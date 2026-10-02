@@ -92,7 +92,7 @@ def test_NumpySorting(setup_NumpyRecording):
 
     # construct back from kwargs keep the same array
     sorting2 = load(sorting.to_dict())
-    assert np.shares_memory(sorting2._cached_spike_vector, sorting._cached_spike_vector)
+    assert np.shares_memory(sorting2._cached_time_ordered_spike_vector, sorting._cached_time_ordered_spike_vector)
 
 
 def test_SharedMemorySorting():
@@ -108,7 +108,7 @@ def test_SharedMemorySorting():
 
     sorting = SharedMemorySorting.from_sorting(np_sorting)
     # print(sorting)
-    assert sorting._cached_spike_vector is not None
+    assert sorting._cached_time_ordered_spike_vector is not None
 
     # print(sorting.to_spike_vector())
     d = sorting.to_dict()
