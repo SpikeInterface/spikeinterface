@@ -2,7 +2,10 @@
 Some functions internally use by SortingComparison.
 """
 
+from concurrent.futures import ThreadPoolExecutor
+
 from spikeinterface.core.basesorting import BaseSorting
+from spikeinterface.core.job_tools import fix_job_kwargs
 
 import numpy as np
 
@@ -209,7 +212,11 @@ def get_optimized_compute_matching_matrix():
 
 
 def make_match_count_matrix(
-    sorting1: BaseSorting, sorting2: BaseSorting, delta_frames: int, ensure_symmetry: bool = False
+    sorting1: BaseSorting,
+    sorting2: BaseSorting,
+    delta_frames: int,
+    ensure_symmetry: bool = False,
+    n_jobs: int = 1,
 ):
     """
     Computes a matrix representing the matches between two Sorting objects.
@@ -230,9 +237,12 @@ def make_match_count_matrix(
         The inclusive upper limit on the frame difference for which two spikes are considered matching. That is
         if `abs(spike_frames_train1[i] - spike_frames_train2[j]) <= delta_frames` then the spikes at
         `spike_frames_train1[i]` and `spike_frames_train2[j]` are considered matching.
-    ensure_symmetry: bool, default False
+    ensure_symmetry : bool, default: False
         If ensure_symmetry=True, then the algo is run two times by switching sorting1 and sorting2.
-        And the minimum of the two results is taken.
+        And the maximum of the two results is taken.
+    n_jobs : int, default: 1
+        Number of jobs used to compute the two directions concurrently when `ensure_symmetry=True`.
+        Only two jobs can be used because the symmetric comparison has two directions.
     Returns
     -------
     matching_matrix : pd.DataFrame
@@ -279,40 +289,65 @@ def make_match_count_matrix(
         num_segments_sorting1 == num_segments_sorting2
     ), "make_match_count_matrix : sorting1 and sorting2 must have the same segment number"
 
-    # Segments should be matched one by one
-    for segment_index in range(num_segments_sorting1):
-        spike_vector1 = spike_vector1_segments[segment_index]
-        spike_vector2 = spike_vector2_segments[segment_index]
+    n_jobs = fix_job_kwargs({"n_jobs": n_jobs})["n_jobs"]
+    executor = ThreadPoolExecutor(max_workers=1) if ensure_symmetry and n_jobs > 1 else None
+    matching_function = get_optimized_compute_matching_matrix()
 
-        sample_frames1_sorted = spike_vector1["sample_index"]
-        sample_frames2_sorted = spike_vector2["sample_index"]
+    try:
+        # Segments should be matched one by one
+        for segment_index in range(num_segments_sorting1):
+            spike_vector1 = spike_vector1_segments[segment_index]
+            spike_vector2 = spike_vector2_segments[segment_index]
 
-        unit_indices1_sorted = spike_vector1["unit_index"]
-        unit_indices2_sorted = spike_vector2["unit_index"]
+            sample_frames1_sorted = spike_vector1["sample_index"]
+            sample_frames2_sorted = spike_vector2["sample_index"]
 
-        matching_matrix_seg = get_optimized_compute_matching_matrix()(
-            sample_frames1_sorted,
-            sample_frames2_sorted,
-            unit_indices1_sorted,
-            unit_indices2_sorted,
-            num_units_sorting1,
-            num_units_sorting2,
-            delta_frames,
-        )
+            unit_indices1_sorted = spike_vector1["unit_index"]
+            unit_indices2_sorted = spike_vector2["unit_index"]
 
-        if ensure_symmetry:
-            matching_matrix_seg_switch = get_optimized_compute_matching_matrix()(
-                sample_frames2_sorted,
+            args = (
                 sample_frames1_sorted,
-                unit_indices2_sorted,
+                sample_frames2_sorted,
                 unit_indices1_sorted,
-                num_units_sorting2,
+                unit_indices2_sorted,
                 num_units_sorting1,
+                num_units_sorting2,
                 delta_frames,
             )
-            matching_matrix_seg = np.maximum(matching_matrix_seg, matching_matrix_seg_switch.T)
 
-        matching_matrix += matching_matrix_seg
+            if executor is not None:
+                matching_matrix_switch_future = executor.submit(
+                    matching_function,
+                    sample_frames2_sorted,
+                    sample_frames1_sorted,
+                    unit_indices2_sorted,
+                    unit_indices1_sorted,
+                    num_units_sorting2,
+                    num_units_sorting1,
+                    delta_frames,
+                )
+
+            matching_matrix_seg = matching_function(*args)
+
+            if ensure_symmetry:
+                if executor is not None:
+                    matching_matrix_seg_switch = matching_matrix_switch_future.result()
+                else:
+                    matching_matrix_seg_switch = matching_function(
+                        sample_frames2_sorted,
+                        sample_frames1_sorted,
+                        unit_indices2_sorted,
+                        unit_indices1_sorted,
+                        num_units_sorting2,
+                        num_units_sorting1,
+                        delta_frames,
+                    )
+                matching_matrix_seg = np.maximum(matching_matrix_seg, matching_matrix_seg_switch.T)
+
+            matching_matrix += matching_matrix_seg
+    finally:
+        if executor is not None:
+            executor.shutdown()
 
     # ensure the number of match do not exceed the number of spike in train 2
     # this is a simple way to handle corner cases for bursting in sorting1
@@ -352,6 +387,7 @@ def make_agreement_scores(
     sorting2: BaseSorting,
     delta_frames: int,
     ensure_symmetry: bool = True,
+    n_jobs: int = 1,
 ):
     """
     Make the agreement matrix.
@@ -370,7 +406,10 @@ def make_agreement_scores(
         Number of frames to consider spikes coincident
     ensure_symmetry : bool, default: True
         If ensure_symmetry is True, then the algo is run two times by switching sorting1 and sorting2.
-        And the minimum of the two results is taken.
+        And the maximum of the two results is taken.
+    n_jobs : int, default: 1
+        Number of jobs used to compute the two directions concurrently when `ensure_symmetry=True`.
+        Only two jobs can be used because the symmetric comparison has two directions.
     Returns
     -------
     agreement_scores : pd.DataFrame
@@ -386,7 +425,9 @@ def make_agreement_scores(
     event_counts1 = pd.Series(ev_counts1, index=unit1_ids)
     event_counts2 = pd.Series(ev_counts2, index=unit2_ids)
 
-    match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames, ensure_symmetry=ensure_symmetry)
+    match_event_count = make_match_count_matrix(
+        sorting1, sorting2, delta_frames, ensure_symmetry=ensure_symmetry, n_jobs=n_jobs
+    )
 
     agreement_scores = make_agreement_scores_from_count(match_event_count, event_counts1, event_counts2)
 
