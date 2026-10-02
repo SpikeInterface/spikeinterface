@@ -10,6 +10,8 @@ from .filter import (
     notch_filter,
     HighpassFilterRecording,
     highpass_filter,
+    LowpassFilterRecording,
+    lowpass_filter,
     causal_filter,
 )
 from .filter_gaussian import GaussianFilterRecording, gaussian_filter
@@ -58,6 +60,7 @@ _all_preprocesser_dict = {
     FilterRecording: filter,
     BandpassFilterRecording: bandpass_filter,
     HighpassFilterRecording: highpass_filter,
+    LowpassFilterRecording: lowpass_filter,
     NotchFilterRecording: notch_filter,
     GaussianFilterRecording: gaussian_filter,
     # gain offset stuff
