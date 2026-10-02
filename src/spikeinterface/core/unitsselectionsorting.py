@@ -61,7 +61,7 @@ class UnitsSelectionSorting(BaseSorting):
         )
 
         # check if order is preserved
-        pos = np.searchsorted(self._parent_sorting.unit_ids, self.unit_ids)
+        pos = self._parent_sorting.ids_to_indices(self._unit_ids)
         order_is_preserved = np.all(np.diff(pos) > 0)
 
         if not order_is_preserved:
