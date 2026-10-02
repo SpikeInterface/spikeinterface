@@ -145,23 +145,44 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     from scipy.fft import rfft, irfft
 
     signal_length = signal.shape[axis]
-    num_channels = shift_samples.size
-    fourier_signal_size = signal_length // 2 + 1
-
     frequency_domain_signal = rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
-    fourier_signal_size = frequency_domain_signal.shape[0]
 
     if axis == 0:
-        frequency_grid = np.empty(shape=(fourier_signal_size, num_channels))
-        # Note that np.fft.rfttfreq handles both even and odd signal lengths
-        frequency_grid[:, :] = 2 * np.pi * np.fft.rfftfreq(signal_length)[:, np.newaxis]
-        shifts = np.multiply(frequency_grid, shift_samples[np.newaxis, :], out=frequency_grid)
+        angular_frequencies = 2 * np.pi * np.fft.rfftfreq(signal_length)
+        # The crossover was measured at 32 and 384 channels, and at signal lengths from 4 to 384 samples.
+        # np.unique's overhead is fixed per call but the exp() savings it buys scale with the signal length
+        # (one rotation per frequency bin), so a short chunk can lose even at the channel/reuse ratio that
+        # wins for a realistically sized one. 128 samples clears the measured worst case (32 channels, exact
+        # 4x reuse) with margin; skip the fast path below that instead of adding fixed overhead to short chunks.
+        take_fast_path = False
+        if signal_length >= 128 and shift_samples.size >= 32:
+            unique_shifts, shift_indices = np.unique(shift_samples, return_inverse=True)
+            # Gathering regresses at 2x average reuse on small channel counts, but wins consistently from 4x
+            # across measured 32- and 384-channel inputs. Inverse indices handle skewed reuse and non-contiguous
+            # channel groups without a per-channel Python loop.
+            take_fast_path = unique_shifts.size * 4 <= shift_samples.size
+
+        if take_fast_path:
+            # Neuropixels channels share a small number of ADC sampling delays (12 for NP 1.0). The original
+            # path always rounds the angle to a float64 buffer right after the multiply, independently of
+            # input dtype; downcast the angle product here (not the raw shift beforehand) so a wider shift
+            # dtype rounds at the same point instead of losing precision one multiply earlier.
+            unique_angles = (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]).astype(
+                np.float64, copy=False
+            )
+            unique_rotations = np.exp(-1j * unique_angles)
+            rotations = unique_rotations[:, shift_indices]
+            # scipy.fft preserves a float32 input as complex64, while rotations above is complex128. The ufunc
+            # promotes the multiply to complex128 here, matching the original path's float64-precision output.
+            phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
+        else:
+            frequency_grid = np.empty(shape=frequency_domain_signal.shape)
+            frequency_grid[:, :] = angular_frequencies[:, np.newaxis]
+            shifts = np.multiply(frequency_grid, shift_samples[np.newaxis, :], out=frequency_grid)
+            rotations = np.exp(-1j * shifts)
+            phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
     else:
         raise NotImplementedError("Axis != 0 is not implemented yet")
-
-    # Rotate the signal in the frequency domain
-    rotations = np.exp(-1j * shifts)
-    phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
 
     # Inverse FFT to get the translated signal
     shifted_signal = irfft(phase_shifted_signal, n=signal_length, axis=axis, overwrite_x=True)
