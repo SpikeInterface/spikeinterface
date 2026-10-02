@@ -1070,7 +1070,7 @@ class NwbRecordingExtractor(BaseRecording):
                 self.set_property(property_name, values)
 
         if stream_mode is None and file_path is not None:
-            file_path = str(Path(file_path).resolve())
+            file_path = str(Path(file_path).absolute())
 
         if stream_mode == "fsspec" and stream_cache_path is not None:
             stream_cache_path = str(Path(self.stream_cache_path).absolute())
@@ -1404,7 +1404,7 @@ class NwbSortingExtractor(BaseSorting):
             self.extra_requirements.append(stream_mode)
 
         if stream_mode is None and file_path is not None:
-            file_path = str(Path(file_path).resolve())
+            file_path = str(Path(file_path).absolute())
 
         if storage_options is not None and stream_mode == "zarr":
             warnings.warn(

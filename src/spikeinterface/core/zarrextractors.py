@@ -625,7 +625,7 @@ def resolve_zarr_path(folder_path: str | Path):
         return folder_path, folder_path
     else:
         folder_path = Path(folder_path)
-        folder_path_kwarg = str(Path(folder_path).resolve())
+        folder_path_kwarg = str(Path(folder_path).absolute())
         return folder_path, folder_path_kwarg
 
 
