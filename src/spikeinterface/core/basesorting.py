@@ -535,6 +535,8 @@ class BaseSorting(BaseExtractor):
             * "numpy_folder" format:
                 - folder : str or Path
                     The folder where the files will be saved.
+                - mmap_mode : str or None, default: None
+                    The memory-mapping mode to use when saving numpy files. If None, no memory mapping is used.
                 - overwrite : bool, default: False
                     If True, existing files in the folder will be overwritten.
             * "zarr" format:
