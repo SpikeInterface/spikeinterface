@@ -1076,11 +1076,16 @@ class BaseSorting(BaseExtractor):
         if self._cached_spike_vector_segment_slices is None:
             # compute the, this is needed when spikevector is loaded from format and not computed
             num_seg = self.get_num_segments()
-            slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg + 1))
-            self._cached_spike_vector_segment_slices = np.zeros((num_seg, 2), dtype="int64")
-            for seg_index in range(num_seg):
-                self._cached_spike_vector_segment_slices[seg_index, 0] = slices[seg_index]
-                self._cached_spike_vector_segment_slices[seg_index, 1] = slices[seg_index + 1]
+            if num_seg == 1:
+                self._cached_spike_vector_segment_slices = np.array(
+                    [[0, self._cached_spike_vector.size]], dtype="int64"
+                )
+            else:
+                slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg + 1))
+                self._cached_spike_vector_segment_slices = np.zeros((num_seg, 2), dtype="int64")
+                for seg_index in range(num_seg):
+                    self._cached_spike_vector_segment_slices[seg_index, 0] = slices[seg_index]
+                    self._cached_spike_vector_segment_slices[seg_index, 1] = slices[seg_index + 1]
         return self._cached_spike_vector_segment_slices
 
     def to_reordered_spike_vector(
