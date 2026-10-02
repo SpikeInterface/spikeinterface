@@ -15,7 +15,13 @@ def find_recording_folders(d):
     """Finds all recording folders 'paths' in a dict"""
 
     path_list = _get_paths_list(d=d)
-    folders_to_mount = [Path(p).resolve().parent for p in path_list]
+    # Remote paths (URLs) are read over the network from inside the container, so there is nothing
+    # to mount for them.
+    is_remote_path = lambda path: "://" in str(path)
+    local_path_list = [p for p in path_list if not is_remote_path(p)]
+    folders_to_mount = [Path(p).resolve().parent for p in local_path_list]
+    if len(folders_to_mount) == 0:
+        return []
 
     try:  # this will fail if on different drives (Windows)
         base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
