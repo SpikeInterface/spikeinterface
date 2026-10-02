@@ -1,7 +1,12 @@
 import pytest
 
 from spikeinterface import generate_sorting
-from spikeinterface.widgets.utils import get_some_colors, validate_segment_indices, get_segment_durations
+from spikeinterface.widgets.utils import (
+    get_some_colors,
+    validate_segment_indices,
+    get_segment_durations,
+)
+import numpy as np
 
 
 def test_get_some_colors():
@@ -56,17 +61,25 @@ def test_get_segment_durations():
 
     # Test with a normal multi-segment sorting
     durations = [5.0, 10.0, 15.0]
+    t_starts = [10, 20, 30]
 
     # Create sorting with high fr to ensure spikes near the end segments
     sorting = generate_sorting(
         durations=durations,
         firing_rates=15.0,
+        t_starts=t_starts,
     )
 
     segment_indices = list(range(sorting.get_num_segments()))
 
     # Calculate durations
-    calculated_durations = get_segment_durations(sorting, segment_indices)
+    calculated_durations, segment_start_stop_times = get_segment_durations(sorting, segment_indices)
+
+    # Check results
+    expected_start_stop_times = np.array([(10, 15), (20, 30), (30, 45)], dtype=float)
+    assert list(segment_start_stop_times) == segment_indices
+    start_stop_times = np.array(list(segment_start_stop_times.values()))
+    assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
 
     # Check results
     assert len(calculated_durations) == len(durations)
@@ -82,9 +95,15 @@ def test_get_segment_durations():
     sorting_single = generate_sorting(
         durations=[7.0],
         firing_rates=15.0,
+        t_starts=[4],
     )
 
-    single_duration = get_segment_durations(sorting_single, [0])[0]
+    single_duration, segment_start_stop_times = get_segment_durations(sorting_single, [0])
+
+    expected_start_stop_times = [(4, 11)]
+    assert list(segment_start_stop_times) == [0]
+    start_stop_times = np.array(list(segment_start_stop_times.values()))
+    assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
 
     # Test that the calculated duration is reasonable
     assert single_duration <= 7.0
