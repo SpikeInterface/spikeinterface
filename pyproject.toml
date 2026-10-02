@@ -340,6 +340,12 @@ test-all = [
     {include-group = "test-generation"},
 ]
 
+# Tools for the pre-commit hooks. uv installs this group by default.
+dev = [
+    "black",
+    "pre-commit",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["src"]
 markers = [
