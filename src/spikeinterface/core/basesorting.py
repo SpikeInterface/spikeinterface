@@ -154,13 +154,38 @@ class BaseSorting(BaseExtractor):
         indices: list[int],
         segment_index: int | None = None,
     ):
+        """
+        Search sample indices (frames) in the cached spike vector of one segment.
+
+        Equivalent to `np.searchsorted(segment_sample_index, indices, side="left")`.
+        Sortings with a lazy spike vector override this to avoid materialising it.
+
+        Parameters
+        ----------
+        indices : list[int]
+            The sample indices (frames) to search.
+        segment_index : int | None, default: None
+            The segment to search. Can be None for mono-segment sortings.
+
+        Returns
+        -------
+        positions : np.ndarray
+            The insertion positions, relative to the start of the segment in the spike vector.
+        """
         if self._cached_spike_vector is None:
             self._compute_and_cache_spike_vector()
-        if segment_index is None and self.get_num_segments() == 1:
-            return np.searchsorted(self._cached_spike_vector["sample_index"], indices)
-        else:
-            sl = self._cached_spike_vector_segment_slices[segment_index]
-            return np.searchsorted(self._cached_spike_vector[sl[0] : sl[1]]["sample_index"], indices)
+        spikes = self._cached_spike_vector
+        if not isinstance(spikes, np.ndarray):  # np.memmap is an ndarray
+            # np.searchsorted would materialise a lazy vector on every call
+            raise TypeError(
+                f"{type(self).__name__} holds a lazy spike vector ({type(spikes).__name__}) "
+                "and must override search_cached_spikes_sorted()"
+            )
+        if segment_index is None:
+            assert self.get_num_segments() == 1, "segment_index is required for multi-segment sortings"
+            segment_index = 0
+        start, stop = self._get_spike_vector_segment_slices()[segment_index]
+        return np.searchsorted(spikes["sample_index"][start:stop], indices)
 
     def get_unit_spike_train(
         self,

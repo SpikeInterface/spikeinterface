@@ -457,6 +457,74 @@ class ZarrSpikeVector:
         return np.copy(np.asarray(self))
 
 
+class ZarrSampleIndexSearch:
+    """
+    `np.searchsorted` on a zarr `sample_index` array without materialising it.
+
+    The array is sorted within each segment and stored in fixed-size zarr chunks. The
+    search keeps the first value of every chunk (8 B per chunk), picks the one chunk that
+    can hold the answer, and decodes only that chunk. The last decoded chunk is cached, so
+    consecutive searches in the same region decode nothing.
+
+    Parameters
+    ----------
+    sample_index : zarr.Array
+        The 1D `sample_index` array of a spike vector.
+    chunk_firsts : np.ndarray | None, default: None
+        `sample_index[::chunk_length]`, as written by `add_sorting_to_zarr_group`.
+        If None (stores written before this index existed), it is read from the array,
+        which decodes every chunk once.
+    """
+
+    def __init__(self, sample_index, chunk_firsts=None):
+        self._sample_index = sample_index
+        self._num_spikes = sample_index.shape[0]
+        self._chunk_length = sample_index.chunks[0]
+        if chunk_firsts is None:
+            starts = np.arange(0, self._num_spikes, self._chunk_length)
+            chunk_firsts = sample_index.get_orthogonal_selection(starts) if starts.size else []
+        self._chunk_firsts = np.asarray(chunk_firsts, dtype="int64")
+        self._cached_chunk = (-1, None)  # (chunk index, decoded values)
+
+    def _get_chunk(self, chunk_index):
+        # read the (index, values) pair once into a local and replace it as a whole: threads
+        # sharing this object (pool_engine="thread") then always see a consistent pair, and a
+        # race can only cost an extra decode
+        cached = self._cached_chunk
+        if cached[0] != chunk_index:
+            start = chunk_index * self._chunk_length
+            stop = min(start + self._chunk_length, self._num_spikes)
+            cached = (chunk_index, self._sample_index[start:stop])
+            self._cached_chunk = cached
+        return cached[1]
+
+    def searchsorted(self, values, start, stop):
+        """
+        Equivalent to `np.searchsorted(sample_index[start:stop], values, side="left")`.
+
+        Returns positions relative to `start`. `start:stop` must be a range over which
+        `sample_index` is sorted, i.e. one segment.
+        """
+        values = np.atleast_1d(np.asarray(values))
+        out = np.zeros(values.size, dtype="int64")
+        if stop <= start:
+            return out
+        first_chunk = start // self._chunk_length
+        last_chunk = (stop - 1) // self._chunk_length
+        # first values of the chunks after `first_chunk`, all of which lie inside start:stop
+        later_firsts = self._chunk_firsts[first_chunk + 1 : last_chunk + 1]
+        for i, value in enumerate(values):
+            # the answer lies in the last chunk whose first value is < value: side="left" keeps
+            # runs of equal values that cross a chunk boundary in the earlier chunk
+            chunk_index = first_chunk + int(np.searchsorted(later_firsts, value, side="left"))
+            chunk_start = chunk_index * self._chunk_length
+            lo = max(chunk_start, start)
+            hi = min(chunk_start + self._chunk_length, stop)
+            block = self._get_chunk(chunk_index)[lo - chunk_start : hi - chunk_start]
+            out[i] = lo + int(np.searchsorted(block, value, side="left")) - start
+        return out
+
+
 class ZarrSortingExtractor(BaseSorting):
     """
     SortingExtractor for a zarr format
@@ -528,6 +596,8 @@ class ZarrSortingExtractor(BaseSorting):
             # In version 0.104.X this was fully lexsorted, but we don't need it anymore because it's only important in the context of SpikeVectorBased extensions in the SortingAnalyzer, which stores its own copy of the Sorting object. This makes the extension data and the spike vector always matching their order.
             # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
         self._lazy_spike_vector = lazy_spike_vector
+        self._spikes_group = spikes_group
+        self._sample_index_search = None
         self._cached_spike_vector = spikes
         # pre-populate segment slices so _get_spike_vector_segment_slices() never
         # needs to materialise the full segment_index array
@@ -566,9 +636,17 @@ class ZarrSortingExtractor(BaseSorting):
                 indices=indices,
                 segment_index=segment_index,
             )
-        else:
-            # TODO: implement search function minimizing zarr chunks reads to reduce RAM usage.
-            pass
+        if segment_index is None:
+            assert self.get_num_segments() == 1, "segment_index is required for multi-segment sortings"
+            segment_index = 0
+        if self._sample_index_search is None:
+            # the chunk index is written with the sorting; older stores rebuild it from the data
+            chunk_firsts = None
+            if "sample_index_chunk_firsts" in self._spikes_group:
+                chunk_firsts = self._spikes_group["sample_index_chunk_firsts"][:]
+            self._sample_index_search = ZarrSampleIndexSearch(self._spikes_group["sample_index"], chunk_firsts)
+        start, stop = self._cached_spike_vector_segment_slices[segment_index]
+        return self._sample_index_search.searchsorted(indices, int(start), int(stop))
 
     @staticmethod
     def write_sorting(
@@ -798,6 +876,15 @@ def add_sorting_to_zarr_group(
                 i0, i1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
                 segment_slices.append([i0, i1])
             spikes_group.create_dataset(name="segment_slices", data=segment_slices, compressor=None)
+
+    # first sample_index of every zarr chunk: lets a lazy reader search sample_index
+    # one chunk at a time (see ZarrSampleIndexSearch) instead of materialising it
+    chunk_length = spikes_group["sample_index"].chunks[0]
+    spikes_group.create_dataset(
+        name="sample_index_chunk_firsts",
+        data=np.asarray(spikes["sample_index"][::chunk_length], dtype="int64"),
+        compressor=None,
+    )
 
     add_properties_and_annotations(zarr_group, sorting)
 

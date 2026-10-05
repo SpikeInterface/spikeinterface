@@ -224,6 +224,16 @@ class SpikeRetriever(PeakSource):
         self.sorting = sorting
         self._peaks = None
 
+        # get_peak_slice() returns positions relative to the segment start
+        if sorting.get_num_segments() == 1:
+            self.segment_slices = None
+        else:
+            self.segment_slices = [slice(int(s0), int(s1)) for s0, s1 in segment_slices]
+
+        # build any lazy search index now, in the parent, so forked workers inherit it
+        # instead of each building its own
+        sorting.search_cached_spikes_sorted([0], segment_index=0)
+
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
             self.neighbours_mask = channel_distance <= radius_um
