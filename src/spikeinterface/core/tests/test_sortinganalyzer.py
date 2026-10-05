@@ -749,6 +749,7 @@ def test_select_units_reordered_keeps_extension_alignment():
     analyzer.compute("dummy")
 
     selected = analyzer.select_units(unit_ids[::-1])
+    # "result_two" is a copy of unit_index array
     old_unit_id_per_spike = unit_ids[selected.get_extension("dummy").data["result_two"]]
     new_unit_id_per_spike = selected.unit_ids[selected.sorting.to_spike_vector()["unit_index"]]
     assert np.array_equal(old_unit_id_per_spike, new_unit_id_per_spike)
