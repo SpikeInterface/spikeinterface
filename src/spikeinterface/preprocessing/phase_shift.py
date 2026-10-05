@@ -9,10 +9,7 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 class PhaseShiftRecording(BasePreprocessor):
     """
-    This apply a phase shift to a recording to cancel the small sampling
-    delay across for some recording system.
-
-    This is particularly relevant for neuropixel recording.
+    Apply phase shifts to compensate for the staggered ADC sampling times in Neuropixels recordings.
 
     This code is inspired from from  IBL lib.
     https://github.com/int-brain-lab/ibllib/blob/master/ibllib/dsp/fourier.py
@@ -149,38 +146,14 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
 
     if axis == 0:
         angular_frequencies = 2 * np.pi * np.fft.rfftfreq(signal_length)
-        # The crossover was measured at 32 and 384 channels, and at signal lengths from 4 to 384 samples.
-        # np.unique's overhead is fixed per call but the exp() savings it buys scale with the signal length
-        # (one rotation per frequency bin), so a short chunk can lose even at the channel/reuse ratio that
-        # wins for a realistically sized one. 128 samples clears the measured worst case (32 channels, exact
-        # 4x reuse) with margin; skip the fast path below that instead of adding fixed overhead to short chunks.
-        take_fast_path = False
-        if signal_length >= 128 and shift_samples.size >= 32:
-            unique_shifts, shift_indices = np.unique(shift_samples, return_inverse=True)
-            # Gathering regresses at 2x average reuse on small channel counts, but wins consistently from 4x
-            # across measured 32- and 384-channel inputs. Inverse indices handle skewed reuse and non-contiguous
-            # channel groups without a per-channel Python loop.
-            take_fast_path = unique_shifts.size * 4 <= shift_samples.size
-
-        if take_fast_path:
-            # Neuropixels channels share a small number of ADC sampling delays (12 for NP 1.0). The original
-            # path always rounds the angle to a float64 buffer right after the multiply, independently of
-            # input dtype; downcast the angle product here (not the raw shift beforehand) so a wider shift
-            # dtype rounds at the same point instead of losing precision one multiply earlier.
-            unique_angles = (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]).astype(
-                np.float64, copy=False
-            )
-            unique_rotations = np.exp(-1j * unique_angles)
-            rotations = unique_rotations[:, shift_indices]
-            # scipy.fft preserves a float32 input as complex64, while rotations above is complex128. The ufunc
-            # promotes the multiply to complex128 here, matching the original path's float64-precision output.
-            phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
-        else:
-            frequency_grid = np.empty(shape=frequency_domain_signal.shape)
-            frequency_grid[:, :] = angular_frequencies[:, np.newaxis]
-            shifts = np.multiply(frequency_grid, shift_samples[np.newaxis, :], out=frequency_grid)
-            rotations = np.exp(-1j * shifts)
-            phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
+        # Neuropixels channels reuse a small set of ADC sampling delays, so compute each rotation once.
+        unique_shifts, shift_indices = np.unique(shift_samples, return_inverse=True)
+        unique_angles = (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]).astype(
+            np.float64, copy=False
+        )
+        unique_rotations = np.exp(-1j * unique_angles)
+        rotations = unique_rotations[:, shift_indices]
+        phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
     else:
         raise NotImplementedError("Axis != 0 is not implemented yet")
 
