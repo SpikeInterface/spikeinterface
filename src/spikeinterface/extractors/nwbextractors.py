@@ -1469,7 +1469,9 @@ class NwbSortingExtractor(BaseSorting):
         if last_spike_positions.size == 0:
             return 0
         last_spike_times = np.asarray(segment.spike_times_data[last_spike_positions], dtype="float64")
-        return int(segment._times_to_samples(last_spike_times).max())
+        last_spike_time = last_spike_times.max()
+        last_spike_frame = segment._times_to_samples(last_spike_time)
+        return int(last_spike_frame)
 
     @staticmethod
     def fetch_available_units_tables(
