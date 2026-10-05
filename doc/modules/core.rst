@@ -438,7 +438,7 @@ All computed extensions will be automatically propagated or merged when curating
 
 
 Handling very large datasets: ``lazy`` mode
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For very large datasets with tens-to-hundreds millions of spikes, the :code:`SortingAnalyzer` computations can be very
 memory intensive. By default, in fact, the :code:`SortingAnalyzer` computes and stores all the data in memory.
@@ -702,7 +702,7 @@ Parallel processing and job_kwargs
 The :py:mod:`~spikeinterface.core` module also contains the basic tools used throughout SpikeInterface for parallel
 processing of recordings.
 In general, parallelization is achieved by splitting the recording in many small time chunks and processing
-them in parallel (for more details, see the :py:class:`~spikeinterface.core.ChunkRecordingExecutor` class).
+them in parallel (for more details, see the :py:class:`~spikeinterface.core.TimeSeriesChunkExecutor` class).
 
 Many functions support parallel processing (e.g., :py:func:`~spikeinterface.core.extract_waveforms`, :code:`save`,
 and many more). All of these functions, in addition to other arguments, also accept the so-called **job_kwargs**.
@@ -1007,7 +1007,7 @@ LEGACY objects
 --------------
 
 WaveformExtractor
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 
 This is now a legacy object that can still be accessed through the :py:class:`MockWaveformExtractor`. It is kept
 for backward compatibility. You can convert a ``WaveformExtractor`` to a ``SortingAnalyzer``

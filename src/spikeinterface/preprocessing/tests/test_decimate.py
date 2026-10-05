@@ -3,10 +3,11 @@ import warnings
 import pytest
 
 
-from spikeinterface import NumpyRecording
+from spikeinterface import NumpyRecording, MockRecording
 from spikeinterface.core import generate_recording, load
 from spikeinterface.preprocessing.decimate import DecimateRecording, decimate
 from spikeinterface.preprocessing.resample import ResampleRecording
+from spikeinterface.preprocessing.astype import astype
 from spikeinterface.preprocessing._resampling_tools import get_polyphase_filter
 from spikeinterface.preprocessing.tests.test_resample import create_sinusoidal_traces
 import numpy as np
@@ -175,6 +176,20 @@ def test_decimate_polyphase_serialization():
     # Provenance round-trips and reproduces the traces.
     dec_loaded = load(dec.to_dict())
     np.testing.assert_allclose(dec_loaded.get_traces(), dec.get_traces())
+
+
+def test_time_handling():
+    """Test frame slicing after decimate, for correct propagation of lazy time vectors."""
+    recording = MockRecording(num_channels=4, durations=[2], sampling_frequency=30000)
+    recording.set_times(recording.get_times() + 100)
+
+    recording_rs = decimate(recording, decimation_factor=10)
+    recording_frames = recording_rs.frame_slice(start_frame=0, end_frame=200)
+    np.testing.assert_array_equal(recording_frames.get_times(), recording_rs.get_times()[:200])
+
+    recording_pre = astype(recording_rs, "float32")
+    recording_pre_frames = recording_pre.frame_slice(start_frame=0, end_frame=200)
+    np.testing.assert_array_equal(recording_pre_frames.get_times(), recording_rs.get_times()[:200])
 
 
 if __name__ == "__main__":

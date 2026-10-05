@@ -62,7 +62,6 @@ def create_sorting_analyzer(
     sparse: bool = True,
     sparsity: ChannelSparsity | None = None,
     set_sparsity_by_dict_key: bool = False,
-    return_scaled: bool | None = None,
     return_in_uV: bool = True,
     overwrite: bool = False,
     backend_options: dict[str, Any] | None = None,
@@ -119,14 +118,9 @@ def create_sorting_analyzer(
     set_sparsity_by_dict_key : bool, default: False
         If True and passing recording and sorting dicts, will set the sparsity based on the dict keys,
         and other `sparsity_kwargs` are overwritten. If False, use other sparsity settings.
-    return_scaled : bool | None, default: None
-        DEPRECATED. Use return_in_uV instead.
-        All extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
-        This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
-    return_in_uV : bool, default: None
+    return_in_uV : bool, default: True
         If True, all extensions that play with traces will use this global return_in_uV : "waveforms", "noise_levels", "templates".
         This prevent return_in_uV being differents from different extensions and having wrong snr for instance.
-        If None, use return_scaled value.
     overwrite: bool, default: False
         If True, overwrite the folder if it already exists.
     backend_options : dict | None, default: None
@@ -270,7 +264,6 @@ def create_sorting_analyzer(
             sparse=sparse,
             sparsity=sparsity,
             main_channel_indices=main_channel_indices,
-            return_scaled=return_scaled,
             return_in_uV=return_in_uV,
             overwrite=overwrite,
             backend_options=backend_options,
@@ -329,15 +322,6 @@ def create_sorting_analyzer(
         )
     else:
         sparsity = None
-
-    # Handle deprecated return_scaled parameter
-    if return_scaled is not None:
-        warnings.warn(
-            "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-            category=FutureWarning,
-            stacklevel=2,
-        )
-        return_in_uV = return_scaled if return_in_uV is None else return_in_uV
 
     # Handle return_in_uV parameter for recordings without scaling
     if return_in_uV and not recording.has_scaleable_traces() and recording.get_dtype().kind == "i":
@@ -452,9 +436,6 @@ class SortingAnalyzer:
         self.peak_sign = peak_sign
         self.peak_mode = peak_mode
         self._main_channel_indices = None
-
-        # For backward compatibility
-        self.return_scaled = return_in_uV
         self.folder: str | Path | None = None
 
         # this is used to store temporary recording
@@ -539,7 +520,6 @@ class SortingAnalyzer:
         folder: str | Path | None = None,
         lazy: bool = False,
         sparsity: ChannelSparsity | None = None,
-        return_scaled: bool | None = None,
         return_in_uV: bool = True,
         peak_sign: PeakSignType = "both",
         peak_mode: PeakModeType = "extremum",
@@ -549,13 +529,6 @@ class SortingAnalyzer:
         assert (
             main_channel_indices is not None
         ), "To create a SortingAnalyzer you need to specify the main_channel_indices"
-        if return_scaled is not None:
-            warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled if return_in_uV is None else return_in_uV
 
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
@@ -741,7 +714,6 @@ class SortingAnalyzer:
         info_file = folder / "spikeinterface_info.json"
         settings_file = folder / "settings.json"
         sorting_folder = folder / "sorting"
-        sorting_provenance_file = folder / "sorting_provenance.json"
         sparsity_file = folder / "sparsity_mask.npy"
         recording_provenance_file = folder / "recording"  # .json (default) or .pickle (if not json-serializable)
         rec_attributes_file = recording_info_folder / "recording_attributes.json"
@@ -758,17 +730,8 @@ class SortingAnalyzer:
             json.dump(check_json(settings), f, indent=4)
 
         # Save the sorting output
-        sorting = sorting.save(folder=sorting_folder)
-
-        # Dump sorting provenance
-        if sorting.check_serializability("json"):
-            sorting.dump(sorting_provenance_file, relative_to=folder)
-        elif sorting.check_serializability("pickle"):
-            sorting.dump(sorting_provenance_file.with_suffix(".pickle"), relative_to=folder)
-        else:
-            warnings.warn(
-                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
-            )
+        mmap_mode = "r" if lazy else None
+        sorting_cached = sorting.save(folder=sorting_folder, relative_to=folder, mmap_mode=mmap_mode)
 
         # Save sparsity
         if sparsity is not None:
@@ -803,7 +766,7 @@ class SortingAnalyzer:
 
         # Create SortingAnalyzer
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting,
+            sorting=sorting_cached,
             recording=recording,
             rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="binary_folder",
@@ -1069,9 +1032,7 @@ class SortingAnalyzer:
         backend_options: dict | None,
         lazy: bool = False,
     ) -> "SortingAnalyzer":
-        # used by create and save_as
-
-        from .zarrextractors import add_sorting_to_zarr_group
+        from .zarrextractors import add_sorting_to_zarr_group, ZarrSortingExtractor
 
         is_remote = is_path_remote(folder)
         if not is_remote:
@@ -1098,27 +1059,10 @@ class SortingAnalyzer:
         settings = {"return_in_uV": return_in_uV, "peak_sign": peak_sign, "peak_mode": peak_mode}
         zarr_root.attrs["settings"] = check_json(settings)
 
-        # Save the sorting output
-        add_sorting_to_zarr_group(sorting, sorting_group, **saving_options)
-
-        # Dump sorting provenance
         relative_to = None if is_remote else folder
-        sort_dict = sorting.to_dict(relative_to=relative_to, recursive=True)
-        if sorting.check_serializability("json"):
-            _write_object_array(zarr_root, "sorting_provenance", check_json(sort_dict), codec="json")
-        elif sorting.check_serializability("pickle"):
-            try:
-                _write_object_array(zarr_root, "sorting_provenance", sort_dict, codec="pickle")
-            except:
-                warnings.warn(
-                    "Failed to serialize sorting provenance with Pickle Codec! "
-                    "The sorting provenance link will be lost for future load"
-                )
-        else:
-            warnings.warn(
-                "The sorting provenance is not serializable! "
-                "The sorting provenance link will be lost for future load"
-            )
+        # Save the sorting output
+        add_sorting_to_zarr_group(sorting, sorting_group, relative_to=folder, **saving_options)
+        sorting_cached = ZarrSortingExtractor(folder / "sorting", lazy_spike_vector=lazy)
 
         # Save sparsity
         if sparsity is not None:
@@ -1130,7 +1074,13 @@ class SortingAnalyzer:
             if recording.check_serializability("json"):
                 _write_object_array(zarr_root, "recording", check_json(rec_dict), codec="json")
             elif recording.check_serializability("pickle"):
-                _write_object_array(zarr_root, "recording", rec_dict, codec="pickle")
+                try:
+                    _write_object_array(zarr_root, "recording", rec_dict, codec="pickle")
+                except:
+                    warnings.warn(
+                        "Failed to serialize recording with Pickle Codec! "
+                        "The recording link will be lost for future load"
+                    )
             else:
                 warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
         else:
@@ -1156,7 +1106,7 @@ class SortingAnalyzer:
 
         # Create SortingAnalyzer
         sorting_analyzer = SortingAnalyzer(
-            sorting=NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True),
+            sorting=sorting_cached,
             recording=recording,
             rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="zarr",
@@ -2027,9 +1977,12 @@ class SortingAnalyzer:
 
             mergeable_unit_groups = []
             unmergeable_unit_groups = []
-            for merge_unit_group, mergeable in zip(merge_unit_groups, mergeable.values()):
+            new_unit_ids_mergeable = [] if new_unit_ids is not None else None
+            for i, (merge_unit_group, mergeable) in enumerate(zip(merge_unit_groups, mergeable.values())):
                 if mergeable:
                     mergeable_unit_groups.append(merge_unit_group)
+                    if new_unit_ids_mergeable is not None:
+                        new_unit_ids_mergeable.append(new_unit_ids[i])
                 else:
                     unmergeable_unit_groups.append(merge_unit_group)
 
@@ -2042,9 +1995,14 @@ class SortingAnalyzer:
                     warnings.warn(warning_message)
         else:
             mergeable_unit_groups = merge_unit_groups
+            new_unit_ids_mergeable = new_unit_ids
+
+        if len(mergeable_unit_groups) == 0:
+            warnings.warn("No mergeable unit groups found.")
+            return self if not return_new_unit_ids else (self, [])
 
         new_unit_ids = generate_unit_ids_for_merge_group(
-            self.unit_ids, mergeable_unit_groups, new_unit_ids, new_id_strategy
+            self.unit_ids, mergeable_unit_groups, new_unit_ids_mergeable, new_id_strategy
         )
         all_unit_ids = _get_ids_after_merging(self.unit_ids, mergeable_unit_groups, new_unit_ids=new_unit_ids)
 
@@ -2196,34 +2154,36 @@ class SortingAnalyzer:
         """
         from .loading import load
 
+        sorting_provenance = None
         if self.format == "memory":
             # the original sorting provenance is not kept in that case
-            sorting_provenance = None
-
+            pass
         elif self.format == "binary_folder":
             for type in ("json", "pickle"):
-                filename = self.folder / f"sorting_provenance.{type}"
+                filename = self.folder / "sorting" / f"provenance.{type}"
                 sorting_provenance = None
+                if not filename.is_file():
+                    # Legacy location
+                    filename = self.folder / "sorting_provenance.json"
+                # try-except here is because it's not required to be able
+                # to load the sorting provenance, as the user might have deleted
+                # the original sorting folder
                 if filename.is_file():
-                    # try-except here is because it's not required to be able
-                    # to load the sorting provenance, as the user might have deleted
-                    # the original sorting folder
                     try:
                         sorting_provenance = load(filename, base_folder=self.folder)
                         break
                     except:
                         pass
-                        # sorting_provenance = None
-
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
             sorting_provenance = None
-            if "sorting_provenance" in zarr_root.keys():
-                # try-except here is because it's not required to be able
-                # to load the sorting provenance, as the user might have deleted
-                # the original sorting folder
-                try:
+            sort_dict = zarr_root["sorting"].attrs.get("provenance", None)
+            if sort_dict is None:
+                # Legacy
+                if "sorting_provenance" in zarr_root.keys():
                     sort_dict = zarr_root["sorting_provenance"][0]
+            if sort_dict is not None:
+                try:
                     sorting_provenance = load(sort_dict, base_folder=self.folder)
                 except:
                     pass
@@ -2816,8 +2776,8 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         metrics_df : pandas.DataFrame
             A concatenated dataframe with all available metrics.
 
-        Note
-        ----
+        Notes
+        -----
         Duplicated columns are removed (can happen if several metric extensions have a metric with the same name).
         """
         import pandas as pd
@@ -3429,6 +3389,8 @@ class AnalyzerExtension:
                             ext_data.loc[:, col] = ext_data_[col][:]
                     ext_data = ext_data.convert_dtypes()
                 elif "object" in ext_data_.attrs:
+                    if lazy:
+                        continue
                     ext_data = ext_data_[0]
                 else:
                     ext_data = ext_data_ if lazy else np.array(ext_data_[:])

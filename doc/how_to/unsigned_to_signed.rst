@@ -16,8 +16,8 @@ For those that want a deeper understanding of dtypes `NumPy provides a great exp
 For our purposes it is important to know that many pieces of recording equipment opt to store their electrophysiological data as unsigned integers
 (e.g., Intan, Maxwell Biosystems, 3Brain Biocam).
 Similarly to signed integers, in order to convert to real units these file formats only need to store a :code:`gain`
-and an :code:`offset`. Our :code:`RecordingExtractor`'s maintain the dtype that the file format utilizes, which means that some of our
-:code:`RecordingExtractor`'s will have unsigned dtypes.
+and an :code:`offset`. Our :code:`BaseRecording`'s maintain the dtype that the file format utilizes, which means that some of our
+:code:`BaseRecording`'s will have unsigned dtypes.
 
 The problem with using unsigned dtypes is that many types of functions (including the ones we use from :code:`SciPy`) perform poorly with unsigned integers.
 This is made worse by the fact that these failures are silent (i.e. no error is triggered but the operation leads to nonsensical data). So the

@@ -289,25 +289,15 @@ def test_BaseRecording(create_cache_folder):
 
     # Both return_scaled and return_in_uV raise error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
-        traces_float32 = rec_int16.get_traces(return_scaled=True)
-    with pytest.raises(ValueError):
         traces_float32 = rec_int16.get_traces(return_in_uV=True)
 
     # Set properties and test both parameters
     rec_int16.set_property("gain_to_uV", [0.195] * 5)
     rec_int16.set_property("offset_to_uV", [0.0] * 5)
 
-    # Test deprecated return_scaled parameter
-    with pytest.warns(FutureWarning, match="`return_scaled` is deprecated"):
-        traces_float32_old = rec_int16.get_traces(return_scaled=True)  # Keep this for testing the deprecation warning
-        assert traces_float32_old.dtype == "float32"
-
     # Test new return_in_uV parameter
-    traces_float32_new = rec_int16.get_traces(return_in_uV=True)
-    assert traces_float32_new.dtype == "float32"
-
-    # Verify both parameters produce the same result
-    assert np.array_equal(traces_float32_old, traces_float32_new)
+    traces_float32 = rec_int16.get_traces(return_in_uV=True)
+    assert traces_float32.dtype == "float32"
 
     # test cast with dtype
     rec_float32 = rec_int16.astype("float32")

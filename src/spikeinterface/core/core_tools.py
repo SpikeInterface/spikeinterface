@@ -934,11 +934,11 @@ def load_annotations_from_folder(folder: str | Path, extractor: "BaseExtractor")
                 extractor._annotations.update(annotations)
 
 
-def save_extractor_provenance(folder: str | Path, extractor: "BaseExtractor"):
+def save_provenance_to_folder(folder: str | Path, extractor: "BaseExtractor", relative_to: str | Path | None = None):
     folder = Path(folder)
     if extractor.check_serializability("json"):
         provenance_file_path = folder / f"provenance.json"
-        extractor.dump_to_json(file_path=provenance_file_path, relative_to=folder)
+        extractor.dump_to_json(file_path=provenance_file_path, relative_to=relative_to)
     elif extractor.check_serializability("pickle"):
         provenance_file = folder / f"provenance.pkl"
         extractor.dump_to_pickle(provenance_file, relative_to=folder)
@@ -953,4 +953,4 @@ def _ensure_seed(seed):
     # a new signal for all call with seed=None but the dump/load will still work
     if seed is None:
         seed = np.random.default_rng(seed=None).integers(0, 2**63)
-    return seed
+    return int(seed)

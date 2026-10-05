@@ -200,6 +200,7 @@ class BaseSorting(BaseExtractor):
                 segment_index=segment_index,
                 start_time=start_time,
                 end_time=end_time,
+                use_cache=use_cache,
             )
 
         segment_index = self._check_segment_index(segment_index)
@@ -237,6 +238,7 @@ class BaseSorting(BaseExtractor):
         segment_index: int | None = None,
         start_time: float | None = None,
         end_time: float | None = None,
+        use_cache: bool = True,
     ) -> np.ndarray:
         """
         Get spike train for a unit in seconds.
@@ -261,6 +263,9 @@ class BaseSorting(BaseExtractor):
             The start time in seconds for spike train extraction
         end_time : float or None, default: None
             The end time in seconds for spike train extraction
+        use_cache : bool, default: True
+            Passed to `get_unit_spike_train` when the times are computed from frames.
+            Ignored when the segment returns native times.
 
         Returns
         -------
@@ -283,7 +288,7 @@ class BaseSorting(BaseExtractor):
                 start_frame=start_frame,
                 end_frame=end_frame,
                 return_times=False,
-                use_cache=True,
+                use_cache=use_cache,
             )
 
             spike_times = self.sample_index_to_time(spike_frames, segment_index=segment_index)
@@ -322,7 +327,7 @@ class BaseSorting(BaseExtractor):
             start_frame=start_frame,
             end_frame=end_frame,
             return_times=False,
-            use_cache=True,
+            use_cache=use_cache,
         )
 
         t_start = segment._t_start if segment._t_start is not None else 0
@@ -522,6 +527,7 @@ class BaseSorting(BaseExtractor):
         ----------
         format : str, default: "numpy_folder"
             The format to save the sorting in. Options are:
+
             - "numpy_folder": Saves the sorting in a binary numpy folder format.
             - "zarr": Saves the sorting in Zarr format.
             - "memory": Saves the sorting in memory (shared memory or numpy array).
@@ -534,6 +540,8 @@ class BaseSorting(BaseExtractor):
             * "numpy_folder" format:
                 - folder : str or Path
                     The folder where the files will be saved.
+                - mmap_mode : str or None, default: None
+                    The memory-mapping mode to use when saving numpy files. If None, no memory mapping is used.
                 - overwrite : bool, default: False
                     If True, existing files in the folder will be overwritten.
             * "zarr" format:
@@ -1024,7 +1032,7 @@ class BaseSorting(BaseExtractor):
             warnings.warn(
                 "Sorting.to_spike_vector() with extremum_channel_inds is deprecated. "
                 "Use main_channel_indices instead"
-                "This will be removed in 0.016.0"
+                "This will be removed in 0.106.0"
             )
             main_channel_indices = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
 

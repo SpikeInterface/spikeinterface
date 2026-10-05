@@ -13,10 +13,12 @@ NUM_RECORDINGS = 2
 SORTERS = ["tridesclous2"]
 
 
-def create_recordings(NUM_RECORDINGS=2, base_seed=42):
+def create_recordings(folder, NUM_RECORDINGS=2, base_seed=42):
     recordings = []
     for i in range(NUM_RECORDINGS):
+
         recording, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=base_seed + i)
+        recording = recording.save(folder=folder / f"rec_for_generate_recording_{i}", format="binary", overwrite=True)
 
         if i % 2 == 0:
             recording.set_channel_groups(["0"] * 4 + ["1"] * 4)
@@ -28,7 +30,7 @@ def create_recordings(NUM_RECORDINGS=2, base_seed=42):
 
 def get_job_list(base_folder):
     jobs = []
-    recordings = create_recordings(NUM_RECORDINGS)
+    recordings = create_recordings(base_folder, NUM_RECORDINGS)
     for i, recording in enumerate(recordings):
         for sorter_name in SORTERS:
             kwargs = dict(
@@ -209,7 +211,7 @@ def test_run_sorter_by_property(create_cache_folder):
     if working_folder2.is_dir():
         shutil.rmtree(working_folder2)
 
-    recordings = create_recordings(NUM_RECORDINGS)
+    recordings = create_recordings(create_cache_folder, NUM_RECORDINGS)
 
     rec0 = recordings[0]
     rec0_by = rec0.split_by("group")
