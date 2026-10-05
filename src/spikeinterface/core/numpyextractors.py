@@ -276,8 +276,7 @@ class NumpySorting(BaseSorting):
 
         self._serializability["memory"] = True
         self._serializability["json"] = False
-        # theorically this should be False but for simplicity make generators simples we still need this.
-        self._serializability["pickle"] = True
+        self._serializability["pickle"] = False
 
         if spikes.size == 0:
             nseg = 1
