@@ -7,129 +7,198 @@ from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecuto
 from .common_reference import common_reference
 from .filter import highpass_filter, lowpass_filter
 
-# but whether RMS should exclude DC must be an explicit metric decision.
-# do we want to add some saturation detection?
-# TODO: rename these vars
-# factor out the chunk running stuff
-# think about the format ouf outputs (last)
-# Reduction matches IBL. Differences remain: sampling starts at 0 vs 40 s, chunks are demeaned,
-# processed AP uses high-pass/common-reference instead of destriping, and values are µV rather than IBL’s volts.
-# how to handle last chunk when num_samples // num_samples has remainder
-# log axis for rms / psd
-#      if num_chunks < 1:
-#         raise ValueError("num_chunks_per_segment must be at least 1")
-#    if num_chunks > max_start_frame + 1:
-#       raise ValueError(f"Segment {segment_index} is too short for {num_chunks} distinct chunk positions")
-# TODO: review spike rate, this isn't so useful in current form may have missunderstood, recheck IBL!
-# TODO: num_chunks estimate option?
+"""
+To discuss
+----------
+
+- RMS is demeaned (following ibl-neuropixel, not to_ibl)
+- expose hann window? will anyone ever care?
+
+to_ibl welch overlaps non-contigious samples
+proper tests of the chunk size job_kwargs because they are brittle..
+
+"""
 
 
 def raw_data_quality_metrics(
     raw_ap_recording: BaseRecording,
     raw_lfp_recording: BaseRecording | None = None,
     preprocessed_ap_recording: BaseRecording | None = None,
+    first_chunk_time_s=0.0,
     chunk_time_s=1.0,
-    num_chunks=24,
+    num_chunks=30,
+    rolling_rms_window_size_s=3.0,
     verbose: bool = False,
     **job_kwargs,
 ):
-    """ """
-    job_kwargs = fix_job_kwargs(job_kwargs)
+    """Compute sparse RMS/PSD summaries and rolling RMS for each recording.
+
+    Returns
+
+    EXPLAIN WHAT THESE THINGS ARE:
+
+    RMS_MEDIAN
+    RMS_QUANTILE
+    PSD
+    FREQS
+
+    -------
+    results : dict
+        ``chunked_results`` maps recording name -> metric name -> list of arrays indexed by segment.
+        ``rolling_rms`` maps recording name -> metric (``rms`` or ``times``) -> list of arrays indexed by segment.
+        #>>> psd = results["chunked_results"]["raw_ap_recording"]["psd"][0]  # (frequencies, channels)
+        # >>> freqs = results["chunked_results"]["raw_ap_recording"]["freqs"][0]  # Frequency bins in Hz
+    """
+    # Explicit slices control sparse processing; configure a matching executor duration.
+    sparse_job_kwargs, rolling_job_kwargs = _get_job_kwargs(job_kwargs, chunk_time_s, rolling_rms_window_size_s)
+
+    if not np.isfinite(first_chunk_time_s) or first_chunk_time_s < 0:
+        raise ValueError("first_chunk_time_s must be finite and non-negative")
 
     if preprocessed_ap_recording is None:
         preprocessed_ap_recording = highpass_filter(raw_ap_recording, freq_min=300)
         preprocessed_ap_recording = common_reference(preprocessed_ap_recording, operator="median")
 
     recordings = {
-        "raw": raw_ap_recording,
-        "prepro_ap": preprocessed_ap_recording,
+        "raw_ap_recording": raw_ap_recording,
+        "preprocessed_ap_recording": preprocessed_ap_recording,
     }
 
     if raw_lfp_recording is not None:
-        recordings.update({"lfp": raw_lfp_recording})
+        recordings.update({"raw_lfp_recording": raw_lfp_recording})
 
     all_chunk_results = {}
     all_rolling_rms = {}
 
     for recording_name, recording in recordings.items():
 
+        if verbose:
+            print(f"Running quality metrics for: {recording_name}")
+
+        # For each recording (and segment) generate the slices for the ChunkExecutor
+        # to run over. These divide up each segment according to the chunk arguments.
         sparse_slices_for_recording = _generate_skipped_chunk_slices(
             recording,
+            first_chunk_time_s=first_chunk_time_s,
             chunk_time_s=chunk_time_s,
             num_chunks=num_chunks,
         )
 
-        chunk_results = _compute_rms_psd_over_sparse_chunks(recording, sparse_slices_for_recording, verbose, job_kwargs)
+        # Compute the RMS and PSDF over these sparsely samples chunks
+        chunk_results = _compute_rms_psd_over_sparse_chunks(
+            recording, sparse_slices_for_recording, verbose, sparse_job_kwargs
+        )
 
-        rolling_rms = _compute_rolling_rms(recording, verbose, job_kwargs)
+        # Compute the RMS over the entire recording in blocks
+        # of size `rolling_rms_window_size_s`.
+        rolling_rms = _compute_rolling_rms(recording, rolling_rms_window_size_s, verbose, rolling_job_kwargs)
 
         all_chunk_results[recording_name] = chunk_results
         all_rolling_rms[recording_name] = rolling_rms
 
     return {
-        "quick": all_chunk_results,
+        "chunked_results": all_chunk_results,
         "rolling_rms": all_rolling_rms,
     }
 
 
-def _compute_rms_psd_over_sparse_chunks(recording, sparse_slices_for_recording, verbose, job_kwargs):
-    """"""
-    resuts_per_chunk = _run_executor_over_chunks(
-        recording,
-        _compute_rms_psd,
-        job_name="compute_rms",
-        verbose=verbose,
-        job_kwargs=job_kwargs,
-        slices=sparse_slices_for_recording,
+def _get_job_kwargs(job_kwargs, chunk_time_s, rolling_rms_window_size_s):
+    """Build independent execution settings for sparse metrics and rolling RMS."""
+    chunk_keys = {"chunk_size", "chunk_duration", "chunk_memory", "total_memory"}
+    if chunk_keys.intersection(job_kwargs):
+        raise ValueError("Use the metric window parameters to control chunk sizes.")
+
+    sparse_job_kwargs = fix_job_kwargs(
+        {
+            **job_kwargs,
+            "chunk_duration": chunk_time_s,
+        }
     )
 
-    # Unpack the results into per-segment arrays
-    segment_results_chunked = {
-        segment_index: {"rms": [], "psd": [], "freqs": None} for segment_index in range(recording.get_num_segments())
+    rolling_job_kwargs = fix_job_kwargs(
+        {
+            **job_kwargs,
+            "chunk_duration": rolling_rms_window_size_s,
+        }
+    )
+
+    return sparse_job_kwargs, rolling_job_kwargs
+
+
+def _compute_rms_psd_over_sparse_chunks(recording, sparse_slices_for_recording, verbose, job_kwargs):
+    """"""
+    executor = TimeSeriesChunkExecutor(
+        recording,
+        _compute_rms_psd,
+        _init_rms_worker,
+        (recording,),
+        job_name="compute_rms",
+        verbose=verbose,
+        handle_returns=True,
+        **job_kwargs,
+    )
+    results_per_chunk = executor.run(slices=sparse_slices_for_recording)
+
+    # Unpack the (segment_index, rms, ...) per-chunk results into single arrays
+    # organized by segment and result type
+    num_segments = recording.get_num_segments()
+    chunk_results = {
+        "rms": [[] for _ in range(num_segments)],
+        "psd": [[] for _ in range(num_segments)],
     }
 
-    for segment_index, rms_by_channel, freqs, psd in resuts_per_chunk:
-        segment_results_chunked[segment_index]["rms"].append(rms_by_channel)
-        segment_results_chunked[segment_index]["psd"].append(psd)
+    shared_freqs = None
+    for segment_index, rms_by_channel, freqs, psd in results_per_chunk:
+        chunk_results["rms"][segment_index].append(rms_by_channel)
+        chunk_results["psd"][segment_index].append(psd)
 
-        if segment_results_chunked[segment_index]["freqs"] is None:
-            segment_results_chunked[segment_index]["freqs"] = freqs
+        if shared_freqs is None:
+            shared_freqs = freqs
+        else:
+            assert np.array_equal(shared_freqs, freqs), "All chunks should have the same frequency grid."
 
-    # Stack the per-chunk arrays and compute summary statistics over them
+    # Stack the per-chunk arrays and compute RMS summary statistics and
+    # average the PSD over them
     summary_over_chunks = {
-        "rms_median_over_chunk": [],
-        "rms_quantile_over_channel": [],
-        "welch_no_overlap": [],
+        "rms_median": [],
+        "rms_quantile": [],
+        "psd": [],
         "freqs": [],
     }
+    for segment_index in range(num_segments):
 
-    for segment_index, data in segment_results_chunked.items():
+        seg_rms_median = np.median(np.stack(chunk_results["rms"][segment_index]), axis=0)
+        seg_rms_quantile = np.percentile(seg_rms_median, [10, 90])
 
-        rms_median_over_chunk = np.median(np.stack(data["rms"]), axis=0)
-        rms_quantile_over_channel = np.percentile(rms_median_over_chunk, [10, 90])
-
-        welch_no_overlap = np.mean(
-            np.stack(data["psd"]),
+        seg_welch_no_overlap = np.mean(
+            np.stack(chunk_results["psd"][segment_index]),
             axis=0,
         )
-        summary_over_chunks["rms_median_over_chunk"].append(rms_median_over_chunk)
-        summary_over_chunks["rms_quantile_over_channel"].append(rms_quantile_over_channel)
-        summary_over_chunks["welch_no_overlap"].append(welch_no_overlap)
-        summary_over_chunks["freqs"].append(data["freqs"])
+        summary_over_chunks["rms_median"].append(seg_rms_median)
+        summary_over_chunks["rms_quantile"].append(seg_rms_quantile)
+        summary_over_chunks["psd"].append(seg_welch_no_overlap)
+        summary_over_chunks["freqs"].append(shared_freqs)
 
     return summary_over_chunks
 
 
-def _compute_rolling_rms(recording, verbose, job_kwargs):
-    """"""
-    results = _run_executor_over_chunks(
+def _compute_rolling_rms(recording, rolling_rms_window_size_s, verbose, job_kwargs):
+    """job_kwargs will have
+
+    job_kwargs = job_kwargs.copy()
+    job_kwargs["chunk_duration"] = rolling_rms_window_size_s
+    """
+    executor = TimeSeriesChunkExecutor(
         recording,
         _compute_rms_with_times,
+        _init_rms_worker,
+        (recording,),
         job_name="compute_rms_with_times",
         verbose=verbose,
-        job_kwargs=job_kwargs,
-        slices=None,
+        handle_returns=True,
+        **job_kwargs,
     )
+    results = executor.run()
 
     segment_results_chunked = {
         segment_index: {"rms": [], "times": []} for segment_index in range(recording.get_num_segments())
@@ -139,15 +208,20 @@ def _compute_rolling_rms(recording, verbose, job_kwargs):
         segment_results_chunked[segment_index]["rms"].append(rms)
         segment_results_chunked[segment_index]["times"].append(time)
 
-    final_results = [
-        {
-            "rms": np.stack(data["rms"]),
-            "times": np.asarray(data["times"]),
-        }
-        for data in segment_results_chunked.values()
-    ]
+    return {
+        "rms": [np.stack(data["rms"]) for data in segment_results_chunked.values()],
+        "times": [np.asarray(data["times"]) for data in segment_results_chunked.values()],
+    }
 
-    return final_results
+
+# Executor functions
+# --------------------------------------------------------------------------------------
+
+
+def _init_rms_worker(recording):
+    return {
+        "recording": recording,
+    }
 
 
 def _compute_rms_psd(segment_index, start_frame, end_frame, worker_context):
@@ -161,12 +235,13 @@ def _compute_rms_psd(segment_index, start_frame, end_frame, worker_context):
         return_in_uV=True,
     ).astype(np.float64, copy=False)
 
+    traces -= np.mean(traces, axis=0)
     rms = _compute_rms(traces)
 
     frequencies, psd = periodogram(
         traces,
         fs=recording.get_sampling_frequency(),
-        window="hann",  # TODO: expose this
+        window="hann",
         detrend="constant",
         scaling="density",
         axis=0,
@@ -186,6 +261,7 @@ def _compute_rms_with_times(segment_index, start_frame, end_frame, worker_contex
         return_in_uV=True,
     ).astype(np.float64, copy=False)
 
+    traces -= np.mean(traces, axis=0)
     rms = _compute_rms(traces)
 
     rms_time_center_bin = (
@@ -205,42 +281,20 @@ def _compute_rms(traces):
     return np.sqrt(np.mean(np.square(traces), axis=0))
 
 
-def _init_rms_worker(recording):
-    return {
-        "recording": recording,
-    }
-
-
-def _run_executor_over_chunks(
-    recording,
-    function_to_run,
-    job_name,
-    verbose,
-    job_kwargs,
-    slices,
-):
-    executor = TimeSeriesChunkExecutor(
-        recording,
-        function_to_run,
-        _init_rms_worker,
-        (recording,),
-        job_name=job_name,
-        verbose=verbose,
-        handle_returns=True,
-        **job_kwargs,
-    )
-
-    return executor.run(slices=slices)
+# Slice generator
+# --------------------------------------------------------------------------------------
 
 
 def _generate_skipped_chunk_slices(
     recording,
     chunk_time_s,
     num_chunks,
+    first_chunk_time_s=0.0,
 ):
-    """"""
+    """Generate non-overlapping chunks starting at an offset from each segment's beginning."""
     sampling_frequency = recording.get_sampling_frequency()
     chunk_size = round(chunk_time_s * sampling_frequency)
+    first_frame = round(first_chunk_time_s * sampling_frequency)
 
     slices = []
     for segment_index in range(recording.get_num_segments()):
@@ -248,25 +302,20 @@ def _generate_skipped_chunk_slices(
         num_samples = recording.get_num_samples(segment_index)
         max_start_frame = num_samples - chunk_size
         if max_start_frame < 0:
-            # Reject short segments explicitly: negative starts can produce unequal chunk lengths
-            # and incompatible PSD frequency grids when the per-chunk spectra are stacked.
             raise ValueError(f"Segment {segment_index} is shorter than chunk_time_s={chunk_time_s}")
 
-        # Uniformly spaced starts still overlap (or repeat) unless all requested chunks fit.
-        if num_chunks * chunk_size > num_samples:
+        # Divide the recording time into evenly spaced chunks with the first chunk starting
+        # at `first_frame` and the last chunk finishing at example `num_samples`
+        # Ensure that each segment has enough samples to fit all requested chunkds.
+        available_samples = num_samples - first_frame
+        if num_chunks * chunk_size > available_samples:
             raise ValueError(
-                f"Segment {segment_index} has {num_samples} samples, but {num_chunks} non-overlapping "
-                f"chunks of {chunk_size} samples require {num_chunks * chunk_size} samples. "
-                "Reduce num_chunks or chunk_time_s."
+                f"Segment {segment_index} is not long enough to accommodate the requested "
+                "number of chunks at the requested chunk size."
             )
 
-        num_chunks_for_segment = num_chunks
-
-        if num_chunks_for_segment == 1:
-            start_frames = np.array([0], dtype=np.int64)
-        else:
-            start_to_start_interval_size = max_start_frame / (num_chunks_for_segment - 1)
-            start_frames = np.rint(np.arange(num_chunks_for_segment) * start_to_start_interval_size)
+        start_frames = np.linspace(first_frame, max_start_frame, num_chunks)
+        start_frames = np.rint(start_frames).astype(np.int64)
 
         slices.extend((segment_index, int(start_frame), int(start_frame + chunk_size)) for start_frame in start_frames)
 
@@ -278,83 +327,166 @@ def _generate_skipped_chunk_slices(
 # ----------------------------------------------------------------------------------------------------------------------
 
 
-def plot_raw_data_quality_metrics(chunk_results, rolling_rms, segment_index=0):
-    """Plot rolling RMS and power spectra for one segment.
-    TODO: rewrite
+def plot_raw_data_quality_metrics(chunk_results, rolling_rms, segment_index=0, *, recordings=None):
+    """Plot one segment, optionally ordering channels by probe depth.
+
+    ``recordings`` maps result names to the recordings used to compute them.
+    When supplied, channels with locations are ordered using
+    ``order_channels_by_depth`` (tip first, bottom of the plot), and ticks show
+    channel IDs. Otherwise, rows retain their original recording order.
     """
     import matplotlib.pyplot as plt
-    from matplotlib.colors import LogNorm
+    from matplotlib.colors import LogNorm, Normalize
+    from spikeinterface.core import order_channels_by_depth
 
-    recording_names = ("raw", "prepro_ap", "lfp")
+    recording_names = ["raw_ap_recording", "preprocessed_ap_recording"]
+    if "raw_lfp_recording" in chunk_results or "raw_lfp_recording" in rolling_rms:
+        recording_names.append("raw_lfp_recording")
     missing_names = [name for name in recording_names if name not in chunk_results or name not in rolling_rms]
     if missing_names:
         raise ValueError(f"Missing results for recordings: {', '.join(missing_names)}")
+    if recordings is not None and any(name not in recordings for name in recording_names):
+        raise ValueError("recordings must include each recording represented in the results")
 
-    num_segments = len(rolling_rms["raw"])
+    num_segments = len(rolling_rms["raw_ap_recording"]["rms"])
     if num_segments == 0:
         raise ValueError("At least one recording segment is required")
-    if any(len(rolling_rms[name]) != num_segments for name in recording_names):
-        raise ValueError("All rolling RMS results must have the same number of segments")
-    if not 0 <= segment_index < num_segments:
-        raise IndexError(f"segment_index must be between 0 and {num_segments - 1}, got {segment_index}")
+    for name in recording_names:
+        for results, metrics in (
+            (rolling_rms[name], ("rms", "times")),
+            (chunk_results[name], ("rms_median", "rms_quantile", "psd", "freqs")),
+        ):
+            if any(metric not in results or len(results[metric]) != num_segments for metric in metrics):
+                raise ValueError(f"All metrics for {name} must contain {num_segments} segments")
+    if not isinstance(segment_index, (int, np.integer)) or not 0 <= segment_index < num_segments:
+        raise IndexError(f"segment_index must be an integer between 0 and {num_segments - 1}, got {segment_index}")
 
-    display_names = {"raw": "Raw AP", "prepro_ap": "Preprocessed AP", "lfp": "LFP"}
-    rms_figure, rms_axes = plt.subplots(1, 3, figsize=(15, 3.5), constrained_layout=True)
-    for axis, recording_name in zip(rms_axes, recording_names):
-        segment_data = rolling_rms[recording_name][segment_index]
-        rms = np.asarray(segment_data["rms"])
-        times = np.asarray(segment_data["times"])
-        if rms.ndim != 2 or times.ndim != 1 or rms.shape[0] != times.size:
-            raise ValueError(
-                f"Invalid rolling RMS shapes for {recording_name} segment {segment_index}: "
-                f"rms={rms.shape}, times={times.shape}"
+    # Validate all selected data before creating figures.
+    selected = {}
+    for name in recording_names:
+        data = {
+            metric: np.asarray(chunk_results[name][metric][segment_index])
+            for metric in ("rms_median", "rms_quantile", "psd", "freqs")
+        }
+        data.update({metric: np.asarray(rolling_rms[name][metric][segment_index]) for metric in ("rms", "times")})
+        for value_key, coordinate_key in (("rms", "times"), ("psd", "freqs")):
+            values, coordinates = data[value_key], data[coordinate_key]
+            if values.ndim != 2 or coordinates.ndim != 1 or values.size == 0 or values.shape[0] != coordinates.size:
+                raise ValueError(f"Invalid {value_key}/{coordinate_key} shapes for {name} segment {segment_index}")
+            if not np.all(np.isfinite(values)) or np.any(values < 0):
+                raise ValueError(f"{value_key} for {name} must contain finite, non-negative values")
+            if not np.all(np.isfinite(coordinates)) or np.any(np.diff(coordinates) <= 0):
+                raise ValueError(f"{coordinate_key} for {name} must be finite and strictly increasing")
+        num_channels = data["rms"].shape[1]
+        if (
+            data["psd"].shape[1] != num_channels
+            or data["rms_median"].shape != (num_channels,)
+            or data["rms_quantile"].shape != (2,)
+        ):
+            raise ValueError(f"Inconsistent channel or RMS summary shapes for {name} segment {segment_index}")
+        if np.any(data["freqs"] < 0):
+            raise ValueError(f"Frequencies for {name} must be non-negative")
+        for metric in ("rms_median", "rms_quantile"):
+            if not np.all(np.isfinite(data[metric])) or np.any(data[metric] < 0):
+                raise ValueError(f"{metric} for {name} must contain finite, non-negative values")
+        data["channel_ids"] = np.arange(num_channels)
+        data["channel_label"] = "Channel index (recording order)"
+        if recordings is not None:
+            recording = recordings[name]
+            if recording.get_num_channels() != num_channels:
+                raise ValueError(f"Recording channel count does not match results for {name}")
+            order = np.arange(num_channels)
+            data["channel_label"] = "Channel ID (recording order)"
+            if recording.has_channel_location():
+                if not np.all(np.isfinite(recording.get_channel_locations())):
+                    raise ValueError(f"Channel locations for {name} must be finite to order by depth")
+                order, _ = order_channels_by_depth(recording)
+                data["channel_label"] = "Channel ID (depth ordered)"
+            data["channel_ids"] = recording.get_channel_ids()[order]
+            data["rms"] = data["rms"][:, order]
+            data["psd"] = data["psd"][:, order]
+            data["rms_median"] = data["rms_median"][order]
+        selected[name] = data
+
+    def label_channels(axis, data):
+        channel_ids = data["channel_ids"]
+        ticks = np.linspace(0, channel_ids.size - 1, min(8, channel_ids.size), dtype=int)
+        axis.set_yticks(ticks, labels=[str(channel_ids[index]) for index in ticks])
+        axis.set_ylabel(data["channel_label"])
+
+    def plot_values(axis, coordinates, values, norm=None):
+        num_channels = values.shape[1]
+        if coordinates.size == 1:
+            # A single center gives no window width; show values at that coordinate.
+            image = axis.scatter(
+                np.full(num_channels, coordinates[0]),
+                np.arange(num_channels),
+                c=values[0],
+                marker="s",
+                norm=norm,
             )
+        else:
+            # Infer display edges from centers, retaining irregular spacing at the final window.
+            edges = np.r_[
+                coordinates[0] - (coordinates[1] - coordinates[0]) / 2,
+                coordinates[:-1] + np.diff(coordinates) / 2,
+                coordinates[-1] + (coordinates[-1] - coordinates[-2]) / 2,
+            ]
+            image = axis.pcolormesh(
+                edges,
+                np.arange(num_channels + 1) - 0.5,
+                values.T,
+                shading="flat",
+                norm=norm,
+            )
+        axis.set_ylim(-0.5, num_channels - 0.5)
+        return image
 
-        image = axis.imshow(
-            rms.T,
-            origin="lower",
-            aspect="auto",
-            extent=(times[0], times[-1], 0, rms.shape[1]),
-            interpolation="nearest",
-        )
-        rms_by_channel = np.asarray(chunk_results[recording_name]["rms_median_over_chunk"][segment_index])
-        rms_quantiles = np.asarray(chunk_results[recording_name]["rms_quantile_over_channel"][segment_index])
+    display_names = {
+        "raw_ap_recording": "Raw AP",
+        "preprocessed_ap_recording": "Preprocessed AP",
+        "raw_lfp_recording": "LFP",
+    }
+    num_recordings = len(recording_names)
+    rms_figure, rms_axes = plt.subplots(1, num_recordings, figsize=(5 * num_recordings, 3.5), constrained_layout=True)
+    for axis, name in zip(rms_axes, recording_names):
+        data = selected[name]
+        image = plot_values(axis, data["times"], data["rms"])
+        rms_quantiles = data["rms_quantile"]
         axis.set_title(
-            f"{display_names[recording_name]} | segment {segment_index}\n"
-            f"median RMS {np.median(rms_by_channel):.2f} µV; "
-            f"channel P10–P90 {rms_quantiles[0]:.2f}–{rms_quantiles[1]:.2f} µV",
+            f"{display_names[name]} | segment {segment_index}\n"
+            f"median RMS {np.median(data['rms_median']):.2f} \u00b5V; "
+            f"channel P10\u2013P90 {rms_quantiles[0]:.2f}\u2013{rms_quantiles[1]:.2f} \u00b5V",
             fontsize=10,
         )
         axis.set_xlabel("Time (s)")
-        axis.set_ylabel("Channel index")
-        rms_figure.colorbar(image, ax=axis, label="RMS (µV)")
+        label_channels(axis, data)
+        rms_figure.colorbar(image, ax=axis, label="RMS (\u00b5V)")
 
-    spectrum_figure, spectrum_axes = plt.subplots(1, 3, figsize=(15, 3.5), constrained_layout=True)
-    for axis, recording_name in zip(spectrum_axes, recording_names):
-        frequencies = np.asarray(chunk_results[recording_name]["freqs"][segment_index])
-        psd = np.asarray(chunk_results[recording_name]["welch_no_overlap"][segment_index])
-        if psd.ndim != 2 or frequencies.ndim != 1 or psd.shape[0] != frequencies.size:
-            raise ValueError(
-                f"Invalid PSD shapes for {recording_name} segment {segment_index}: "
-                f"psd={psd.shape}, frequencies={frequencies.shape}"
-            )
+    spectrum_figure, spectrum_axes = plt.subplots(
+        1, num_recordings, figsize=(5 * num_recordings, 3.5), constrained_layout=True
+    )
+    for axis, name in zip(spectrum_axes, recording_names):
+        data = selected[name]
+        psd = data["psd"]
         positive_psd = psd[psd > 0]
-        psd_floor = positive_psd.min() if positive_psd.size else np.finfo(float).tiny
-        psd_for_plot = np.maximum(psd, psd_floor)
-        psd_ceiling = psd_for_plot.max()
-        if psd_ceiling <= psd_floor:
-            psd_ceiling = psd_floor * 10
-        image = axis.imshow(
-            psd_for_plot.T,
-            origin="lower",
-            aspect="auto",
-            extent=(frequencies[0], frequencies[-1], 0, psd.shape[1]),
-            interpolation="nearest",
-            norm=LogNorm(vmin=psd_floor, vmax=psd_ceiling),
-        )
-        axis.set_title(f"{display_names[recording_name]} | segment {segment_index}")
+        if positive_psd.size:
+            psd_floor = positive_psd.min()
+            psd_ceiling = positive_psd.max()
+            if psd_ceiling == psd_floor:
+                psd_floor /= 10
+            psd_for_plot = np.maximum(psd, psd_floor)
+            norm = LogNorm(vmin=psd_floor, vmax=psd_ceiling)
+        else:
+            # Zero power has no logarithm; keep zeros visible on a linear color scale.
+            psd_for_plot = psd
+            norm = Normalize(vmin=0, vmax=1)
+        image = plot_values(axis, data["freqs"], psd_for_plot, norm=norm)
+        if data["freqs"].size > 1:
+            axis.set_xlim(left=0)
+        axis.set_title(f"{display_names[name]} | segment {segment_index}")
         axis.set_xlabel("Frequency (Hz)")
-        axis.set_ylabel("Channel index")
-        spectrum_figure.colorbar(image, ax=axis, label="PSD (µV²/Hz)")
+        label_channels(axis, data)
+        spectrum_figure.colorbar(image, ax=axis, label="PSD (\u00b5V\u00b2/Hz)")
 
     return rms_figure, spectrum_figure

@@ -10,49 +10,84 @@ from spikeinterface.core import NumpyRecording
 from spikeinterface.preprocessing import plot_raw_data_quality_metrics, raw_data_quality_metrics
 
 REAL_DATA = True
-REAL_DATA_DURATION_S = 20 * 60
-DANDI_S3_URL = "https://dandiarchive.s3.amazonaws.com/blobs/a8f/800/a8f8003e-4483-4b50-8a45-91ac5971f5d5"
-REAL_DATA_FOLDER = Path(__file__).parent / "cache_folder" / "dandi_000939_A3702_first_20_minutes"
+REAL_DATA_DURATION_S = 10 * 60
+# Neuropixels recording in macaque V1 during presentation of static gratings.
+# DANDI 001290, version 0.260827.1449, subject L11104 (CC-BY-4.0).
+# https://dandiarchive.org/dandiset/001290/0.260827.1449
+DANDI_S3_URL = "https://dandiarchive.s3.amazonaws.com/blobs/e31/54b/e3154bc7-9510-436e-b6bb-fa181d70dc08"
+DANDI_ASSET_PATH = "sub-L11104/sub-L11104_ses-None_ecephys.nwb"
+DANDI_FILE_SIZE = 7_378_434_120
+DANDI_SHA256 = "720a532ec0ef60ee82c9b4de9c6013a3b6f9f7642893d881a712651fd5df91f8"
+REAL_DATA_FOLDER = Path(__file__).parent / "cache_folder" / "dandi_001290_L11104"
+DANDI_NWB_PATH = REAL_DATA_FOLDER / Path(DANDI_ASSET_PATH).name
 
 
-def load_real_recording():
-	from spikeinterface import load
-	from spikeinterface.extractors.nwbextractors import NwbRecordingExtractor
+def download_neuropixels_recording():
+    """Download the NWB file once, resuming partial downloads and verifying its checksum."""
+    import hashlib
+    import requests
+    from tqdm.auto import tqdm
 
-	class NwbRecordingWithoutChannelLocations(NwbRecordingExtractor):
-		def set_channel_locations(self, locations):
-			pass
+    if DANDI_NWB_PATH.exists():
+        if DANDI_NWB_PATH.stat().st_size != DANDI_FILE_SIZE:
+            raise ValueError(f"Unexpected size for cached recording: {DANDI_NWB_PATH}")
+        return DANDI_NWB_PATH
 
-	if REAL_DATA_FOLDER.exists():
-		print(f"Loading cached DANDI recording from {REAL_DATA_FOLDER}")
-		return load(REAL_DATA_FOLDER)
+    REAL_DATA_FOLDER.mkdir(parents=True, exist_ok=True)
+    partial_path = DANDI_NWB_PATH.with_suffix(".nwb.part")
+    downloaded = partial_path.stat().st_size if partial_path.exists() else 0
+    if downloaded > DANDI_FILE_SIZE:
+        raise ValueError(f"Partial download is larger than the expected file: {partial_path}")
 
-	print("Inspecting DANDI 000939 electrical series...")
-	series_paths = NwbRecordingExtractor.fetch_available_electrical_series_paths(
-		file_path=DANDI_S3_URL,
-		stream_mode="remfile",
-	)
-	non_lfp_paths = [path for path in series_paths if "lfp" not in path.lower()]
-	electrical_series_path = (non_lfp_paths or series_paths)[0]
-	remote_recording = NwbRecordingWithoutChannelLocations(
-		file_path=DANDI_S3_URL,
-		stream_mode="remfile",
-		electrical_series_path=electrical_series_path,
-		load_channel_properties=False,
-	)
+    if downloaded < DANDI_FILE_SIZE:
+        headers = {"Range": f"bytes={downloaded}-"} if downloaded else {}
+        with requests.get(DANDI_S3_URL, headers=headers, stream=True, timeout=(30, 120)) as response:
+            response.raise_for_status()
+            if downloaded and (
+                response.status_code != 206
+                or not response.headers.get("Content-Range", "").startswith(f"bytes {downloaded}-")
+            ):
+                raise RuntimeError("Server did not honor the download resume offset")
+            with partial_path.open("ab" if downloaded else "wb") as output, tqdm(
+                total=DANDI_FILE_SIZE, initial=downloaded, unit="B", unit_scale=True,
+                desc="Downloading DANDI Neuropixels NWB", mininterval=10,
+            ) as progress:
+                for block in response.iter_content(chunk_size=8 * 1024 * 1024):
+                    output.write(block)
+                    progress.update(len(block))
 
-	end_frame = min(
-		round(REAL_DATA_DURATION_S * remote_recording.get_sampling_frequency()),
-		remote_recording.get_num_samples(segment_index=0),
-	)
-	recording = remote_recording.frame_slice(start_frame=0, end_frame=end_frame)
-	estimated_size_gb = end_frame * recording.get_num_channels() * recording.get_dtype().itemsize / 1e9
-	print(
-		f"Downloading {end_frame / recording.get_sampling_frequency() / 60:.1f} minutes "
-		f"from {electrical_series_path} (approximately {estimated_size_gb:.1f} GB)..."
-	)
-	REAL_DATA_FOLDER.parent.mkdir(parents=True, exist_ok=True)
-	return recording.save(format="binary", folder=REAL_DATA_FOLDER, overwrite=True)
+    if partial_path.stat().st_size != DANDI_FILE_SIZE:
+        raise RuntimeError("Incomplete download; rerun to resume")
+    print("Verifying DANDI SHA-256 checksum...", flush=True)
+    digest = hashlib.sha256()
+    with partial_path.open("rb") as downloaded_file:
+        for block in iter(lambda: downloaded_file.read(8 * 1024 * 1024), b""):
+            digest.update(block)
+    if digest.hexdigest() != DANDI_SHA256:
+        raise ValueError(f"DANDI checksum mismatch: {partial_path}")
+    partial_path.rename(DANDI_NWB_PATH)
+    return DANDI_NWB_PATH
+
+
+def load_real_recordings():
+    """Load matching AP and LFP streams from the downloaded Neuropixels recording."""
+    from spikeinterface.extractors.nwbextractors import NwbRecordingExtractor
+
+    file_path = download_neuropixels_recording()
+    recordings = []
+    for series_name in ("ElectricalSeriesAPImec", "ElectricalSeriesLFImec"):
+        recording = NwbRecordingExtractor(
+            file_path=file_path,
+            electrical_series_path=f"acquisition/{series_name}",
+        )
+        end_frame = min(
+            round(REAL_DATA_DURATION_S * recording.get_sampling_frequency()),
+            recording.get_num_samples(segment_index=0),
+        )
+        recording = recording.frame_slice(start_frame=0, end_frame=end_frame)
+        print(f"{series_name}: {recording}")
+        recordings.append(recording)
+    return tuple(recordings)
 
 
 def make_realistic_segment(segment_index, sampling_frequency, duration_s, num_channels, rng):
@@ -92,20 +127,33 @@ def make_realistic_segment(segment_index, sampling_frequency, duration_s, num_ch
 
 	return traces.astype("float32")
 
-if REAL_DATA:
-	recording = load_real_recording()
-else:
-	sampling_frequency = 2_000.0
-	duration_s = 301.0
-	num_channels = 8
-	rng = np.random.default_rng(seed=0)
-	traces_list = [
-		make_realistic_segment(segment_index, sampling_frequency, duration_s, num_channels, rng)
-		for segment_index in range(2)
-	]
-	recording = NumpyRecording(traces_list, sampling_frequency=sampling_frequency)
+if __name__ == "__main__":
+	import spikeinterface.full as si
 
-results = raw_data_quality_metrics(recording, n_jobs=10)
-for segment_index in range(recording.get_num_segments()):
-	plot_raw_data_quality_metrics(results["quick"], results["rolling_rms"], segment_index=segment_index)
-plt.show()
+	if REAL_DATA:
+		recording, lfp_recording = load_real_recordings()
+	else:
+		sampling_frequency = 2_000.0
+		duration_s = 301.0
+		num_channels = 8
+		rng = np.random.default_rng(seed=0)
+		traces_list = [
+			make_realistic_segment(segment_index, sampling_frequency, duration_s, num_channels, rng)
+			for segment_index in range(2)
+		]
+		recording = NumpyRecording(traces_list, sampling_frequency=sampling_frequency)
+		lfp_recording = si.lowpass_filter(recording, 300)
+
+	results = raw_data_quality_metrics(recording, raw_lfp_recording=lfp_recording, n_jobs=10)
+	# Automatic AP preprocessing preserves the raw AP channel order and geometry.
+	plot_recordings = {
+		"raw_ap_recording": recording,
+		"preprocessed_ap_recording": recording,
+		"raw_lfp_recording": lfp_recording,
+	}
+	for segment_index in range(recording.get_num_segments()):
+		plot_raw_data_quality_metrics(
+			results["chunked_results"], results["rolling_rms"],
+			segment_index=segment_index, recordings=plot_recordings,
+		)
+	plt.show()
