@@ -777,7 +777,8 @@ def is_path_remote(path: str | Path) -> bool:
     is_remote: bool
         Whether the path is a remote path.
     """
-    return "s3://" in str(path) or "gcs://" in str(path)
+    remote_schemes = ("s3://", "gcs://", "http://", "https://")
+    return any(scheme in str(path) for scheme in remote_schemes)
 
 
 def ms_to_samples(ms: float, sampling_frequency: float) -> int:

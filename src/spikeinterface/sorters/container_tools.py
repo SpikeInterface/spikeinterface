@@ -8,7 +8,7 @@ import warnings
 # TODO move this inside functions
 
 
-from spikeinterface.core.core_tools import recursive_path_modifier, _get_paths_list
+from spikeinterface.core.core_tools import recursive_path_modifier, _get_paths_list, is_path_remote
 
 
 def find_recording_folders(d):
@@ -17,8 +17,7 @@ def find_recording_folders(d):
     path_list = _get_paths_list(d=d)
     # Remote paths (URLs) are read over the network from inside the container, so there is nothing
     # to mount for them.
-    is_remote_path = lambda path: "://" in str(path)
-    local_path_list = [p for p in path_list if not is_remote_path(p)]
+    local_path_list = [p for p in path_list if not is_path_remote(p)]
     folders_to_mount = [Path(p).resolve().parent for p in local_path_list]
     if len(folders_to_mount) == 0:
         return []
