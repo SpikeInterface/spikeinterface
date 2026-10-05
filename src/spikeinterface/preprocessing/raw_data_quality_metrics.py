@@ -7,11 +7,6 @@ from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecuto
 from .common_reference import common_reference
 from .filter import highpass_filter, lowpass_filter
 
-# TODO: there is too much indirection here and its a bit confusing to follow. One suggestion:
-# The questionable layer is _compute_rms_psd_over_sparse_chunks: _compute_sparse_metrics builds a dictionary by looping over recordings, then delegates to another function that loops over those same recordings. That splits one workflow across two places.
-#
-# My preference: have _compute_sparse_metrics loop over recordings, generate each recording’s slices, and call a single-recording RMS/PSD helper. Keep AP peak detection there too. That removes the intermediate slice dictionary and makes ownership clearer without creating one large function
-
 # but whether RMS should exclude DC must be an explicit metric decision.
 # do we want to add some saturation detection?
 # TODO: rename these vars
@@ -21,114 +16,138 @@ from .filter import highpass_filter, lowpass_filter
 # processed AP uses high-pass/common-reference instead of destriping, and values are µV rather than IBL’s volts.
 # how to handle last chunk when num_samples // num_samples has remainder
 # log axis for rms / psd
-#        if max_start_frame < 0:  # TODO: this check elsewhere
-#           raise ValueError(f"Segment {segment_index} is shorter than chunk_time_s={chunk_time_s}")
 #      if num_chunks < 1:
 #         raise ValueError("num_chunks_per_segment must be at least 1")
 #    if num_chunks > max_start_frame + 1:
 #       raise ValueError(f"Segment {segment_index} is too short for {num_chunks} distinct chunk positions")
 # TODO: review spike rate, this isn't so useful in current form may have missunderstood, recheck IBL!
+# TODO: num_chunks estimate option?
 
 
 def raw_data_quality_metrics(
-    raw_recording: BaseRecording,
-    preprocessed_ap: BaseRecording | None = None,
-    lfp_recording: BaseRecording | None = None,
-    num_chunks=24,
+    raw_ap_recording: BaseRecording,
+    raw_lfp_recording: BaseRecording | None = None,
+    preprocessed_ap_recording: BaseRecording | None = None,
     chunk_time_s=1.0,
-    peak_detection_kwargs: dict | None = None,
+    num_chunks=24,
     verbose: bool = False,
     **job_kwargs,
 ):
+    """ """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    if preprocessed_ap is None:
-        preprocessed_ap = highpass_filter(raw_recording, freq_min=300)
-        preprocessed_ap = common_reference(preprocessed_ap, operator="median")
-
-    if lfp_recording is None:
-        lfp_recording = lowpass_filter(
-            raw_recording,
-            freq_max=300,
-        )
-
-    peak_detection_method = "locally_exclusive" if preprocessed_ap.has_probe() else "by_channel"
-    if peak_detection_kwargs is None:
-        peak_detection_kwargs = {
-            "peak_sign": "neg",
-            "detect_threshold": 5,
-            "exclude_sweep_ms": 1.0,
-        }
-        if peak_detection_method == "locally_exclusive":
-            peak_detection_kwargs["radius_um"] = 50
-    else:
-        peak_detection_kwargs = peak_detection_kwargs.copy()
+    if preprocessed_ap_recording is None:
+        preprocessed_ap_recording = highpass_filter(raw_ap_recording, freq_min=300)
+        preprocessed_ap_recording = common_reference(preprocessed_ap_recording, operator="median")
 
     recordings = {
-        "raw": raw_recording,
-        "prepro_ap": preprocessed_ap,
-        "lfp": lfp_recording,
+        "raw": raw_ap_recording,
+        "prepro_ap": preprocessed_ap_recording,
     }
 
-    # Compute RMS and PSD over chunks for three recordings,
-    # as well as spikes in the AP band in the same chunks
-    chunk_results = _compute_sparse_metrics(
-        recordings, chunk_time_s, num_chunks, peak_detection_method, peak_detection_kwargs, verbose, job_kwargs
-    )
+    if raw_lfp_recording is not None:
+        recordings.update({"lfp": raw_lfp_recording})
 
-    # Next compute rolling RMS
-    rolling_rms = _compute_rolling_rms(recordings, verbose, job_kwargs)
+    all_chunk_results = {}
+    all_rolling_rms = {}
 
-    return {
-        "quick": chunk_results,
-        "rolling_rms": rolling_rms,
-        "firing_rate": chunk_results["prepro_ap"]["firing_rate"],
-    }
-
-
-def _compute_sparse_metrics(
-    recordings, chunk_time_s, num_chunks, peak_detection_method, peak_detection_kwargs, verbose, job_kwargs
-):
-    """"""
-    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
-
-    sparse_slices_per_recording = {}
     for recording_name, recording in recordings.items():
-        sparse_slices_per_recording[recording_name] = _generate_skipped_chunk_slices(
+
+        sparse_slices_for_recording = _generate_skipped_chunk_slices(
             recording,
             chunk_time_s=chunk_time_s,
             num_chunks=num_chunks,
         )
 
-    chunk_results = _compute_rms_psd_over_sparse_chunks(recordings, sparse_slices_per_recording, verbose, job_kwargs)
+        chunk_results = _compute_rms_psd_over_sparse_chunks(recording, sparse_slices_for_recording, verbose, job_kwargs)
 
-    preprocessed_ap = recordings["prepro_ap"]
-    ap_slices = sparse_slices_per_recording["prepro_ap"]
-    peaks = detect_peaks(
-        preprocessed_ap,
-        method=peak_detection_method,
-        method_kwargs=peak_detection_kwargs,
-        pipeline_kwargs={"slices": ap_slices},
+        rolling_rms = _compute_rolling_rms(recording, verbose, job_kwargs)
+
+        all_chunk_results[recording_name] = chunk_results
+        all_rolling_rms[recording_name] = rolling_rms
+
+    return {
+        "quick": all_chunk_results,
+        "rolling_rms": all_rolling_rms,
+    }
+
+
+def _compute_rms_psd_over_sparse_chunks(recording, sparse_slices_for_recording, verbose, job_kwargs):
+    """"""
+    resuts_per_chunk = _run_executor_over_chunks(
+        recording,
+        _compute_rms_psd,
+        job_name="compute_rms",
+        verbose=verbose,
         job_kwargs=job_kwargs,
+        slices=sparse_slices_for_recording,
     )
 
-    firing_rate = _compute_firing_rate_per_segment(peaks, ap_slices, preprocessed_ap)
+    # Unpack the results into per-segment arrays
+    segment_results_chunked = {
+        segment_index: {"rms": [], "psd": [], "freqs": None} for segment_index in range(recording.get_num_segments())
+    }
 
-    chunk_results["prepro_ap"]["firing_rate"] = firing_rate
+    for segment_index, rms_by_channel, freqs, psd in resuts_per_chunk:
+        segment_results_chunked[segment_index]["rms"].append(rms_by_channel)
+        segment_results_chunked[segment_index]["psd"].append(psd)
 
-    return chunk_results
+        if segment_results_chunked[segment_index]["freqs"] is None:
+            segment_results_chunked[segment_index]["freqs"] = freqs
+
+    # Stack the per-chunk arrays and compute summary statistics over them
+    summary_over_chunks = {
+        "rms_median_over_chunk": [],
+        "rms_quantile_over_channel": [],
+        "welch_no_overlap": [],
+        "freqs": [],
+    }
+
+    for segment_index, data in segment_results_chunked.items():
+
+        rms_median_over_chunk = np.median(np.stack(data["rms"]), axis=0)
+        rms_quantile_over_channel = np.percentile(rms_median_over_chunk, [10, 90])
+
+        welch_no_overlap = np.mean(
+            np.stack(data["psd"]),
+            axis=0,
+        )
+        summary_over_chunks["rms_median_over_chunk"].append(rms_median_over_chunk)
+        summary_over_chunks["rms_quantile_over_channel"].append(rms_quantile_over_channel)
+        summary_over_chunks["welch_no_overlap"].append(welch_no_overlap)
+        summary_over_chunks["freqs"].append(data["freqs"])
+
+    return summary_over_chunks
 
 
-def _compute_firing_rate_per_segment(peaks, slices, recording):
+def _compute_rolling_rms(recording, verbose, job_kwargs):
     """"""
-    num_segments = recording.get_num_segments()
-    sampled_frames = np.zeros(num_segments, dtype=np.int64)
-    for segment_index, start_frame, end_frame in slices:
-        sampled_frames[segment_index] += end_frame - start_frame
+    results = _run_executor_over_chunks(
+        recording,
+        _compute_rms_with_times,
+        job_name="compute_rms_with_times",
+        verbose=verbose,
+        job_kwargs=job_kwargs,
+        slices=None,
+    )
 
-    peak_counts = np.bincount(peaks["segment_index"], minlength=num_segments)
-    sampled_duration_s = sampled_frames / recording.get_sampling_frequency()
-    return peak_counts / sampled_duration_s
+    segment_results_chunked = {
+        segment_index: {"rms": [], "times": []} for segment_index in range(recording.get_num_segments())
+    }
+
+    for segment_index, rms, time in results:
+        segment_results_chunked[segment_index]["rms"].append(rms)
+        segment_results_chunked[segment_index]["times"].append(time)
+
+    final_results = [
+        {
+            "rms": np.stack(data["rms"]),
+            "times": np.asarray(data["times"]),
+        }
+        for data in segment_results_chunked.values()
+    ]
+
+    return final_results
 
 
 def _compute_rms_psd(segment_index, start_frame, end_frame, worker_context):
@@ -186,111 +205,23 @@ def _compute_rms(traces):
     return np.sqrt(np.mean(np.square(traces), axis=0))
 
 
-def _compute_rms_psd_over_sparse_chunks(recordings, sparse_slices_per_recording, verbose, job_kwargs):
-    """"""
-    full_results = {}
-    for recording_name, recording in recordings.items():
-
-        resuts_per_chunk = _run_executor_over_chunks(
-            recording,
-            _compute_rms_psd,
-            job_name="compute_rms",
-            chunk_time_s=1.0,
-            verbose=verbose,
-            job_kwargs=job_kwargs,
-            slices=sparse_slices_per_recording[recording_name],
-        )
-
-        # Unpack the results into per-segment arrays
-        segment_results_chunked = {
-            segment_index: {"rms": [], "psd": [], "freqs": None}
-            for segment_index in range(recording.get_num_segments())
-        }
-
-        for segment_index, rms_by_channel, freqs, psd in resuts_per_chunk:
-            segment_results_chunked[segment_index]["rms"].append(rms_by_channel)
-            segment_results_chunked[segment_index]["psd"].append(psd)
-
-            if segment_results_chunked[segment_index]["freqs"] is None:
-                segment_results_chunked[segment_index]["freqs"] = freqs
-
-        # Stack the per-chunk arrays and compute summary statistics over them
-        summary_over_chunks = {
-            "rms_median_over_chunk": [],
-            "rms_quantile_over_channel": [],
-            "welch_no_overlap": [],
-            "freqs": [],
-        }
-        for segment_index, data in segment_results_chunked.items():
-
-            rms_median_over_chunk = np.median(np.stack(data["rms"]), axis=0)
-            rms_quantile_over_channel = np.percentile(rms_median_over_chunk, [10, 90])
-
-            welch_no_overlap = np.mean(
-                np.stack(data["psd"]),
-                axis=0,
-            )
-            summary_over_chunks["rms_median_over_chunk"].append(rms_median_over_chunk)
-            summary_over_chunks["rms_quantile_over_channel"].append(rms_quantile_over_channel)
-            summary_over_chunks["welch_no_overlap"].append(welch_no_overlap)
-            summary_over_chunks["freqs"].append(data["freqs"])
-        full_results[recording_name] = summary_over_chunks
-
-    return full_results
-
-
-def _compute_rolling_rms(recordings, verbose, job_kwargs):
-
-    rolling_rms_results = {}
-    for recording_name, recording in recordings.items():
-
-        results = _run_executor_over_chunks(
-            recording,
-            _compute_rms_with_times,
-            job_name="compute_rms_with_times",
-            chunk_time_s=3.0,
-            verbose=verbose,
-            job_kwargs=job_kwargs,
-        )
-
-        segment_results_chunked = {
-            segment_index: {"rms": [], "times": []} for segment_index in range(recording.get_num_segments())
-        }
-
-        for segment_index, rms, time in results:
-            segment_results_chunked[segment_index]["rms"].append(rms)
-            segment_results_chunked[segment_index]["times"].append(time)
-
-        final_results = [
-            {
-                "rms": np.stack(data["rms"]),
-                "times": np.asarray(data["times"]),
-            }
-            for data in segment_results_chunked.values()
-        ]
-        rolling_rms_results[recording_name] = final_results
-
-    return rolling_rms_results
+def _init_rms_worker(recording):
+    return {
+        "recording": recording,
+    }
 
 
 def _run_executor_over_chunks(
     recording,
-    chunk_function,
+    function_to_run,
     job_name,
-    chunk_time_s,
     verbose,
     job_kwargs,
-    num_chunks=None,
-    slices=None,
+    slices,
 ):
-    def _init_rms_worker(recording):
-        return {
-            "recording": recording,
-        }
-
     executor = TimeSeriesChunkExecutor(
         recording,
-        chunk_function,
+        function_to_run,
         _init_rms_worker,
         (recording,),
         job_name=job_name,
@@ -298,12 +229,7 @@ def _run_executor_over_chunks(
         handle_returns=True,
         **job_kwargs,
     )
-    if slices is None:
-        slices = _generate_skipped_chunk_slices(
-            recording,
-            chunk_time_s=chunk_time_s,
-            num_chunks=num_chunks,
-        )
+
     return executor.run(slices=slices)
 
 
@@ -312,6 +238,7 @@ def _generate_skipped_chunk_slices(
     chunk_time_s,
     num_chunks,
 ):
+    """"""
     sampling_frequency = recording.get_sampling_frequency()
     chunk_size = round(chunk_time_s * sampling_frequency)
 
@@ -320,10 +247,20 @@ def _generate_skipped_chunk_slices(
 
         num_samples = recording.get_num_samples(segment_index)
         max_start_frame = num_samples - chunk_size
+        if max_start_frame < 0:
+            # Reject short segments explicitly: negative starts can produce unequal chunk lengths
+            # and incompatible PSD frequency grids when the per-chunk spectra are stacked.
+            raise ValueError(f"Segment {segment_index} is shorter than chunk_time_s={chunk_time_s}")
+
+        # Uniformly spaced starts still overlap (or repeat) unless all requested chunks fit.
+        if num_chunks * chunk_size > num_samples:
+            raise ValueError(
+                f"Segment {segment_index} has {num_samples} samples, but {num_chunks} non-overlapping "
+                f"chunks of {chunk_size} samples require {num_chunks * chunk_size} samples. "
+                "Reduce num_chunks or chunk_time_s."
+            )
 
         num_chunks_for_segment = num_chunks
-        if num_chunks_for_segment is None:
-            num_chunks_for_segment = num_samples // chunk_size
 
         if num_chunks_for_segment == 1:
             start_frames = np.array([0], dtype=np.int64)
