@@ -221,7 +221,6 @@ class SpikeRetriever(PeakSource):
         assert main_channel_ids is not None, "SpikeRetriever needs the sorting to have `main_channel_id`s."
         self.main_channel_indices = recording.ids_to_indices(main_channel_ids)
         self.spike_vector, segment_slices = sorting.to_spike_vector(return_slices=True)
-        self.spike_sample_indices = np.asarray(self.spike_vector["sample_index"])
         self.sorting = sorting
         self._peaks = None
 
@@ -229,12 +228,6 @@ class SpikeRetriever(PeakSource):
             channel_distance = get_channel_distances(recording)
             self.neighbours_mask = channel_distance <= radius_um
             self.peak_sign = peak_sign
-
-        # For mono-segment, we avoid an extra slice, otherwise make them a tuple for slicing
-        if sorting.get_num_segments() == 1:
-            self.segment_slices = None
-        else:
-            self.segment_slices = [slice(int(s0), int(s1)) for s0, s1 in segment_slices]
 
         self._kwargs.update(
             dict(
@@ -261,16 +254,14 @@ class SpikeRetriever(PeakSource):
         return self._dtype
 
     def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
-        if self.segment_slices is not None:
-            sl = self.segment_slices[segment_index]
-            sample_indices_in_segment = self.spike_sample_indices[sl]
-        else:
-            sample_indices_in_segment = self.spike_sample_indices
         if self.include_spikes_in_margin:
-            i0, i1 = np.searchsorted(sample_indices_in_segment, [start_frame - max_margin, end_frame + max_margin])
+            indices = [start_frame - max_margin, end_frame + max_margin]
         else:
-            i0, i1 = np.searchsorted(sample_indices_in_segment, [start_frame, end_frame])
-        return i0, i1
+            indices = [start_frame, end_frame]
+        return self.sorting.search_cached_spikes_sorted(
+            indices=indices,
+            segment_index=segment_index,
+        )
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks

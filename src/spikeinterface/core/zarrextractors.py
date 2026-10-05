@@ -524,7 +524,7 @@ class ZarrSortingExtractor(BaseSorting):
             # we do not need to lexsort at init (very high cost) because there already sorted by frame before to be saved.
             # In version 0.104.X this was fully lexsorted, but we don't need it anymore because it's only important in the context of SpikeVectorBased extensions in the SortingAnalyzer, which stores its own copy of the Sorting object. This makes the extension data and the spike vector always matching their order.
             # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
-
+        self._lazy_spike_vector = lazy_spike_vector
         self._cached_spike_vector = spikes
         # pre-populate segment slices so _get_spike_vector_segment_slices() never
         # needs to materialise the full segment_index array
@@ -552,6 +552,20 @@ class ZarrSortingExtractor(BaseSorting):
             "zarr_group": zarr_group,
             "lazy_spike_vector": lazy_spike_vector,
         }
+
+    def search_cached_spikes_sorted(
+        self,
+        indices: list[int],
+        segment_index: int | None = None,
+    ):
+        if not self._lazy_spike_vector:
+            return super().search_cached_spikes_sorted(
+                indices=indices,
+                segment_index=segment_index,
+            )
+        else:
+            # TODO: implement search function minimizing zarr chunks reads to reduce RAM usage.
+            pass
 
     @staticmethod
     def write_sorting(

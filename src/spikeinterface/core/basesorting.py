@@ -149,6 +149,19 @@ class BaseSorting(BaseExtractor):
         ), "This methods requires an associated recording. Call self.register_recording() first."
         return self._recording.get_total_duration()
 
+    def search_cached_spikes_sorted(
+        self,
+        indices: list[int],
+        segment_index: int | None = None,
+    ):
+        if self._cached_spike_vector is None:
+            self._compute_and_cache_spike_vector()
+        if segment_index is None and self.get_num_segments() == 1:
+            return np.searchsorted(self._cached_spike_vector["sample_index"], indices)
+        else:
+            sl = self._cached_spike_vector_segment_slices[segment_index]
+            return np.searchsorted(self._cached_spike_vector[sl[0] : sl[1]]["sample_index"], indices)
+
     def get_unit_spike_train(
         self,
         unit_id: str | int,
