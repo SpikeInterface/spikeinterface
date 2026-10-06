@@ -10,7 +10,7 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from spikeinterface.core.core_tools import slice_rows
+from spikeinterface.core.core_tools import slice_rows, materialize_array
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms, _select_channels_sparse_data
 
@@ -86,12 +86,12 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     def _select_units_extension_data(self, unit_ids):
 
-        keep_unit_indices = np.flatnonzero(np.isin(self.sorting_analyzer.unit_ids, unit_ids))
+        keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
-        new_data["pca_projection"] = self.data["pca_projection"][keep_spike_mask, :, :]
+        new_data["pca_projection"] = slice_rows(self.data["pca_projection"], keep_spike_mask)
         # one or several model
         for k, v in self.data.items():
             if "model" in k:
@@ -115,20 +115,18 @@ class ComputePrincipalComponents(AnalyzerExtension):
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, keep_mask=None, verbose=False, **job_kwargs
     ):
 
-        pca_projections = self.data["pca_projection"]
+        pca_projections = materialize_array(self.data["pca_projection"])
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         if keep_mask is not None:
             spike_indices = self.sorting_analyzer.get_extension("random_spikes").get_data()
             valid = keep_mask[spike_indices]
             some_spikes = some_spikes[valid]
-            pca_projections = pca_projections[valid]
-        else:
-            pca_projections = pca_projections.copy()
+            # slice_rows already returns an independent, materialized array
+            pca_projections = slice_rows(pca_projections, valid)
 
         old_sparsity = self.sorting_analyzer.sparsity
         if old_sparsity is not None:
-
             # we need a realignement inside each group because we take the channel intersection sparsity
             # the story is same as in "waveforms" extension
             for group_ids in merge_unit_groups:
@@ -157,7 +155,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
         # splitting only changes random spikes assignments
-        return self.data.copy()
+        new_data = dict(pca_projection=materialize_array(self.data["pca_projection"]))
+        for k, v in self.data.items():
+            if "model" in k:
+                new_data[k] = v
+        return new_data
 
     def get_pca_model(self):
         """
@@ -169,6 +171,8 @@ class ComputePrincipalComponents(AnalyzerExtension):
             * if mode is "by_channel_local", "pca_model" is a list of PCA model by channel
             * if mode is "by_channel_global" or "concatenated", "pca_model" is a single PCA model
         """
+        if self.sorting_analyzer._lazy:
+            raise RuntimeError("PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode.")
         mode = self.params["mode"]
         if mode == "by_channel_local":
             pca_models = []
@@ -278,17 +282,20 @@ class ComputePrincipalComponents(AnalyzerExtension):
         else:
             # need re-alignement
             some_projections = np.zeros((selected_inds.size, num_components, channel_indices.size), dtype=dtype)
+            # read all requested rows at once: per-unit reads on a remote zarr array re-fetch the same chunks
+            selected_projections = slice_rows(all_projections, selected_inds)
 
             for unit_id in unit_ids:
                 unit_index = sorting.id_to_index(unit_id)
-                sparse_projection, local_chan_inds = self.get_projections_one_unit(unit_id, sparse=True)
+                spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
+                local_chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
+                sparse_projection = selected_projections[spike_mask][:, :, : local_chan_inds.size]
 
                 # keep only requested channels
                 channel_mask = np.isin(local_chan_inds, channel_indices)
                 sparse_projection = sparse_projection[:, :, channel_mask]
                 local_chan_inds = local_chan_inds[channel_mask]
 
-                spike_mask = np.flatnonzero(spike_unit_indices == unit_index)
                 proj = np.zeros((spike_mask.size, num_components, channel_indices.size), dtype=dtype)
                 # inject in requested channels
                 channel_mask = np.isin(channel_indices, local_chan_inds)
@@ -323,6 +330,8 @@ class ComputePrincipalComponents(AnalyzerExtension):
         Compute the PCs on waveforms extacted within the by ComputeWaveforms.
         Projections are computed only on the waveforms sampled by the SortingAnalyzer.
         """
+        if self.sorting_analyzer._lazy:
+            raise RuntimeError("PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode.")
         p = self.params
         mode = p["mode"]
 
@@ -594,7 +603,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         unit_index = self.sorting_analyzer.sorting.id_to_index(unit_id)
         spike_mask = spikes["unit_index"] == unit_index
-        wfs = waveforms[spike_mask, :, :]
+        wfs = slice_rows(waveforms, spike_mask)
 
         sparsity = self.sorting_analyzer.sparsity
         if sparsity is not None:

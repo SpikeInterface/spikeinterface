@@ -2,7 +2,7 @@ import numpy as np
 import warnings
 from itertools import chain
 import importlib.util
-
+from spikeinterface.core.core_tools import slice_rows, materialize_array
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from spikeinterface.core.template_tools import get_dense_templates_array
 from spikeinterface.core.sparsity import ChannelSparsity
@@ -61,7 +61,8 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
     def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-        new_similarity = self.data["similarity"][unit_indices][:, unit_indices]
+        new_similarity = slice_rows(self.data["similarity"], unit_indices)
+        new_similarity = new_similarity[:, unit_indices]
         return dict(similarity=new_similarity)
 
     def _merge_extension_data(
@@ -92,7 +93,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
             other_sparsity=new_sorting_analyzer.sparsity,
         )
 
-        old_similarity = self.data["similarity"]
+        old_similarity = materialize_array(self.data["similarity"])
 
         all_new_unit_ids = new_sorting_analyzer.unit_ids
         n = all_new_unit_ids.size
@@ -105,7 +106,7 @@ class ComputeTemplateSimilarity(AnalyzerExtension):
 
         # copy old similarity
         for old_ind1, unit_ind1 in zip(old_units_inds, sub_units_inds):
-            s = self.data["similarity"][old_ind1, old_units_inds]
+            s = old_similarity[old_ind1, old_units_inds]
             similarity[unit_ind1, sub_units_inds] = s
             similarity[sub_units_inds, unit_ind1] = s
 
@@ -296,13 +297,11 @@ if HAVE_NUMBA:
         elif method == "cosine":
             metric = 2
 
+        overlapping_i_list = typed.List()
         overlapping_j_list = typed.List()
         active_channels_list = typed.List()
 
         for src_unit in range(num_templates):
-            overlapping_ids = typed.List()
-            overlapping_chs = typed.List()
-
             start = src_unit if same_array else 0
             for tgt_unit in range(start, other_num_templates):
 
@@ -328,11 +327,9 @@ if HAVE_NUMBA:
                     ch = np.arange(num_channels, dtype=np.uint16)
 
                 if len(ch) > 0:
-                    overlapping_ids.append(np.uint16(tgt_unit))
-                    overlapping_chs.append(ch)
-
-            overlapping_j_list.append(overlapping_ids)
-            active_channels_list.append(overlapping_chs)
+                    overlapping_i_list.append(np.int64(src_unit))
+                    overlapping_j_list.append(np.int64(tgt_unit))
+                    active_channels_list.append(ch)
 
         for count in range(len(shift_loop)):
             shift = shift_loop[count]
@@ -340,44 +337,40 @@ if HAVE_NUMBA:
             src_sliced = templates_array[:, num_shifts : num_samples - num_shifts]
             tgt_sliced = other_templates_array[:, num_shifts + shift : num_samples - num_shifts + shift]
 
-            for i in prange(num_templates):
-                i_ = np.int64(i)
-                src_template = src_sliced[i_]
-                overlapping_ids = overlapping_j_list[i_]
-                overlapping_chs = active_channels_list[i_]
+            for pair_idx in prange(len(overlapping_j_list)):
+                pair_idx_ = np.int64(pair_idx)
+                i = overlapping_i_list[pair_idx_]
+                j = overlapping_j_list[pair_idx_]
+                active_channels = active_channels_list[pair_idx_]
 
-                for pair_idx in range(len(overlapping_ids)):
-                    j = np.uint16(overlapping_ids[pair_idx])
-                    ch = overlapping_chs[pair_idx]
+                src_ch = src_sliced[i][:, active_channels]
+                tgt_ch = tgt_sliced[j][:, active_channels]
 
-                    src_ch = src_template[:, ch]
-                    tgt_ch = tgt_sliced[j][:, ch]
+                if metric == 0:
+                    # l1
+                    norm_i = np.sum(np.abs(src_ch))
+                    norm_j = np.sum(np.abs(tgt_ch))
+                    dist = np.sum(np.abs(src_ch - tgt_ch))
+                    distances[count, i, j] = dist / (norm_i + norm_j)
 
-                    if metric == 0:
-                        # l1
-                        norm_i = np.sum(np.abs(src_ch))
-                        norm_j = np.sum(np.abs(tgt_ch))
-                        dist = np.sum(np.abs(src_ch - tgt_ch))
-                        distances[count, i, j] = dist / (norm_i + norm_j)
+                elif metric == 1:
+                    # l2
+                    norm_i = sqrt(np.sum(src_ch**2))
+                    norm_j = sqrt(np.sum(tgt_ch**2))
+                    dist = sqrt(np.sum((src_ch - tgt_ch) ** 2))
+                    distances[count, i, j] = dist / (norm_i + norm_j)
 
-                    elif metric == 1:
-                        # l2
-                        norm_i = sqrt(np.sum(src_ch**2))
-                        norm_j = sqrt(np.sum(tgt_ch**2))
-                        dist = sqrt(np.sum((src_ch - tgt_ch) ** 2))
-                        distances[count, i, j] = dist / (norm_i + norm_j)
+                elif metric == 2:
+                    # cosine
+                    dot = np.sum(src_ch * tgt_ch)
+                    norm_i = sqrt(np.sum(src_ch**2))
+                    norm_j = sqrt(np.sum(tgt_ch**2))
+                    denom = norm_i * norm_j
+                    if denom > 0.0:
+                        distances[count, i, j] = 1.0 - dot / denom
 
-                    elif metric == 2:
-                        # cosine
-                        dot = np.sum(src_ch * tgt_ch)
-                        norm_i = sqrt(np.sum(src_ch**2))
-                        norm_j = sqrt(np.sum(tgt_ch**2))
-                        denom = norm_i * norm_j
-                        if denom > 0.0:
-                            distances[count, i, j] = 1.0 - dot / denom
-
-                    if same_array:
-                        distances[count, j, i] = distances[count, i, j]
+                if same_array:
+                    distances[count, j, i] = distances[count, i, j]
 
             if same_array and shift != 0:
                 distances[num_shifts_both_sides - count - 1] = distances[count].T

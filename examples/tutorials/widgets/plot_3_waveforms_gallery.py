@@ -1,8 +1,8 @@
 """
-Waveforms Widgets Gallery
-=========================
+SortingAnalyzer Widgets Gallery
+===============================
 
-Here is a gallery of all the available widgets using a pair of RecordingExtractor-SortingExtractor objects.
+Here is a gallery of all the available widgets using SortingAnalyzer objects.
 """
 
 import matplotlib.pyplot as plt

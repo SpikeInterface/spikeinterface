@@ -94,15 +94,19 @@ jobs:
       - name: Pip list
         run: uv pip list --system
 
-      - name: Test core
-        run: pytest -m "core"
-        shell: bash
-
       - name: Install Dependencies for Timing Display
         run: |
           uv pip install --system tabulate
           uv pip install --system pandas
         shell: bash
+
+      - name: Set execute permissions on run_tests.sh
+        shell: bash
+        run: chmod +x .github/run_tests.sh
+
+      - name: Test core
+        shell: bash
+        run: ./.github/run_tests.sh core --no-virtual-env
 
       - name: Get current hash (SHA) of the ephy_testing_data repo
         shell: bash
@@ -136,10 +140,6 @@ jobs:
       - name : Install Plexon dependencies
         if: env.INSTALL_PLEXON_DEPENDENCIES == 'true'
         uses: ./.github/actions/install-wine
-
-      - name: Set execute permissions on run_tests.sh
-        shell: bash
-        run: chmod +x .github/run_tests.sh
 
       - name: Test extractors
         shell: bash
@@ -210,6 +210,8 @@ jobs:
       - name: Test curation
         shell: bash
         if: env.RUN_CURATION_TESTS == 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           uv pip install --system -e .[curation] --group test-curation
           uv pip list --system
@@ -236,6 +238,8 @@ jobs:
       - name: Test sortingcomponents
         shell: bash
         if: env.RUN_SORTINGCOMPONENTS_TESTS == 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           uv pip install --system -e .[sortingcomponents] --group test-sortingcomponents
           uv pip list --system
