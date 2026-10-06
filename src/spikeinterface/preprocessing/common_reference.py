@@ -11,6 +11,24 @@ from spikeinterface.core.baserecording import BaseRecording
 from .filter import fix_dtype
 
 
+def _median_reference(traces, axis=1, keepdims=False):
+    """Compute a median along a short channel axis using NumPy's faster sort path."""
+    num_channels = traces.shape[axis]
+    if traces.dtype.kind in "fiu" and num_channels in (1, 2):
+        return np.mean(traces, axis=axis, keepdims=keepdims)
+    if num_channels < 4 or traces.dtype.kind not in "fiu" or (traces.dtype.kind == "f" and np.isnan(traces).any()):
+        return np.median(traces, axis=axis, keepdims=keepdims)
+
+    sorted_traces = np.sort(traces, axis=axis)
+    midpoint = num_channels // 2
+    middle = [slice(None)] * traces.ndim
+    if num_channels % 2:
+        middle[axis] = slice(midpoint, midpoint + 1)
+    else:
+        middle[axis] = slice(midpoint - 1, midpoint + 1)
+    return np.mean(sorted_traces[tuple(middle)], axis=axis, keepdims=keepdims)
+
+
 class CommonReferenceRecording(BasePreprocessor):
     """
     Re-references the recording extractor traces. That is, the value of the traces are
@@ -244,7 +262,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.local_kernel = local_kernel
         self.temp = None
         self.dtype = dtype
-        self.operator_func = np.mean if self.operator == "average" else np.median
+        self.operator_func = np.mean if self.operator == "average" else _median_reference
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         # Let's do the case with group_indices equal None as that is easy
