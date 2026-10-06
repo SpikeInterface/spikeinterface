@@ -1,5 +1,6 @@
 import json
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -7,6 +8,34 @@ import pytest
 from spikeinterface.core import BaseSorting, NumpyRecording
 from spikeinterface.sorters import VanillaSortSorter, available_sorters, run_sorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
+
+
+@pytest.fixture
+def tiny_model(tmp_path):
+    """Use real small model architectures; external CI never downloads weights."""
+    import torch
+    from vanillasort.checkpoints import load_config
+    from vanillasort.models import VanillaDet, HuiduRep
+
+    config = load_config()
+    config["detector_architecture"].update(
+        d_model=8, nhead=2, num_layers=1, dim_ff=16, frontend_channels=8, max_len=5000
+    )
+    config["huidurep_architecture"].update(embedding_dim=16, n_heads=2, ff_dim=16, num_layers=3)
+    config["chunk_len"] = 128
+    config["profiles"]["d1"].update(base_threshold=0.0001, direct_keep=0.0001)
+    model_path = tmp_path / "tiny.pt"
+    with torch.random.fork_rng():
+        torch.manual_seed(0)
+        torch.save(
+            {
+                "config": config,
+                "detector_state_dict": VanillaDet(**config["detector_architecture"]).state_dict(),
+                "huidurep_state_dict": HuiduRep(**config["huidurep_architecture"]).state_dict(),
+            },
+            model_path,
+        )
+    return model_path
 
 
 def make_recording(multi_segment=False):
@@ -28,13 +57,27 @@ def make_recording(multi_segment=False):
 class VanillaSortCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     SorterClass = VanillaSortSorter
 
+    @pytest.fixture(autouse=True)
+    def configure_model(self, tiny_model):
+        self.model_path = tiny_model
+
     def setUp(self):
+        defaults = patch.dict(
+            self.SorterClass._default_params,
+            {
+                "model_path": str(self.model_path),
+                "components": 2,
+                "device": "cpu",
+            },
+        )
+        defaults.start()
+        self.addCleanup(defaults.stop)
         # Keep the common tests, using 0.25 s instead of the suite's 60 s fixture.
         self.recording = make_recording().save(folder=self.cache_folder / "rec", verbose=False, format="binary")
 
 
 @pytest.mark.skipif(not VanillaSortSorter.is_installed(), reason="vanillasort >= 0.1.0 not installed")
-def test_vanillasort_direct_and_wrapper(tmp_path):
+def test_vanillasort_direct_and_wrapper(tmp_path, tiny_model):
     import vanillasort
 
     assert "vanillasort" in available_sorters()
@@ -42,7 +85,7 @@ def test_vanillasort_direct_and_wrapper(tmp_path):
     assert set(VanillaSortSorter.default_params()) == set(VanillaSortSorter.params_description())
     assert not VanillaSortSorter.use_gpu({"device": "cpu"})
     recording = make_recording(multi_segment=True).save(folder=tmp_path / "rec", verbose=False)
-    params = dict(components=4, device="cpu", seed=0)
+    params = dict(components=4, device="cpu", seed=0, model_path=str(tiny_model))
     direct = vanillasort.sort(recording, verbose=False, **params)
     folder = tmp_path / "wrapped"
     wrapped = run_sorter("vanillasort", recording, folder=folder, verbose=True, **params)

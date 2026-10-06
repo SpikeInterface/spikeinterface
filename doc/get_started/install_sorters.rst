@@ -220,7 +220,9 @@ VanillaSort combines VanillaDet spike detection, HuiduRep waveform embeddings,
 relative-amplitude features, Gaussian-mixture clustering, and template-residual
 refinement. The wrapper calls the package's public ``vanillasort.sort()`` API;
 the algorithm and pretrained checkpoints are maintained in VanillaSort.
-Checkpoints are bundled with the package and are not downloaded at import time.
+The default checkpoints are hosted at https://huggingface.co/Kohaku2580/VanillaSort.
+They download from a pinned revision on first inference and are then cached locally;
+installation and ordinary import do not download weights.
 See the repository README for platform-specific PyTorch installation.
 
 The pretrained model requires raw 30 kHz recordings with 2D channel locations in

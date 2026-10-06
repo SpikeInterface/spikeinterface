@@ -26,7 +26,7 @@ class VanillaSortSorter(BaseSorter):
     }
 
     _params_description = {
-        "model": "Model name; 'default' uses the bundled pretrained checkpoints without downloading.",
+        "model": "Model name; 'default' downloads pinned Hugging Face checkpoints once and reuses the local cache.",
         "model_path": "Optional local combined .pt checkpoint or directory containing config.json and both models.",
         "device": "'auto' selects CUDA when available, otherwise CPU; also accepts 'cpu', 'cuda', or 'cuda:N'.",
         "seed": "Random seed for model initialization and GMM clustering.",
