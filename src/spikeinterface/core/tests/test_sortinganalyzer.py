@@ -25,6 +25,13 @@ from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 # to test basespikevectorextension with node pipeline
 from spikeinterface.core.node_pipeline import SpikeRetriever
 from spikeinterface.core.tests.test_node_pipeline import AmplitudeExtractionNode
+from spikeinterface.core.core_tools import is_zarr_write_supported
+
+# TODO: remove once writing to zarr is supported with zarr>=3
+requires_zarr_write = pytest.mark.skipif(
+    not is_zarr_write_supported(), reason="Writing to zarr is not supported yet with zarr>=3"
+)
+analyzer_formats = ("memory", "binary_folder", "zarr") if is_zarr_write_supported() else ("memory", "binary_folder")
 
 
 def get_dataset():
@@ -138,6 +145,7 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
+@requires_zarr_write
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
     recording, sorting = dataset
     recording = recording.save(folder=tmp_path / "recording_zarr")
@@ -309,20 +317,22 @@ def test_load_without_runtime_info(tmp_path, dataset):
     with pytest.warns(UserWarning):
         sorting_analyzer = load_sorting_analyzer(folder, format="auto")
 
-    # zarr
-    folder = tmp_path / "test_SortingAnalyzer_run_info.zarr"
-    sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
-    )
-    sorting_analyzer.compute(extensions)
-    # remove run_info from attrs to mimic a previous version of spikeinterface
-    root = sorting_analyzer._get_zarr_root(mode="r+")
-    for ext in extensions:
-        del root["extensions"][ext].attrs["run_info"]
-        zarr.consolidate_metadata(root.store)
-    # should raise a warning for missing run_info
-    with pytest.warns(UserWarning):
-        sorting_analyzer = load_sorting_analyzer(folder, format="auto")
+    # TODO: remove once writing to zarr is supported with zarr>=3
+    if is_zarr_write_supported():
+        # zarr
+        folder = tmp_path / "test_SortingAnalyzer_run_info.zarr"
+        sorting_analyzer = create_sorting_analyzer(
+            sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
+        )
+        sorting_analyzer.compute(extensions)
+        # remove run_info from attrs to mimic a previous version of spikeinterface
+        root = sorting_analyzer._get_zarr_root(mode="r+")
+        for ext in extensions:
+            del root["extensions"][ext].attrs["run_info"]
+            zarr.consolidate_metadata(root.store)
+        # should raise a warning for missing run_info
+        with pytest.warns(UserWarning):
+            sorting_analyzer = load_sorting_analyzer(folder, format="auto")
 
 
 def test_SortingAnalyzer_tmp_recording(dataset):
@@ -366,7 +376,7 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
 
 
-@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=requires_zarr_write)])
 def test_load_in_lazy_mode(tmp_path, dataset, format):
     recording, sorting = dataset
 
@@ -447,7 +457,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     assert sorting_analyzer.has_recording()
     # save to several format
-    for format in ("memory", "binary_folder", "zarr"):
+    for format in analyzer_formats:
         if format != "memory":
             if format == "zarr":
                 folder = cache_folder / f"test_SortingAnalyzer_save_as_{format}.zarr"
@@ -477,7 +487,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         assert sorting_analyzer2.sparsity == sorting_analyzer.sparsity
 
     # select unit_ids to several format
-    for format in ("memory", "binary_folder", "zarr"):
+    for format in analyzer_formats:
         if format != "memory":
             if format == "zarr":
                 folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}.zarr"
@@ -858,7 +868,7 @@ def _compute_reference_pipeline_data(dataset):
     return analyzer.get_extension("dummy_pipeline").get_data()
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["memory", "binary_folder", pytest.param("zarr", marks=requires_zarr_write)])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, format, lazy):
     """
@@ -923,7 +933,7 @@ def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, forma
         assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
 
 
-@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=requires_zarr_write)])
 def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     """
     With save=False on a disk-backed analyzer, node-pipeline extensions are computed in memory
@@ -945,7 +955,7 @@ def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     assert not analyzer_reloaded.has_extension("dummy_pipeline")
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["memory", "binary_folder", pytest.param("zarr", marks=requires_zarr_write)])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format, lazy):
     """

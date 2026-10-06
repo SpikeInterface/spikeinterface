@@ -15,6 +15,14 @@ from spikeinterface.core.generate import generate_unit_locations, generate_templ
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.core.zarrextractors import ZarrRecordingExtractor
 
+from spikeinterface.core.core_tools import is_zarr_write_supported
+
+# TODO: remove once writing to zarr is supported with zarr>=3
+requires_zarr_write = pytest.mark.skipif(
+    not is_zarr_write_supported(), reason="Writing to zarr is not supported yet with zarr>=3"
+)
+
+
 try:
     import s3fs
 
@@ -89,7 +97,7 @@ def generate_motion_object():
     return motion
 
 
-@pytest.mark.parametrize("output_format", ["binary", "zarr"])
+@pytest.mark.parametrize("output_format", ["binary", pytest.param("zarr", marks=requires_zarr_write)])
 def test_load_binary_recording(generate_recording_sorting, tmp_path, output_format):
     rec, _ = generate_recording_sorting
     _ = rec.save(folder=tmp_path / "test_recording", format=output_format, overwrite=True)
@@ -102,7 +110,7 @@ def test_load_binary_recording(generate_recording_sorting, tmp_path, output_form
     check_recordings_equal(rec, rec_loaded)
 
 
-@pytest.mark.parametrize("output_format", ["numpy_folder", "zarr"])
+@pytest.mark.parametrize("output_format", ["numpy_folder", pytest.param("zarr", marks=requires_zarr_write)])
 def test_load_binary_sorting(generate_recording_sorting, tmp_path, output_format):
     _, sort = generate_recording_sorting
     _ = sort.save(folder=tmp_path / "test_sorting", format=output_format, overwrite=True)
@@ -140,7 +148,7 @@ def test_load_ext_extractors(generate_recording_sorting, tmp_path, extension):
     check_sortings_equal(sort, sort_loaded, check_properties=False)
 
 
-@pytest.mark.parametrize("output_format", ["binary_folder", "zarr"])
+@pytest.mark.parametrize("output_format", ["binary_folder", pytest.param("zarr", marks=requires_zarr_write)])
 def test_load_sorting_analyzer(generate_sorting_analyzer, tmp_path, output_format):
     analyzer = generate_sorting_analyzer
     _ = analyzer.save_as(folder=tmp_path / "analyzer", format=output_format)
@@ -157,6 +165,7 @@ def test_load_sorting_analyzer(generate_sorting_analyzer, tmp_path, output_forma
         assert ext in analyzer_loaded.extensions
 
 
+@requires_zarr_write
 def test_load_templates(tmp_path, generate_templates_object):
     templates = generate_templates_object
     templates_dict = templates.to_dict()

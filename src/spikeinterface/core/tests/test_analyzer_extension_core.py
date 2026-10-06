@@ -11,6 +11,13 @@ from spikeinterface.core import Templates
 from spikeinterface.core.sortinganalyzer import _extension_children, _get_children_dependencies
 
 import numpy as np
+from spikeinterface.core.core_tools import is_zarr_write_supported
+
+# TODO: remove once writing to zarr is supported with zarr>=3
+requires_zarr_write = pytest.mark.skipif(
+    not is_zarr_write_supported(), reason="Writing to zarr is not supported yet with zarr>=3"
+)
+analyzer_formats = ("memory", "binary_folder", "zarr") if is_zarr_write_supported() else ("memory", "binary_folder")
 
 
 def get_sorting_analyzer(cache_folder, format="memory", sparse=True):
@@ -51,7 +58,7 @@ def get_sorting_analyzer(cache_folder, format="memory", sparse=True):
 
 def _check_result_extension(sorting_analyzer, extension_name, cache_folder):
     # select unit_ids to several format
-    for format in ("memory", "binary_folder", "zarr"):
+    for format in analyzer_formats:
         # for format in ("memory", ):
         if format != "memory":
             if format == "zarr":
@@ -72,7 +79,7 @@ def _check_result_extension(sorting_analyzer, extension_name, cache_folder):
         #     print(k, arr.shape)
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["memory", "binary_folder", pytest.param("zarr", marks=requires_zarr_write)])
 @pytest.mark.parametrize(
     "sparse",
     [
@@ -102,7 +109,7 @@ def test_ComputeRandomSpikes(format, sparse, create_cache_folder):
     _check_result_extension(sorting_analyzer, "random_spikes", cache_folder)
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["memory", "binary_folder", pytest.param("zarr", marks=requires_zarr_write)])
 @pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeWaveforms(format, sparse, create_cache_folder):
     cache_folder = create_cache_folder
@@ -115,7 +122,7 @@ def test_ComputeWaveforms(format, sparse, create_cache_folder):
     _check_result_extension(sorting_analyzer, "waveforms", cache_folder)
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["memory", "binary_folder", pytest.param("zarr", marks=requires_zarr_write)])
 @pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeTemplates(format, sparse, create_cache_folder):
     cache_folder = create_cache_folder
@@ -204,7 +211,7 @@ def test_ComputeTemplates(format, sparse, create_cache_folder):
     _check_result_extension(sorting_analyzer, "templates", cache_folder)
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["memory", "binary_folder", pytest.param("zarr", marks=requires_zarr_write)])
 @pytest.mark.parametrize("sparse", [True, False])
 def test_ComputeNoiseLevels(format, sparse, create_cache_folder):
     cache_folder = create_cache_folder

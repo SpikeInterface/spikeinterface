@@ -5,6 +5,12 @@ from spikeinterface.core.template import Templates
 from spikeinterface.core.sparsity import ChannelSparsity
 
 from probeinterface import generate_multi_columns_probe
+from spikeinterface.core.core_tools import is_zarr_write_supported
+
+# TODO: remove once writing to zarr is supported with zarr>=3
+requires_zarr_write = pytest.mark.skipif(
+    not is_zarr_write_supported(), reason="Writing to zarr is not supported yet with zarr>=3"
+)
 
 
 def generate_test_template(template_type, is_in_uV=True) -> Templates:
@@ -115,6 +121,7 @@ def test_initialization_fail_with_dense_templates():
         template = generate_test_template(template_type="sparse_with_dense_templates")
 
 
+@requires_zarr_write
 @pytest.mark.parametrize("is_in_uV", [True, False])
 @pytest.mark.parametrize("template_type", ["dense", "sparse"])
 def test_save_and_load_zarr(template_type, is_in_uV, tmp_path):

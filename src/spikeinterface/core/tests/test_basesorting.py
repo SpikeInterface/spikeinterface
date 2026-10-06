@@ -25,6 +25,7 @@ from spikeinterface.core import (
 from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
 from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
+from spikeinterface.core.core_tools import is_zarr_write_supported
 
 
 def test_BaseSorting(create_cache_folder):
@@ -143,16 +144,18 @@ def test_BaseSorting(create_cache_folder):
     del sorting6
     del sorting5
 
-    # test save to zarr
-    # compressor = get_default_zarr_compressor()
-    sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting.zarr")
-    sorting_zarr_loaded = load(cache_folder / "sorting.zarr")
-    # annotations is False because Zarr adds compression ratios
-    check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
-    check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
-    for annotation_name in sorting.get_annotation_keys():
-        assert sorting.get_annotation(annotation_name) == sorting_zarr.get_annotation(annotation_name)
-        assert sorting.get_annotation(annotation_name) == sorting_zarr_loaded.get_annotation(annotation_name)
+    # TODO: remove once writing to zarr is supported with zarr>=3
+    if is_zarr_write_supported():
+        # test save to zarr
+        # compressor = get_default_zarr_compressor()
+        sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting.zarr")
+        sorting_zarr_loaded = load(cache_folder / "sorting.zarr")
+        # annotations is False because Zarr adds compression ratios
+        check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
+        check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
+        for annotation_name in sorting.get_annotation_keys():
+            assert sorting.get_annotation(annotation_name) == sorting_zarr.get_annotation(annotation_name)
+            assert sorting.get_annotation(annotation_name) == sorting_zarr_loaded.get_annotation(annotation_name)
 
 
 def _make_sorting_with_shuffled_ties(num_units, num_segments, seed=42):

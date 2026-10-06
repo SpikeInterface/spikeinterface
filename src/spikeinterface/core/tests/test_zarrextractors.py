@@ -14,8 +14,15 @@ from spikeinterface.core.zarrextractors import (
     add_sorting_to_zarr_group,
     get_default_zarr_compressor,
 )
+from spikeinterface.core.core_tools import is_zarr_write_supported
+
+# TODO: remove once writing to zarr is supported with zarr>=3
+requires_zarr_write = pytest.mark.skipif(
+    not is_zarr_write_supported(), reason="Writing to zarr is not supported yet with zarr>=3"
+)
 
 
+@requires_zarr_write
 def test_zarr_compression_options(tmp_path):
     from numcodecs import Blosc, Delta, FixedScaleOffset
 
@@ -59,6 +66,7 @@ def test_zarr_compression_options(tmp_path):
     assert rec_other._root["times_seg0"].filters == other_filters2
 
 
+@requires_zarr_write
 def test_ZarrSortingExtractor(tmp_path):
     np_sorting = generate_sorting()
 
