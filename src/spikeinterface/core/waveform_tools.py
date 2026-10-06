@@ -942,7 +942,6 @@ def estimate_templates(
         all_waveforms, wf_array_info = extract_waveforms_to_single_buffer(
             recording,
             spikes,
-            unit_ids,
             nbefore,
             nafter,
             mode="shared_memory",
