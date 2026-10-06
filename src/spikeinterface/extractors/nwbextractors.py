@@ -2030,6 +2030,76 @@ def read_nwb_sorting_analyzer(
     rescale_templates_to_uV: bool = True,
     verbose: bool = False,
 ) -> SortingAnalyzer:
+    """
+    Build a SortingAnalyzer from the Units table of an NWB file.
+
+    The analyzer is assembled from what the file stores, not recomputed: templates come from
+    `waveform_mean` (and `waveform_sd`), sparsity from the per-unit `electrodes` region, quality metrics
+    from the canonical quality-metric columns, and every other per-unit scalar column becomes a sorting
+    property. Per-spike columns (e.g. spike amplitudes) are not read.
+
+    Parameters
+    ----------
+    file_path : str or Path
+        Path to the NWB file.
+    electrical_series_path : str or None
+        Path of the ElectricalSeries holding the recording the sorting was run on. It has no default, so
+        attaching a recording is always an explicit choice. When given, that recording is attached to the
+        analyzer and provides the channel ids, the channel groups (for `group_name`) and the time base
+        (`sampling_frequency` and `t_start`, so neither can be passed as well). When None, the analyzer
+        has no recording: the probe is built from the electrodes table and the recording duration is
+        taken from `recording_duration`, or estimated (see `recording_duration`).
+    t_start : float or None, default: None
+        Time (in seconds, on the NWB session clock) of the recording's first sample. Only used when
+        `electrical_series_path` is None, where it defaults to 0.
+    sampling_frequency : float or None, default: None
+        The sampling frequency in Hz. Only used when `electrical_series_path` is None. If None, it is read
+        from the Units table ``resolution`` attribute.
+    recording_duration : float or None, default: None
+        Duration of the recording in seconds, used when `electrical_series_path` is None. If None, the
+        duration is estimated from the spike times and a warning is raised: the metrics stored in the file
+        are unaffected, but recomputing metrics that depend on the duration (e.g. firing_rate,
+        presence_ratio, isi_violation) will give wrong values.
+    unit_table_path : str or None, default: None
+        The path of the Units table in the NWB file. If None, the canonical ``/units`` table is used.
+    stream_mode : "fsspec" | "remfile" | "zarr" | None, default: None
+        The streaming mode to use. If None it assumes the file is on the local disk.
+    stream_cache_path : str or Path or None, default: None
+        Local path for caching. If None it uses the system temporary directory.
+    cache : bool, default: False
+        If True, the file is cached in the file passed to stream_cache_path.
+    storage_options : dict or None, default: None
+        Additional kwargs (e.g. AWS credentials) passed to the zarr.open convenience function.
+        Only used with the "zarr" stream_mode.
+    use_pynwb : bool, default: False
+        Uses the pynwb library to read the NWB file. If False, h5py (or zarr) is used directly.
+    group_name : str or None, default: None
+        The electrode group whose units are loaded. Required when the units span more than one group.
+    compute_extra : list of str or None, default: ["unit_locations"]
+        Extensions to compute on the analyzer after it is built.
+    compute_extra_params : dict or None, default: None
+        Parameters passed to `analyzer.compute()` for `compute_extra`.
+    extension_map : dict or None, default: None
+        Per-extension overrides of `DEFAULT_EXTENSION_MAP`, which maps each extension to where its data
+        lives in the file. Setting an extension to None disables it.
+    rescale_templates_to_uV : bool, default: True
+        Infer the scale of `waveform_mean` from its magnitude and convert the templates to microvolts.
+    verbose : bool, default: False
+        If True, print progress messages.
+
+    Returns
+    -------
+    sorting_analyzer : SortingAnalyzer
+        An in-memory SortingAnalyzer with the `random_spikes` and `templates` extensions (when the file
+        stores templates), `quality_metrics` (when it stores canonical metric columns) and `compute_extra`.
+
+    Notes
+    -----
+    `random_spikes` is set to cover every spike, because it is a required dependency of `templates`.
+    Without a recording, extensions that need traces (e.g. waveforms) cannot be computed. With a
+    recording they can, but recompute `random_spikes` first to extract waveforms from a subset of spikes,
+    and note that recomputing `templates` replaces the templates read from the file.
+    """
     # extension_map overrides (per extension) merge over DEFAULT_EXTENSION_MAP; see its docstring.
     resolved_extension_map = dict(DEFAULT_EXTENSION_MAP)
     if extension_map is not None:
