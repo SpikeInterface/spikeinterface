@@ -321,6 +321,10 @@ class Templates:
         to optimize read/write operations for individual units.
         """
 
+        from .core_tools import check_zarr_write_is_supported
+
+        check_zarr_write_is_supported()
+
         # Saves one chunk per unit
         arrays_chunk = (1, None, None)
         zarr_group.create_dataset("templates_array", data=self.templates_array, chunks=arrays_chunk)
@@ -353,6 +357,9 @@ class Templates:
         """
         import zarr
 
+        from .core_tools import check_zarr_write_is_supported
+
+        check_zarr_write_is_supported()
         zarr_group = zarr.open_group(folder_path, mode="w")
 
         self.add_templates_to_zarr_group(zarr_group)
