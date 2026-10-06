@@ -409,7 +409,6 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
 def extract_waveforms_to_single_buffer(
     recording,
     spikes,
-    unit_ids,
     nbefore,
     nafter,
     mode="memmap",
@@ -447,8 +446,6 @@ def extract_waveforms_to_single_buffer(
     spikes: 1d numpy array with several fields
         Spikes handled as a unique vector.
         This vector can be obtained with: `spikes = Sorting.to_spike_vector()`
-    unit_ids: list ot numpy
-        List of unit_ids
     nbefore: int
         N samples before spike
     nafter: int
@@ -650,7 +647,7 @@ def _init_worker_distribute_single_buffer(
         worker_dict["shm"] = shm
         worker_dict["all_waveforms"] = all_waveforms
 
-    # prepare segment slices
+    # prepare segment slices: since this is a subset of spikes, it's cheap to compute segment slices
     segment_slices = []
     for segment_index in range(recording.get_num_segments()):
         s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])

@@ -50,7 +50,6 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     n = rec.get_num_channels()
-    unit_ids = np.arange(n, dtype="int64")
     sparsity_mask = np.eye(n, dtype="bool")
 
     spikes = np.zeros(
@@ -66,7 +65,6 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
     all_wfs = extract_waveforms_to_single_buffer(
         rec,
         spikes,
-        unit_ids,
         nbefore,
         nafter,
         mode="shared_memory",

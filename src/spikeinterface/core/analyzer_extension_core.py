@@ -182,7 +182,6 @@ class ComputeWaveforms(AnalyzerExtension):
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
-        unit_ids = sorting.unit_ids
 
         # retrieve spike vector and the sampling
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
@@ -209,7 +208,6 @@ class ComputeWaveforms(AnalyzerExtension):
         all_waveforms = extract_waveforms_to_single_buffer(
             recording,
             some_spikes,
-            unit_ids,
             self.nbefore,
             self.nafter,
             mode=mode,

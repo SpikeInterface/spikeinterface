@@ -136,7 +136,6 @@ def test_waveform_tools(create_cache_folder):
                 all_waveforms = extract_waveforms_to_single_buffer(
                     recording,
                     spikes,
-                    unit_ids,
                     nbefore,
                     nafter,
                     return_in_uV=False,
@@ -184,7 +183,7 @@ def test_extract_waveforms_to_single_buffer_zarr(tmp_path, sparse):
 
     # reference computed in shared memory, single job
     reference = extract_waveforms_to_single_buffer(
-        recording, spikes, unit_ids, nbefore, nafter, mode="shared_memory", n_jobs=1, **common
+        recording, spikes, nbefore, nafter, mode="shared_memory", n_jobs=1, **common
     )
 
     # zarr mode, single and parallel jobs, must match the reference and reload from disk
@@ -193,7 +192,6 @@ def test_extract_waveforms_to_single_buffer_zarr(tmp_path, sparse):
         zarr_waveforms = extract_waveforms_to_single_buffer(
             recording,
             spikes,
-            unit_ids,
             nbefore,
             nafter,
             mode="zarr",
