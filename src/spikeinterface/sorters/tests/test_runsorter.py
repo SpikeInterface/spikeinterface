@@ -13,14 +13,15 @@ from spikeinterface.sorters import run_sorter
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
-def _generate_recording():
+def _generate_recording(folder):
     recording, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=2205)
+    recording = recording.save(folder=folder / "rec_for_generate_recording", format="binary")
     return recording
 
 
 @pytest.fixture(scope="module")
-def generate_recording():
-    return _generate_recording()
+def generate_recording(create_cache_folder):
+    return _generate_recording(create_cache_folder)
 
 
 @pytest.mark.xfail(
