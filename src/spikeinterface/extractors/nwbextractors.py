@@ -1456,6 +1456,23 @@ class NwbSortingExtractor(BaseSorting):
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = np.array([[0, num_spikes]], dtype="int64")
 
+    def get_last_spike_frame(self, segment_index: int | None = None) -> int:
+        # Performance: the generic BaseSorting version builds the full spike vector to take one maximum.
+        # spike_times_index holds the end offset of each unit's spikes, so reading only the last spike of
+        # each unit is enough. This assumes spike times are ordered within each unit, an NWB best practice
+        # checked by nwbinspector, so each unit's last stored time is its latest.
+        segment_index = self._check_segment_index(segment_index)
+        segment = self.segments[segment_index]
+        unit_ends = np.asarray(segment.spike_times_index_data[:], dtype="int64")
+        unit_counts = np.diff(unit_ends, prepend=0)
+        last_spike_positions = unit_ends[unit_counts > 0] - 1
+        if last_spike_positions.size == 0:
+            return 0
+        last_spike_times = np.asarray(segment.spike_times_data[last_spike_positions], dtype="float64")
+        last_spike_time = last_spike_times.max()
+        last_spike_frame = segment._times_to_samples(last_spike_time)
+        return int(last_spike_frame)
+
     @staticmethod
     def fetch_available_units_tables(
         file_path: str | Path,
