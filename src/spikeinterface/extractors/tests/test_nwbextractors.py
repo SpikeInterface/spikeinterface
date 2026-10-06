@@ -1313,7 +1313,9 @@ def test_read_nwb_sorting_analyzer_default(tmp_path):
     from spikeinterface.extractors import read_nwb_sorting_analyzer
 
     path = _make_units_nwb(tmp_path / "units.nwb")
-    analyzer = read_nwb_sorting_analyzer(path, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None)
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None
+    )
 
     # recordingless, sparse, with templates for every unit
     assert not analyzer.has_recording()
@@ -1337,6 +1339,7 @@ def test_read_nwb_sorting_analyzer_extension_map_override(tmp_path):
     path = _make_units_nwb(tmp_path / "units.nwb")
     analyzer = read_nwb_sorting_analyzer(
         path,
+        electrical_series_path=None,
         use_pynwb=False,
         sampling_frequency=30000.0,
         compute_extra=None,
@@ -1354,6 +1357,7 @@ def test_read_nwb_sorting_analyzer_extension_map_disable(tmp_path):
     path = _make_units_nwb(tmp_path / "units.nwb")
     analyzer = read_nwb_sorting_analyzer(
         path,
+        electrical_series_path=None,
         use_pynwb=False,
         sampling_frequency=30000.0,
         compute_extra=None,
@@ -1369,7 +1373,9 @@ def test_read_nwb_sorting_analyzer_waveform_sd(tmp_path):
     from spikeinterface.extractors import read_nwb_sorting_analyzer
 
     path = _make_units_nwb(tmp_path / "units.nwb", with_std=True)
-    analyzer = read_nwb_sorting_analyzer(path, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None)
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None
+    )
     templates = analyzer.get_extension("templates")
     # the std operator is populated only because the file stores waveform_sd
     assert "std" in templates.params["operators"]
@@ -1392,10 +1398,29 @@ def test_read_nwb_sorting_analyzer_skips_per_spike_columns(tmp_path, use_pynwb, 
         return original_getitem(self, key)
 
     monkeypatch.setattr(h5py.Dataset, "__getitem__", logging_getitem)
-    analyzer = read_nwb_sorting_analyzer(path, use_pynwb=use_pynwb, sampling_frequency=30000.0, compute_extra=None)
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, use_pynwb=use_pynwb, sampling_frequency=30000.0, compute_extra=None
+    )
 
     assert "/units/spike_amplitudes_uV" not in read_datasets
     assert "spike_amplitudes_uV" not in analyzer.sorting.get_property_keys()
+
+
+def test_read_nwb_sorting_analyzer_recording_duration(tmp_path):
+    pytest.importorskip("pynwb")
+    import warnings
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb")
+    with pytest.warns(UserWarning, match="duration is estimated"):
+        read_nwb_sorting_analyzer(path, electrical_series_path=None, sampling_frequency=30000.0, compute_extra=None)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message=".*duration is estimated.*")
+        analyzer = read_nwb_sorting_analyzer(
+            path, electrical_series_path=None, sampling_frequency=30000.0, recording_duration=120.0, compute_extra=None
+        )
+    assert analyzer.get_total_duration() == pytest.approx(120.0)
 
 
 if __name__ == "__main__":

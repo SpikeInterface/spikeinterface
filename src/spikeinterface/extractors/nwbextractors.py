@@ -2013,9 +2013,10 @@ def _resolve_extension_columns(extension_map, scalar_colnames, all_colnames):
 
 def read_nwb_sorting_analyzer(
     file_path: str | Path,
+    electrical_series_path: str | None,
     t_start: float | None = None,
     sampling_frequency: float | None = None,
-    electrical_series_path: str | None = None,
+    recording_duration: float | None = None,
     unit_table_path: str | None = None,
     stream_mode: Literal["fsspec", "remfile", "zarr"] | None = None,
     stream_cache_path: str | Path | None = None,
@@ -2033,8 +2034,10 @@ def read_nwb_sorting_analyzer(
     resolved_extension_map = dict(DEFAULT_EXTENSION_MAP)
     if extension_map is not None:
         resolved_extension_map.update(extension_map)
-    # try to read recording object to get the analyzer
-    try:
+    # The recording is attached only when the caller names its ElectricalSeries. Guessing it would attach
+    # whatever single series the file holds (e.g. LFP), and a failed load would silently fall back to the
+    # recordingless case. electrical_series_path=None is the explicit opt-out.
+    if electrical_series_path is not None:
         recording = NwbRecordingExtractor(
             file_path=file_path,
             electrical_series_path=electrical_series_path,
@@ -2044,12 +2047,12 @@ def read_nwb_sorting_analyzer(
             storage_options=storage_options,
             use_pynwb=use_pynwb,
         )
-    except Exception:
-        if verbose:
-            print("Could not load recording, proceeding without it")
+        # the ElectricalSeries provides the time base, so t_start is passed through as given and the
+        # sorting raises if the caller also set it
+        t_start_tmp = t_start
+    else:
         recording = None
-
-    t_start_tmp = 0 if t_start is None else t_start
+        t_start_tmp = 0 if t_start is None else t_start
 
     sorting_tmp = NwbSortingExtractor(
         file_path=file_path,
@@ -2179,9 +2182,18 @@ def read_nwb_sorting_analyzer(
         # last spike; doubling generously covers the gap while over-estimating only adds a harmless empty
         # tail. Read from sorting_tmp because a group selection wraps `sorting` in a UnitsSelectionSorting
         # whose segment has no spike_times_data.
-        spike_times_data = sorting_tmp._sorting_segments[0].spike_times_data
-        last_stored_spike_time = 0.0 if spike_times_data.shape[0] == 0 else float(np.asarray(spike_times_data[-1]))
-        placeholder_duration = max(last_stored_spike_time * 2.0, 1.0)
+        if recording_duration is not None:
+            placeholder_duration = recording_duration
+        else:
+            spike_times_data = sorting_tmp._sorting_segments[0].spike_times_data
+            last_stored_spike_time = 0.0 if spike_times_data.shape[0] == 0 else float(np.asarray(spike_times_data[-1]))
+            placeholder_duration = max(last_stored_spike_time * 2.0, 1.0)
+            warnings.warn(
+                "No recording attached and no `recording_duration` given, so the recording duration is estimated. "
+                "Recomputing metrics that depend on it (firing_rate, presence_ratio, isi_violation, rp_violation, "
+                "sliding_rp_violation, firing_range, amplitude_cv, drift) will give wrong values. The metrics "
+                "stored in the file are unaffected. Pass `recording_duration` (in seconds) if it is known."
+            )
         analyzer_recording, analyzer_channel_ids = _make_placeholder_recording_from_electrodes(
             sorting, electrodes_table, electrodes_indices, duration=placeholder_duration, verbose=verbose
         )
