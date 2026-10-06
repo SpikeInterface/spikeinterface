@@ -5,7 +5,7 @@ from spikeinterface.core import BaseRecording
 from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecutor
 
 from .common_reference import common_reference
-from .filter import highpass_filter, lowpass_filter
+from .filter import highpass_filter
 
 """
 To discuss

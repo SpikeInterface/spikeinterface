@@ -142,7 +142,13 @@ if __name__ == "__main__":
 			for segment_index in range(2)
 		]
 		recording = NumpyRecording(traces_list, sampling_frequency=sampling_frequency)
-		lfp_recording = si.lowpass_filter(recording, 300)
+		lfp_recording = si.bandpass_filter(recording, freq_min=1, freq_max=300)
+
+	bad_channels, bad_channel_ids = si.detect_bad_channels(recording)
+	recording = recording.remove_channels(bad_channels)
+
+#	bad_channels, bad_channel_ids = si.detect_bad_channels(lfp_recording)
+#	lfp_recording = lfp_recording.remove_channels(bad_channels)
 
 	results = raw_data_quality_metrics(recording, raw_lfp_recording=lfp_recording, n_jobs=10)
 	# Automatic AP preprocessing preserves the raw AP channel order and geometry.

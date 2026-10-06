@@ -48,7 +48,7 @@ class FilterRecording(BasePreprocessor):
     band : float or list, default: [300.0, 6000.0]
         If float, cutoff frequency in Hz for "highpass" filter type
         If list. band (low, high) in Hz for "bandpass" filter type
-    btype : "bandpass" | "highpass" | "lowpass", default: "bandpass"
+    btype : "bandpass" | "highpass", default: "bandpass"
         Type of the filter
     margin_ms : float, default: None
         Margin in ms on border to avoid border effect.
@@ -98,7 +98,7 @@ class FilterRecording(BasePreprocessor):
         assert filter_mode in ("sos", "ba"), "'filter' mode must be 'sos' or 'ba'"
         fs = recording.get_sampling_frequency()
         if coeff is None:
-            assert btype in ("bandpass", "highpass", "lowpass"), "Invalid filter type"
+            assert btype in ("bandpass", "highpass"), "'bytpe' must be 'bandpass' or 'highpass'"
             # coefficient
             # self.coeff is 'sos' or 'ab' style
             filter_coeff = iirfilter(
@@ -366,32 +366,6 @@ class HighpassFilterRecording(FilterRecording):
         return new_kwargs
 
 
-class LowpassFilterRecording(FilterRecording):
-    """Low-pass filter of a recording."""
-
-    def __init__(
-        self,
-        recording,
-        freq_max=300.0,
-        margin_ms="auto",
-        dtype=None,
-        **filter_kwargs,
-    ):
-        if margin_ms == "auto":
-            margin_ms = adjust_margin_ms_for_highpass(freq_max)
-        FilterRecording.__init__(
-            self, recording, band=freq_max, margin_ms=margin_ms, dtype=dtype, btype="lowpass", **filter_kwargs
-        )
-        dtype = fix_dtype(recording, dtype)
-        self._kwargs = dict(
-            recording=recording,
-            freq_max=freq_max,
-            margin_ms=margin_ms,
-            dtype=dtype.str,
-        )
-        self._kwargs.update(filter_kwargs)
-
-
 class NotchFilterRecording(FilterRecording):
     """
     Parameters
@@ -444,7 +418,6 @@ filter = define_function_handling_dict_from_class(source_class=FilterRecording, 
 bandpass_filter = define_function_handling_dict_from_class(source_class=BandpassFilterRecording, name="bandpass_filter")
 notch_filter = define_function_handling_dict_from_class(source_class=NotchFilterRecording, name="notch_filter")
 highpass_filter = define_function_handling_dict_from_class(source_class=HighpassFilterRecording, name="highpass_filter")
-lowpass_filter = define_function_handling_dict_from_class(source_class=LowpassFilterRecording, name="lowpass_filter")
 
 
 def causal_filter(
