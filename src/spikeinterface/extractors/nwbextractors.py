@@ -2077,9 +2077,14 @@ def read_nwb_sorting_analyzer(
     # (identity properties). The large per-spike columns (spike amplitudes, spike depths, each as long
     # as the whole spike vector) are never read here, which is what makes streaming this table viable.
     if use_pynwb:
+        from hdmf.common import VectorIndex
+
         units_table = sorting.units_table
         colnames = list(units_table.colnames)
-        units = units_table.to_dataframe(index=True)
+        # ragged columns (per-spike data) are excluded so to_dataframe never reads them; electrodes is
+        # ragged too but is the per-unit region needed for sparsity
+        ragged_colnames = {c for c in colnames if c != "electrodes" and isinstance(units_table[c], VectorIndex)}
+        units = units_table.to_dataframe(index=True, exclude=ragged_colnames)
         structural = {"waveform_mean", "waveform_sd", "electrodes"}
         metric_colnames = [c for c in units.columns if c not in structural and units[c].dtype.kind in "fiu"]
         label_colnames = [

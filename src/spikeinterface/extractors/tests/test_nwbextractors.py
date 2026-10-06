@@ -1266,7 +1266,7 @@ def test_time_series_recording_equality_with_pynwb_and_backend(generate_nwbfile_
     check_recordings_equal(recording_backend, recording_pynwb)
 
 
-def _make_units_nwb(path, n_units=6, n_ch=8, n_samp=30, with_std=False):
+def _make_units_nwb(path, n_units=6, n_ch=8, n_samp=30, with_std=False, with_per_spike=False):
     """Build a minimal NWB file with a Units table for read_nwb_sorting_analyzer tests.
 
     Pure pynwb, no external writers. The Units table has `waveform_mean` (templates), a canonical
@@ -1286,6 +1286,8 @@ def _make_units_nwb(path, n_units=6, n_ch=8, n_samp=30, with_std=False):
     nwbfile.add_unit_column(name="snr", description="canonical quality metric")
     nwbfile.add_unit_column(name="custom_score", description="non-canonical per-unit value")
     nwbfile.add_unit_column(name="ks_label", description="curation label")
+    if with_per_spike:
+        nwbfile.add_unit_column(name="spike_amplitudes_uV", description="per-spike amplitudes", index=True)
     rng = np.random.default_rng(0)
     for u in range(n_units):
         kwargs = dict(
@@ -1298,6 +1300,8 @@ def _make_units_nwb(path, n_units=6, n_ch=8, n_samp=30, with_std=False):
         )
         if with_std:
             kwargs["waveform_sd"] = np.abs(rng.standard_normal((n_samp, n_ch)))
+        if with_per_spike:
+            kwargs["spike_amplitudes_uV"] = rng.standard_normal(kwargs["spike_times"].size)
         nwbfile.add_unit(**kwargs)
     with NWBHDF5IO(str(path), "w") as io:
         io.write(nwbfile)
@@ -1370,6 +1374,28 @@ def test_read_nwb_sorting_analyzer_waveform_sd(tmp_path):
     # the std operator is populated only because the file stores waveform_sd
     assert "std" in templates.params["operators"]
     assert "std" in templates.data
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_read_nwb_sorting_analyzer_skips_per_spike_columns(tmp_path, use_pynwb, monkeypatch):
+    pytest.importorskip("pynwb")
+    import h5py
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb", with_per_spike=True)
+
+    read_datasets = set()
+    original_getitem = h5py.Dataset.__getitem__
+
+    def logging_getitem(self, key):
+        read_datasets.add(self.name)
+        return original_getitem(self, key)
+
+    monkeypatch.setattr(h5py.Dataset, "__getitem__", logging_getitem)
+    analyzer = read_nwb_sorting_analyzer(path, use_pynwb=use_pynwb, sampling_frequency=30000.0, compute_extra=None)
+
+    assert "/units/spike_amplitudes_uV" not in read_datasets
+    assert "spike_amplitudes_uV" not in analyzer.sorting.get_property_keys()
 
 
 if __name__ == "__main__":
