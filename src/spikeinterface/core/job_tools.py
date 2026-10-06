@@ -232,7 +232,7 @@ def divide_time_series_into_chunks(recording, chunk_size, num_chunk_per_batch):
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
         slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
     if num_chunk_per_batch is not None:
-        slices = [slices[i : i + num_chunk_per_batch] for i in range(0, len(slices), num_chunk_per_batch)]    
+        slices = [slices[i : i + num_chunk_per_batch] for i in range(0, len(slices), num_chunk_per_batch)]
     return slices
 
 
@@ -704,7 +704,6 @@ class WorkerFuncWrapper:
                     return self.func(segment_index, start_frame, end_frame, self.worker_dict)
         else:
             raise ValueError("args must be a tuple or a list of tuples")
-
 
 
 # see
