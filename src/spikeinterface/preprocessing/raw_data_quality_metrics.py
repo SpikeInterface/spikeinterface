@@ -174,6 +174,8 @@ def _get_job_kwargs(job_kwargs, chunk_size_s, rolling_rms_window_size_s):
     we handle this outselves. Pass to `fix_job_kwargs`, for sparse_job_kwargs
     we generate ``slices`` outselves so this is not directly used, but passed
     to `fix_job_kwargs` to avoid it default inserting a chunk size.
+
+    TODO: ensure this is properly tested, its a bit brittle.
     """
     chunk_keys = {"chunk_size", "chunk_duration", "chunk_memory", "total_memory"}
     if chunk_keys.intersection(job_kwargs):

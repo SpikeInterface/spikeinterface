@@ -1,3 +1,6 @@
+"""
+This is a temporary LLM-generated script for testing the raw data quality metrics on some real data.
+"""
 import sys
 from pathlib import Path
 
