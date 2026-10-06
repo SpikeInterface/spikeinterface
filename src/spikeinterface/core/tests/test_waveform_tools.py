@@ -210,6 +210,53 @@ def test_extract_waveforms_to_single_buffer_zarr(tmp_path, sparse):
         assert np.array_equal(reference, reloaded[:])
 
 
+def test_waveforms_at_segment_borders(tmp_path):
+    # spikes near the segment borders are partially filled: samples outside of the segment are 0
+    from spikeinterface.core import NumpySorting
+
+    recording = generate_recording(num_channels=4, durations=[2.0, 3.0], seed=0)
+    nbefore, nafter = 30, 60
+    samples_list, labels_list = [], []
+    for segment_index in range(recording.get_num_segments()):
+        num_samples = recording.get_num_samples(segment_index=segment_index)
+        samples_list.append(np.array([5, 1000, num_samples - 10]))
+        labels_list.append(np.array([0, 1, 0]))
+    sorting = NumpySorting.from_samples_and_labels(samples_list, labels_list, recording.sampling_frequency)
+    spikes = sorting.to_spike_vector()
+
+    expected = np.zeros((spikes.size, nbefore + nafter, recording.get_num_channels()), dtype="float32")
+    for i, spike in enumerate(spikes):
+        segment_index = spike["segment_index"]
+        num_samples = recording.get_num_samples(segment_index=segment_index)
+        start, end = spike["sample_index"] - nbefore, spike["sample_index"] + nafter
+        traces = recording.get_traces(
+            start_frame=max(start, 0), end_frame=min(end, num_samples), segment_index=segment_index
+        )
+        expected[i, max(0, -start) : max(0, -start) + traces.shape[0]] = traces
+
+    job_kwargs = dict(n_jobs=1, chunk_duration="0.5s", progress_bar=False)
+    common = dict(return_in_uV=False, dtype="float32", **job_kwargs)
+    shared = extract_waveforms_to_single_buffer(recording, spikes, nbefore, nafter, mode="shared_memory", **common)
+    zarr_waveforms = extract_waveforms_to_single_buffer(
+        recording, spikes, nbefore, nafter, mode="zarr", file_path=tmp_path / "wf.zarr" / "waveforms", **common
+    )
+    by_units = extract_waveforms_to_buffers(
+        recording, spikes, sorting.unit_ids, nbefore, nafter, mode="shared_memory", copy=True, **common
+    )
+    np.testing.assert_array_equal(shared, expected)
+    np.testing.assert_array_equal(zarr_waveforms[:], expected)
+    for unit_index, unit_id in enumerate(sorting.unit_ids):
+        np.testing.assert_array_equal(by_units[unit_id], expected[spikes["unit_index"] == unit_index])
+
+    templates = estimate_templates_with_accumulator(
+        recording, spikes, sorting.unit_ids, nbefore, nafter, return_in_uV=False, **job_kwargs
+    )
+    for unit_index in range(sorting.unit_ids.size):
+        np.testing.assert_allclose(
+            templates[unit_index], expected[spikes["unit_index"] == unit_index].mean(axis=0), rtol=1e-5, atol=1e-5
+        )
+
+
 def test_estimate_templates_with_accumulator():
     recording, sorting = get_dataset()
 

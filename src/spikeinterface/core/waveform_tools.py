@@ -350,8 +350,6 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
     inds_by_unit = worker_dict["inds_by_unit"]
     sparsity_mask = worker_dict["sparsity_mask"]
 
-    seg_size = recording.get_num_samples(segment_index=segment_index)
-
     # take only spikes with the correct segment_index
     # this is a slice so no copy!!
     s0, s1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
@@ -359,14 +357,14 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
 
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
-    # the border of segment are protected by nbefore on left an nafter on the right
-    i0, i1 = np.searchsorted(
-        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
-    )
+    # spikes near the segment borders are kept: their waveforms are partially filled (zero padded)
+    i0, i1 = np.searchsorted(in_seg_spikes["sample_index"], [start_frame, end_frame])
 
     # slice in absolut in spikes vector
     l0 = i0 + s0
     l1 = i1 + s0
+
+    num_samples = recording.get_num_samples(segment_index=segment_index)
 
     if l1 > l0:
 
@@ -374,12 +372,16 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
         start = sub_spikes[0]["sample_index"] - nbefore
         end = sub_spikes[-1]["sample_index"] + nafter
 
-        # load trace in memory
+        # load trace in memory, clipped to the segment: spikes near the segment borders are partially filled
+        traces_start = max(start, 0)
         traces = recording.get_traces(
-            start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
+            start_frame=traces_start,
+            end_frame=min(end, num_samples),
+            segment_index=segment_index,
+            return_in_uV=return_in_uV,
         )
 
-        onset = start + nbefore
+        onset = traces_start + nbefore
         offset = nbefore + nafter
 
         for unit_ind, unit_id in enumerate(unit_ids):
@@ -398,12 +400,15 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
 
             for pos in in_chunk_pos:
                 sample_index = spikes["sample_index"][inds[pos]] - onset
-                wf = traces[sample_index : sample_index + offset, :]
+                # sample_index < 0 only near the segment start, near the segment end wf is shorter
+                wf_start = max(0, -sample_index)
+                wf = traces[sample_index + wf_start : sample_index + offset, :]
+                wf_end = wf_start + wf.shape[0]
 
                 if sparsity_mask is None:
-                    wfs[pos, :, :] = wf
+                    wfs[pos, wf_start:wf_end, :] = wf
                 else:
-                    wfs[pos, :, :] = wf[:, sparsity_mask[unit_ind]]
+                    wfs[pos, wf_start:wf_end, :] = wf[:, sparsity_mask[unit_ind]]
 
 
 def extract_waveforms_to_single_buffer(
@@ -429,7 +434,8 @@ def extract_waveforms_to_single_buffer(
     needed to recover waveforms unit by unit. Importantly in case of sparsity, the channels are not aligned across
     units.
 
-    Note: spikes near borders (nbefore/nafter) are not extracted and 0 are put the output buffer.
+    Note: spikes near the segment borders (nbefore/nafter) are partially filled: the samples outside of the
+    segment are set to 0.
     This ensures that spikes.shape[0] == all_waveforms.shape[0].
 
     Important note: for the "shared_memory" mode wf_array_info contains reference to
@@ -669,43 +675,47 @@ def _worker_distribute_single_buffer(segment_index, start_frame, end_frame, work
     sparsity_mask = worker_dict["sparsity_mask"]
     all_waveforms = worker_dict["all_waveforms"]
 
-    seg_size = recording.get_num_samples(segment_index=segment_index)
-
     s0, s1 = segment_slices[segment_index]
     in_seg_spikes = spikes[s0:s1]
 
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
-    # the border of segment are protected by nbefore on left an nafter on the right
-    i0, i1 = np.searchsorted(
-        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
-    )
+    # spikes near the segment borders are kept: their waveforms are partially filled (zero padded)
+    i0, i1 = np.searchsorted(in_seg_spikes["sample_index"], [start_frame, end_frame])
+    num_samples = recording.get_num_samples(segment_index=segment_index)
 
     if i1 > i0:
         sub_spikes = in_seg_spikes[i0:i1]
         start = sub_spikes[0]["sample_index"] - nbefore
         end = sub_spikes[-1]["sample_index"] + nafter
 
-        # load trace in memory
+        # load trace in memory, clipped to the segment: spikes near the segment borders are partially filled
+        traces_start = max(start, 0)
         traces = recording.get_traces(
-            start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
+            start_frame=traces_start,
+            end_frame=min(end, num_samples),
+            segment_index=segment_index,
+            return_in_uV=return_in_uV,
         )
 
-        onset = start + nbefore
+        onset = traces_start + nbefore
         offset = nbefore + nafter
         sample_indices = sub_spikes["sample_index"] - onset
         unit_indices = sub_spikes["unit_index"]
         spike_indices = s0 + np.arange(i0, i1)
 
         for sample_index, unit_index, spike_index in zip(sample_indices, unit_indices, spike_indices):
-            wf = traces[sample_index : sample_index + offset, :]
+            # sample_index < 0 only near the segment start, near the segment end wf is shorter
+            wf_start = max(0, -sample_index)
+            wf = traces[sample_index + wf_start : sample_index + offset, :]
+            wf_end = wf_start + wf.shape[0]
 
             if sparsity_mask is None:
-                all_waveforms[spike_index, :, :] = wf
+                all_waveforms[spike_index, wf_start:wf_end, :] = wf
             else:
                 mask = sparsity_mask[unit_index, :]
                 wf = wf[:, mask]
-                all_waveforms[spike_index, :, : wf.shape[1]] = wf
+                all_waveforms[spike_index, wf_start:wf_end, : wf.shape[1]] = wf
 
         if worker_dict["mode"] == "memmap":
             all_waveforms.flush()
@@ -767,15 +777,13 @@ def _worker_return_single_buffer(segment_index, start_frame, end_frame, worker_d
     n_samples = worker_dict["n_samples"]
     num_chans = worker_dict["num_chans"]
 
-    seg_size = recording.get_num_samples(segment_index=segment_index)
-
     s0, s1 = segment_slices[segment_index]
     in_seg_spikes = spikes[s0:s1]
 
-    # take only spikes in range [start_frame, end_frame]; borders are protected by nbefore/nafter
-    i0, i1 = np.searchsorted(
-        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
-    )
+    # take only spikes in range [start_frame, end_frame]; spikes near the segment borders are kept and
+    # their waveforms are partially filled (zero padded)
+    i0, i1 = np.searchsorted(in_seg_spikes["sample_index"], [start_frame, end_frame])
+    num_samples = recording.get_num_samples(segment_index=segment_index)
 
     if i1 <= i0:
         return None
@@ -784,24 +792,32 @@ def _worker_return_single_buffer(segment_index, start_frame, end_frame, worker_d
     start = sub_spikes[0]["sample_index"] - nbefore
     end = sub_spikes[-1]["sample_index"] + nafter
 
+    # load trace in memory, clipped to the segment: spikes near the segment borders are partially filled
+    traces_start = max(start, 0)
     traces = recording.get_traces(
-        start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
+        start_frame=traces_start,
+        end_frame=min(end, num_samples),
+        segment_index=segment_index,
+        return_in_uV=return_in_uV,
     )
 
-    onset = start + nbefore
+    onset = traces_start + nbefore
     offset = nbefore + nafter
     sample_indices = sub_spikes["sample_index"] - onset
     unit_indices = sub_spikes["unit_index"]
 
     block = np.zeros((i1 - i0, n_samples, num_chans), dtype=dtype)
     for local_index, (sample_index, unit_index) in enumerate(zip(sample_indices, unit_indices)):
-        wf = traces[sample_index : sample_index + offset, :]
+        # sample_index < 0 only near the segment start, near the segment end wf is shorter
+        wf_start = max(0, -sample_index)
+        wf = traces[sample_index + wf_start : sample_index + offset, :]
+        wf_end = wf_start + wf.shape[0]
         if sparsity_mask is None:
-            block[local_index, :, :] = wf
+            block[local_index, wf_start:wf_end, :] = wf
         else:
             mask = sparsity_mask[unit_index, :]
             wf = wf[:, mask]
-            block[local_index, :, : wf.shape[1]] = wf
+            block[local_index, wf_start:wf_end, : wf.shape[1]] = wf
 
     # spike_indices s0 + [i0, i1) are contiguous -> write as a single slice in the main process
     start_row = s0 + i0
@@ -1164,17 +1180,14 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
     return_in_uV = worker_dict["return_in_uV"]
     sparsity_mask = worker_dict["sparsity_mask"]
 
-    seg_size = recording.get_num_samples(segment_index=segment_index)
-
     s0, s1 = segment_slices[segment_index]
     in_seg_spikes = spikes[s0:s1]
 
     # take only spikes in range [start_frame, end_frame]
     # this is a slice so no copy!!
-    # the border of segment are protected by nbefore on left an nafter on the right
-    i0, i1 = np.searchsorted(
-        in_seg_spikes["sample_index"], [max(start_frame, nbefore), min(end_frame, seg_size - nafter)]
-    )
+    # spikes near the segment borders are kept: their waveforms are partially filled (zero padded)
+    i0, i1 = np.searchsorted(in_seg_spikes["sample_index"], [start_frame, end_frame])
+    num_samples = recording.get_num_samples(segment_index=segment_index)
 
     if i1 > i0:
         sub_spikes = in_seg_spikes[i0:i1]
@@ -1182,28 +1195,37 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
         start = sub_spikes[0]["sample_index"] - nbefore
         end = sub_spikes[-1]["sample_index"] + nafter
 
-        # load trace in memory
+        # load trace in memory, clipped to the segment: spikes near the segment borders are partially filled
+        traces_start = max(start, 0)
         traces = recording.get_traces(
-            start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
+            start_frame=traces_start,
+            end_frame=min(end, num_samples),
+            segment_index=segment_index,
+            return_in_uV=return_in_uV,
         )
 
-        onset = start + nbefore
+        onset = traces_start + nbefore
         offset = nbefore + nafter
         sample_indices = sub_spikes["sample_index"] - onset
         unit_indices = sub_spikes["unit_index"]
 
         for sample_index, unit_index in zip(sample_indices, unit_indices):
 
-            wf = traces[sample_index : sample_index + offset, :]
+            # sample_index < 0 only near the segment start, near the segment end wf is shorter
+            wf_start = max(0, -sample_index)
+            wf = traces[sample_index + wf_start : sample_index + offset, :]
+            wf_end = wf_start + wf.shape[0]
 
             if sparsity_mask is None:
-                waveform_accumulator_per_worker[worker_index, unit_index, :, :] += wf
+                waveform_accumulator_per_worker[worker_index, unit_index, wf_start:wf_end, :] += wf
                 if waveform_squared_accumulator_per_worker is not None:
-                    waveform_squared_accumulator_per_worker[worker_index, unit_index, :, :] += wf**2
+                    waveform_squared_accumulator_per_worker[worker_index, unit_index, wf_start:wf_end, :] += wf**2
 
             else:
                 mask = sparsity_mask[unit_index, :]
                 wf = wf[:, mask]
-                waveform_accumulator_per_worker[worker_index, unit_index, :, : wf.shape[1]] += wf
+                waveform_accumulator_per_worker[worker_index, unit_index, wf_start:wf_end, : wf.shape[1]] += wf
                 if waveform_squared_accumulator_per_worker is not None:
-                    waveform_squared_accumulator_per_worker[worker_index, unit_index, :, : wf.shape[1]] += wf**2
+                    waveform_squared_accumulator_per_worker[
+                        worker_index, unit_index, wf_start:wf_end, : wf.shape[1]
+                    ] += (wf**2)
