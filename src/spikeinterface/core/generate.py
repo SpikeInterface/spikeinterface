@@ -569,9 +569,7 @@ class TransformSorting(BaseSorting):
         to_keep = ~self.added_spikes_from_existing_mask.copy()
         for segment_index in range(self.get_num_segments()):
             for unit_ind in unit_indices:
-                (indices,) = np.nonzero(
-                    (spikes["unit_index"] == unit_ind) * (spikes["segment_index"] == segment_index)
-                )
+                (indices,) = np.nonzero((spikes["unit_index"] == unit_ind) * (spikes["segment_index"] == segment_index))
                 to_keep[indices[1:]] = np.logical_or(
                     to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
                 )
