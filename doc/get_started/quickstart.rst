@@ -198,8 +198,9 @@ to set it *manually*.
 
 
 If your recording does not have a ``Probe``, you can set it using
-``set_probe``. Note: ``set_probe`` creates a copy of the recording with
-the new probe, rather than modifying the existing recording in place.
+``set_probe``. Note: ``set_probe`` modifies the recording in place. To
+get a new recording object with a subset of channels attached to a probe,
+use ``select_channels_with_probe``.
 There is more information
 `here <https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html>`__.
 

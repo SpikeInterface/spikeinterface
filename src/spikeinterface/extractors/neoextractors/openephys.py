@@ -15,7 +15,10 @@ import warnings
 
 import probeinterface
 
-from spikeinterface.extractors.neuropixels_utils import get_neuropixels_sample_shifts_from_probe
+from spikeinterface.extractors.neuropixels_utils import (
+    get_neuropixels_sample_shifts_from_probe,
+    compute_saturation_threshold_from_probe,
+)
 from spikeinterface.extractors.neoextractors.neobaseextractor import NeoBaseRecordingExtractor, NeoBaseEventExtractor
 
 
@@ -130,18 +133,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         Alternative way to specify which experiment to load using a zero-based index.
         block_index=0 corresponds to experiment1, block_index=1 to experiment2, etc.
         Cannot be used together with experiment_name.
-    load_sync_channel : bool, default: False
-        **DEPRECATED: Use stream_name or stream_id to load sync streams. Will be removed in version 0.104.0**
-        If False (default) and a SYNC channel is present (e.g., Neuropixels), this is not loaded.
-        If True, the SYNC channel is loaded and can be accessed in the analog signals.
     load_sync_timestamps : bool, default: False
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing
-    experiment_names : str, list, or None, default: None
-        **DEPRECATED: Use experiment_name instead. Will be removed in version 0.105.0**
-        This parameter was designed for Neo's multi-block loading, but SpikeInterface only loads
-        one block at a time. Use experiment_name to select a single experiment.
     all_annotations : bool, default: False
         Load exhaustively all annotation from neo
 
@@ -224,19 +219,10 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         stream_id: str = None,
         stream_name: str = None,
         block_index: int = None,
-        load_sync_channel: bool = False,
         load_sync_timestamps: bool = False,
-        experiment_names: str | list | None = None,
         all_annotations: bool = False,
     ):
-        # Handle experiment_names deprecation
-        if experiment_names is not None:
-            warnings.warn(
-                "OpenEphysBinaryRecordingExtractor: 'experiment_names' is deprecated and will be removed in version 0.105.0. "
-                "Use 'experiment_name' instead to select a single experiment (e.g., experiment_name='experiment2').",
-                FutureWarning,
-                stacklevel=2,
-            )
+        folder_path = Path(folder_path)
 
         # Handle experiment_name and block_index parameters
         if experiment_name is not None and block_index is not None:
@@ -248,7 +234,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         # Convert experiment_name to experiment_names for Neo
         # When using experiment_name, Neo will filter to only that experiment, making it block_index=0
         # experiment_name takes precedence over experiment_names
-        experiment_names_for_neo = experiment_names  # Use deprecated parameter if provided
+        experiment_names_for_neo = None  # No longer using the deprecated parameter
         if experiment_name is not None:
             # experiment_name overrides experiment_names
             experiment_names_for_neo = [experiment_name]
@@ -275,16 +261,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             # Single experiment: no filtering needed, let base class handle it
             block_index = None
 
-        if load_sync_channel:
-            warning_message = (
-                "OpenEphysBinaryRecordingExtractor: `load_sync_channel` is deprecated and will "
-                "be removed in version 0.104, use the `stream_name` or `stream_id` to load the sync stream if needed"
-            )
-            warnings.warn(warning_message, DeprecationWarning, stacklevel=2)
-
         stream_is_not_specified = stream_name is None and stream_id is None
         if stream_is_not_specified:
-            available_stream_names, _ = self.get_streams(folder_path, load_sync_channel, experiment_names_for_neo)
+            available_stream_names, _ = self.get_streams(folder_path, experiment_names_for_neo)
 
             # Auto-select neural data stream when there are exactly two streams (neural + sync)
             # and no stream was explicitly specified
@@ -294,7 +273,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     neural_stream_name = next(stream for stream in available_stream_names if "SYNC" not in stream)
                     stream_name = neural_stream_name
 
-        neo_kwargs = self.map_to_neo_kwargs(folder_path, load_sync_channel, experiment_names_for_neo)
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, experiment_names_for_neo)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -307,7 +286,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         stream_is_sync = "SYNC" in self.stream_name
         if not stream_is_sync:
             # get streams to find correct probe
-            stream_names, stream_ids = self.get_streams(folder_path, load_sync_channel, experiment_names_for_neo)
+            stream_names, stream_ids = self.get_streams(folder_path, experiment_names_for_neo)
             if stream_name is None and stream_id is None:
                 stream_name = stream_names[0]
             elif stream_name is None:
@@ -327,29 +306,39 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 exp_id = exp_ids[block_index]
             rec_ids = sorted(list(node_structure["experiments"][exp_id]["recordings"].keys()))
 
-            # do not load probe for NIDQ stream or if load_sync_channel is True
-            if "NI-DAQmx" not in stream_name and not load_sync_channel:
+            # do not load probe for NIDQ stream
+            if "NI-DAQmx" not in stream_name:
                 settings_file = node_structure["experiments"][exp_id]["settings_file"]
 
-                if Path(settings_file).is_file():
-                    probe = probeinterface.read_openephys(
-                        settings_file=settings_file, stream_name=oe_stream_name, raise_error=False
+                if Path(settings_file).is_file() and probeinterface.has_neuropixels_probes(
+                    settings_file, stream_name=oe_stream_name
+                ):
+                    probe = probeinterface.read_openephys_neuropixels(
+                        settings_file=settings_file, stream_name=oe_stream_name
                     )
-                else:
-                    probe = None
-
-                if probe is not None:
                     if probe.shank_ids is not None:
-                        self.set_probe(probe, in_place=True, group_mode="by_shank")
+                        self.set_probe(probe, group_mode="by_shank")
                     else:
-                        self.set_probe(probe, in_place=True)
+                        self.set_probe(probe)
                     # get inter-sample shifts based on the probe information and mux channels
                     sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
                     if sample_shifts is not None:
                         self.set_property("inter_sample_shift", sample_shifts)
 
-            # load synchronized timestamps and set_times to recording
-            recording_folder = Path(folder_path) / record_node
+                    # add saturation levels if available
+                    saturation_threshold_uV = compute_saturation_threshold_from_probe(probe, oe_stream_name)
+                    if saturation_threshold_uV is not None:
+                        self.annotate(saturation_threshold_uV=saturation_threshold_uV)
+
+            # folder_path can point to different levels of the OE folder structure
+            # (root, record node, experiment, or recording). We need to find the root folder
+            # in order to load the sync timestamps and set them as times to the recording.
+            if record_node in folder_path.parts:
+                root_index = len(folder_path.parts) - folder_path.parts.index(record_node) - 1
+                root_folder = folder_path.parents[root_index]
+            else:
+                root_folder = folder_path
+            recording_folder = root_folder / record_node
             stream_folders = []
             for segment_index, rec_id in enumerate(rec_ids):
                 stream_folder = (
@@ -377,19 +366,26 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             dict(
                 folder_path=str(Path(folder_path).absolute()),
                 experiment_name=experiment_name,
-                load_sync_channel=load_sync_channel,
                 load_sync_timestamps=load_sync_timestamps,
             )
         )
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path, load_sync_channel=False, experiment_names=None):
+    def map_to_neo_kwargs(cls, folder_path, experiment_names=None):
         neo_kwargs = {
             "dirname": str(folder_path),
-            "load_sync_channel": load_sync_channel,
             "experiment_names": experiment_names,
         }
         return neo_kwargs
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "load_sync_channel" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs.pop("load_sync_channel")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):
@@ -502,11 +498,6 @@ def read_openephys(folder_path, **kwargs):
         Cannot be used together with experiment_name.
     all_annotations : bool, default: False
         Load exhaustively all annotation from neo
-    load_sync_channel : bool, default: False
-        **DEPRECATED: Use stream_name or stream_id to load sync streams**
-        If False (default) and a SYNC channel is present (e.g. Neuropixels), this is not loaded.
-        If True, the SYNC channel is loaded and can be accessed in the analog signals.
-        For open ephys binary format only
     load_sync_timestamps : bool, default: False
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed

@@ -40,7 +40,7 @@ class UnitWaveformsWidget(BaseWidget):
     scale : float, default: 1
         Scale factor for the waveforms/templates (matplotlib backend)
     abs_y_scale : None | float, default None
-        Absolut y_scale that override the auto y scale mechanism
+        Absolute y_scale that override the auto y scale mechanism
     widen_narrow_scale : float, default: 1
         Scale factor for the x-axis of the waveforms/templates (matplotlib backend)
     axis_equal : bool, default: False
@@ -76,7 +76,7 @@ class UnitWaveformsWidget(BaseWidget):
         If True, waveforms and templates are displayed on the same axis (matplotlib backend)
     x_offset_units : bool, default: False
         In case same_axis is True, this parameter allow to x-offset the waveforms for different units
-        (recommended for a few units) (matlotlib backend)
+        (recommended for a few units) (matplotlib backend)
     plot_legend : bool, default: True
         Display legend (matplotlib backend)
     """
@@ -183,7 +183,7 @@ class UnitWaveformsWidget(BaseWidget):
             ):
                 warn(
                     "templates_percentile_shading can only be used if the 'waveforms' extension is available. "
-                    "Settimg templates_percentile_shading to None."
+                    "Setting templates_percentile_shading to None."
                 )
                 templates_percentile_shading = None
             templates_shading = self._get_template_shadings(unit_ids, templates_percentile_shading)

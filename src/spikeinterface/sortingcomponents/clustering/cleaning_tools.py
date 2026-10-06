@@ -1,5 +1,5 @@
 """
-This gather some function usefull for some clusetring algos.
+This gather some function useful for some clustering algos.
 """
 
 import numpy as np
@@ -107,7 +107,7 @@ def _split_waveforms_nested(
 
         (active_ind,) = np.nonzero(local_labels_with_noise == 0)
 
-        # reduce dimention in 2 step
+        # reduce dimension in 2 step
         active_wfs = wfs_and_noise[active_ind, :, :]
         local_feature = np.zeros((active_wfs.shape[0], n_components_by_channel * active_wfs.shape[2]))
         tsvd = sklearn.decomposition.TruncatedSVD(n_components=n_components_by_channel)

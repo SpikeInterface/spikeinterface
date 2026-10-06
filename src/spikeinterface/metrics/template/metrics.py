@@ -1,4 +1,5 @@
 from collections import namedtuple
+
 import numpy as np
 
 from spikeinterface.core.analyzer_extension_core import BaseMetric
@@ -151,7 +152,6 @@ def get_trough_and_peak_idx(
         - "{extremum}_half_width_left": sample index of the left intersection point of the main with half of amplitude
         - "{extremum}_half_width_right": sample index of the right intersection point of the main with half of amplitude
     """
-    from scipy.signal import find_peaks
 
     assert template.ndim == 1
 
@@ -577,7 +577,7 @@ def get_repolarization_slope(main_channel_template, sampling_frequency, peaks_in
     slope: float
         The repolarization slope
     """
-    import scipy.stats
+    from scipy.stats import linregress
 
     times = np.arange(main_channel_template.shape[0]) / sampling_frequency
 
@@ -593,9 +593,7 @@ def get_repolarization_slope(main_channel_template, sampling_frequency, peaks_in
     if return_to_base_idx - trough_index < 3:
         return np.nan
 
-    res = scipy.stats.linregress(
-        times[trough_index:return_to_base_idx], main_channel_template[trough_index:return_to_base_idx]
-    )
+    res = linregress(times[trough_index:return_to_base_idx], main_channel_template[trough_index:return_to_base_idx])
     return res.slope
 
 

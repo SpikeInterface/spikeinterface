@@ -27,7 +27,7 @@ Example code
 	# Combine sorting and recording into a sorting_analyzer
 	# It is also recommended to run sorting_analyzer.compute(input="spike_amplitudes")
 	# in order to use amplitudes from all spikes
-	fraction_missing = sqm.compute_amplitude_cutoffs(sorting_analyzer=sorting_analyzer, peak_sign="neg")
+	fraction_missing = sqm.compute_amplitude_cutoffs(sorting_analyzer=sorting_analyzer)
 	# fraction_missing is a dict containing the unit IDs as keys,
 	# and their estimated fraction of missing spikes as values.
 

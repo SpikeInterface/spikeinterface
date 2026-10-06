@@ -5,6 +5,7 @@ from spikeinterface import (
     generate_ground_truth_recording,
     create_sorting_analyzer,
     load,
+    ms_to_samples,
     SortingAnalyzer,
     Templates,
     aggregate_channels,
@@ -71,7 +72,7 @@ def generate_templates_object():
     templates = Templates(
         templates_array=templates_arr,
         sampling_frequency=sampling_frequency,
-        nbefore=int(ms_before * sampling_frequency / 1000),
+        nbefore=ms_to_samples(ms_before, sampling_frequency),
         probe=probe,
     )
     return templates
@@ -195,7 +196,7 @@ def test_load_aggregate_recording_from_json(generate_recording_sorting, tmp_path
     aggregated_rec = aggregate_channels(list_of_recs)
 
     recording_path = tmp_path / "aggregated_recording"
-    aggregated_rec.save_to_folder(folder=recording_path)
+    aggregated_rec.save(folder=recording_path)
     loaded_rec = load(recording_path / "provenance.json", base_folder=recording_path)
 
     assert np.all(loaded_rec.get_property("group") == recording.get_property("group"))
@@ -227,3 +228,7 @@ def test_remote_analyzer():
         "quality_metrics",
     ]:
         assert ext in analyzer.get_saved_extension_names()
+
+
+if __name__ == "__main__":
+    test_remote_analyzer()

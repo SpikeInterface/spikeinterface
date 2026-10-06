@@ -1,7 +1,9 @@
+from copy import deepcopy
+
 import numpy as np
+
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from copy import deepcopy
 from spikeinterface.core.sorting_tools import generate_unit_ids_for_merge_group
 
 
@@ -68,7 +70,7 @@ class MergeUnitsSorting(BaseSorting):
             rm_dup_delta = None
         else:
             rm_dup_delta = int(delta_time_ms / 1000 * sampling_frequency)
-        for parent_segment in self._parent_sorting._sorting_segments:
+        for parent_segment in self._parent_sorting.segments:
             sub_segment = MergeUnitsSortingSegment(parent_segment, units_to_merge, new_unit_ids, rm_dup_delta)
             self.add_sorting_segment(sub_segment)
 
@@ -159,7 +161,7 @@ class MergeUnitsSortingSegment(BaseSortingSegment):
             else:
                 start_i = 0
             if end_frame is not None:
-                end_i = np.searchsorted(spike_times, start_frame, side="right")
+                end_i = np.searchsorted(spike_times, end_frame, side="right")
             else:
                 end_i = len(spike_times)
             return spike_times[start_i:end_i]

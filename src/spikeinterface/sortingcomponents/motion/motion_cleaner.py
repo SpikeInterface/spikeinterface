@@ -18,7 +18,7 @@ def clean_motion_vector(motion, temporal_bins, bin_duration_s, speed_threshold=3
     bin_duration_s : float
         bin duration in second
     speed_threshold : float (units um/s)
-        Maximum speed treshold between 2 bins allowed.
+        Maximum speed threshold between 2 bins allowed.
         Expressed in um/s
     sigma_smooth_s : None or float
         Optional smooting gaussian kernel.

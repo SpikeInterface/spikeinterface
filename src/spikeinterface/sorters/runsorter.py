@@ -706,7 +706,7 @@ def read_sorter_folder(folder, register_recording=True, sorting_info=True, raise
         Attach recording (when json or pickle) to the sorting
     sorting_info : bool, default: True
         Attach sorting info to the sorting
-    raise_error : bool, detault: True
+    raise_error : bool, default: True
         Raise an error if the spike sorting failed
     """
     folder = Path(folder)

@@ -179,7 +179,7 @@ def test_pca_projection_sparsity(generated_recording, detected_peaks, model_path
 def test_initialization_with_wrong_parents_failure(generated_recording, model_path_of_trained_pca):
     recording = generated_recording
     model_folder_path = model_path_of_trained_pca
-    dummy_parent = PipelineNode(recording=recording)
+    dummy_parent = PipelineNode(recording)
     extract_waveforms = ExtractSparseWaveforms(
         recording=recording, ms_before=1, ms_after=1, radius_um=40, return_output=True
     )

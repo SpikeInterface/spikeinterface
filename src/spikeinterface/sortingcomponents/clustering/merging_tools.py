@@ -1,22 +1,25 @@
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
+import importlib.util
 
 
 import numpy as np
 
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
-try:
-    import numba
-    import networkx as nx
-    import scipy.spatial
+numba_spec = importlib.util.find_spec("numba")
+networkx_spec = importlib.util.find_spec("networkx")
+scipy_spec = importlib.util.find_spec("scipy")
+sklearn_spec = importlib.util.find_spec("sklearn")
+
+if numba_spec is not None and networkx_spec is not None and scipy_spec is not None and sklearn_spec is not None:
+    from scipy.spatial import distance
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-
     from .isosplit_isocut import isocut
-
-except:
+else:
     pass
+
 from .tools import aggregate_sparse_features, FeaturesLoader
 
 DEBUG = False
@@ -131,7 +134,7 @@ def find_merge_pairs_from_features(
 
     channel_locs = recording.get_channel_locations()
     template_locs = channel_locs[max_chans, :]
-    template_dist = scipy.spatial.distance.cdist(template_locs, template_locs, metric="euclidean")
+    template_dist = distance.cdist(template_locs, template_locs, metric="euclidean")
 
     # print("template_locs", template_locs.shape, template_locs)
     # print("template_locs", np.unique(template_locs[:, 1]).shape)

@@ -57,7 +57,7 @@ print(type(recording))
 print(isinstance(recording, si.BaseRecording))
 
 ##############################################################################
-# The :py:func:`~spikeinterface.extractors.read_spike2`` function is equivalent to instantiating a
+# The :py:func:`~spikeinterface.extractors.read_spike2` function is equivalent to instantiating a
 # :py:class:`~spikeinterface.extractors.Spike2RecordingExtractor` object:
 #
 

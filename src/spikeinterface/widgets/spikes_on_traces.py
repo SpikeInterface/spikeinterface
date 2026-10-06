@@ -6,11 +6,9 @@ from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 from .traces import TracesWidget
 from spikeinterface.core import ChannelSparsity
-from spikeinterface.core.template_tools import get_template_extremum_channel
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.sortinganalyzer import SortingAnalyzer
-from spikeinterface.core.baserecording import BaseRecording
 from spikeinterface.core.basesorting import BaseSorting
-from spikeinterface.postprocessing import compute_unit_locations
 
 
 class SpikesOnTracesWidget(BaseWidget):
@@ -39,8 +37,6 @@ class SpikesOnTracesWidget(BaseWidget):
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled : bool | None, default: None
-            DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
@@ -76,7 +72,6 @@ class SpikesOnTracesWidget(BaseWidget):
         unit_colors=None,
         sparsity=None,
         mode="auto",
-        return_scaled=None,
         return_in_uV=False,
         cmap="RdBu",
         show_channel_ids=False,
@@ -92,16 +87,6 @@ class SpikesOnTracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
-        # Handle deprecated return_scaled parameter
-        if return_scaled is not None:
-            warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=DeprecationWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled
-
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
         self.check_extensions(sorting_analyzer, "unit_locations")
 
@@ -119,9 +104,9 @@ class SpikesOnTracesWidget(BaseWidget):
             sparsity = sorting_analyzer.sparsity
         else:
             if sparsity is None:
-                # in this case, we construct a sparsity dictionary only with the best channel
-                extremum_channel_ids = get_template_extremum_channel(sorting_analyzer)
-                unit_id_to_channel_ids = {u: [ch] for u, ch in extremum_channel_ids.items()}
+                # in this case, we construct a sparsity dictionary only with the main channel
+                main_channels = sorting_analyzer.get_main_channels(outputs="id", with_dict=True)
+                unit_id_to_channel_ids = {u: [ch] for u, ch in main_channels.items()}
                 sparsity = ChannelSparsity.from_unit_id_to_channel_ids(
                     unit_id_to_channel_ids=unit_id_to_channel_ids,
                     unit_ids=sorting_analyzer.unit_ids,
@@ -230,7 +215,7 @@ class SpikesOnTracesWidget(BaseWidget):
                     vspacing = traces_widget.data_plot["vspacing"]
                     traces = traces_widget.data_plot["list_traces"][0] * dp.options["scale"]
 
-                    nbefore = nafter = int(dp.spike_width_ms / 2 * sorting_analyzer.sampling_frequency / 1000)
+                    nbefore = nafter = ms_to_samples(dp.spike_width_ms / 2, sorting_analyzer.sampling_frequency)
                     waveform_idxs = spike_frames_to_plot[:, None] + np.arange(-nbefore, nafter) - frame_range[0]
                     waveform_idxs = np.clip(waveform_idxs, 0, len(traces_widget.data_plot["times_in_range"]) - 1)
 

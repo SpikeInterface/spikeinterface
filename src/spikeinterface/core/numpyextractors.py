@@ -1,5 +1,5 @@
-import warnings
 import numpy as np
+
 from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
@@ -77,10 +77,10 @@ class NumpyRecording(BaseRecording):
         }
 
     @staticmethod
-    def from_recording(source_recording, **job_kwargs):
+    def from_recording(source_recording, with_metadata=True, with_time_vector=False, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
 
-        t_starts = source_recording._get_t_starts()
+        t_starts = source_recording.get_segment_t_starts()
 
         if shms[0] is not None:
             # if the computation was done in parallel then traces_list is shared array
@@ -97,6 +97,17 @@ class NumpyRecording(BaseRecording):
             t_starts=t_starts,
             channel_ids=source_recording.channel_ids,
         )
+
+        if with_metadata:
+            source_recording.copy_metadata(recording)
+
+        if with_time_vector:
+            for segment_index in range(source_recording.get_num_segments()):
+                if source_recording.has_time_vector(segment_index):
+                    # the use of get_times is preferred since timestamps are converted to array
+                    time_vector = source_recording.get_times(segment_index=segment_index)
+                    recording.set_times(time_vector, segment_index=segment_index)
+
         return recording
 
 
@@ -119,7 +130,7 @@ class NumpyRecordingSegment(BaseRecordingSegment):
 
 class SharedMemoryRecording(BaseRecording):
     """
-    In memory recording with shared memmory buffer.
+    In memory recording with shared memory buffer.
 
     Parameters
     ----------
@@ -198,17 +209,17 @@ class SharedMemoryRecording(BaseRecording):
         }
 
     def __del__(self):
-        self._recording_segments = []
+        self._segments = []
         for shm in self.shms:
             shm.close()
             if self.main_shm_owner:
                 shm.unlink()
 
     @staticmethod
-    def from_recording(source_recording, **job_kwargs):
+    def from_recording(source_recording, with_metadata=True, with_time_vector=False, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
 
-        t_starts = source_recording._get_t_starts()
+        t_starts = source_recording.get_segment_t_starts()
 
         recording = SharedMemoryRecording(
             shm_names=[shm.name for shm in shms],
@@ -219,6 +230,16 @@ class SharedMemoryRecording(BaseRecording):
             t_starts=t_starts,
             main_shm_owner=True,
         )
+
+        if with_metadata:
+            source_recording.copy_metadata(recording)
+
+        if with_time_vector:
+            for segment_index in range(source_recording.get_num_segments()):
+                if source_recording.has_time_vector(segment_index):
+                    # the use of get_times is preferred since timestamps are converted to array
+                    time_vector = source_recording.get_times(segment_index=segment_index)
+                    recording.set_times(time_vector, segment_index=segment_index)
 
         for shm in shms:
             # the sharedmem are handle by the new SharedMemoryRecording
@@ -255,8 +276,7 @@ class NumpySorting(BaseSorting):
 
         self._serializability["memory"] = True
         self._serializability["json"] = False
-        # theorically this should be False but for simplicity make generators simples we still need this.
-        self._serializability["pickle"] = True
+        self._serializability["pickle"] = False
 
         if spikes.size == 0:
             nseg = 1
@@ -329,7 +349,7 @@ class NumpySorting(BaseSorting):
             spikes_in_seg["sample_index"] = times
             spikes_in_seg["unit_index"] = unit_index
             spikes_in_seg["segment_index"] = i
-            order = np.argsort(times)
+            order = np.argsort(times, stable=True)
             spikes_in_seg = spikes_in_seg[order]
             spikes.append(spikes_in_seg)
         spikes = np.concatenate(spikes)
@@ -395,7 +415,7 @@ class NumpySorting(BaseSorting):
                 sample_indices = np.concatenate(sample_indices)
                 unit_indices = np.concatenate(unit_indices)
 
-                order = np.argsort(sample_indices)
+                order = np.argsort(sample_indices, stable=True)
                 sample_indices = sample_indices[order]
                 unit_indices = unit_indices[order]
 

@@ -13,10 +13,12 @@ NUM_RECORDINGS = 2
 SORTERS = ["tridesclous2"]
 
 
-def create_recordings(NUM_RECORDINGS=2, base_seed=42):
+def create_recordings(folder, NUM_RECORDINGS=2, base_seed=42):
     recordings = []
     for i in range(NUM_RECORDINGS):
+
         recording, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=base_seed + i)
+        recording = recording.save(folder=folder / f"rec_for_generate_recording_{i}", format="binary", overwrite=True)
 
         if i % 2 == 0:
             recording.set_channel_groups(["0"] * 4 + ["1"] * 4)
@@ -28,7 +30,7 @@ def create_recordings(NUM_RECORDINGS=2, base_seed=42):
 
 def get_job_list(base_folder):
     jobs = []
-    recordings = create_recordings(NUM_RECORDINGS)
+    recordings = create_recordings(base_folder, NUM_RECORDINGS)
     for i, recording in enumerate(recordings):
         for sorter_name in SORTERS:
             kwargs = dict(
@@ -55,7 +57,7 @@ def test_run_sorter_jobs_loop(job_list):
     print(sortings)
 
 
-@pytest.mark.skipif(True, reason="tridesclous is already multiprocessing, joblib cannot run it in parralel")
+@pytest.mark.skipif(True, reason="tridesclous is already multiprocessing, joblib cannot run it in parallel")
 def test_run_sorter_jobs_joblib(job_list):
     sortings = run_sorter_jobs(
         job_list, engine="joblib", engine_kwargs=dict(n_jobs=2, backend="loky"), return_output=True
@@ -64,7 +66,7 @@ def test_run_sorter_jobs_joblib(job_list):
 
 
 @pytest.mark.skipif(
-    True, reason="tridesclous is already multiprocessing, processpoolexecutor cannot run it in parralel"
+    True, reason="tridesclous is already multiprocessing, processpoolexecutor cannot run it in parallel"
 )
 def test_run_sorter_jobs_processpoolexecutor(job_list, create_cache_folder):
     cache_folder = create_cache_folder
@@ -171,7 +173,7 @@ def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
     ]
     mock_subprocess_run.assert_called_with(expected_command, capture_output=True, text=True)
 
-    # Next, check the fisrt call (which sets up `si_script_0.py`)
+    # Next, check the first call (which sets up `si_script_0.py`)
     # also has the expected arguments.
     expected_command[9] = script_0_path
     assert mock_subprocess_run.call_args_list[0].args[0] == expected_command
@@ -209,7 +211,7 @@ def test_run_sorter_by_property(create_cache_folder):
     if working_folder2.is_dir():
         shutil.rmtree(working_folder2)
 
-    recordings = create_recordings(NUM_RECORDINGS)
+    recordings = create_recordings(create_cache_folder, NUM_RECORDINGS)
 
     rec0 = recordings[0]
     rec0_by = rec0.split_by("group")

@@ -106,7 +106,6 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
 
     selected_indices = []
 
-    seed = seed if seed else None
     rng = np.random.default_rng(seed=seed)
 
     if method == "uniform":

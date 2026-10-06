@@ -17,7 +17,7 @@ def compute_bin_edges_per_unit(sorting, segment_samples, bin_duration_s=1.0, per
     periods : array of unit_period_dtype, default: None
         Periods to consider for each unit
     concatenated : bool, default: True
-        Wheter the bins are concatenated across segments or not.
+        Whether the bins are concatenated across segments or not.
         If False, the bin edges are computed per segment and the first index of each segment is 0.
         If True, the bin edges are computed on the concatenated segments, with the correct offsets.
 
@@ -138,7 +138,7 @@ def create_regular_periods(sorting_analyzer, num_periods, bin_size_s=None):
         The sorting analyzer containing the units and recording information.
     num_periods : int
         The number of periods to divide the total duration into (used if bin_size_s is None).
-    bin_size_s : float, defaut: None
+    bin_size_s : float, default: None
         If given, periods will be multiple of this size in seconds.
 
     Returns

@@ -125,8 +125,8 @@ class AgreementMatrixWidget(BaseWidget):
         N1 = scores.shape[0]
         N2 = scores.shape[1]
 
-        unit_ids1 = scores.index.values
-        unit_ids2 = scores.columns.values
+        unit_ids1 = scores.index.to_numpy()
+        unit_ids2 = scores.columns.to_numpy()
 
         # Using matshow here just because it sets the ticks up nicely. imshow is faster.
         self.ax.matshow(scores.values, cmap="Greens")

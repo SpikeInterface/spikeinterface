@@ -14,6 +14,7 @@ import warnings
 
 from spikeinterface.core import load, BaseRecordingSnippets, BaseRecording
 from spikeinterface.core.core_tools import check_json
+from spikeinterface.core.recording_tools import get_rec_attributes
 from spikeinterface.core.globals import get_global_job_kwargs
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .utils import SpikeSortingError, ShellScript
@@ -105,12 +106,20 @@ class BaseSorter:
             raise ValueError("recording must be a Recording or a Snippets!!")
 
         if cls.requires_locations:
-            locations = recording.get_channel_locations()
-            if locations is None:
+            if not recording.has_probe():
                 raise RuntimeError(
                     "Channel locations are required for this spike sorter. "
                     "Locations can be added to the RecordingExtractor by loading a probe file "
                     "(.prb or .csv) or by setting them manually."
+                )
+            # check uniqueness of locations
+            locations = recording.get_channel_locations()
+            if len(locations) != len(set(map(tuple, locations))):
+                raise RuntimeError(
+                    "Channel locations are not unique! "
+                    "Please ensure that each channel has a unique location before running spike sorting. "
+                    "If you have multiple groups with overlapping channel locations, you can use the "
+                    "``run_sorter_by_property`` function to sort each group separately"
                 )
 
         if output_folder is None:
@@ -142,9 +151,14 @@ class BaseSorter:
             recording.dump(output_folder / "spikeinterface_recording.pickle", relative_to=output_folder)
         else:
             raise RuntimeError(
-                "This recording is not serializable and so can not be sorted. Consider `recording.save()` to save a "
+                "This recording is not serializable and so can not be sorted. Consider `recording.save(folder=...)` to save a "
                 "compatible binary file."
             )
+
+        # save recording attributes in case the recording is not serializable or removed after sorting
+        rec_attributes = get_rec_attributes(recording)
+        rec_attributes_file = output_folder / "recording_attributes.json"
+        rec_attributes_file.write_text(json.dumps(check_json(rec_attributes), indent=4), encoding="utf8")
 
         return output_folder
 
