@@ -1266,7 +1266,9 @@ def test_time_series_recording_equality_with_pynwb_and_backend(generate_nwbfile_
     check_recordings_equal(recording_backend, recording_pynwb)
 
 
-def _make_units_nwb(path, n_units=6, n_ch=8, n_samp=30, with_std=False, with_per_spike=False):
+def _make_units_nwb(
+    path, n_units=6, n_ch=8, n_samp=30, with_std=False, with_per_spike=False, with_electrical_series=False
+):
     """Build a minimal NWB file with a Units table for read_nwb_sorting_analyzer tests.
 
     Pure pynwb, no external writers. The Units table has `waveform_mean` (templates), a canonical
@@ -1283,6 +1285,18 @@ def _make_units_nwb(path, n_units=6, n_ch=8, n_samp=30, with_std=False, with_per
     nwbfile.add_electrode_column(name="rel_y", description="y")
     for i in range(n_ch):
         nwbfile.add_electrode(group=group, location="brain", rel_x=float(i % 4) * 20.0, rel_y=float(i // 4) * 20.0)
+    if with_electrical_series:
+        from pynwb.ecephys import ElectricalSeries
+
+        region = nwbfile.create_electrode_table_region(region=list(range(n_ch)), description="all electrodes")
+        series = ElectricalSeries(
+            name="ElectricalSeries",
+            data=np.zeros((1_000, n_ch), dtype="int16"),
+            electrodes=region,
+            rate=30_000.0,
+            starting_time=5.0,
+        )
+        nwbfile.add_acquisition(series)
     nwbfile.add_unit_column(name="snr", description="canonical quality metric")
     nwbfile.add_unit_column(name="custom_score", description="non-canonical per-unit value")
     nwbfile.add_unit_column(name="ks_label", description="curation label")
@@ -1421,6 +1435,58 @@ def test_read_nwb_sorting_analyzer_recording_duration(tmp_path):
             path, electrical_series_path=None, sampling_frequency=30000.0, recording_duration=120.0, compute_extra=None
         )
     assert analyzer.get_total_duration() == pytest.approx(120.0)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_read_nwb_sorting_analyzer_non_ragged_electrodes(tmp_path, use_pynwb):
+    """The schema allows a Units `electrodes` column with one electrode row per unit and no index."""
+    pytest.importorskip("pynwb")
+    import h5py
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    n_units, n_ch = 6, 8
+    path = _make_units_nwb(tmp_path / "units.nwb", n_units=n_units, n_ch=n_ch)
+    peak_electrodes = np.arange(n_units) % n_ch
+    # pynwb always writes Units.electrodes with an index, so rewrite it as one row per unit
+    with h5py.File(path, "r+") as file:
+        units = file["units"]
+        attrs = dict(units["electrodes"].attrs)
+        del units["electrodes"], units["electrodes_index"]
+        units.create_dataset("electrodes", data=peak_electrodes)
+        units["electrodes"].attrs.update(attrs)
+
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, use_pynwb=use_pynwb, sampling_frequency=30000.0, compute_extra=None
+    )
+    channel_ids = analyzer.channel_ids
+    for unit_id, peak_electrode in zip(analyzer.unit_ids, peak_electrodes):
+        assert list(analyzer.sparsity.unit_id_to_channel_ids[unit_id]) == [channel_ids[peak_electrode]]
+
+
+def test_read_nwb_sorting_analyzer_electrical_series_path(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb", with_electrical_series=True)
+
+    # naming the series attaches it and takes the time base from it
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path="acquisition/ElectricalSeries", compute_extra=None
+    )
+    assert analyzer.has_recording()
+    assert analyzer.sampling_frequency == 30_000.0
+
+    # the series is the only time base, so an explicit t_start conflicts with it
+    with pytest.raises(ValueError):
+        read_nwb_sorting_analyzer(
+            path, electrical_series_path="acquisition/ElectricalSeries", t_start=0.0, compute_extra=None
+        )
+
+    # None opts out even when the file holds a series
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, sampling_frequency=30_000.0, recording_duration=10.0, compute_extra=None
+    )
+    assert not analyzer.has_recording()
 
 
 if __name__ == "__main__":

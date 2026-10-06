@@ -2210,6 +2210,9 @@ def read_nwb_sorting_analyzer(
             electrodes_indices = electrodes_indices = units["electrodes"][:]
 
     if electrodes_indices is not None:
+        # the schema also allows a non-ragged electrodes column (one electrode row per unit, no
+        # electrodes_index); make every unit's region an array so both layouts are handled the same way
+        electrodes_indices = [np.atleast_1d(region) for region in electrodes_indices]
         # here we assume all groups are the same for each unit, so we just check one.
         if "group_name" in electrodes_table.columns:
             group_names = np.array([electrodes_table.iloc[int(ei[0])]["group_name"] for ei in electrodes_indices])
@@ -2224,7 +2227,7 @@ def read_nwb_sorting_analyzer(
                         print(f"Selecting {sum(unit_mask)} / {len(units)} units from {group_name}")
                     sorting = sorting.select_units(unit_ids=sorting.unit_ids[unit_mask])
                     units = units.loc[units.index[unit_mask]]
-                    electrodes_indices = units["electrodes"]
+                    electrodes_indices = [np.atleast_1d(region) for region in units["electrodes"]]
 
     # Every scalar column not claimed as a quality metric becomes a sorting property (labels like
     # cluster_uuid, and any non-canonical numeric column). Properties show up in the GUI's unit table
