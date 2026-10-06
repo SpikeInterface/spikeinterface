@@ -473,14 +473,8 @@ def _load_model_from_folder(model_folder=None, model_name=None, trust_model=Fals
         skops_file = skops_files[0]
 
     if trust_model and trusted is None:
-        try:
-            model = skio.load(skops_file)
-        except UntrustedTypesFoundException as e:
-            exception_msg = str(e)
-            # the exception message contains the list of untrusted objects. The following
-            #  search assumes it is the only list in the message.
-            string_list = re.search(r"\[(.*?)\]", exception_msg).group()
-            trusted = [list_item for list_item in string_list.split("'") if len(list_item) > 2]
+        untrusted = skio.get_untrusted_types(file=skops_file)
+        trusted = untrusted
 
     model = skio.load(skops_file, trusted=trusted)
     _patch_sklearn_imputer_compatibility(model)

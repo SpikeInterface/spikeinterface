@@ -481,7 +481,7 @@ class TestKilosort4Long:
         from the recording.
         """
         recording = self._get_ground_truth_recording()
-        recording_bin = recording.save()
+        recording_bin = recording.save(folder=tmp_path / "recording_for_ks4")
 
         # run with SI wrapper
         sorting_ks4 = si.run_sorter(

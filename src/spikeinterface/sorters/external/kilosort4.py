@@ -7,7 +7,6 @@ import numpy as np
 from spikeinterface.core import write_binary_recording, Motion, BaseRecording
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
-from spikeinterface.sorters.basesorter import get_job_kwargs
 from importlib.metadata import version as importlib_version
 
 
