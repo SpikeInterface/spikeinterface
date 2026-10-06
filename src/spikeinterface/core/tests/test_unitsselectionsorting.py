@@ -250,8 +250,7 @@ def test_non_identity_selection_does_not_share(unit_ids):
 
 def test_identity_selection_keeps_lazy_zarr_vector(tmp_path):
     """A lazy parent spike vector should stay lazy through an identity selection."""
-    from spikeinterface.core import ZarrSortingExtractor
-    from spikeinterface.core.zarrextractors import ZarrSpikeVector
+    from spikeinterface.core.zarrextractors import ZarrSortingExtractor, ZarrSpikeVector
 
     folder = tmp_path / "sorting.zarr"
     ZarrSortingExtractor.write_sorting(_make_parent_with_shuffled_ties(), folder)
