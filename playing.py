@@ -150,7 +150,12 @@ if __name__ == "__main__":
 #	bad_channels, bad_channel_ids = si.detect_bad_channels(lfp_recording)
 #	lfp_recording = lfp_recording.remove_channels(bad_channels)
 
-	results = raw_data_quality_metrics(recording, raw_lfp_recording=lfp_recording, n_jobs=10)
+	results = raw_data_quality_metrics(
+		recording,
+		raw_lfp_recording=lfp_recording,
+		n_jobs=10,
+		folder=r"\Users\Jzimi\git-repos\forks\spikeinterface\playing",
+	)
 	# Automatic AP preprocessing preserves the raw AP channel order and geometry.
 	plot_recordings = {
 		"raw_ap_recording": recording,
