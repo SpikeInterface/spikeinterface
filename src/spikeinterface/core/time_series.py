@@ -243,13 +243,6 @@ class TimeSeries(ABC):
 
         rs._t_start = None
         rs._time_vector = times.astype("float64", copy=False)
-
-        if with_warning:
-            warnings.warn(
-                "Setting times with Recording.set_times() is not recommended because "
-                "times are not always propagated across preprocessing"
-                "Use this carefully!"
-            )
         self._time_info_modified = True
 
     def reset_times(self):
