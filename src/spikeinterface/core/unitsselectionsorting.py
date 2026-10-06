@@ -55,7 +55,7 @@ class UnitsSelectionSorting(BaseSorting):
                 return
 
         spike_vector, _ = remap_unit_indices_in_vector(
-            vector=self._parent_sorting._cached_time_ordered_spike_vector,
+            vector=self._parent_sorting._cached_time_ordered_spike_vector["spikes"],
             all_old_unit_ids=self._parent_sorting.unit_ids,
             all_new_unit_ids=self._unit_ids,
         )
@@ -75,7 +75,7 @@ class UnitsSelectionSorting(BaseSorting):
                 (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
             )
             spike_vector = spike_vector[sort_indices]
-        self._cached_time_ordered_spike_vector = spike_vector
+        self._cached_time_ordered_spike_vector = {"spikes": spike_vector, "segment_slices": None}
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):

@@ -1453,8 +1453,10 @@ class NwbSortingExtractor(BaseSorting):
         spikes["sample_index"] = sample_indices[order]
         spikes["unit_index"] = unit_indices[order]
         # segment_index stays 0 for the single segment.
-        self._cached_time_ordered_spike_vector = spikes
-        self._cached_time_ordered_segment_slices = np.array([[0, num_spikes]], dtype="int64")
+        self._cached_time_ordered_spike_vector = {
+            "spikes": spikes,
+            "segment_slices": np.array([[0, num_spikes]], dtype="int64"),
+        }
 
     @staticmethod
     def fetch_available_units_tables(
