@@ -111,7 +111,7 @@ class PeakRetriever(PeakSource):
     def __init__(self, recording, peaks):
         PipelineNode.__init__(self, recording, return_output=False)
 
-        self.peaks = peaks
+        self._peaks = peaks
 
         # precompute segment slice
         if recording.get_num_segments() > 1:
@@ -133,9 +133,9 @@ class PeakRetriever(PeakSource):
     def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
         if self.segment_slices is not None:
             sl = self.segment_slices[segment_index]
-            peaks_in_segment = self.peaks[sl]
+            peaks_in_segment = self._peaks[sl]
         else:
-            peaks_in_segment = self.peaks
+            peaks_in_segment = self._peaks
         i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         return i0, i1
 
@@ -143,9 +143,9 @@ class PeakRetriever(PeakSource):
         # get local peaks
         if self.segment_slices is not None:
             sl = self.segment_slices[segment_index]
-            peaks_in_segment = self.peaks[sl]
+            peaks_in_segment = self._peaks[sl]
         else:
-            peaks_in_segment = self.peaks
+            peaks_in_segment = self._peaks
 
         # i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         i0, i1 = peak_slice
@@ -249,13 +249,6 @@ class SpikeRetriever(PeakSource):
                 include_spikes_in_margin=include_spikes_in_margin,
             )
         )
-
-    @property
-    def peaks(self):
-        if self._peaks is not None:
-            return self._peaks
-        self._peaks = sorting_to_peaks(self.sorting, self.main_channel_indices)
-        return self._peaks
 
     def get_margin(self):
         return 0
