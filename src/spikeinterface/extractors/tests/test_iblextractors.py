@@ -11,14 +11,8 @@ from spikeinterface.extractors.extractor_classes import read_ibl_recording, read
 EID = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
 PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
 
-# TODO: remove once the IBL streaming tests pass on Python 3.14
-skip_python_314 = pytest.mark.skipif(
-    sys.version_info >= (3, 14), reason="IBL streaming is not supported on Python 3.14"
-)
-
 
 @pytest.mark.streaming_extractors
-@skip_python_314
 class TestDefaultIblRecordingExtractorApBand(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -117,7 +111,6 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
 
 
 @pytest.mark.streaming_extractors
-@skip_python_314
 class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -192,7 +185,6 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
 
 
 @pytest.mark.streaming_extractors
-@skip_python_314
 class TestIblSortingExtractor(TestCase):
     def test_ibl_sorting_extractor(self):
         """
