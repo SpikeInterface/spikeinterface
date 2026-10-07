@@ -129,7 +129,8 @@ jobs:
         run: |
           uv pip install --system datalad-installer
           if [ ${{ runner.os }} = 'Linux' ]; then
-            datalad-installer --sudo ok git-annex --method datalad/packages
+            # TODO: remove the pin once datalad uploads the git-annex 10.20261006 package (its latest-version points to a missing file)
+            datalad-installer --sudo ok git-annex=10.20260901 --method datalad/packages
           elif [ ${{ runner.os }} = 'macOS' ]; then
             datalad-installer --sudo ok git-annex --method brew
           elif [ ${{ runner.os }} = 'Windows' ]; then
