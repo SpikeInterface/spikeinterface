@@ -111,6 +111,7 @@ NEO-based
     .. autofunction:: read_neuralynx
     .. autofunction:: read_neuralynx_sorting
     .. autofunction:: read_neuroexplorer
+    .. autofunction:: read_neuroexplorer_sorting
     .. autofunction:: read_neuroscope
     .. autofunction:: read_nix
     .. autofunction:: read_openephys
