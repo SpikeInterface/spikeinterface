@@ -133,7 +133,9 @@ def dataset_to_split(create_cache_folder):
 
 @pytest.mark.parametrize("lazy", [False, True])
 @pytest.mark.parametrize("sparse", [False, True])
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize(
+    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
+)
 def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, format, tmp_path):
     if format == "memory" and lazy:
         pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")
@@ -265,7 +267,9 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
 
 @pytest.mark.parametrize("lazy", [False, True])
 @pytest.mark.parametrize("sparse", [False, True])
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize(
+    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
+)
 def test_SortingAnalyzer_split_all_extensions(dataset_to_split, lazy, sparse, format, tmp_path):
     if format == "memory" and lazy:
         pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")

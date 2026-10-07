@@ -9,6 +9,7 @@ from spikeinterface.core import (
     estimate_sparsity,
 )
 from spikeinterface.core.sortinganalyzer import get_extension_class
+from spikeinterface.core.core_tools import is_zarr_write_supported
 
 extensions_which_allow_unit_ids = ["unit_locations"]
 extensions_with_unit_by_unit_data = ["correlograms", "template_similarity"]
@@ -241,8 +242,10 @@ class AnalyzerExtensionCommonTestSuite:
         of interest with the passed parameters. Will perform tests
         for sparsity and format.
         """
+        # TODO: remove once writing to zarr is supported with zarr>=3
+        formats = ("memory", "binary_folder", "zarr") if is_zarr_write_supported() else ("memory", "binary_folder")
         for sparse in (True, False):
-            for format in ("memory", "binary_folder", "zarr"):
+            for format in formats:
                 print("sparse", sparse, format)
                 sorting_analyzer = self._prepare_sorting_analyzer(
                     format, sparse, extension_class, extension_params=params
