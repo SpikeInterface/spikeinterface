@@ -532,21 +532,6 @@ Of course, these pipelines can be enhanced and customized using other available 
 
 
 
-
-Preprocessing on Snippets
--------------------------
-
-Some preprocessing steps are available also for :py:class:`~spikeinterface.core.BaseSnippets` objects:
-
-align_snippets()
-^^^^^^^^^^^^^^^^
-
-This function aligns waveform snippets.
-
-* :py:func:`~spikeinterface.preprocessing.align_snippets()`
-
-
-
 References
 ----------
 

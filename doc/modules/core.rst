@@ -11,9 +11,7 @@ The core classes are: :py:class:`~spikeinterface.core.BaseRecording` (for raw da
 :py:class:`~spikeinterface.core.BaseSorting` (for spike-sorted data), and
 :py:class:`~spikeinterface.core.SortingAnalyzer` (for postprocessing, quality metrics, and waveform extraction).
 
-There are additional classes to allow to retrieve events (:py:class:`~spikeinterface.core.BaseEvent`) and to
-handle unsorted waveform cutouts, or *snippets*, which are recorded by some acquisition systems
-(:py:class:`~spikeinterface.core.BaseSnippets`).
+In addition, this module includes a base class to retrieve events (:py:class:`~spikeinterface.core.BaseEvent`).
 
 
 All classes support:
@@ -483,52 +481,6 @@ with events from two channels:
     ### NOTE ###
     # 'segment_index' is required for multi-segment objects
 
-
-Snippets
---------
-
-The :py:class:`~spikeinterface.core.BaseSnippets` class serves as basis for all :code:`Snippets`
-classes (currently only :py:class:`~spikeinterface.core.NumpySnippets` and
-:code:`WaveClusSnippetsExtractor` are implemented).
-
-It represents unsorted waveform cutouts. Some acquisition systems, in fact, allow users to set a
-threshold and only record the times at which a peak was detected and the waveform cut out around
-the peak.
-
-.. note::
-
-    While we support this class (mainly for legacy formats), this approach is a bad practice
-    and is highly discouraged! Most modern spike sorters, in fact, require the raw traces to perform
-    template matching to recover spikes!
-
-Here we assume :code:`snippets` is a :py:class:`~spikeinterface.core.BaseSnippets` object
-with 16 channels:
-
-.. code-block:: python
-
-    channel_ids = snippets.channel_ids
-    num_channels = snippets.get_num_channels()
-    # retrieve number of snippets
-    num_snippets = snippets.get_num_snippets(segment_index=0)
-    ### NOTE ###
-    # 'segment_index' is required for multi-segment objects
-    # retrieve total number of snippets across segments
-    total_snippets = snippets.get_total_snippets()
-
-    # retrieve snippet size
-    nbefore = snippets.nbefore # samples before peak
-    nsamples_per_snippet = snippets.snippet_len # total
-    nafter = nsamples_per_snippet - nbefore # samples after peak
-
-    # retrieve sample/frame indices
-    frames = snippets.get_frames(segment_index=0)
-    # retrieve snippet cutouts
-    snippet_cutouts = snippets.get_snippets(segment_index=0)
-    # retrieve snippet cutouts on first 4 channels
-    snippet_cutouts_slice = snippets.get_snippets(channel_ids=channel_ids[:4],
-                                                  segment_index=0)
-
-
 Handling probes
 ---------------
 
@@ -648,15 +600,14 @@ Saving, loading, and compression
 --------------------------------
 
 The Base SpikeInterface objects (:py:class:`~spikeinterface.core.BaseRecording`,
-:py:class:`~spikeinterface.core.BaseSorting`, and
-:py:class:`~spikeinterface.core.BaseSnippets`) hold full information about their history to maintain provenance.
+:py:class:`~spikeinterface.core.BaseSorting`) hold full information about their history to maintain provenance.
 Each object is in fact internally represented as a dictionary (:code:`si_object.to_dict()`) which can be used to
 re-instantiate the object from scratch (this is true for all objects except in-memory ones, see :ref:`in_memory`).
 
 The :code:`save()` function allows to easily store SI objects to a folder on disk.
 :py:class:`~spikeinterface.core.BaseRecording` objects are stored in binary (.raw) or
 `Zarr <https://zarr.readthedocs.io/en/stable/tutorial.html>`__ (.zarr) format and
-:py:class:`~spikeinterface.core.BaseSorting` and :py:class:`~spikeinterface.core.BaseSnippets` object in numpy (.npz)
+:py:class:`~spikeinterface.core.BaseSorting` object in numpy (.npy) or Zarr (.zarr) format.
 format. With the actual data, the :code:`save()` function also stores the provenance dictionary and all the properties
 and annotations associated to the object.
 The save function also supports parallel processing to speed up the writing process.
@@ -673,10 +624,6 @@ This saving/loading features enables us to store SpikeInterface objects efficien
     recording_bin = recording.save(folder="recording", **job_kwargs)
     # save recording to folder in zarr format (.zarr is appended automatically)
     recording_zarr = recording.save(folder="recording", format="zarr", **job_kwargs)
-    # save snippets to NPZ
-    snippets_saved = snippets.save(folder="snippets")
-    # save sorting to NPZ
-    sorting_saved = sorting.save(folder="sorting")
 
 **NOTE:** the Zarr format by default applies data compression with :code:`Blosc.Zstandard` codec with BIT shuffling.
 Any other Zarr-compatible compressors and filters can be applied using the :code:`compressor` and :code:`filters`
@@ -749,8 +696,7 @@ in-memory objects (for example, for testing a new method) or "manually" add some
 workflow.
 
 In order to do this, one can use the :code:`Numpy*` classes, :py:class:`~spikeinterface.core.NumpyRecording`,
-:py:class:`~spikeinterface.core.NumpySorting`, :py:class:`~spikeinterface.core.NumpyEvent`, and
-:py:class:`~spikeinterface.core.NumpySnippets`. These object behave exactly like normal SpikeInterface objects,
+:py:class:`~spikeinterface.core.NumpySorting`, and :py:class:`~spikeinterface.core.NumpyEvent`. These object behave exactly like normal SpikeInterface objects,
 but they are not bound to a file.
 
 Also note the class :py:class:`~spikeinterface.core.SharedMemorySorting` which is very similar to
@@ -814,7 +760,7 @@ Any sorting object can be transformed into a :py:class:`~spikeinterface.core.Num
 Manipulating objects: slicing, aggregating
 -------------------------------------------
 
-:py:class:`~spikeinterface.core.BaseRecording` (and :py:class:`~spikeinterface.core.BaseSnippets`)
+:py:class:`~spikeinterface.core.BaseRecording`
 and :py:class:`~spikeinterface.core.BaseSorting` objects can be sliced on the time or channel/unit axis.
 
 These operations are completely lazy, as there is no data duplication. After slicing or aggregating,
@@ -949,7 +895,7 @@ They are useful to make examples, tests, and small demos:
 
 .. code-block:: python
 
-    from spikeinterface.core import generate_recording, generate_sorting, generate_snippets
+    from spikeinterface.core import generate_recording, generate_sorting
 
     # recording with 2 segments and 4 channels
     recording = generate_recording(num_channels=4, sampling_frequency=30000.,
@@ -958,11 +904,6 @@ They are useful to make examples, tests, and small demos:
     # sorting with 2 segments and 5 units
     sorting = generate_sorting(num_units=5, sampling_frequency=30000., durations=[10.325, 3.5],
                                firing_rates=15, refractory_period_ms=1.5)
-
-    # snippets of 60 samples on 2 channels from 5 units
-    snippets = generate_snippets(nbefore=20, nafter=40, num_channels=2,
-                                 sampling_frequency=30000., durations=[10.325, 3.5],
-                                 set_probe=True,  num_units=5)
 
 
 There are also some more advanced functions to generate sorting objects with varioues "mistakes"

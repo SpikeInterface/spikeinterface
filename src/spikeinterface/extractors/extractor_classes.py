@@ -5,11 +5,9 @@ from spikeinterface.core import (
     NumpyRecording,
     NpzSortingExtractor,
     NumpySorting,
-    NpySnippetsExtractor,
     read_binary,
     read_zarr,
     read_npz_sorting,
-    read_npy_snippets,
 )
 
 from spikeinterface.core.zarrextractors import (
@@ -71,9 +69,6 @@ from .shybridextractors import (
     read_shybrid_recording,
     read_shybrid_sorting,
 )
-
-# snippers
-from .waveclussnippetstextractors import WaveClusSnippetsExtractor, read_waveclus_snippets
 
 # misc
 from .alfsortingextractor import ALFSortingExtractor, read_alf_sorting
@@ -154,11 +149,6 @@ _sorting_extractor_full_dict.update(neo_sorting_extractors_dict)
 # events only from neo
 _event_extractor_full_dict = neo_event_extractors_dict
 
-_snippets_extractor_full_dict = {
-    NpySnippetsExtractor: dict(wrapper_string="read_npy_snippets", wrapper_class=read_npy_snippets),
-    WaveClusSnippetsExtractor: dict(wrapper_string="read_waveclus_snippets", wrapper_class=read_waveclus_snippets),
-}
-
 ############################################################################################################
 # Organize the possible extractors into a user facing format with keys being extractor names
 # (e.g. 'intan' , 'kilosort') and values being the appropriate Extractor class returned as its wrapper
@@ -181,24 +171,18 @@ event_extractor_full_dict = {
     event_class.__name__.replace("Event", "").replace("Extractor", "").lower(): event_func["wrapper_class"]
     for event_class, event_func in _event_extractor_full_dict.items()
 }
-snippets_extractor_full_dict = {
-    snippets_class.__name__.replace("Snippets", "").replace("Extractor", "").lower(): snippets_func["wrapper_class"]
-    for snippets_class, snippets_func in _snippets_extractor_full_dict.items()
-}
 
 
 # we only do the functions in the init rather than pull in the classes
 __all__ = [func["wrapper_string"] for func in _recording_extractor_full_dict.values()]
 __all__ += [func["wrapper_string"] for func in _sorting_extractor_full_dict.values()]
 __all__ += [func["wrapper_string"] for func in _event_extractor_full_dict.values()]
-__all__ += [func["wrapper_string"] for func in _snippets_extractor_full_dict.values()]
 __all__.extend(
     [
         "read_nwb",  # convenience function for multiple nwb formats
         "recording_extractor_full_dict",
         "sorting_extractor_full_dict",
         "event_extractor_full_dict",
-        "snippets_extractor_full_dict",
         "read_binary",  # convenience function for binary formats
         "read_zarr",
         "read_neuroscope",  # convenience function for neuroscope

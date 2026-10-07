@@ -12,7 +12,7 @@ import shutil
 import warnings
 
 
-from spikeinterface.core import load, BaseRecordingSnippets, BaseRecording
+from spikeinterface.core import load, BaseRecording
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core.recording_tools import get_rec_attributes
 from spikeinterface.core.globals import get_global_job_kwargs
@@ -101,9 +101,6 @@ class BaseSorter:
             raise Exception(
                 f"The sorter {cls.sorter_name} is not installed. Please install it with:\n{cls.installation_mesg}"
             )
-
-        if not isinstance(recording, BaseRecordingSnippets):
-            raise ValueError("recording must be a Recording or a Snippets!!")
 
         if cls.requires_locations:
             if not recording.has_probe():
