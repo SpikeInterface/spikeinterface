@@ -5,6 +5,7 @@ import warnings
 import importlib.util
 
 import numpy as np
+from probeinterface import Probe, ProbeGroup
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
@@ -1040,9 +1041,21 @@ class NwbRecordingExtractor(BaseRecording):
         self.set_channel_gains(gains_to_uV)
         self.set_channel_offsets(offsets_to_uV)
         locations = self._reader.locations()
-        if locations is not None:
-            self.set_channel_locations(locations)
         groups = self._reader.groups()
+        if locations is not None:
+            # rel_x, rel_y and rel_z are relative to each electrode group, so each group is its own
+            # probe. Two groups can then share positions (e.g. two identical probes in one
+            # ElectricalSeries), so the overlap check across probes is skipped.
+            probegroup = ProbeGroup()
+            for group_name in np.unique(groups):
+                channel_indices = np.flatnonzero(groups == group_name)
+                probe = Probe(ndim=2)
+                probe.set_contacts(locations[channel_indices, :2], shapes="circle", shape_params={"radius": 1})
+                probe.set_device_channel_indices(channel_indices)
+                if locations.shape[1] == 3:
+                    probe = probe.to_3d(axes="xy")
+                probegroup.add_probe(probe)
+            self.set_probegroup(probegroup, check_overlap=False)
         if groups is not None:
             self.set_channel_groups(groups)
 
