@@ -1,7 +1,3 @@
-import shutil
-from pathlib import Path
-
-from numpy import rec
 import pytest
 import numpy as np
 
