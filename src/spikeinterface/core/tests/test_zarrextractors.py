@@ -117,7 +117,7 @@ def test_ZarrSortingExtractor_lazy_search(tmp_path):
     lazy = ZarrSortingExtractor(folder, lazy_spike_vector=True)
     assert type(lazy.to_spike_vector()).__name__ == "ZarrSpikeVector"
 
-    rng = np.random.default_rng(1)
+    rng = np.random.default_rng(2308)
     num_samples = int(sorting.to_spike_vector()["sample_index"].max()) + 100
     for segment_index in range(sorting.get_num_segments()):
         frames = np.sort(rng.integers(-10, num_samples, size=200))
