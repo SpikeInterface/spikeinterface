@@ -55,7 +55,6 @@ SORTER_DOCKER_MAP = dict(
     kilosort2_5="kilosort2_5-compiled",
     kilosort3="kilosort3-compiled",
     waveclus="waveclus-compiled",
-    waveclus_snippets="waveclus-compiled",
     # archived
     # klusta="klusta",
     # yass="yass",
