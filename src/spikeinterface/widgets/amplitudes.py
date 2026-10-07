@@ -122,14 +122,14 @@ class AmplitudesWidget(BaseRasterWidget):
             bins = 100
 
         # Calculate durations for all segments for x-axis limits
-        durations = get_segment_durations(sorting, segment_indices)
+        _, segment_start_stop_times = get_segment_durations(sorting, segment_indices)
 
         # Build the plot data with the full dict of dicts structure
         plot_data = dict(
             unit_colors=unit_colors,
             plot_histograms=plot_histograms,
             bins=bins,
-            durations=durations,
+            segment_start_stop_times=segment_start_stop_times,
             unit_ids=unit_ids,
             hide_unit_selector=hide_unit_selector,
             plot_legend=plot_legend,
@@ -180,9 +180,14 @@ class AmplitudesWidget(BaseRasterWidget):
             for u in unit_ids
         ]
 
+        segment_times = dp.segment_start_stop_times.values()
+
+        start_time_sec = min(start for start, _ in segment_times)
+        end_time_sec = max(stop for _, stop in segment_times)
+
         self.view = vv_views.SpikeAmplitudes(
-            start_time_sec=0,
-            end_time_sec=np.sum(dp.durations),
+            start_time_sec=start_time_sec,
+            end_time_sec=end_time_sec,
             plots=sa_items,
             # hide_unit_selector=dp.hide_unit_selector,
         )
