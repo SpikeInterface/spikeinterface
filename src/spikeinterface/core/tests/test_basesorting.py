@@ -97,22 +97,11 @@ def test_BaseSorting(create_cache_folder):
 
     spikes = sorting.to_spike_vector()
     # print(spikes)
-    assert sorting._cached_spike_vector is not None
+    assert sorting._cached_time_ordered_spike_vector is not None
 
     spikes = sorting.to_spike_vector()
     ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
         lexsort=("sample_index", "segment_index", "unit_index"),
-        return_order=True,
-        return_slices=True,
-    )
-    assert np.array_equal(spikes[order], ordered_spikes)
-
-    ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
-        lexsort=(
-            "sample_index",
-            "unit_index",
-            "segment_index",
-        ),
         return_order=True,
         return_slices=True,
     )
@@ -182,11 +171,7 @@ def _make_sorting_with_shuffled_ties(num_units, num_segments, seed=42):
 
 
 @pytest.mark.parametrize("use_numba", [True, False], ids=["numba", "numpy"])
-@pytest.mark.parametrize(
-    "lexsort",
-    [("sample_index", "segment_index", "unit_index"), ("sample_index", "unit_index", "segment_index")],
-)
-def test_to_reordered_spike_vector(lexsort, use_numba, monkeypatch):
+def test_to_reordered_spike_vector(use_numba, monkeypatch):
     """`to_reordered_spike_vector` should group spikes by (unit, segment) without disturbing them."""
     if use_numba and importlib.util.find_spec("numba") is None:
         pytest.skip("numba not installed")
@@ -202,17 +187,12 @@ def test_to_reordered_spike_vector(lexsort, use_numba, monkeypatch):
     )
 
     ordered_spikes, order, slices = sorting.to_reordered_spike_vector(
-        lexsort=lexsort, return_order=True, return_slices=True
+        lexsort=LEXSORT_UNIT_COMPACT, return_order=True, return_slices=True
     )
 
-    # The buckets, in the order the requested lexsort puts them in.
-    unit_major = lexsort == ("sample_index", "segment_index", "unit_index")
-    if unit_major:
-        assert slices.shape == (num_units, num_segments, 2)
-        groups = [(u, s) for u in range(num_units) for s in range(num_segments)]
-    else:
-        assert slices.shape == (num_segments, num_units, 2)
-        groups = [(u, s) for s in range(num_segments) for u in range(num_units)]
+    # The buckets, unit by unit and segment by segment within each unit.
+    assert slices.shape == (num_units, num_segments, 2)
+    groups = [(u, s) for u in range(num_units) for s in range(num_segments)]
     masks = [(spikes["unit_index"] == u) & (spikes["segment_index"] == s) for u, s in groups]
 
     assert np.array_equal(ordered_spikes, np.concatenate([spikes[mask] for mask in masks]))

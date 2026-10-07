@@ -53,7 +53,7 @@ class NumpyFolderSorting(BaseSorting):
         for segment_index in range(num_segments):
             self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
         # important trick : the cache is already spikes vector
-        self._cached_spike_vector = self.spikes
+        self._cached_time_ordered_spike_vector = {"spikes": self.spikes, "segment_slices": None}
 
         load_properties_from_folder(folder_path / "properties", self)
         load_annotations_from_folder(folder_path, self)
