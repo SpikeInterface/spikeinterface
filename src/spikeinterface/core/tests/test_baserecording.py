@@ -480,7 +480,7 @@ def test_time_slice_with_time_vector():
     sampling_frequency = 10_000.0
     recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
     times = 1 + np.arange(0, 10_000) / sampling_frequency
-    recording.set_times(times=times, segment_index=0, with_warning=False)
+    recording.set_times(times=times, segment_index=0)
 
     sliced_recording_times = recording.time_slice(start_time=1.1, end_time=1.8)
     sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
@@ -507,7 +507,7 @@ def test_save_load_binary_with_time_vector(create_cache_folder, mp_context):
     times = rec.get_times(segment_index=0) + 100.0
 
     # Set time vector
-    rec.set_times(times=times, segment_index=0, with_warning=False)
+    rec.set_times(times=times, segment_index=0)
     # Save
     rec_saved = rec.save(folder=cache_folder / f"recording_with_time_vector_{mp_context}", format="binary")
     assert np.allclose(rec.get_times(segment_index=0), rec_saved.get_times(segment_index=0))

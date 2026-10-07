@@ -475,7 +475,7 @@ def test_get_times_with_time_vector_slicing():
     sampling_frequency = 10_000.0
     recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
     times = 1.0 + np.arange(0, 10_000) / sampling_frequency
-    recording.set_times(times=times, segment_index=0, with_warning=False)
+    recording.set_times(times=times, segment_index=0)
 
     # Full get_times should return the complete time vector
     times_full = recording.get_times(segment_index=0)
@@ -639,7 +639,7 @@ class TestSortingTimeWithRecording:
             100.0
             + np.cumsum(np.random.RandomState(0).uniform(0.5, 1.5, num_samples)) / recording.get_sampling_frequency()
         )
-        recording.set_times(times, segment_index=0, with_warning=False)
+        recording.set_times(times, segment_index=0)
 
         sorting = generate_sorting(num_units=5, durations=[1.0])
         sorting.register_recording(recording)

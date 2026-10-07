@@ -222,7 +222,7 @@ class TimeSeries(ABC):
         segment_index = self._check_segment_index(segment_index)
         return self.segments[segment_index].has_time_vector()
 
-    def set_times(self, times, segment_index=None, with_warning=True):
+    def set_times(self, times, segment_index=None):
         """Set times for a recording segment.
 
         Parameters
@@ -232,8 +232,6 @@ class TimeSeries(ABC):
             into memory and cast to float64 before being stored on the segment.
         segment_index : int or None, default: None
             The segment index (required for multi-segment)
-        with_warning : bool, default: True
-            If True, a warning is printed
         """
         segment_index = self._check_segment_index(segment_index)
         rs = self.segments[segment_index]
@@ -243,13 +241,6 @@ class TimeSeries(ABC):
 
         rs._t_start = None
         rs._time_vector = times.astype("float64", copy=False)
-
-        if with_warning:
-            warnings.warn(
-                "Setting times with Recording.set_times() is not recommended because "
-                "times are not always propagated across preprocessing"
-                "Use this carefully!"
-            )
         self._time_info_modified = True
 
     def reset_times(self):

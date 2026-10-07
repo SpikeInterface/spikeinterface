@@ -312,6 +312,48 @@ def test_nwb_extractor_electrodes_region_out_of_order(tmp_path, use_pynwb):
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
+def test_nwb_extractor_one_probe_per_electrode_group(tmp_path, use_pynwb):
+    """rel_x and rel_y are relative to each electrode group, so two identical probes written to one
+    ElectricalSeries share positions. Building a single probe from all channels failed on the
+    duplicate positions (GH-3999)."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.testing.mock.device import mock_Device
+    from pynwb.testing.mock.ecephys import mock_ElectrodeGroup, mock_ElectricalSeries
+
+    nwbfile = mock_NWBFile()
+    device = mock_Device(nwbfile=nwbfile)
+
+    # Both groups get the same contact positions, so the two probes overlap.
+    group_names = ["probe_A", "probe_B"]
+    probe_locations = np.array([[0.0, 0.0], [0.0, 20.0], [0.0, 40.0], [0.0, 60.0]])
+    for group_name in group_names:
+        electrode_group = mock_ElectrodeGroup(name=group_name, device=device, nwbfile=nwbfile)
+        for rel_x, rel_y in probe_locations:
+            nwbfile.add_electrode(group=electrode_group, location="brain", rel_x=rel_x, rel_y=rel_y)
+
+    channels_per_group = len(probe_locations)
+    num_electrodes = len(group_names) * channels_per_group
+    electrode_region = nwbfile.create_electrode_table_region(region=list(range(num_electrodes)), description="all")
+    mock_ElectricalSeries(
+        name="ElectricalSeries", data=np.ones((10, num_electrodes)), electrodes=electrode_region, nwbfile=nwbfile
+    )
+
+    nwbfile_path = tmp_path / "two_electrode_groups.nwb"
+    with NWBHDF5IO(str(nwbfile_path), mode="w") as io:
+        io.write(nwbfile)
+
+    recording = NwbRecordingExtractor(
+        nwbfile_path, electrical_series_path="acquisition/ElectricalSeries", use_pynwb=use_pynwb
+    )
+
+    assert len(recording.get_probegroup().probes) == len(group_names)
+    recordings_by_group = recording.split_by("group")
+    for group_name in group_names:
+        assert np.array_equal(recordings_by_group[group_name].get_channel_locations(), probe_locations)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
 def test_nwb_extractor_offset_from_series(generate_nwbfile, use_pynwb):
     """Test that the offset is retrieved from the ElectricalSeries if it is present."""
     path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile
