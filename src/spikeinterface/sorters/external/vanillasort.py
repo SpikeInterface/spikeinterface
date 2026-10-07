@@ -44,11 +44,9 @@ class VanillaSortSorter(BaseSorter):
     """
 
     installation_mesg = """
-    Install VanillaSort >= 0.1.0 from its repository:
+    Install VanillaSort >= 0.1.0 from PyPI:
 
-        git clone https://github.com/IgarashiAkatuki/VanillaSort.git
-        cd VanillaSort
-        pip install -e .
+        pip install vanillasort
 
     Follow the repository README for CPU/CUDA PyTorch installation instructions.
     """

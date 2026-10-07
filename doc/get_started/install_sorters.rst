@@ -212,9 +212,7 @@ VanillaSort
 * Reference: `Spike Sorting with VanillaSort <https://doi.org/10.64898/2026.09.18.752552>`_ (bioRxiv, 2026)
 * Installation (requires the VanillaSort package, version 0.1.0 or newer)::
 
-      git clone https://github.com/IgarashiAkatuki/VanillaSort.git
-      cd VanillaSort
-      pip install -e .
+      pip install vanillasort
 
 VanillaSort combines VanillaDet spike detection, HuiduRep waveform embeddings,
 relative-amplitude features, Gaussian-mixture clustering, and template-residual
