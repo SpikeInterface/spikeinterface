@@ -58,7 +58,6 @@ class ChannelSliceRecording(BaseRecording):
             self.add_recording_segment(sub_segment)
 
         # copy annotation and properties
-        recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
         self._parent = recording
 
         # change the wiring of the probe
@@ -67,6 +66,7 @@ class ChannelSliceRecording(BaseRecording):
             sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
             sliced_probegroup.set_global_device_channel_indices(np.arange(len(self._channel_ids)))
             self.set_probegroup(sliced_probegroup)
+        recording.copy_metadata(self, only_main=False, ids=self._channel_ids)
 
         # update dump dict
         self._kwargs = {
