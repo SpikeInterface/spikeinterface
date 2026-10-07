@@ -24,6 +24,7 @@ def generate_recording(create_cache_folder):
     return _generate_recording(create_cache_folder)
 
 
+@pytest.mark.requires_zarr_write
 @pytest.mark.xfail(
     platform.system() == "Windows" and parse(platform.python_version()) > parse("3.12"),
     reason="3rd parth threadpoolctl issue: OSError('GetModuleFileNameEx failed')",

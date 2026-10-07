@@ -15,6 +15,7 @@ from spikeinterface.core import (
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
+from spikeinterface.core.core_tools import check_zarr_write_is_supported
 
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
 from spikeinterface.core.base import minimum_spike_dtype
@@ -117,6 +118,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
+
+        # TODO: remove once writing to zarr is supported with zarr>=3
+        if params["save_array"]:
+            check_zarr_write_is_supported()
 
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
