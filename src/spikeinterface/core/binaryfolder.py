@@ -15,7 +15,7 @@ from .core_tools import (
     make_paths_absolute,
     load_properties_from_folder,
     save_properties_to_folder,
-    save_extractor_provenance,
+    save_provenance_to_folder,
     save_annotations_to_folder,
     load_annotations_from_folder,
 )
@@ -160,7 +160,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         )
 
         save_properties_to_folder(folder_path / "properties", recording)
-        save_extractor_provenance(folder_path, recording)
+        save_provenance_to_folder(folder_path, recording, relative_to=folder_path)
         # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
         save_annotations_to_folder(folder_path, recording)
 

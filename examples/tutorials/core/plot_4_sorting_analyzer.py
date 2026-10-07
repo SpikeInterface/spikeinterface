@@ -33,8 +33,8 @@ from spikeinterface import create_sorting_analyzer, load_sorting_analyzer, gener
 # First let's generate a simulated recording and sorting
 
 recording, sorting = generate_ground_truth_recording()
-# let's make the recording JSON serializable
-recording = recording.save(folder="recording_binary")
+# Make the recording JSON serializable, so it can be reloaded later
+recording = recording.save(folder="recording_folder")
 print(recording)
 print(sorting)
 
