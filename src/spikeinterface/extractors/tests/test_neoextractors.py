@@ -19,6 +19,7 @@ from spikeinterface.extractors.extractor_classes import (
     IntanRecordingExtractor,
     NeuroScopeRecordingExtractor,
     NeuroExplorerRecordingExtractor,
+    NeuroExplorerSortingExtractor,
     NeuroScopeSortingExtractor,
     NeuroNexusRecordingExtractor,
     PlexonRecordingExtractor,
@@ -267,6 +268,15 @@ class NeuroExplorerRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
         ("neuroexplorer/File_neuroexplorer_1.nex", {"stream_name": "ContChannel02"}),
         ("neuroexplorer/File_neuroexplorer_2.nex", {"stream_name": "ContChannel01"}),
         ("neuroexplorer/File_neuroexplorer_2.nex", {"stream_name": "ContChannel02"}),
+    ]
+
+
+class NeuroExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroExplorerSortingExtractor
+    downloads = ["neuroexplorer"]
+    entities = [
+        "neuroexplorer/File_neuroexplorer_1.nex",
+        "neuroexplorer/File_neuroexplorer_2.nex",
     ]
 
 
