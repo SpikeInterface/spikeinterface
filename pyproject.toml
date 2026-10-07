@@ -367,6 +367,7 @@ markers = [
     "widgets",
     "sortingcomponents",
     "streaming_extractors: extractors that require streaming such as ross and fsspec",
+    "requires_zarr_write: tests that write to zarr, skipped with zarr>=3 where writing is not supported yet",
 ]
 filterwarnings =[
     'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',

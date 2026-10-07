@@ -5,12 +5,6 @@ import numpy as np
 
 from spikeinterface.core import generate_recording, generate_sorting
 import spikeinterface.full as si
-from spikeinterface.core.core_tools import is_zarr_write_supported
-
-# TODO: remove once writing to zarr is supported with zarr>=3
-requires_zarr_write = pytest.mark.skipif(
-    not is_zarr_write_supported(), reason="Writing to zarr is not supported yet with zarr>=3"
-)
 
 
 class TestTimeHandling:
@@ -120,7 +114,7 @@ class TestTimeHandling:
             assert raw_recording.has_time_vector(segment_idx) is False
             assert times_recording.has_time_vector(segment_idx) is True
 
-    @pytest.mark.parametrize("mode", ["binary", pytest.param("zarr", marks=requires_zarr_write)])
+    @pytest.mark.parametrize("mode", ["binary", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
     @pytest.mark.parametrize("fixture_name", ["time_vector_recording", "t_start_recording"])
     def test_times_propagated_to_save_folder(self, request, fixture_name, mode, tmp_path):
         """
@@ -381,7 +375,7 @@ class TestTimeHandling:
                 times_recording.get_times(segment_index=idx), loaded_recording.get_times(segment_index=idx)
             )
 
-    @pytest.mark.parametrize("save_format", ["binary", pytest.param("zarr", marks=requires_zarr_write)])
+    @pytest.mark.parametrize("save_format", ["binary", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
     def test_shift_times_after_load(self, request, save_format, tmp_path):
         """
         Shift times on a recording loaded from disk as a read-only np.memmap
