@@ -339,7 +339,7 @@ class BaseRecording(BaseExtractor, TimeSeries):
 
     def set_channel_groups(self, groups, channel_ids=None):
         if "probes" in self._annotations:
-            warn("set_channel_groups() destroys the probe description. Using set_probe() is preferable")
+            warnings.warn("set_channel_groups() destroys the probe description. Using set_probe() is preferable")
             self._annotations.pop("probes")
         self.set_property("group", groups, ids=channel_ids)
 
@@ -621,7 +621,7 @@ class BaseRecording(BaseExtractor, TimeSeries):
             order = np.argsort(device_channel_indices)
             probegroup = probegroup.get_slice(order)
         else:
-            warn(
+            warnings.warn(
                 "No connected channels in the probegroup! "
                 "The probegroup will be attached but no channel will be selected."
             )
