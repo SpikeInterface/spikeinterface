@@ -16,7 +16,7 @@ from spikeinterface.core.node_pipeline import (
     ExtractDenseWaveforms,
     sorting_to_peaks,
 )
-from spikeinterface.core.core_tools import is_zarr_write_supported
+from spikeinterface.core.core_tools import _is_zarr_write_supported
 
 
 class AmplitudeExtractionNode(PipelineNode):
@@ -182,7 +182,7 @@ def test_run_node_pipeline(cache_folder_creation):
         assert np.array_equal(denoised_waveforms_rms2, denoised_waveforms_rms3)
 
         # TODO: remove once writing to zarr is supported with zarr>=3
-        if is_zarr_write_supported():
+        if _is_zarr_write_supported():
             # gather zarr mode
             import zarr
 
@@ -236,7 +236,7 @@ def test_run_node_pipeline(cache_folder_creation):
         assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms_f)
 
         # TODO: remove once writing to zarr is supported with zarr>=3
-        if is_zarr_write_supported():
+        if _is_zarr_write_supported():
             # gather zarr mode with an explicit list of dataset paths, created on the fly
             # inside an existing store (final location, e.g. an analyzer extension group)
             datasets_store = cache_folder / f"pipeline_zarr_datasets_{loop}.zarr"

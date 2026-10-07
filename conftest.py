@@ -48,13 +48,13 @@ def pytest_collection_modifyitems(config, items):
     Marking them in turn allows the tests to be run by using the pytest -m marker_name option.
     """
 
-    from spikeinterface.core.core_tools import is_zarr_write_supported
+    from spikeinterface.core.core_tools import _is_zarr_write_supported
 
     rootdir = Path(config.rootdir)
     modules_location = rootdir / "src" / "spikeinterface"
     for item in items:
         # TODO: remove once writing to zarr is supported with zarr>=3
-        if item.get_closest_marker("requires_zarr_write") and not is_zarr_write_supported():
+        if item.get_closest_marker("requires_zarr_write") and not _is_zarr_write_supported():
             item.add_marker(pytest.mark.skip(reason="Writing to zarr is not supported yet with zarr>=3"))
 
         if config.getoption("--mp-context") is not None and item.name == "test_global_job_kwargs":

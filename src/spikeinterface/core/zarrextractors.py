@@ -16,7 +16,7 @@ from .core_tools import (
     check_json,
     retrieve_importing_provenance,
     is_path_remote,
-    check_zarr_write_is_supported,
+    _check_zarr_write_is_supported,
 )
 from .time_series_tools import _write_time_series_to_zarr
 
@@ -650,7 +650,7 @@ def create_zarr_path_for_write(folder_path: str | Path, overwrite: bool = False)
     folder_path : str or Path
         Path to the zarr root file
     """
-    check_zarr_write_is_supported()
+    _check_zarr_write_is_supported()
     if not is_path_remote(folder_path):
         folder_path = Path(folder_path)
         folder_path = folder_path.with_suffix(".zarr")

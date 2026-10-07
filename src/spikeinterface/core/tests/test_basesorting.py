@@ -25,7 +25,7 @@ from spikeinterface.core import (
 from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
 from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
-from spikeinterface.core.core_tools import is_zarr_write_supported
+from spikeinterface.core.core_tools import _is_zarr_write_supported
 
 
 def test_BaseSorting(create_cache_folder):
@@ -145,7 +145,7 @@ def test_BaseSorting(create_cache_folder):
     del sorting5
 
     # TODO: remove once writing to zarr is supported with zarr>=3
-    if is_zarr_write_supported():
+    if _is_zarr_write_supported():
         # test save to zarr
         # compressor = get_default_zarr_compressor()
         sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting.zarr")

@@ -11,9 +11,9 @@ from spikeinterface.core import Templates
 from spikeinterface.core.sortinganalyzer import _extension_children, _get_children_dependencies
 
 import numpy as np
-from spikeinterface.core.core_tools import is_zarr_write_supported
+from spikeinterface.core.core_tools import _is_zarr_write_supported
 
-analyzer_formats = ("memory", "binary_folder", "zarr") if is_zarr_write_supported() else ("memory", "binary_folder")
+analyzer_formats = ("memory", "binary_folder", "zarr") if _is_zarr_write_supported() else ("memory", "binary_folder")
 
 
 def get_sorting_analyzer(cache_folder, format="memory", sparse=True):

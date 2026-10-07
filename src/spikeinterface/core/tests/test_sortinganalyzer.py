@@ -25,9 +25,9 @@ from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 # to test basespikevectorextension with node pipeline
 from spikeinterface.core.node_pipeline import SpikeRetriever
 from spikeinterface.core.tests.test_node_pipeline import AmplitudeExtractionNode
-from spikeinterface.core.core_tools import is_zarr_write_supported
+from spikeinterface.core.core_tools import _is_zarr_write_supported
 
-analyzer_formats = ("memory", "binary_folder", "zarr") if is_zarr_write_supported() else ("memory", "binary_folder")
+analyzer_formats = ("memory", "binary_folder", "zarr") if _is_zarr_write_supported() else ("memory", "binary_folder")
 
 
 def get_dataset():
@@ -314,7 +314,7 @@ def test_load_without_runtime_info(tmp_path, dataset):
         sorting_analyzer = load_sorting_analyzer(folder, format="auto")
 
     # TODO: remove once writing to zarr is supported with zarr>=3
-    if is_zarr_write_supported():
+    if _is_zarr_write_supported():
         # zarr
         folder = tmp_path / "test_SortingAnalyzer_run_info.zarr"
         sorting_analyzer = create_sorting_analyzer(

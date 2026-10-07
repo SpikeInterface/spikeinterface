@@ -27,7 +27,7 @@ from .core_tools import (
     retrieve_importing_provenance,
     is_path_remote,
     clean_zarr_folder_name,
-    check_zarr_write_is_supported,
+    _check_zarr_write_is_supported,
 )
 from .sorting_tools import (
     generate_unit_ids_for_merge_group,
@@ -1015,7 +1015,7 @@ class SortingAnalyzer:
     def _get_zarr_root(self, mode="r+"):
         assert mode in ("r+", "a", "r"), "mode must be 'r+', 'a' or 'r'"
         if mode != "r":
-            check_zarr_write_is_supported()
+            _check_zarr_write_is_supported()
 
         storage_options = self._backend_options.get("storage_options", {})
         zarr_root = super_zarr_open(self.folder, mode=mode, storage_options=storage_options)
@@ -1037,7 +1037,7 @@ class SortingAnalyzer:
     ) -> "SortingAnalyzer":
         from .zarrextractors import add_sorting_to_zarr_group, ZarrSortingExtractor
 
-        check_zarr_write_is_supported()
+        _check_zarr_write_is_supported()
         is_remote = is_path_remote(folder)
         if not is_remote:
             folder = clean_zarr_folder_name(folder)

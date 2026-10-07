@@ -11,7 +11,7 @@ from spikeinterface.core import (
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.core.core_tools import check_zarr_write_is_supported
+from spikeinterface.core.core_tools import _check_zarr_write_is_supported
 
 from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
 from spikeinterface.core.base import minimum_spike_dtype
@@ -127,7 +127,7 @@ class LupinSorter(ComponentsBasedSorter):
 
         # TODO: remove once writing to zarr is supported with zarr>=3
         if params["save_array"]:
-            check_zarr_write_is_supported()
+            _check_zarr_write_is_supported()
 
         from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_recording
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
