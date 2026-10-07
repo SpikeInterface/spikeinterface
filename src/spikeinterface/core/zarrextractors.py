@@ -463,8 +463,7 @@ class ZarrSampleIndexSearch:
 
     The array is sorted within each segment and stored in fixed-size zarr chunks. The
     search keeps the first value of every chunk (8 B per chunk), picks the one chunk that
-    can hold the answer, and decodes only that chunk. The last decoded chunk is cached, so
-    consecutive searches in the same region decode nothing.
+    can hold the answer, and decodes only that chunk — once per unique chunk per call.
 
     Parameters
     ----------
@@ -484,19 +483,6 @@ class ZarrSampleIndexSearch:
             starts = np.arange(0, self._num_spikes, self._chunk_length)
             chunk_firsts = sample_index.get_orthogonal_selection(starts) if starts.size else []
         self._chunk_firsts = np.asarray(chunk_firsts, dtype="int64")
-        self._cached_chunk = (-1, None)  # (chunk index, decoded values)
-
-    def _get_chunk(self, chunk_index):
-        # read the (index, values) pair once into a local and replace it as a whole: threads
-        # sharing this object (pool_engine="thread") then always see a consistent pair, and a
-        # race can only cost an extra decode
-        cached = self._cached_chunk
-        if cached[0] != chunk_index:
-            start = chunk_index * self._chunk_length
-            stop = min(start + self._chunk_length, self._num_spikes)
-            cached = (chunk_index, self._sample_index[start:stop])
-            self._cached_chunk = cached
-        return cached[1]
 
     def searchsorted(self, values, start, stop):
         """
@@ -513,15 +499,18 @@ class ZarrSampleIndexSearch:
         last_chunk = (stop - 1) // self._chunk_length
         # first values of the chunks after `first_chunk`, all of which lie inside start:stop
         later_firsts = self._chunk_firsts[first_chunk + 1 : last_chunk + 1]
-        for i, value in enumerate(values):
-            # the answer lies in the last chunk whose first value is < value: side="left" keeps
-            # runs of equal values that cross a chunk boundary in the earlier chunk
-            chunk_index = first_chunk + int(np.searchsorted(later_firsts, value, side="left"))
+        # assign every value to its chunk in one vectorised call: side="left" keeps runs of
+        # equal values that cross a chunk boundary in the earlier chunk
+        chunk_indices = first_chunk + np.searchsorted(later_firsts, values, side="left")
+        # decode each touched chunk exactly once and answer all values that fall in it
+        unique_chunks, inverse = np.unique(chunk_indices, return_inverse=True)
+        for k, chunk_index in enumerate(unique_chunks):
+            mask = inverse == k
             chunk_start = chunk_index * self._chunk_length
             lo = max(chunk_start, start)
             hi = min(chunk_start + self._chunk_length, stop)
-            block = self._get_chunk(chunk_index)[lo - chunk_start : hi - chunk_start]
-            out[i] = lo + int(np.searchsorted(block, value, side="left")) - start
+            block = self._sample_index[lo:hi]
+            out[mask] = lo + np.searchsorted(block, values[mask], side="left") - start
         return out
 
 
