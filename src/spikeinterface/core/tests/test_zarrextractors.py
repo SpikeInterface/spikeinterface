@@ -16,6 +16,7 @@ from spikeinterface.core.zarrextractors import (
 )
 
 
+@pytest.mark.requires_zarr_write
 def test_zarr_compression_options(tmp_path):
     from numcodecs import Blosc, Delta, FixedScaleOffset
 
@@ -59,6 +60,7 @@ def test_zarr_compression_options(tmp_path):
     assert rec_other._root["times_seg0"].filters == other_filters2
 
 
+@pytest.mark.requires_zarr_write
 def test_ZarrSortingExtractor(tmp_path):
     np_sorting = generate_sorting()
 

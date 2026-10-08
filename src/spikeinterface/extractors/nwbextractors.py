@@ -333,7 +333,9 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
     if result is None:
         result = []
 
-    for neurodata_name, value in group.items():
+    # zarr>=3 groups have no `items()`, `keys()` works for h5py and both zarr versions
+    for neurodata_name in group.keys():
+        value = group[neurodata_name]
         # Check if it's a group and if it has the neurodata_type
         if isinstance(value, group_class):
             current_path = f"{path}/{neurodata_name}" if path else neurodata_name
@@ -354,8 +356,8 @@ def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, elect
         if backend == "zarr":
             import zarr
 
-            # links must be resolved
-            zarr_links = electrical_series.attrs["zarr_link"]
+            # links must be resolved, hdmf-zarr>=0.14 stores them under "_LINKS" instead of "zarr_link"
+            zarr_links = electrical_series.attrs.get("zarr_link", electrical_series.attrs.get("_LINKS"))
             electrodes_path = None
             for zarr_link in zarr_links:
                 if zarr_link["name"] == "electrodes":
@@ -1642,7 +1644,9 @@ def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
     if result is None:
         result = []
 
-    for name, value in group.items():
+    # zarr>=3 groups have no `items()`, `keys()` works for h5py and both zarr versions
+    for name in group.keys():
+        value = group[name]
         if isinstance(value, group_class):
             current_path = f"{path}/{name}" if path else name
             if value.attrs.get("neurodata_type") == "TimeSeries":

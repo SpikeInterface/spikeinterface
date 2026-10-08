@@ -12,7 +12,7 @@ from spikeinterface.core.time_series import TimeSeries
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
-from spikeinterface.core.core_tools import ms_to_samples, samples_to_ms
+from spikeinterface.core.core_tools import ms_to_samples, samples_to_ms, _check_zarr_write_is_supported
 
 
 class PipelineNode:
@@ -1044,6 +1044,7 @@ class GatherToZarr:
 
         from spikeinterface.core.zarrextractors import get_default_zarr_compressor
 
+        _check_zarr_write_is_supported()
         if compressor == "default":
             compressor = get_default_zarr_compressor()
         self.compressor = compressor
