@@ -69,19 +69,24 @@ class ComputeSpikeLocations(BaseSpikeVectorExtension):
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
+        main_channel_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
 
         retriever_kwargs = {
             "channel_from_template": True,
             **self.params["spike_retriever_kwargs"],
         }
         retriever = SpikeRetriever(sorting, recording, **retriever_kwargs)
+        spikes = sorting.to_spike_vector()
+        channel_index_array = main_channel_indices[spikes["unit_index"]]
         nodes = get_localization_pipeline_nodes(
             recording,
             retriever,
+            peaks_or_spikes=spikes,
             method=self.params["method"],
             method_kwargs=self.params["method_kwargs"],
             ms_before=self.params["ms_before"],
             ms_after=self.params["ms_after"],
+            channel_index_array=channel_index_array,
             seed=self.params.get("seed"),
         )
         return nodes
