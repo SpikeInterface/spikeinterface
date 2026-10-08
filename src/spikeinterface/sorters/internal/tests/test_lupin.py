@@ -13,7 +13,7 @@ class LupinSorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     SorterClass = LupinSorter
 
     # TODO: remove once writing to zarr is supported with zarr>=3 (save_array writes the templates to zarr)
-    @pytest.mark.requires_zarr_write
+
     def test_with_run(self):
         super().test_with_run()
 

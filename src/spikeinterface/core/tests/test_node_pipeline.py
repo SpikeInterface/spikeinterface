@@ -271,7 +271,6 @@ def test_run_node_pipeline(cache_folder_creation):
             unpickled_node = pickle.loads(pickled_node)
 
 
-@pytest.mark.requires_zarr_write
 def test_gather_to_zarr_chunking(tmp_path):
     # the zarr chunk size along the first axis must be picked from a byte target (not from the
     # size of the first gathered buffer), so it stays sensible for billions of spikes and never
@@ -320,7 +319,6 @@ def test_gather_to_zarr_chunking(tmp_path):
     assert np.array_equal(waveforms[:], waveforms2[:])
 
 
-@pytest.mark.requires_zarr_write
 def test_gather_to_zarr_chunk_bytes_per_name(tmp_path):
     # `zarr_target_chunk_bytes` can also be a dict to use a different byte target per array
     recording, sorting = generate_ground_truth_recording(num_channels=8, num_units=5, durations=[20.0], seed=7)

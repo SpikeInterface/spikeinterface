@@ -141,7 +141,6 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
-@pytest.mark.requires_zarr_write
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
     recording, sorting = dataset
     recording = recording.save(folder=tmp_path / "recording_zarr")
@@ -370,7 +369,7 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
 
 
-@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
+@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
 def test_load_in_lazy_mode(tmp_path, dataset, format):
     recording, sorting = dataset
 
@@ -862,9 +861,7 @@ def _compute_reference_pipeline_data(dataset):
     return analyzer.get_extension("dummy_pipeline").get_data()
 
 
-@pytest.mark.parametrize(
-    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
-)
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, format, lazy):
     """
@@ -929,7 +926,7 @@ def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, forma
         assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
 
 
-@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
+@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
 def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     """
     With save=False on a disk-backed analyzer, node-pipeline extensions are computed in memory
@@ -951,9 +948,7 @@ def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     assert not analyzer_reloaded.has_extension("dummy_pipeline")
 
 
-@pytest.mark.parametrize(
-    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
-)
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format, lazy):
     """
