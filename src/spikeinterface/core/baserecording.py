@@ -348,8 +348,9 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                 - channel_chunk_size: int or None, default: None
                     Channels per chunk (only for BaseRecording)
                 - chunks: tuple | None, default: None
-                    Chunks for the traces dataset. If None, no chunking is done. Note that sharding requires chunking to be specified
-                    and that chunk dimensions need to be larger than shard dimensions (if shards is not None).
+                    # TOOD: modify this
+                    Chunks for the traces dataset. If None, chunking is applied to the time dimension only and it is
+                    determined by the job_kwargs chunks ("chunk_size" or "chunk_duration").
                     If `chunks` is not None, it needs to be a tuple of length 2 with the chunk size for the time and channel
                     dimensions respectively and `channel_chunk_size` should not be specified.
                 - shard_factor: int | tuple[int] | None, default: None

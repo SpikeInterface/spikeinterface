@@ -27,6 +27,8 @@ from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 from spikeinterface.core.node_pipeline import SpikeRetriever
 from spikeinterface.core.tests.test_node_pipeline import AmplitudeExtractionNode
 
+analyzer_formats = ("memory", "binary_folder", "zarr")
+
 
 def get_dataset():
     recording, sorting = generate_ground_truth_recording(
@@ -94,6 +96,7 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
 
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     recording, sorting = dataset
+    recording = recording.save(folder=tmp_path / "recording_binary")
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
@@ -138,8 +141,10 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
+@pytest.mark.requires_zarr_write
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
     recording, sorting = dataset
+    recording = recording.save(folder=tmp_path / "recording_zarr")
 
     # make recording JSON serializable
     recording = recording.save(folder=tmp_path / "recording_for_zarr", overwrite=True)
@@ -365,7 +370,7 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
 
 
-@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
 def test_load_in_lazy_mode(tmp_path, dataset, format):
     recording, sorting = dataset
 
@@ -446,7 +451,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     assert sorting_analyzer.has_recording()
     # save to several format
-    for format in ("memory", "binary_folder", "zarr"):
+    for format in analyzer_formats:
         if format != "memory":
             if format == "zarr":
                 folder = cache_folder / f"test_SortingAnalyzer_save_as_{format}.zarr"
@@ -476,7 +481,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         assert sorting_analyzer2.sparsity == sorting_analyzer.sparsity
 
     # select unit_ids to several format
-    for format in ("memory", "binary_folder", "zarr"):
+    for format in analyzer_formats:
         if format != "memory":
             if format == "zarr":
                 folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}.zarr"
@@ -857,7 +862,9 @@ def _compute_reference_pipeline_data(dataset):
     return analyzer.get_extension("dummy_pipeline").get_data()
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize(
+    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
+)
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, format, lazy):
     """
@@ -922,7 +929,7 @@ def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, forma
         assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
 
 
-@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
 def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     """
     With save=False on a disk-backed analyzer, node-pipeline extensions are computed in memory
@@ -944,7 +951,9 @@ def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     assert not analyzer_reloaded.has_extension("dummy_pipeline")
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize(
+    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
+)
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format, lazy):
     """

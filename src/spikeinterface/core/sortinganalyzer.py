@@ -721,7 +721,6 @@ class SortingAnalyzer:
         info_file = folder / "spikeinterface_info.json"
         settings_file = folder / "settings.json"
         sorting_folder = folder / "sorting"
-        sorting_provenance_file = folder / "sorting_provenance.json"
         sparsity_file = folder / "sparsity_mask.npy"
         recording_provenance_file = folder / "recording"  # .json (default) or .pickle (if not json-serializable)
         rec_attributes_file = recording_info_folder / "recording_attributes.json"
@@ -738,17 +737,8 @@ class SortingAnalyzer:
             json.dump(check_json(settings), f, indent=4)
 
         # Save the sorting output
-        sorting = sorting.save(folder=sorting_folder)
-
-        # Dump sorting provenance
-        if sorting.check_serializability("json"):
-            sorting.dump(sorting_provenance_file, relative_to=folder)
-        elif sorting.check_serializability("pickle"):
-            sorting.dump(sorting_provenance_file.with_suffix(".pickle"), relative_to=folder)
-        else:
-            warnings.warn(
-                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
-            )
+        mmap_mode = "r" if lazy else None
+        sorting_cached = sorting.save(folder=sorting_folder, relative_to=folder, mmap_mode=mmap_mode)
 
         # Save sparsity
         if sparsity is not None:
@@ -783,7 +773,7 @@ class SortingAnalyzer:
 
         # Create SortingAnalyzer
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting,
+            sorting=sorting_cached,
             recording=recording,
             rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="binary_folder",
@@ -1050,9 +1040,7 @@ class SortingAnalyzer:
         backend_options: dict | None,
         lazy: bool = False,
     ) -> "SortingAnalyzer":
-        # used by create and save_as
-
-        from .zarrextractors import add_sorting_to_zarr_group
+        from .zarrextractors import add_sorting_to_zarr_group, ZarrSortingExtractor
 
         is_remote = is_path_remote(folder)
         if not is_remote:
@@ -1084,20 +1072,10 @@ class SortingAnalyzer:
         settings = {"return_in_uV": return_in_uV, "peak_sign": peak_sign, "peak_mode": peak_mode}
         zarr_root.attrs["settings"] = check_json(settings)
 
-        # Save the sorting output
-        add_sorting_to_zarr_group(sorting, sorting_group, **saving_options)
-
-        # Dump sorting provenance
         relative_to = None if is_remote else folder
-        sort_dict = sorting.to_dict(relative_to=relative_to, recursive=True)
-        if sorting.check_serializability("json"):
-            # In zarr v3, store JSON-serializable data in attributes instead of using object_codec
-            zarr_root.attrs["sorting_provenance"] = check_json(sort_dict)
-        else:
-            warnings.warn(
-                "The sorting provenance is not serializable! "
-                "The sorting provenance link will be lost for future load"
-            )
+        # Save the sorting output
+        add_sorting_to_zarr_group(sorting, sorting_group, relative_to=folder, **saving_options)
+        sorting_cached = ZarrSortingExtractor(folder / "sorting", lazy_spike_vector=lazy)
 
         # Save sparsity
         if sparsity is not None:
@@ -1135,7 +1113,7 @@ class SortingAnalyzer:
 
         # Create SortingAnalyzer
         sorting_analyzer = SortingAnalyzer(
-            sorting=NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True),
+            sorting=sorting_cached,
             recording=recording,
             rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="zarr",
@@ -2187,30 +2165,34 @@ class SortingAnalyzer:
         """
         from .loading import load
 
+        sorting_provenance = None
         if self.format == "memory":
             # the original sorting provenance is not kept in that case
-            sorting_provenance = None
-
+            pass
         elif self.format == "binary_folder":
             for type in ("json", "pickle"):
-                filename = self.folder / f"sorting_provenance.{type}"
+                filename = self.folder / "sorting" / f"provenance.{type}"
                 sorting_provenance = None
+                if not filename.is_file():
+                    # Legacy location
+                    filename = self.folder / "sorting_provenance.json"
+                # try-except here is because it's not required to be able
+                # to load the sorting provenance, as the user might have deleted
+                # the original sorting folder
                 if filename.is_file():
-                    # try-except here is because it's not required to be able
-                    # to load the sorting provenance, as the user might have deleted
-                    # the original sorting folder
                     try:
                         sorting_provenance = load(filename, base_folder=self.folder)
                         break
                     except:
                         pass
-                        # sorting_provenance = None
-
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
             sorting_provenance = None
             # In zarr v3, sorting_provenance is stored in attributes (in zarr v2 it was an object array)
-            sort_dict = get_zarr_attr_or_legacy_object(zarr_root, "sorting_provenance")
+            sort_dict = get_zarr_attr_or_legacy_object(zarr_root, "provenance")
+            if sort_dict is not None:
+                # Legacy
+                sort_dict = get_zarr_attr_or_legacy_object(zarr_root, "sorting_provenance")
             if sort_dict is not None:
                 # try-except here is because it's not required to be able
                 # to load the sorting provenance, as the user might have deleted
@@ -2434,7 +2416,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             else:
                 extension_instance.run(save=save, verbose=verbose)
             if not self._lazy:
-
                 for variable_name in extension_instance.data.keys():
                     # Materialize the data if not in lazy mode
                     if isinstance(extension_instance.data[variable_name], (np.memmap, zarr.Array)):

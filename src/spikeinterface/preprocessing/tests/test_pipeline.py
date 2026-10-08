@@ -169,6 +169,7 @@ def test_loading_provenance(create_cache_folder):
     cache_folder = create_cache_folder / "preprocessed_rec_for_pipeline"
 
     rec, _ = generate_ground_truth_recording(seed=0, num_channels=6)
+    rec = rec.save(folder=cache_folder / "recording_provenance")
     pp_rec = detect_and_remove_bad_channels(
         bandpass_filter(common_reference(rec, operator="average")),
         noisy_channel_threshold=0.3,
@@ -176,9 +177,9 @@ def test_loading_provenance(create_cache_folder):
         # when several run
         seed=2205,
     )
-    pp_rec.save(folder=cache_folder)
+    pp_rec.save(folder=cache_folder / "preprocessed_recording")
 
-    loaded_pp_list = get_preprocessing_list_from_file(cache_folder / "provenance.pkl")
+    loaded_pp_list = get_preprocessing_list_from_file(cache_folder / "preprocessed_recording" / "provenance.json")
 
     pipeline_rec_applying_precomputed_kwargs = apply_preprocessing_pipeline(
         rec,

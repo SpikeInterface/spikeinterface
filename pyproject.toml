@@ -20,7 +20,8 @@ classifiers = [
 
 
 dependencies = [
-    "numpy>=2.0.0",
+    "numpy>=2.0.0;python_version<'3.14'",
+    "numpy>=2.3.2;python_version>='3.14'",
     "threadpoolctl>=3.0.0",
     "tqdm",
     "zarr>=3,<4",
@@ -341,6 +342,12 @@ test-all = [
     {include-group = "test-generation"},
 ]
 
+# Tools for the pre-commit hooks. uv installs this group by default.
+dev = [
+    "black",
+    "pre-commit",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["src"]
 markers = [
@@ -359,6 +366,7 @@ markers = [
     "widgets",
     "sortingcomponents",
     "streaming_extractors: extractors that require streaming such as ross and fsspec",
+    "requires_zarr_write: tests that write to zarr, skipped with zarr>=3 where writing is not supported yet",
 ]
 filterwarnings =[
     'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',

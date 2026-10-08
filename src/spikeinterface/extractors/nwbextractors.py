@@ -5,6 +5,7 @@ import warnings
 import importlib.util
 
 import numpy as np
+from probeinterface import Probe, ProbeGroup
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
@@ -1074,9 +1075,21 @@ class NwbRecordingExtractor(BaseRecording):
         self.set_channel_gains(gains_to_uV)
         self.set_channel_offsets(offsets_to_uV)
         locations = self._reader.locations()
-        if locations is not None:
-            self.set_channel_locations(locations)
         groups = self._reader.groups()
+        if locations is not None:
+            # rel_x, rel_y and rel_z are relative to each electrode group, so each group is its own
+            # probe. Two groups can then share positions (e.g. two identical probes in one
+            # ElectricalSeries), so the overlap check across probes is skipped.
+            probegroup = ProbeGroup()
+            for group_name in np.unique(groups):
+                channel_indices = np.flatnonzero(groups == group_name)
+                probe = Probe(ndim=2)
+                probe.set_contacts(locations[channel_indices, :2], shapes="circle", shape_params={"radius": 1})
+                probe.set_device_channel_indices(channel_indices)
+                if locations.shape[1] == 3:
+                    probe = probe.to_3d(axes="xy")
+                probegroup.add_probe(probe)
+            self.set_probegroup(probegroup, check_overlap=False)
         if groups is not None:
             self.set_channel_groups(groups)
 
@@ -1104,7 +1117,7 @@ class NwbRecordingExtractor(BaseRecording):
                 self.set_property(property_name, values)
 
         if stream_mode is None and file_path is not None:
-            file_path = str(Path(file_path).resolve())
+            file_path = str(Path(file_path).absolute())
 
         if stream_mode == "fsspec" and stream_cache_path is not None:
             stream_cache_path = str(Path(self.stream_cache_path).absolute())
@@ -1438,7 +1451,7 @@ class NwbSortingExtractor(BaseSorting):
             self.extra_requirements.append(stream_mode)
 
         if stream_mode is None and file_path is not None:
-            file_path = str(Path(file_path).resolve())
+            file_path = str(Path(file_path).absolute())
 
         if storage_options is not None and stream_mode == "zarr":
             warnings.warn(
@@ -1489,6 +1502,23 @@ class NwbSortingExtractor(BaseSorting):
         # segment_index stays 0 for the single segment.
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = np.array([[0, num_spikes]], dtype="int64")
+
+    def get_last_spike_frame(self, segment_index: int | None = None) -> int:
+        # Performance: the generic BaseSorting version builds the full spike vector to take one maximum.
+        # spike_times_index holds the end offset of each unit's spikes, so reading only the last spike of
+        # each unit is enough. This assumes spike times are ordered within each unit, an NWB best practice
+        # checked by nwbinspector, so each unit's last stored time is its latest.
+        segment_index = self._check_segment_index(segment_index)
+        segment = self.segments[segment_index]
+        unit_ends = np.asarray(segment.spike_times_index_data[:], dtype="int64")
+        unit_counts = np.diff(unit_ends, prepend=0)
+        last_spike_positions = unit_ends[unit_counts > 0] - 1
+        if last_spike_positions.size == 0:
+            return 0
+        last_spike_times = np.asarray(segment.spike_times_data[last_spike_positions], dtype="float64")
+        last_spike_time = last_spike_times.max()
+        last_spike_frame = segment._times_to_samples(last_spike_time)
+        return int(last_spike_frame)
 
     @staticmethod
     def fetch_available_units_tables(
@@ -1646,6 +1676,7 @@ def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
     if result is None:
         result = []
 
+    # zarr>=3 groups have no `items()`, `keys()` works for h5py and both zarr versions
     for name in group.keys():
         value = group[name]
         if isinstance(value, group_class):

@@ -69,7 +69,7 @@ extensions_with_rel_tolerance_splits = {
 }
 
 
-def get_dataset_to_merge(folder):
+def get_dataset_to_merge(cache_folder):
     # generate a dataset with some split units to minimize merge errors
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
@@ -81,7 +81,7 @@ def get_dataset_to_merge(folder):
         generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=2.0, maximum_z=15.0, minimum_distance=20),
         seed=2205,
     )
-    recording = recording.save(folder=folder / "recording_for_merge")
+    recording = recording.save(folder=cache_folder / "recording_merge")
 
     # since templates are going to be averaged and this might be a problem for amplitude scaling
     # we select the 3 units with the largest templates to split
@@ -97,7 +97,7 @@ def get_dataset_to_merge(folder):
     return recording, sorting_with_splits, split_unit_ids
 
 
-def get_dataset_to_split(folder):
+def get_dataset_to_split(cache_folder):
     # generate a dataset and return large unit to split to minimize split errors
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
@@ -108,7 +108,7 @@ def get_dataset_to_split(folder):
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
-    recording = recording.save(folder=folder / "recording_for_split")
+    recording = recording.save(folder=cache_folder / "recording_split")
 
     # since templates are going to be averaged and this might be a problem for amplitude scaling
     # we select the 3 units with the largest templates to split
@@ -133,7 +133,9 @@ def dataset_to_split(create_cache_folder):
 
 @pytest.mark.parametrize("lazy", [False, True])
 @pytest.mark.parametrize("sparse", [False, True])
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize(
+    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
+)
 def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, format, tmp_path):
     if format == "memory" and lazy:
         pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")
@@ -265,7 +267,9 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
 
 @pytest.mark.parametrize("lazy", [False, True])
 @pytest.mark.parametrize("sparse", [False, True])
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize(
+    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
+)
 def test_SortingAnalyzer_split_all_extensions(dataset_to_split, lazy, sparse, format, tmp_path):
     if format == "memory" and lazy:
         pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")
