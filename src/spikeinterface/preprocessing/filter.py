@@ -200,8 +200,8 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         num_channels = traces_chunk.shape[1]
         filtered_traces = np.empty((num_samples, num_channels), dtype=self.dtype)
 
-        for channel in range(num_channels):
-            block = traces_chunk[:, channel : channel + 1]
+        for channel_index in range(num_channels):
+            block = traces_chunk[:, channel_index : channel_index + 1]
 
             if self.direction == "forward-backward":
                 if self.filter_mode == "sos":
@@ -227,7 +227,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
             if np.issubdtype(self.dtype, np.integer):
                 filtered_block = filtered_block.round()
 
-            filtered_traces[:, channel : channel + 1] = filtered_block
+            filtered_traces[:, channel_index : channel_index + 1] = filtered_block
 
         return filtered_traces
 
