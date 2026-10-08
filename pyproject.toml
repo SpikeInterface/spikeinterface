@@ -27,10 +27,10 @@ dependencies = [
     "zarr>=2.18,<3;python_version<'3.14'",
     "zarr>=3;python_version>='3.14'",  # Zarr writing is not yet supported with zarr 3
     # for release we need pypi, so this needs to be commented
-    "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
-    "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    # "neo>=0.14.5",
-    # "probeinterface>=0.4.0",
+    # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
+    # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
+    "neo>=0.14.5",
+    "probeinterface>=0.4.0",
     "packaging",
     "pydantic",
     "numcodecs<0.16.0;python_version<'3.14'",  # For supporting zarr < 3
