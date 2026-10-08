@@ -992,7 +992,7 @@ def add_sorting_to_zarr_group(
     # first sample_index of every zarr chunk: lets a lazy reader search sample_index
     # one chunk at a time (see ZarrSampleIndexSearch) instead of materialising it
     chunk_length = spikes_group["sample_index"].chunks[0]
-    spikes_group.create_dataset(
+    spikes_group.create_array(
         name="sample_index_chunk_firsts",
         data=np.asarray(spikes["sample_index"][::chunk_length], dtype="int64"),
         compressor=None,
