@@ -11,7 +11,13 @@ from .base import minimum_spike_dtype, _get_class_from_string
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .job_tools import split_job_kwargs
-from .core_tools import define_function_from_class, check_json, retrieve_importing_provenance, is_path_remote
+from .core_tools import (
+    define_function_from_class,
+    check_json,
+    retrieve_importing_provenance,
+    is_path_remote,
+    _check_zarr_write_is_supported,
+)
 from .time_series_tools import _write_time_series_to_zarr
 
 
@@ -78,9 +84,11 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
     else:
         if not Path(folder_path).is_dir():
             raise ValueError(f"Folder {folder_path} does not exist")
+        # zarr>=3 refuses storage_options for a local path, even an empty dict
+        local_kwargs = dict(storage_options=storage_options) if storage_options else dict()
         for open_func in open_funcs:
             try:
-                root = open_func(str(folder_path), mode=mode, storage_options=storage_options)
+                root = open_func(str(folder_path), mode=mode, **local_kwargs)
                 break
             except Exception as e:
                 exception = e
@@ -642,6 +650,7 @@ def create_zarr_path_for_write(folder_path: str | Path, overwrite: bool = False)
     folder_path : str or Path
         Path to the zarr root file
     """
+    _check_zarr_write_is_supported()
     if not is_path_remote(folder_path):
         folder_path = Path(folder_path)
         folder_path = folder_path.with_suffix(".zarr")
