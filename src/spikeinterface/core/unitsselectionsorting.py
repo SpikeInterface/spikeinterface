@@ -33,6 +33,11 @@ class UnitsSelectionSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, self._renamed_unit_ids)
 
+        self._is_identity_selection = bool(np.array_equal(self._unit_ids, parents_unit_ids))
+        if self._is_identity_selection:
+            # Same units (possibly renamed), same order => we can use the parent's cached spike vector
+            self._cached_lexsorted_spike_vector = parent_sorting._cached_lexsorted_spike_vector
+
         for parent_segment in self._parent_sorting.segments:
             sub_segment = UnitsSelectionSortingSegment(parent_segment, ids_conversion)
             self.add_sorting_segment(sub_segment)
@@ -54,27 +59,16 @@ class UnitsSelectionSorting(BaseSorting):
             if self._parent_sorting._cached_spike_vector is None:
                 return
 
+        if self._is_identity_selection:
+            self._cached_spike_vector = self._parent_sorting._cached_spike_vector
+            self._cached_spike_vector_segment_slices = self._parent_sorting._get_spike_vector_segment_slices()
+            return
+
         spike_vector, _ = remap_unit_indices_in_vector(
             vector=self._parent_sorting._cached_spike_vector,
             all_old_unit_ids=self._parent_sorting.unit_ids,
             all_new_unit_ids=self._unit_ids,
         )
-
-        # check if order is preserved
-        pos = np.searchsorted(self._parent_sorting.unit_ids, self.unit_ids)
-        order_is_preserved = np.all(np.diff(pos) > 0)
-
-        if not order_is_preserved:
-            # Note: this can be a very high cost and make big dataset very slow
-            # the only goal of this is to ensure the unit_index order when the sample is the same
-            # TODO: maybe we can remove it, if we don't guarantee the order of unit_index
-            # when sample_index is the same, but it can be a problem for some downstream analysis
-
-            # lexsort by segment_index, sample_index, unit_index
-            sort_indices = np.lexsort(
-                (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
-            )
-            spike_vector = spike_vector[sort_indices]
         self._cached_spike_vector = spike_vector
 
 
