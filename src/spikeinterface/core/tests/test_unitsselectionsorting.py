@@ -248,6 +248,7 @@ def test_non_identity_selection_does_not_share(unit_ids):
     assert len(parent._cached_lexsorted_spike_vector) == 0
 
 
+@pytest.mark.requires_zarr_write
 def test_identity_selection_keeps_lazy_zarr_vector(tmp_path):
     """A lazy parent spike vector should stay lazy through an identity selection."""
     from spikeinterface.core.zarrextractors import ZarrSortingExtractor, ZarrSpikeVector
