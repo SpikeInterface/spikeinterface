@@ -126,6 +126,15 @@ class _DetectSaturation(PipelineNode):
         else:
             self.diff_threshold_unscaled = None
 
+        self._kwargs.update(
+            dict(
+                saturation_threshold_uV=saturation_threshold_uV,
+                diff_threshold_uV=diff_threshold_uV,
+                proportion=proportion,
+                signed=signed,
+            )
+        )
+
     def get_margin(self) -> int:
         """Return the number of margin samples required on each side of a chunk."""
         return 0
