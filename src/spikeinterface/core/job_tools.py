@@ -225,12 +225,14 @@ def divide_segment_into_chunks(num_frames, chunk_size):
     return chunks
 
 
-def divide_time_series_into_chunks(recording, chunk_size):
+def divide_time_series_into_chunks(recording, chunk_size, num_chunk_per_batch):
     slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
         chunks = divide_segment_into_chunks(num_frames, chunk_size)
         slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
+    if num_chunk_per_batch is not None:
+        slices = [slices[i : i + num_chunk_per_batch] for i in range(0, len(slices), num_chunk_per_batch)]
     return slices
 
 
@@ -383,6 +385,12 @@ class TimeSeriesChunkExecutor:
         Size of each chunk in number of samples. If "total_memory" or "chunk_memory" are used, it is ignored.
     chunk_duration : str or float or None
         Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
+    num_chunk_per_batch : int or None, default: None
+        Number of chunks to process per batch.
+        Chunks (slice of traces) are distributed over a pool of  n_jobs workers one by one.
+        Optionally each worker can reeive a batch of continuous chunks to process at once.
+        This is usefull in the context of zarr v3 shards concept.
+        Internally, instead of  sending slices to each worker it sends a list of slices.
     mp_context : "fork" | "spawn" | None, default: None
         "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
         "fork" is only safely available on LINUX systems.
@@ -415,6 +423,7 @@ class TimeSeriesChunkExecutor:
         chunk_size=None,
         chunk_memory=None,
         chunk_duration=None,
+        num_chunk_per_batch=None,
         mp_context=None,
         job_name="",
         max_threads_per_worker=1,
@@ -463,6 +472,7 @@ class TimeSeriesChunkExecutor:
             chunk_duration=chunk_duration,
             n_jobs=self.n_jobs,
         )
+        self.num_chunk_per_batch = num_chunk_per_batch
         self.job_name = job_name
         self.max_threads_per_worker = max_threads_per_worker
 
@@ -517,7 +527,7 @@ class TimeSeriesChunkExecutor:
 
         if slices is None:
             # TODO: rename
-            slices = divide_time_series_into_chunks(self.time_series, self.chunk_size)
+            slices = divide_time_series_into_chunks(self.time_series, self.chunk_size, self.num_chunk_per_batch)
 
         if self.handle_returns:
             returns = []
@@ -539,10 +549,17 @@ class TimeSeriesChunkExecutor:
 
             for segment_index, frame_start, frame_stop in slices:
                 res = self.func(segment_index, frame_start, frame_stop, worker_dict)
-                if self.handle_returns:
-                    returns.append(res)
-                if self.gather_func is not None:
-                    self.gather_func(res)
+                if self.num_chunk_per_batch is None:
+                    if self.handle_returns:
+                        returns.append(res)
+                    if self.gather_func is not None:
+                        self.gather_func(res)
+                else:
+                    for res2 in res:
+                        if self.handle_returns:
+                            returns.append(res2)
+                        if self.gather_func is not None:
+                            self.gather_func(res2)
 
         else:
             n_jobs = min(self.n_jobs, len(slices))
@@ -583,10 +600,17 @@ class TimeSeriesChunkExecutor:
                         )
 
                     for res in results:
-                        if self.handle_returns:
-                            returns.append(res)
-                        if self.gather_func is not None:
-                            self.gather_func(res)
+                        if self.num_chunk_per_batch is None:
+                            if self.handle_returns:
+                                returns.append(res)
+                            if self.gather_func is not None:
+                                self.gather_func(res)
+                        else:
+                            for res2 in res:
+                                if self.handle_returns:
+                                    returns.append(res2)
+                                if self.gather_func is not None:
+                                    self.gather_func(res2)
 
             elif self.pool_engine == "thread":
                 # this is need to create a per worker local dict where the initializer will push the func wrapper
@@ -624,10 +648,18 @@ class TimeSeriesChunkExecutor:
                     for res in results:
                         if self.progress_bar:
                             pbar.update(1)
-                        if self.handle_returns:
-                            returns.append(res)
-                        if self.gather_func is not None:
-                            self.gather_func(res)
+                        if self.num_chunk_per_batch is None:
+                            if self.handle_returns:
+                                returns.append(res)
+                            if self.gather_func is not None:
+                                self.gather_func(res)
+                        else:
+                            for res2 in res:
+                                if self.handle_returns:
+                                    returns.append(res2)
+                                if self.gather_func is not None:
+                                    self.gather_func(res2)
+
                 if self.progress_bar:
                     pbar.close()
                     del pbar
@@ -651,12 +683,27 @@ class WorkerFuncWrapper:
         self.max_threads_per_worker = max_threads_per_worker
 
     def __call__(self, args):
-        segment_index, start_frame, end_frame = args
-        if self.max_threads_per_worker is None:
-            return self.func(segment_index, start_frame, end_frame, self.worker_dict)
-        else:
-            with threadpool_limits(limits=self.max_threads_per_worker):
+        if isinstance(args[0], tuple):
+            # this is the case when num_chunk_per_batch is not None
+            res = []
+            for arg in args:
+                segment_index, start_frame, end_frame = arg
+                if self.max_threads_per_worker is None:
+                    res.append(self.func(segment_index, start_frame, end_frame, self.worker_dict))
+                else:
+                    with threadpool_limits(limits=self.max_threads_per_worker):
+                        res.append(self.func(segment_index, start_frame, end_frame, self.worker_dict))
+            return res
+        elif isinstance(args, tuple):
+            # this is the case when num_chunk_per_batch is None -> legacy mode
+            segment_index, start_frame, end_frame = args
+            if self.max_threads_per_worker is None:
                 return self.func(segment_index, start_frame, end_frame, self.worker_dict)
+            else:
+                with threadpool_limits(limits=self.max_threads_per_worker):
+                    return self.func(segment_index, start_frame, end_frame, self.worker_dict)
+        else:
+            raise ValueError("args must be a tuple or a list of tuples")
 
 
 # see
