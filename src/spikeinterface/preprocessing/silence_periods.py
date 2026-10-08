@@ -106,7 +106,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 num_channels=recording.get_num_channels(),
                 sampling_frequency=recording.sampling_frequency,
                 durations=[recording.select_segments(i).get_duration() for i in range(recording.get_num_segments())],
-                dtype=recording.dtype,
+                # the noise is generated as float and cast to the recording dtype by ScaleRecording,
+                # since MockRecording only supports float dtypes
+                dtype="float32",
                 seed=seed,
                 strategy="on_the_fly",
                 noise_block_size=int(recording.sampling_frequency),

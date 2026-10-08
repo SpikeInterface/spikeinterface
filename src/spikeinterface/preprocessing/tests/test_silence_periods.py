@@ -3,7 +3,7 @@ import pytest
 from spikeinterface.core import generate_recording
 from spikeinterface.core import get_noise_levels
 from spikeinterface.core.base import base_period_dtype
-from spikeinterface.preprocessing import silence_periods
+from spikeinterface.preprocessing import scale, silence_periods
 
 
 import numpy as np
@@ -89,6 +89,22 @@ def test_silence_with_apodization(create_cache_folder):
     )
     # the traces at onset should be apodized, and the extended traces should have the same apodization in the overlapping region
     assert np.array_equal(traces_at_onset, traces_at_onset_extended[extra_samples:-extra_samples])
+
+
+def test_silence_noise_integer_recording():
+    # mode="noise" also works for integer recordings, see #4420
+    rec = scale(generate_recording(durations=[2.0], seed=0), gain=1000, dtype="int16")
+
+    periods = np.array([(0, 1000, 5000)], dtype=base_period_dtype)
+    rec_noise = silence_periods(rec, periods=periods, mode="noise", seed=2308)
+    traces = rec_noise.get_traces(segment_index=0, start_frame=0, end_frame=6000)
+    assert traces.dtype == np.dtype("int16")
+
+    noise_levels = get_noise_levels(rec, return_in_uV=False)
+    assert np.allclose(np.std(traces[1000:5000], axis=0), noise_levels, rtol=0.1)
+    original = rec.get_traces(segment_index=0, start_frame=0, end_frame=6000)
+    assert np.array_equal(traces[:1000], original[:1000])
+    assert np.array_equal(traces[5000:], original[5000:])
 
 
 if __name__ == "__main__":
