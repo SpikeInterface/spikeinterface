@@ -190,7 +190,7 @@ to different groups.
             sorter_name='kilosort2',
             recording=sub_recording,
             folder=f"folder_KS2_group{group}"
-            )
+        )
         sortings[group] = sorting
 
 
