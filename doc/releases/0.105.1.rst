@@ -58,6 +58,7 @@ sortingcomponents:
 
 documentation:
 
+* Fix manual split example in process_by_channel_group docs (#4846)
 * Clarify PSD threshold units and recording scaling (#4808)
 
 continuous integration:
@@ -75,9 +76,10 @@ testing:
 
 Contributors:
 
+* @alejoe91
 * @AtomicGlance
+* @grahamfindlay
+* @guptaishaan
+* @h-mayorquin
 * @JESUSROYETH
 * @JoeZiminski
-* @alejoe91
-* @grahamfindlay
-* @h-mayorquin
