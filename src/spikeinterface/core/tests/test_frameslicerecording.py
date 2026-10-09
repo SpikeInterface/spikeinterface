@@ -41,5 +41,20 @@ def test_FrameSliceRecording():
     assert np.allclose(times0[10:85], sub_times0)
 
 
+def test_frame_slice_with_explicit_times():
+    traces = np.arange(20, dtype="float64")[:, None]
+    rec = NumpyRecording([traces], sampling_frequency=30000)
+    times = np.cumsum(np.linspace(0.001, 0.002, 20))
+    rec.set_times(times)
+
+    sliced = rec.frame_slice(4, 15)
+    assert sliced.has_time_vector()
+    np.testing.assert_array_equal(sliced.get_times(), times[4:15])
+    np.testing.assert_array_equal(sliced.get_traces()[:, 0], traces[4:15, 0])
+    assert sliced.sample_index_to_time(3) == times[7]
+    assert sliced.time_to_sample_index(times[7]) == 3
+    np.testing.assert_array_equal(sliced.frame_slice(2, 5).get_times(), times[6:9])
+
+
 if __name__ == "__main__":
     test_FrameSliceRecording()
