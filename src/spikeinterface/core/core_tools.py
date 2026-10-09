@@ -763,6 +763,27 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     return memory
 
 
+def _is_zarr_write_supported() -> bool:
+    """
+    Whether writing to zarr is supported with the installed zarr, which is not yet the case for zarr>=3.
+    """
+    return int(zarr.__version__.split(".")[0]) < 3
+
+
+def _check_zarr_write_is_supported() -> None:
+    """
+    Raise an informative error when writing to zarr with zarr>=3, which is not supported yet.
+
+    zarr>=3 is what gets installed on Python 3.14, where reading existing zarr folders works but writing does not.
+    """
+    if not _is_zarr_write_supported():
+        raise NotImplementedError(
+            f"Writing to zarr is not supported yet with zarr {zarr.__version__}, which is the version installed "
+            "on Python 3.14. Use Python 3.13 or lower to save in zarr format, or save in another format such as "
+            "'binary_folder'."
+        )
+
+
 def is_path_remote(path: str | Path) -> bool:
     """
     Returns True if the path is a remote path (e.g., s3:// or gcs://).
@@ -777,7 +798,8 @@ def is_path_remote(path: str | Path) -> bool:
     is_remote: bool
         Whether the path is a remote path.
     """
-    return "s3://" in str(path) or "gcs://" in str(path)
+    remote_schemes = ("s3://", "gcs://", "http://", "https://")
+    return any(scheme in str(path) for scheme in remote_schemes)
 
 
 def ms_to_samples(ms: float, sampling_frequency: float) -> int:
@@ -934,11 +956,11 @@ def load_annotations_from_folder(folder: str | Path, extractor: "BaseExtractor")
                 extractor._annotations.update(annotations)
 
 
-def save_extractor_provenance(folder: str | Path, extractor: "BaseExtractor"):
+def save_provenance_to_folder(folder: str | Path, extractor: "BaseExtractor", relative_to: str | Path | None = None):
     folder = Path(folder)
     if extractor.check_serializability("json"):
         provenance_file_path = folder / f"provenance.json"
-        extractor.dump_to_json(file_path=provenance_file_path, relative_to=folder)
+        extractor.dump_to_json(file_path=provenance_file_path, relative_to=relative_to)
     elif extractor.check_serializability("pickle"):
         provenance_file = folder / f"provenance.pkl"
         extractor.dump_to_pickle(provenance_file, relative_to=folder)

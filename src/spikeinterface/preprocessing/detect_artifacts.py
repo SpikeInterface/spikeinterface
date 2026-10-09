@@ -126,6 +126,15 @@ class _DetectSaturation(PipelineNode):
         else:
             self.diff_threshold_unscaled = None
 
+        self._kwargs.update(
+            dict(
+                saturation_threshold_uV=saturation_threshold_uV,
+                diff_threshold_uV=diff_threshold_uV,
+                proportion=proportion,
+                signed=signed,
+            )
+        )
+
     def get_margin(self) -> int:
         """Return the number of margin samples required on each side of a chunk."""
         return 0
@@ -424,9 +433,13 @@ class _DetectThresholdCrossing(PeakDetector):
             ``"front"`` (``True`` for rising edge, ``False`` for falling edge).
         """
         z = np.median((traces - self.medians) / self.abs_thresholds, axis=1)
-        threshold_mask = np.diff((z > 1) != 0, axis=0)
+        above_threshold = z > 1
 
-        indices = np.flatnonzero(threshold_mask)
+        # the chunk is treated as self-contained: the signal is considered below threshold before the
+        # first and after the last sample. This guarantees that crossings always come in
+        # (rising, falling) pairs, even when a period straddles a chunk boundary. Such a period is
+        # emitted as two adjacent periods, which are merged back by `_collapse_events`.
+        indices = np.flatnonzero(np.diff(above_threshold, prepend=False, append=False))
         threshold_crossings = np.zeros(indices.size, dtype=self._dtype)
         threshold_crossings["sample_index"] = indices
         threshold_crossings["segment_index"] = segment_index

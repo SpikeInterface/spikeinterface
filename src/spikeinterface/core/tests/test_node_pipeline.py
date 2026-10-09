@@ -16,6 +16,7 @@ from spikeinterface.core.node_pipeline import (
     ExtractDenseWaveforms,
     sorting_to_peaks,
 )
+from spikeinterface.core.core_tools import _is_zarr_write_supported
 
 
 class AmplitudeExtractionNode(PipelineNode):
@@ -180,34 +181,36 @@ def test_run_node_pipeline(cache_folder_creation):
         assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms2)
         assert np.array_equal(denoised_waveforms_rms2, denoised_waveforms_rms3)
 
-        # gather zarr mode
-        import zarr
+        # TODO: remove once writing to zarr is supported with zarr>=3
+        if _is_zarr_write_supported():
+            # gather zarr mode
+            import zarr
 
-        zarr_folder = cache_folder / f"pipeline_folder_{loop}.zarr"
-        if zarr_folder.is_dir():
-            shutil.rmtree(zarr_folder)
-        output = run_node_pipeline(
-            recording,
-            nodes,
-            job_kwargs,
-            gather_mode="zarr",
-            dest=zarr_folder,
-            names=["amplitudes", "waveforms_rms", "denoised_waveforms_rms"],
-        )
-        amplitudes_z, waveforms_rms_z, denoised_waveforms_rms_z = output
+            zarr_folder = cache_folder / f"pipeline_folder_{loop}.zarr"
+            if zarr_folder.is_dir():
+                shutil.rmtree(zarr_folder)
+            output = run_node_pipeline(
+                recording,
+                nodes,
+                job_kwargs,
+                gather_mode="zarr",
+                dest=zarr_folder,
+                names=["amplitudes", "waveforms_rms", "denoised_waveforms_rms"],
+            )
+            amplitudes_z, waveforms_rms_z, denoised_waveforms_rms_z = output
 
-        # values must match the memory gather
-        assert np.array_equal(amplitudes, amplitudes_z[:])
-        assert np.array_equal(waveforms_rms, waveforms_rms_z[:])
-        assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms_z[:])
+            # values must match the memory gather
+            assert np.array_equal(amplitudes, amplitudes_z[:])
+            assert np.array_equal(waveforms_rms, waveforms_rms_z[:])
+            assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms_z[:])
 
-        # arrays must be persisted on disk and re-openable
-        zarr_root = zarr.open(str(zarr_folder), mode="r")
-        for name in ("amplitudes", "waveforms_rms", "denoised_waveforms_rms"):
-            assert name in zarr_root
-        assert np.array_equal(amplitudes, zarr_root["amplitudes"][:])
-        assert np.array_equal(waveforms_rms, zarr_root["waveforms_rms"][:])
-        assert np.array_equal(denoised_waveforms_rms, zarr_root["denoised_waveforms_rms"][:])
+            # arrays must be persisted on disk and re-openable
+            zarr_root = zarr.open(str(zarr_folder), mode="r")
+            for name in ("amplitudes", "waveforms_rms", "denoised_waveforms_rms"):
+                assert name in zarr_root
+            assert np.array_equal(amplitudes, zarr_root["amplitudes"][:])
+            assert np.array_equal(waveforms_rms, zarr_root["waveforms_rms"][:])
+            assert np.array_equal(denoised_waveforms_rms, zarr_root["denoised_waveforms_rms"][:])
 
         # gather npy mode with an explicit list of file paths (final location)
         npy_files_folder = cache_folder / f"pipeline_npy_files_{loop}"
@@ -232,36 +235,38 @@ def test_run_node_pipeline(cache_folder_creation):
         assert np.array_equal(waveforms_rms, waveforms_rms_f)
         assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms_f)
 
-        # gather zarr mode with an explicit list of dataset paths, created on the fly
-        # inside an existing store (final location, e.g. an analyzer extension group)
-        datasets_store = cache_folder / f"pipeline_zarr_datasets_{loop}.zarr"
-        if datasets_store.is_dir():
-            shutil.rmtree(datasets_store)
-        # pre-existing store that must not be wiped
-        root = zarr.open(str(datasets_store), mode="w")
-        root.attrs["preexisting"] = True
-        dataset_paths = [
-            datasets_store / "extensions" / "amplitudes",
-            datasets_store / "extensions" / "waveforms_rms",
-            datasets_store / "extensions" / "denoised_waveforms_rms",
-        ]
-        output = run_node_pipeline(
-            recording,
-            nodes,
-            job_kwargs,
-            gather_mode="zarr",
-            dest=dataset_paths,
-        )
-        amplitudes_d, waveforms_rms_d, denoised_waveforms_rms_d = output
-        assert np.array_equal(amplitudes, amplitudes_d[:])
-        assert np.array_equal(waveforms_rms, waveforms_rms_d[:])
-        assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms_d[:])
-        # data must be persisted at the passed final location and the store not wiped
-        root_reopen = zarr.open(str(datasets_store), mode="r")
-        assert root_reopen.attrs.get("preexisting", False)
-        assert np.array_equal(amplitudes, root_reopen["extensions"]["amplitudes"][:])
-        assert np.array_equal(waveforms_rms, root_reopen["extensions"]["waveforms_rms"][:])
-        assert np.array_equal(denoised_waveforms_rms, root_reopen["extensions"]["denoised_waveforms_rms"][:])
+        # TODO: remove once writing to zarr is supported with zarr>=3
+        if _is_zarr_write_supported():
+            # gather zarr mode with an explicit list of dataset paths, created on the fly
+            # inside an existing store (final location, e.g. an analyzer extension group)
+            datasets_store = cache_folder / f"pipeline_zarr_datasets_{loop}.zarr"
+            if datasets_store.is_dir():
+                shutil.rmtree(datasets_store)
+            # pre-existing store that must not be wiped
+            root = zarr.open(str(datasets_store), mode="w")
+            root.attrs["preexisting"] = True
+            dataset_paths = [
+                datasets_store / "extensions" / "amplitudes",
+                datasets_store / "extensions" / "waveforms_rms",
+                datasets_store / "extensions" / "denoised_waveforms_rms",
+            ]
+            output = run_node_pipeline(
+                recording,
+                nodes,
+                job_kwargs,
+                gather_mode="zarr",
+                dest=dataset_paths,
+            )
+            amplitudes_d, waveforms_rms_d, denoised_waveforms_rms_d = output
+            assert np.array_equal(amplitudes, amplitudes_d[:])
+            assert np.array_equal(waveforms_rms, waveforms_rms_d[:])
+            assert np.array_equal(denoised_waveforms_rms, denoised_waveforms_rms_d[:])
+            # data must be persisted at the passed final location and the store not wiped
+            root_reopen = zarr.open(str(datasets_store), mode="r")
+            assert root_reopen.attrs.get("preexisting", False)
+            assert np.array_equal(amplitudes, root_reopen["extensions"]["amplitudes"][:])
+            assert np.array_equal(waveforms_rms, root_reopen["extensions"]["waveforms_rms"][:])
+            assert np.array_equal(denoised_waveforms_rms, root_reopen["extensions"]["denoised_waveforms_rms"][:])
 
         # Test pickle mechanism
         for node in nodes:
@@ -271,6 +276,7 @@ def test_run_node_pipeline(cache_folder_creation):
             unpickled_node = pickle.loads(pickled_node)
 
 
+@pytest.mark.requires_zarr_write
 def test_gather_to_zarr_chunking(tmp_path):
     # the zarr chunk size along the first axis must be picked from a byte target (not from the
     # size of the first gathered buffer), so it stays sensible for billions of spikes and never
@@ -319,6 +325,7 @@ def test_gather_to_zarr_chunking(tmp_path):
     assert np.array_equal(waveforms[:], waveforms2[:])
 
 
+@pytest.mark.requires_zarr_write
 def test_gather_to_zarr_chunk_bytes_per_name(tmp_path):
     # `zarr_target_chunk_bytes` can also be a dict to use a different byte target per array
     recording, sorting = generate_ground_truth_recording(num_channels=8, num_units=5, durations=[20.0], seed=7)

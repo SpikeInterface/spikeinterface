@@ -2,6 +2,7 @@ import pytest
 
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core import create_sorting_analyzer
+from spikeinterface.core.core_tools import _is_zarr_write_supported
 from spikeinterface.generation import generate_recording, generate_ground_truth_recording
 from spikeinterface.preprocessing import (
     apply_preprocessing_pipeline,
@@ -169,6 +170,7 @@ def test_loading_provenance(create_cache_folder):
     cache_folder = create_cache_folder / "preprocessed_rec_for_pipeline"
 
     rec, _ = generate_ground_truth_recording(seed=0, num_channels=6)
+    rec = rec.save(folder=cache_folder / "recording_provenance")
     pp_rec = detect_and_remove_bad_channels(
         bandpass_filter(common_reference(rec, operator="average")),
         noisy_channel_threshold=0.3,
@@ -176,9 +178,9 @@ def test_loading_provenance(create_cache_folder):
         # when several run
         seed=2205,
     )
-    pp_rec.save(folder=cache_folder)
+    pp_rec.save(folder=cache_folder / "preprocessed_recording")
 
-    loaded_pp_list = get_preprocessing_list_from_file(cache_folder / "provenance.pkl")
+    loaded_pp_list = get_preprocessing_list_from_file(cache_folder / "preprocessed_recording" / "provenance.json")
 
     pipeline_rec_applying_precomputed_kwargs = apply_preprocessing_pipeline(
         rec,
@@ -204,6 +206,7 @@ def test_loading_from_analyzer(create_cache_folder):
 
     cache_folder = create_cache_folder
     recording, sorting = generate_ground_truth_recording()
+    recording = recording.save(folder=cache_folder / "recording")
 
     preprocessing_dict = {"common_reference": {}, "highpass_filter": {"freq_min": 301.0}}
     pp_recording = apply_preprocessing_pipeline(recording, preprocessing_dict)
@@ -216,11 +219,13 @@ def test_loading_from_analyzer(create_cache_folder):
     pp_recording_from_binary = apply_preprocessing_pipeline(recording, pp_list_from_binary)
     check_recordings_equal(pp_recording, pp_recording_from_binary)
 
-    analyzer_zarr_folder = cache_folder / "zarr_format.zarr"
-    _ = create_sorting_analyzer(sorting=sorting, recording=pp_recording, format="zarr", folder=analyzer_zarr_folder)
-    pp_list_from_zarr = get_preprocessing_list_from_analyzer(analyzer_zarr_folder)
-    pp_recording_from_zarr = apply_preprocessing_pipeline(recording, pp_list_from_zarr)
-    check_recordings_equal(pp_recording, pp_recording_from_zarr)
+    # TODO: remove once writing to zarr is supported with zarr>=3
+    if _is_zarr_write_supported():
+        analyzer_zarr_folder = cache_folder / "zarr_format.zarr"
+        _ = create_sorting_analyzer(sorting=sorting, recording=pp_recording, format="zarr", folder=analyzer_zarr_folder)
+        pp_list_from_zarr = get_preprocessing_list_from_analyzer(analyzer_zarr_folder)
+        pp_recording_from_zarr = apply_preprocessing_pipeline(recording, pp_list_from_zarr)
+        check_recordings_equal(pp_recording, pp_recording_from_zarr)
 
 
 def test_pipeline_recording_arg_substitution(create_cache_folder):

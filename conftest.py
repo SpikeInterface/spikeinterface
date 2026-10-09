@@ -1,3 +1,4 @@
+import platform
 import pytest
 from pathlib import Path
 
@@ -21,6 +22,24 @@ def pytest_addoption(parser):
         default=False,
         help="Enable debug plots during tests",
     )
+    # Users on Linux get fork by default but the tests run with forkserver (the default since Python 3.14)
+    parser.addoption(
+        "--mp-context",
+        default="forkserver" if platform.system() == "Linux" else None,
+        help="Multiprocessing context used by the tests instead of the default one (forkserver on Linux)",
+    )
+
+
+def pytest_configure(config):
+    mp_context = config.getoption("--mp-context")
+    if mp_context is not None:
+        import multiprocessing
+        import spikeinterface.core.globals as si_globals
+
+        # The default is patched as well so it survives reset_global_job_kwargs()
+        multiprocessing.set_start_method(mp_context, force=True)
+        si_globals._default_job_kwargs["mp_context"] = mp_context
+        si_globals.global_job_kwargs["mp_context"] = mp_context
 
 
 def pytest_collection_modifyitems(config, items):
@@ -29,9 +48,18 @@ def pytest_collection_modifyitems(config, items):
     Marking them in turn allows the tests to be run by using the pytest -m marker_name option.
     """
 
+    from spikeinterface.core.core_tools import _is_zarr_write_supported
+
     rootdir = Path(config.rootdir)
     modules_location = rootdir / "src" / "spikeinterface"
     for item in items:
+        # TODO: remove once writing to zarr is supported with zarr>=3
+        if item.get_closest_marker("requires_zarr_write") and not _is_zarr_write_supported():
+            item.add_marker(pytest.mark.skip(reason="Writing to zarr is not supported yet with zarr>=3"))
+
+        if config.getoption("--mp-context") is not None and item.name == "test_global_job_kwargs":
+            item.add_marker(pytest.mark.skip(reason="--mp-context changes the default job kwargs"))
+
         try:
             rel_path = Path(item.fspath).relative_to(modules_location)
         except:

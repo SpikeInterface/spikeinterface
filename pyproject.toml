@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.105.0"
+version = "0.105.1"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -20,10 +20,12 @@ classifiers = [
 
 
 dependencies = [
-    "numpy>=2.0.0",
+    "numpy>=2.0.0;python_version<'3.14'",
+    "numpy>=2.3.2;python_version>='3.14'",
     "threadpoolctl>=3.0.0",
     "tqdm",
-    "zarr>=2.18,<3",
+    "zarr>=2.18,<3;python_version<'3.14'",
+    "zarr>=3;python_version>='3.14'",  # Zarr writing is not yet supported with zarr 3
     # for release we need pypi, so this needs to be commented
     # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
     # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
@@ -31,7 +33,8 @@ dependencies = [
     "probeinterface>=0.4.0",
     "packaging",
     "pydantic",
-    "numcodecs<0.16.0", # For supporting zarr < 3
+    "numcodecs<0.16.0;python_version<'3.14'",  # For supporting zarr < 3
+    "numcodecs>=0.16.5;python_version>='3.14'",
 ]
 
 [build-system]
@@ -340,6 +343,12 @@ test-all = [
     {include-group = "test-generation"},
 ]
 
+# Tools for the pre-commit hooks. uv installs this group by default.
+dev = [
+    "black",
+    "pre-commit",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["src"]
 markers = [
@@ -358,6 +367,7 @@ markers = [
     "widgets",
     "sortingcomponents",
     "streaming_extractors: extractors that require streaming such as ross and fsspec",
+    "requires_zarr_write: tests that write to zarr, skipped with zarr>=3 where writing is not supported yet",
 ]
 filterwarnings =[
     'ignore:.*distutils Version classes are deprecated.*:DeprecationWarning',

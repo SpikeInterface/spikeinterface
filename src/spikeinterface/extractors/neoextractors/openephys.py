@@ -355,7 +355,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                     else:
                         sync_times = None
                     try:
-                        self.set_times(times=sync_times, segment_index=segment_index, with_warning=False)
+                        self.set_times(times=sync_times, segment_index=segment_index)
                     except:
                         warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
 

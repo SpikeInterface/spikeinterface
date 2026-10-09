@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.13"]  # Lower and higher versions we support
+        python-version: ["3.10", "3.14"]  # Lower and higher versions we support
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v6
@@ -94,15 +94,19 @@ jobs:
       - name: Pip list
         run: uv pip list --system
 
-      - name: Test core
-        run: pytest -m "core"
-        shell: bash
-
       - name: Install Dependencies for Timing Display
         run: |
           uv pip install --system tabulate
           uv pip install --system pandas
         shell: bash
+
+      - name: Set execute permissions on run_tests.sh
+        shell: bash
+        run: chmod +x .github/run_tests.sh
+
+      - name: Test core
+        shell: bash
+        run: ./.github/run_tests.sh core --no-virtual-env
 
       - name: Get current hash (SHA) of the ephy_testing_data repo
         shell: bash
@@ -125,7 +129,8 @@ jobs:
         run: |
           uv pip install --system datalad-installer
           if [ ${{ runner.os }} = 'Linux' ]; then
-            datalad-installer --sudo ok git-annex --method datalad/packages
+            # TODO: remove the pin once datalad uploads the git-annex 10.20261006 package (its latest-version points to a missing file)
+            datalad-installer --sudo ok git-annex=10.20260901 --method datalad/packages
           elif [ ${{ runner.os }} = 'macOS' ]; then
             datalad-installer --sudo ok git-annex --method brew
           elif [ ${{ runner.os }} = 'Windows' ]; then
@@ -136,10 +141,6 @@ jobs:
       - name : Install Plexon dependencies
         if: env.INSTALL_PLEXON_DEPENDENCIES == 'true'
         uses: ./.github/actions/install-wine
-
-      - name: Set execute permissions on run_tests.sh
-        shell: bash
-        run: chmod +x .github/run_tests.sh
 
       - name: Test extractors
         shell: bash

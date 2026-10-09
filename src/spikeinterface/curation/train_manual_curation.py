@@ -832,7 +832,9 @@ def check_metric_names_are_the_same(metrics_for_each_analyzer):
 
 def _format_metric_dataframe(input_data):
 
-    input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
-    input_data = input_data.astype("float32")
+    # cast before replacing infs: finite float64 values beyond float32 range overflow to inf
+    with np.errstate(over="ignore"):
+        input_data = input_data.astype("float32")
+    input_data = input_data.replace([np.inf, -np.inf], np.nan)
 
     return input_data

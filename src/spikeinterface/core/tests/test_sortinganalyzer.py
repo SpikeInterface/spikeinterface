@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+import warnings
 import numpy as np
 
 import shutil
@@ -20,10 +21,14 @@ from spikeinterface.core.sortinganalyzer import (
     _sort_extensions_by_dependency,
 )
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
+from spikeinterface.core.base import minimum_spike_dtype
 
 # to test basespikevectorextension with node pipeline
 from spikeinterface.core.node_pipeline import SpikeRetriever
 from spikeinterface.core.tests.test_node_pipeline import AmplitudeExtractionNode
+from spikeinterface.core.core_tools import _is_zarr_write_supported
+
+analyzer_formats = ("memory", "binary_folder", "zarr") if _is_zarr_write_supported() else ("memory", "binary_folder")
 
 
 def get_dataset():
@@ -92,6 +97,7 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
 
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     recording, sorting = dataset
+    recording = recording.save(folder=tmp_path / "recording_binary")
 
     folder = tmp_path / "test_SortingAnalyzer_binary_folder"
     if folder.exists():
@@ -136,8 +142,10 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
+@pytest.mark.requires_zarr_write
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
     recording, sorting = dataset
+    recording = recording.save(folder=tmp_path / "recording_zarr")
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
 
@@ -306,20 +314,22 @@ def test_load_without_runtime_info(tmp_path, dataset):
     with pytest.warns(UserWarning):
         sorting_analyzer = load_sorting_analyzer(folder, format="auto")
 
-    # zarr
-    folder = tmp_path / "test_SortingAnalyzer_run_info.zarr"
-    sorting_analyzer = create_sorting_analyzer(
-        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
-    )
-    sorting_analyzer.compute(extensions)
-    # remove run_info from attrs to mimic a previous version of spikeinterface
-    root = sorting_analyzer._get_zarr_root(mode="r+")
-    for ext in extensions:
-        del root["extensions"][ext].attrs["run_info"]
-        zarr.consolidate_metadata(root.store)
-    # should raise a warning for missing run_info
-    with pytest.warns(UserWarning):
-        sorting_analyzer = load_sorting_analyzer(folder, format="auto")
+    # TODO: remove once writing to zarr is supported with zarr>=3
+    if _is_zarr_write_supported():
+        # zarr
+        folder = tmp_path / "test_SortingAnalyzer_run_info.zarr"
+        sorting_analyzer = create_sorting_analyzer(
+            sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
+        )
+        sorting_analyzer.compute(extensions)
+        # remove run_info from attrs to mimic a previous version of spikeinterface
+        root = sorting_analyzer._get_zarr_root(mode="r+")
+        for ext in extensions:
+            del root["extensions"][ext].attrs["run_info"]
+            zarr.consolidate_metadata(root.store)
+        # should raise a warning for missing run_info
+        with pytest.warns(UserWarning):
+            sorting_analyzer = load_sorting_analyzer(folder, format="auto")
 
 
 def test_SortingAnalyzer_tmp_recording(dataset):
@@ -363,7 +373,7 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
 
 
-@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
 def test_load_in_lazy_mode(tmp_path, dataset, format):
     recording, sorting = dataset
 
@@ -444,7 +454,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
 
     assert sorting_analyzer.has_recording()
     # save to several format
-    for format in ("memory", "binary_folder", "zarr"):
+    for format in analyzer_formats:
         if format != "memory":
             if format == "zarr":
                 folder = cache_folder / f"test_SortingAnalyzer_save_as_{format}.zarr"
@@ -474,7 +484,7 @@ def _check_sorting_analyzers(sorting_analyzer, original_sorting, cache_folder):
         assert sorting_analyzer2.sparsity == sorting_analyzer.sparsity
 
     # select unit_ids to several format
-    for format in ("memory", "binary_folder", "zarr"):
+    for format in analyzer_formats:
         if format != "memory":
             if format == "zarr":
                 folder = cache_folder / f"test_SortingAnalyzer_select_units_with_{format}.zarr"
@@ -737,6 +747,32 @@ def test_extension():
         register_result_extension(DummyAnalyzerExtension2)
 
 
+def test_select_units_reordered_keeps_extension_alignment():
+    """Extensions slice per-spike data with a mask on the old spike vector, which keeps the old
+    order. The selected sorting's spike vector must keep that same order, even for cotemporal
+    spikes and even when the selection reorders the units."""
+    register_result_extension(DummyAnalyzerExtension)
+
+    rng = np.random.default_rng(0)
+    num_spikes, num_units = 2000, 5
+    spikes = np.empty(num_spikes, dtype=minimum_spike_dtype)
+    spikes["sample_index"] = np.sort(rng.integers(0, 200, size=num_spikes))
+    spikes["unit_index"] = rng.integers(0, num_units, size=num_spikes)
+    spikes["segment_index"] = 0
+    unit_ids = np.array(["u0", "u1", "u2", "u3", "u4"])
+    sorting = NumpySorting(spikes, 30_000.0, unit_ids)
+    recording = generate_recording(num_channels=4, durations=[1.0], sampling_frequency=30_000.0, seed=0)
+
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+    analyzer.compute("dummy")
+
+    selected = analyzer.select_units(unit_ids[::-1])
+    # "result_two" is a copy of unit_index array
+    old_unit_id_per_spike = unit_ids[selected.get_extension("dummy").data["result_two"]]
+    new_unit_id_per_spike = selected.unit_ids[selected.sorting.to_spike_vector()["unit_index"]]
+    assert np.array_equal(old_unit_id_per_spike, new_unit_id_per_spike)
+
+
 def test_excess_spikes(dataset):
     """
     If there are spikes that occur after the recording end time,
@@ -855,7 +891,9 @@ def _compute_reference_pipeline_data(dataset):
     return analyzer.get_extension("dummy_pipeline").get_data()
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize(
+    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
+)
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, format, lazy):
     """
@@ -920,7 +958,7 @@ def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, forma
         assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
 
 
-@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
 def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     """
     With save=False on a disk-backed analyzer, node-pipeline extensions are computed in memory
@@ -942,7 +980,9 @@ def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     assert not analyzer_reloaded.has_extension("dummy_pipeline")
 
 
-@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
+@pytest.mark.parametrize(
+    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
+)
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format, lazy):
     """
@@ -1270,6 +1310,28 @@ def test_merge_units_main_channel_id_disagreement():
         merged_analyzer.sorting.id_to_index(new_unit_ids[0])
     ]
     assert merged_main_channel_id == "chB"
+
+
+def test_no_mergeable_units_with_external_unit_ids(dataset):
+    """
+    Test that merge_units is robust against no mergeable units left
+    """
+    recording, sorting = dataset
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs=dict(method="best_channels", num_channels=3)
+    )
+    merge_unit_groups = [["0", "1"], ["2", "3"]]
+    new_unit_ids = ["8", "9"]
+    with pytest.warns(UserWarning, match="No mergeable unit groups found."):
+        _, new_unit_ids = sorting_analyzer.merge_units(
+            merge_unit_groups=merge_unit_groups,
+            new_unit_ids=new_unit_ids,
+            sparsity_overlap=1,
+            raise_error_if_overlap_fails=False,
+            return_new_unit_ids=True,
+        )
+    # Assert that no merges were made
+    assert len(new_unit_ids) == 0
 
 
 @pytest.mark.parametrize("unit_indices", [[4, 3, 2, 1, 0], [3, 1]])

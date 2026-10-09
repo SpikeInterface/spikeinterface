@@ -24,6 +24,7 @@ from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.core import generate_recording
+from spikeinterface.core.core_tools import _is_zarr_write_supported
 
 
 def test_BaseRecording(create_cache_folder):
@@ -364,32 +365,34 @@ def test_BaseRecording(create_cache_folder):
     rec_2d = rec_3d.planarize(axes="zy")
     assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
-    # test save to zarr
-    compressor = get_default_zarr_compressor()
-    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
-    rec_zarr_loaded = load(cache_folder / "recording.zarr")
-    # annotations is False because Zarr adds compression ratios
-    check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
-    check_recordings_equal(
-        rec_zarr, rec_zarr_loaded, return_in_uV=False, check_annotations=False, check_properties=True
-    )
-    for annotation_name in rec2.get_annotation_keys():
-        assert rec2.get_annotation(annotation_name) == rec_zarr.get_annotation(annotation_name)
-        assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
+    # TODO: remove once writing to zarr is supported with zarr>=3
+    if _is_zarr_write_supported():
+        # test save to zarr
+        compressor = get_default_zarr_compressor()
+        rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
+        rec_zarr_loaded = load(cache_folder / "recording.zarr")
+        # annotations is False because Zarr adds compression ratios
+        check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
+        check_recordings_equal(
+            rec_zarr, rec_zarr_loaded, return_in_uV=False, check_annotations=False, check_properties=True
+        )
+        for annotation_name in rec2.get_annotation_keys():
+            assert rec2.get_annotation(annotation_name) == rec_zarr.get_annotation(annotation_name)
+            assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
 
-    rec_zarr2 = rec2.save(
-        format="zarr", folder=cache_folder / "recording_channel_chunk", compressor=compressor, channel_chunk_size=2
-    )
-    rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
+        rec_zarr2 = rec2.save(
+            format="zarr", folder=cache_folder / "recording_channel_chunk", compressor=compressor, channel_chunk_size=2
+        )
+        rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
 
-    # annotations is False because Zarr adds compression ratios
-    check_recordings_equal(rec2, rec_zarr2, return_in_uV=False, check_annotations=False, check_properties=True)
-    check_recordings_equal(
-        rec_zarr2, rec_zarr2_loaded, return_in_uV=False, check_annotations=False, check_properties=True
-    )
-    for annotation_name in rec2.get_annotation_keys():
-        assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
-        assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
+        # annotations is False because Zarr adds compression ratios
+        check_recordings_equal(rec2, rec_zarr2, return_in_uV=False, check_annotations=False, check_properties=True)
+        check_recordings_equal(
+            rec_zarr2, rec_zarr2_loaded, return_in_uV=False, check_annotations=False, check_properties=True
+        )
+        for annotation_name in rec2.get_annotation_keys():
+            assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
+            assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
 
 
 def test_json_pickle_equivalence(create_cache_folder):
@@ -477,7 +480,7 @@ def test_time_slice_with_time_vector():
     sampling_frequency = 10_000.0
     recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
     times = 1 + np.arange(0, 10_000) / sampling_frequency
-    recording.set_times(times=times, segment_index=0, with_warning=False)
+    recording.set_times(times=times, segment_index=0)
 
     sliced_recording_times = recording.time_slice(start_time=1.1, end_time=1.8)
     sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
@@ -504,7 +507,7 @@ def test_save_load_binary_with_time_vector(create_cache_folder, mp_context):
     times = rec.get_times(segment_index=0) + 100.0
 
     # Set time vector
-    rec.set_times(times=times, segment_index=0, with_warning=False)
+    rec.set_times(times=times, segment_index=0)
     # Save
     rec_saved = rec.save(folder=cache_folder / f"recording_with_time_vector_{mp_context}", format="binary")
     assert np.allclose(rec.get_times(segment_index=0), rec_saved.get_times(segment_index=0))
