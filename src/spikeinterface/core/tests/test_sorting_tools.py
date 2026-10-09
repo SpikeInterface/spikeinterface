@@ -269,6 +269,38 @@ def test_apply_merges_to_sorting():
     assert np.array_equal(sorting2.unit_ids, ["a", "c"])
 
 
+def test_apply_merges_without_censor_does_not_build_spike_indices(monkeypatch):
+    sorting = NumpySorting.from_unit_dict(
+        {"a": np.array([0, 10]), "b": np.array([20, 30]), "c": np.array([40])},
+        sampling_frequency=30_000.0,
+    )
+
+    def fail_if_called(*args, **kwargs):
+        pytest.fail("spike indices are unnecessary when censor_ms is None")
+
+    monkeypatch.setattr("spikeinterface.core.sorting_tools.spike_vector_to_indices", fail_if_called)
+    merged = apply_merges_to_sorting(sorting, [["a", "b"]], censor_ms=None)
+
+    assert np.array_equal(merged.get_unit_spike_train("c"), [40])
+    assert np.array_equal(merged.get_unit_spike_train("merge0"), [0, 10, 20, 30])
+
+
+def test_apply_merges_without_censor_return_extra_keep_mask():
+    sorting = NumpySorting.from_unit_dict(
+        {"a": np.array([0, 10]), "b": np.array([20, 30]), "c": np.array([40])},
+        sampling_frequency=30_000.0,
+    )
+    num_spikes = sorting.to_spike_vector().size
+
+    merged, keep_mask, new_unit_ids = apply_merges_to_sorting(sorting, [["a", "b"]], censor_ms=None, return_extra=True)
+
+    assert keep_mask.dtype == bool
+    assert keep_mask.size == num_spikes
+    assert keep_mask.all()
+    assert merged.to_spike_vector().size == num_spikes
+    assert new_unit_ids == ["merge0"]
+
+
 def test_get_ids_after_merging():
 
     all_unit_ids = _get_ids_after_merging(["a", "b", "c", "d", "e"], [["a", "b"], ["d", "e"]], ["x", "d"])
