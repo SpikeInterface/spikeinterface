@@ -203,6 +203,48 @@ Mountainsort5
 
       pip install mountainsort5
 
+VanillaSort
+^^^^^^^^^^^
+
+* Python / PyTorch, CPU or optional CUDA
+* Url: https://github.com/IgarashiAkatuki/VanillaSort
+* Authors: Zishuo Feng and Feng Cao
+* Reference: `Spike Sorting with VanillaSort <https://doi.org/10.64898/2026.09.18.752552>`_ (bioRxiv, 2026)
+* Installation (requires the VanillaSort package, version 0.1.0 or newer)::
+
+      pip install vanillasort
+
+VanillaSort combines VanillaDet spike detection, HuiduRep waveform embeddings,
+relative-amplitude features, Gaussian-mixture clustering, and template-residual
+refinement. The wrapper calls the package's public ``vanillasort.sort()`` API;
+the algorithm and pretrained checkpoints are maintained in VanillaSort.
+The default checkpoints are hosted at https://huggingface.co/Kohaku2580/VanillaSort.
+They download from a pinned revision on first inference and are then cached locally;
+installation and ordinary import do not download weights.
+See the repository README for platform-specific PyTorch installation.
+
+The pretrained model requires raw 30 kHz recordings with 2D channel locations in
+micrometres and at least four channels in each group/shank. Larger probes use
+experimental nearest-four-channel neighborhoods. Segments are clustered
+independently with distinct unit IDs. Full-segment filtering and normalization
+require sufficient host RAM even though detector and embedding inference are
+batched. The package documents these limitations and its validation scope.
+
+.. code-block:: python
+
+    import spikeinterface.sorters as ss
+
+    sorting = ss.run_sorter(
+        "vanillasort", recording, folder="vanillasort_output",
+        device="auto", components=22, seed=0,
+    )
+
+Choose ``components`` (GMM K per neighborhood/segment) for your data; the default
+22 is a historical preset, not an automatic unit-count estimate. ``model_path``
+can select a local checkpoint bundle or directory. Results retain segment sample
+indices and the ``main_channel_id`` property.
+
+
 SpyKING CIRCUS
 ^^^^^^^^^^^^^^
 
