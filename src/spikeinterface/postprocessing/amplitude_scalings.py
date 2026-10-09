@@ -178,13 +178,12 @@ class AmplitudeScalingNode(PipelineNode):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.return_in_uV = return_in_uV
         if return_in_uV and recording.has_scaleable_traces():
-            self._dtype = np.float32
             self._gains = recording.get_channel_gains()
             self._offsets = recording.get_channel_offsets()
         else:
-            self._dtype = recording.get_dtype()
             self._gains = None
             self._offsets = None
+        self._dtype = np.float32
         spike_retriever = find_parent_of_type(parents, SpikeRetriever)
         assert isinstance(
             spike_retriever, SpikeRetriever
@@ -268,7 +267,7 @@ class AmplitudeScalingNode(PipelineNode):
             collisions = {}
 
         # compute the scaling for each spike
-        scalings = np.zeros(len(local_spikes), dtype=float)
+        scalings = np.zeros(len(local_spikes), dtype=self._dtype)
         spike_collision_mask = np.zeros(len(local_spikes), dtype=bool)
 
         for spike_index, spike in enumerate(local_spikes):

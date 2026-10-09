@@ -1175,22 +1175,13 @@ class SortingAnalyzer:
         settings = cls._handle_backward_compatibility_settings_pre_init(settings)
 
         # Load sorting (in memory or lazy)
-        if lazy:
-            copy_spike_vector = False
-            lazy_spike_vector = True
-        else:
-            copy_spike_vector = True
-            lazy_spike_vector = False
-        sorting = NumpySorting.from_sorting(
-            ZarrSortingExtractor(
-                folder,
-                zarr_group="sorting",
-                storage_options=storage_options,
-                lazy_spike_vector=lazy_spike_vector,
-            ),
-            with_metadata=True,
-            copy_spike_vector=copy_spike_vector,
+        zarr_sorting = ZarrSortingExtractor(
+            folder, zarr_group="sorting", storage_options=storage_options, lazy_spike_vector=lazy
         )
+        if lazy:
+            sorting = zarr_sorting
+        else:
+            sorting = NumpySorting.from_sorting(zarr_sorting, with_metadata=True, copy_spike_vector=True)
 
         # Load recording (if available)
         if recording is None:
