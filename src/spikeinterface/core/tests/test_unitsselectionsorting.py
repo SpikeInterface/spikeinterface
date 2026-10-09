@@ -248,6 +248,7 @@ def test_non_identity_selection_does_not_share(unit_ids):
     assert len(parent._cached_lexsorted_spike_vector) == 0
 
 
+@pytest.mark.requires_zarr_write
 def test_identity_selection_keeps_lazy_zarr_vector(tmp_path):
     """A lazy parent spike vector should stay lazy through an identity selection."""
     from spikeinterface.core.zarrextractors import ZarrSortingExtractor, ZarrSpikeVector
@@ -262,6 +263,11 @@ def test_identity_selection_keeps_lazy_zarr_vector(tmp_path):
     assert renamed._get_spike_vector_segment_slices() is lazy_parent._get_spike_vector_segment_slices()
 
     eager_parent = ZarrSortingExtractor(folder)
+    frames = [-1, 0, 5, 7, 10_000]
+    np.testing.assert_array_equal(
+        renamed.search_cached_spikes_sorted(frames, segment_index=0),
+        eager_parent.search_cached_spikes_sorted(frames, segment_index=0),
+    )
     subset = lazy_parent.select_units(["29", "22"])
     assert isinstance(subset.to_spike_vector(), np.ndarray)
     assert np.array_equal(subset.to_spike_vector(), _mask_and_remap(eager_parent, ["29", "22"]))
