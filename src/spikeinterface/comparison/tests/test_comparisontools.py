@@ -179,9 +179,11 @@ def test_make_match_count_matrix_ensure_symmetry():
 
     sorting1, sorting2 = make_sorting(frames_spike_train1, unit_indices1, frames_spike_train2, unit_indices2)
 
-    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, ensure_symmetry=True)
+    result_serial = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, ensure_symmetry=True)
+    result = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames, ensure_symmetry=True, n_jobs=2)
     result_T = make_match_count_matrix(sorting2, sorting1, delta_frames=delta_frames, ensure_symmetry=True)
 
+    assert_array_equal(result, result_serial)
     assert_array_equal(result.T, result_T)
 
 
