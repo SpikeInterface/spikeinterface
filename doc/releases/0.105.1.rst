@@ -3,13 +3,14 @@
 SpikeInterface 0.105.1 release notes
 ------------------------------------
 
-October 8th 2026
+October 9th 2026
 
 Minor release with bug fixes and performance improvements
 
 
 core:
 
+* Override search_cached_spikes_sorted for identity selections (#4845)
 * Fix group (and other property) propagation in channel slice (#4838)
 * Fix: remove ``set_times`` warning (#4834)
 * Enable case omission  on ``get_unit_spike_train_in_seconds`` (#4811)
@@ -32,7 +33,6 @@ extractors:
 
 preprocessing:
 
-* Filter one channel at a time to reduce peak memory usage (#4840)
 * Fix: artifact detection crossing chunks (#4803)
 * Speed up FFT phase shifts for Neuropixels recordings (#4802)
 * Fix: frame slicing after resample/decimation (#4799)
