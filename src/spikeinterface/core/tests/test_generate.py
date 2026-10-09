@@ -423,6 +423,111 @@ def test_generate_unit_locations():
     # plt.show()
 
 
+def _pairwise_distances(unit_locations):
+    distances = np.linalg.norm(unit_locations[:, np.newaxis] - unit_locations[np.newaxis, :], axis=2)
+    dist_flat = np.triu(distances, k=1).flatten()
+    return dist_flat[dist_flat > 0]
+
+
+def test_generate_unit_locations_dense():
+    # a 384 contact probe packed close to what minimum_distance allows. The rejection sampler that
+    # used to back this function could not solve this within max_iteration, so it warned and handed
+    # back locations that broke the very constraint minimum_distance promises.
+    seed = 0
+
+    probe = generate_multi_columns_probe(num_columns=4, num_contact_per_column=96, xpitch=20, ypitch=20)
+    channel_locations = probe.contact_positions
+    assert channel_locations.shape[0] == 384
+
+    num_units = 550
+    minimum_distance = 20.0
+    margin_um = 20.0
+    minimum_z, maximum_z = 5.0, 40.0
+
+    # distance_strict raises rather than warns, so this fails loudly if the constraint is not met
+    unit_locations = generate_unit_locations(
+        num_units,
+        channel_locations,
+        margin_um=margin_um,
+        minimum_z=minimum_z,
+        maximum_z=maximum_z,
+        minimum_distance=minimum_distance,
+        distance_strict=True,
+        seed=seed,
+    )
+
+    assert unit_locations.shape == (num_units, 3)
+    assert np.all(_pairwise_distances(unit_locations) > minimum_distance)
+
+    # and they must still sit inside the requested box
+    assert np.all(unit_locations[:, 0] >= np.min(channel_locations[:, 0]) - margin_um)
+    assert np.all(unit_locations[:, 0] <= np.max(channel_locations[:, 0]) + margin_um)
+    assert np.all(unit_locations[:, 1] >= np.min(channel_locations[:, 1]) - margin_um)
+    assert np.all(unit_locations[:, 1] <= np.max(channel_locations[:, 1]) + margin_um)
+    assert np.all(unit_locations[:, 2] >= minimum_z)
+    assert np.all(unit_locations[:, 2] <= maximum_z)
+
+
+def test_generate_unit_locations_multimodal():
+    seed = 0
+
+    probe = generate_multi_columns_probe(num_columns=4, num_contact_per_column=96, xpitch=20, ypitch=20)
+    channel_locations = probe.contact_positions
+
+    num_units = 200
+    num_modes = 2
+    minimum_distance = 20.0
+    margin_um = 20.0
+
+    unit_locations = generate_unit_locations(
+        num_units,
+        channel_locations,
+        margin_um=margin_um,
+        minimum_distance=minimum_distance,
+        distribution="multimodal",
+        num_modes=num_modes,
+        distance_strict=True,
+        seed=seed,
+    )
+
+    assert unit_locations.shape == (num_units, 3)
+    assert np.all(_pairwise_distances(unit_locations) > minimum_distance)
+
+    # the layers must still be visible: count how many units sit near a mode center against what a
+    # flat distribution over the same windows would give
+    minimum_y = np.min(channel_locations[:, 1]) - margin_um
+    maximum_y = np.max(channel_locations[:, 1]) + margin_um
+    mode_step = (maximum_y - minimum_y) / (num_modes + 1)
+    half_window = mode_step / 4
+    near_a_mode = np.zeros(num_units, dtype=bool)
+    for i in range(num_modes):
+        near_a_mode |= np.abs(unit_locations[:, 1] - mode_step * (i + 1)) < half_window
+    flat_expectation = 2 * num_modes * half_window / (maximum_y - minimum_y)
+    assert np.sum(near_a_mode) / num_units > 1.5 * flat_expectation
+
+
+def test_generate_unit_locations_no_solution():
+    seed = 0
+
+    probe = generate_multi_columns_probe(num_columns=2, num_contact_per_column=20, xpitch=20, ypitch=20)
+    channel_locations = probe.contact_positions
+
+    # far more units than the box can hold with that spacing
+    num_units = 500
+    minimum_distance = 30.0
+
+    with pytest.raises(ValueError):
+        generate_unit_locations(
+            num_units, channel_locations, minimum_distance=minimum_distance, distance_strict=True, seed=seed
+        )
+
+    with pytest.warns(UserWarning):
+        unit_locations = generate_unit_locations(
+            num_units, channel_locations, minimum_distance=minimum_distance, distance_strict=False, seed=seed
+        )
+    assert unit_locations.shape == (num_units, 3)
+
+
 def test_generate_templates():
     seed = 0
 
