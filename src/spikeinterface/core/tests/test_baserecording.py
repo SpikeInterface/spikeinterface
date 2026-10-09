@@ -24,7 +24,6 @@ from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.core import generate_recording
-from spikeinterface.core.core_tools import _is_zarr_write_supported
 
 
 def test_BaseRecording(create_cache_folder):
@@ -365,34 +364,32 @@ def test_BaseRecording(create_cache_folder):
     rec_2d = rec_3d.planarize(axes="zy")
     assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
-    # TODO: remove once writing to zarr is supported with zarr>=3
-    if _is_zarr_write_supported():
-        # test save to zarr
-        compressor = get_default_zarr_compressor()
-        rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
-        rec_zarr_loaded = load(cache_folder / "recording.zarr")
-        # annotations is False because Zarr adds compression ratios
-        check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
-        check_recordings_equal(
-            rec_zarr, rec_zarr_loaded, return_in_uV=False, check_annotations=False, check_properties=True
-        )
-        for annotation_name in rec2.get_annotation_keys():
-            assert rec2.get_annotation(annotation_name) == rec_zarr.get_annotation(annotation_name)
-            assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
+    # test save to zarr
+    compressor = get_default_zarr_compressor()
+    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressors=compressor)
+    rec_zarr_loaded = load(cache_folder / "recording.zarr")
+    # annotations is False because Zarr adds compression ratios
+    check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
+    check_recordings_equal(
+        rec_zarr, rec_zarr_loaded, return_in_uV=False, check_annotations=False, check_properties=True
+    )
+    for annotation_name in rec2.get_annotation_keys():
+        assert rec2.get_annotation(annotation_name) == rec_zarr.get_annotation(annotation_name)
+        assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
 
-        rec_zarr2 = rec2.save(
-            format="zarr", folder=cache_folder / "recording_channel_chunk", compressor=compressor, channel_chunk_size=2
-        )
-        rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
+    rec_zarr2 = rec2.save(
+        format="zarr", folder=cache_folder / "recording_channel_chunk", compressors=compressor, channel_chunk_size=2
+    )
+    rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
 
-        # annotations is False because Zarr adds compression ratios
-        check_recordings_equal(rec2, rec_zarr2, return_in_uV=False, check_annotations=False, check_properties=True)
-        check_recordings_equal(
-            rec_zarr2, rec_zarr2_loaded, return_in_uV=False, check_annotations=False, check_properties=True
-        )
-        for annotation_name in rec2.get_annotation_keys():
-            assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
-            assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
+    # annotations is False because Zarr adds compression ratios
+    check_recordings_equal(rec2, rec_zarr2, return_in_uV=False, check_annotations=False, check_properties=True)
+    check_recordings_equal(
+        rec_zarr2, rec_zarr2_loaded, return_in_uV=False, check_annotations=False, check_properties=True
+    )
+    for annotation_name in rec2.get_annotation_keys():
+        assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
+        assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
 
 
 def test_json_pickle_equivalence(create_cache_folder):
