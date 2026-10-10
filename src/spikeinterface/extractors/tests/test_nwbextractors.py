@@ -1308,6 +1308,229 @@ def test_time_series_recording_equality_with_pynwb_and_backend(generate_nwbfile_
     check_recordings_equal(recording_backend, recording_pynwb)
 
 
+def _make_units_nwb(
+    path, n_units=6, n_ch=8, n_samp=30, with_std=False, with_per_spike=False, with_electrical_series=False
+):
+    """Build a minimal NWB file with a Units table for read_nwb_sorting_analyzer tests.
+
+    Pure pynwb, no external writers. The Units table has `waveform_mean` (templates), a canonical
+    quality metric (`snr`), a non-canonical numeric column (`custom_score`), a string label
+    (`ks_label`), and a per-unit `electrodes` region; the electrodes table carries `rel_x`/`rel_y`.
+    """
+    from datetime import datetime
+    from pynwb import NWBFile, NWBHDF5IO
+
+    nwbfile = NWBFile(session_description="t", identifier="id", session_start_time=datetime(2020, 1, 1).astimezone())
+    device = nwbfile.create_device(name="probe")
+    group = nwbfile.create_electrode_group(name="s0", description="d", location="loc", device=device)
+    nwbfile.add_electrode_column(name="rel_x", description="x")
+    nwbfile.add_electrode_column(name="rel_y", description="y")
+    for i in range(n_ch):
+        nwbfile.add_electrode(group=group, location="brain", rel_x=float(i % 4) * 20.0, rel_y=float(i // 4) * 20.0)
+    if with_electrical_series:
+        from pynwb.ecephys import ElectricalSeries
+
+        region = nwbfile.create_electrode_table_region(region=list(range(n_ch)), description="all electrodes")
+        series = ElectricalSeries(
+            name="ElectricalSeries",
+            data=np.zeros((1_000, n_ch), dtype="int16"),
+            electrodes=region,
+            rate=30_000.0,
+            starting_time=5.0,
+        )
+        nwbfile.add_acquisition(series)
+    nwbfile.add_unit_column(name="snr", description="canonical quality metric")
+    nwbfile.add_unit_column(name="custom_score", description="non-canonical per-unit value")
+    nwbfile.add_unit_column(name="ks_label", description="curation label")
+    if with_per_spike:
+        nwbfile.add_unit_column(name="spike_amplitudes_uV", description="per-spike amplitudes", index=True)
+    rng = np.random.default_rng(0)
+    for u in range(n_units):
+        kwargs = dict(
+            spike_times=np.sort(rng.uniform(0, 100, size=int(rng.integers(50, 500)))),
+            electrodes=list(range(n_ch)),
+            waveform_mean=rng.standard_normal((n_samp, n_ch)),
+            snr=float(rng.uniform(2, 10)),
+            custom_score=float(rng.uniform(0, 1)),
+            ks_label="good" if u % 2 == 0 else "mua",
+        )
+        if with_std:
+            kwargs["waveform_sd"] = np.abs(rng.standard_normal((n_samp, n_ch)))
+        if with_per_spike:
+            kwargs["spike_amplitudes_uV"] = rng.standard_normal(kwargs["spike_times"].size)
+        nwbfile.add_unit(**kwargs)
+    with NWBHDF5IO(str(path), "w") as io:
+        io.write(nwbfile)
+    return str(path)
+
+
+def test_read_nwb_sorting_analyzer_default(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb")
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None
+    )
+
+    # recordingless, sparse, with templates for every unit
+    assert not analyzer.has_recording()
+    assert analyzer.sparsity is not None
+    assert analyzer.has_extension("templates")
+    assert analyzer.get_extension("templates").get_data().shape[0] == analyzer.get_num_units()
+
+    # by default only canonical quality columns become quality_metrics; the rest become properties, and
+    # template_metrics is never synthesized from value columns
+    assert list(analyzer.get_extension("quality_metrics").get_data().columns) == ["snr"]
+    assert not analyzer.has_extension("template_metrics")
+    properties = set(analyzer.sorting.get_property_keys())
+    assert "custom_score" in properties and "ks_label" in properties
+    assert "snr" not in properties
+
+
+def test_read_nwb_sorting_analyzer_extension_map_override(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb")
+    analyzer = read_nwb_sorting_analyzer(
+        path,
+        electrical_series_path=None,
+        use_pynwb=False,
+        sampling_frequency=30000.0,
+        compute_extra=None,
+        extension_map={"quality_metrics": [{"source": "columns", "columns": ["snr", "custom_score"]}]},
+    )
+    assert set(analyzer.get_extension("quality_metrics").get_data().columns) == {"snr", "custom_score"}
+    # custom_score is now a metric, so it is no longer a property
+    assert "custom_score" not in analyzer.sorting.get_property_keys()
+
+
+def test_read_nwb_sorting_analyzer_extension_map_disable(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb")
+    analyzer = read_nwb_sorting_analyzer(
+        path,
+        electrical_series_path=None,
+        use_pynwb=False,
+        sampling_frequency=30000.0,
+        compute_extra=None,
+        extension_map={"quality_metrics": None},
+    )
+    assert not analyzer.has_extension("quality_metrics")
+    # with quality_metrics disabled, every scalar column (including snr) becomes a property
+    assert {"snr", "custom_score", "ks_label"} <= set(analyzer.sorting.get_property_keys())
+
+
+def test_read_nwb_sorting_analyzer_waveform_sd(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb", with_std=True)
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None
+    )
+    templates = analyzer.get_extension("templates")
+    # the std operator is populated only because the file stores waveform_sd
+    assert "std" in templates.params["operators"]
+    assert "std" in templates.data
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_read_nwb_sorting_analyzer_skips_per_spike_columns(tmp_path, use_pynwb, monkeypatch):
+    pytest.importorskip("pynwb")
+    import h5py
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb", with_per_spike=True)
+
+    read_datasets = set()
+    original_getitem = h5py.Dataset.__getitem__
+
+    def logging_getitem(self, key):
+        read_datasets.add(self.name)
+        return original_getitem(self, key)
+
+    monkeypatch.setattr(h5py.Dataset, "__getitem__", logging_getitem)
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, use_pynwb=use_pynwb, sampling_frequency=30000.0, compute_extra=None
+    )
+
+    assert "/units/spike_amplitudes_uV" not in read_datasets
+    assert "spike_amplitudes_uV" not in analyzer.sorting.get_property_keys()
+
+
+def test_read_nwb_sorting_analyzer_recording_duration(tmp_path):
+    pytest.importorskip("pynwb")
+    import warnings
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb")
+    with pytest.warns(UserWarning, match="duration is estimated"):
+        read_nwb_sorting_analyzer(path, electrical_series_path=None, sampling_frequency=30000.0, compute_extra=None)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message=".*duration is estimated.*")
+        analyzer = read_nwb_sorting_analyzer(
+            path, electrical_series_path=None, sampling_frequency=30000.0, recording_duration=120.0, compute_extra=None
+        )
+    assert analyzer.get_total_duration() == pytest.approx(120.0)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_read_nwb_sorting_analyzer_non_ragged_electrodes(tmp_path, use_pynwb):
+    """The schema allows a Units `electrodes` column with one electrode row per unit and no index."""
+    pytest.importorskip("pynwb")
+    import h5py
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    n_units, n_ch = 6, 8
+    path = _make_units_nwb(tmp_path / "units.nwb", n_units=n_units, n_ch=n_ch)
+    peak_electrodes = np.arange(n_units) % n_ch
+    # pynwb always writes Units.electrodes with an index, so rewrite it as one row per unit
+    with h5py.File(path, "r+") as file:
+        units = file["units"]
+        attrs = dict(units["electrodes"].attrs)
+        del units["electrodes"], units["electrodes_index"]
+        units.create_dataset("electrodes", data=peak_electrodes)
+        units["electrodes"].attrs.update(attrs)
+
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, use_pynwb=use_pynwb, sampling_frequency=30000.0, compute_extra=None
+    )
+    channel_ids = analyzer.channel_ids
+    for unit_id, peak_electrode in zip(analyzer.unit_ids, peak_electrodes):
+        assert list(analyzer.sparsity.unit_id_to_channel_ids[unit_id]) == [channel_ids[peak_electrode]]
+
+
+def test_read_nwb_sorting_analyzer_electrical_series_path(tmp_path):
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    path = _make_units_nwb(tmp_path / "units.nwb", with_electrical_series=True)
+
+    # naming the series attaches it and takes the time base from it
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path="acquisition/ElectricalSeries", compute_extra=None
+    )
+    assert analyzer.has_recording()
+    assert analyzer.sampling_frequency == 30_000.0
+
+    # the series is the only time base, so an explicit t_start conflicts with it
+    with pytest.raises(ValueError):
+        read_nwb_sorting_analyzer(
+            path, electrical_series_path="acquisition/ElectricalSeries", t_start=0.0, compute_extra=None
+        )
+
+    # None opts out even when the file holds a series
+    analyzer = read_nwb_sorting_analyzer(
+        path, electrical_series_path=None, sampling_frequency=30_000.0, recording_duration=10.0, compute_extra=None
+    )
+    assert not analyzer.has_recording()
+
+
 if __name__ == "__main__":
     tmp_path = Path("tmp")
     if tmp_path.is_dir():
