@@ -271,7 +271,9 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         else:
             kernels_kc = np.ascontiguousarray(self._fir_kernels_kc[:, channel_indices])
 
-        if traces.dtype == np.int16:
+        if not _HAS_NUMBA:
+            shifted = _sinc_fir_numpy_tc(traces, kernels_kc)
+        elif traces.dtype == np.int16:
             traces = np.ascontiguousarray(traces)
             shifted = _sinc_fir_kernel_int16_tc(traces, kernels_kc)
         else:
@@ -443,7 +445,7 @@ try:
     from numba import prange
 
     _HAS_NUMBA = True
-except ImportError:  # pragma: no cover - numba is a hard dep for the FIR path only
+except ImportError:  # pragma: no cover - the FIR path falls back to _sinc_fir_numpy_tc
     _HAS_NUMBA = False
 
 
@@ -510,10 +512,25 @@ if _HAS_NUMBA:
                             out[n, c] += kernels_kc[k, c] * np.float32(signal_tc[idx, c])
         return out
 
-else:
 
-    def _sinc_fir_kernel_tc(signal_tc, kernels_kc):  # type: ignore[misc]
-        raise RuntimeError("numba is required for method='fir'; install numba>=0.59")
+def _sinc_fir_numpy_tc(signal_tc, kernels_kc):
+    """Numpy equivalent of the numba kernels, used when numba is not installed.
 
-    def _sinc_fir_kernel_int16_tc(signal_tc, kernels_kc):  # type: ignore[misc]
-        raise RuntimeError("numba is required for method='fir'; install numba>=0.59")
+    Accumulates one tap at a time over the whole ``(T, C)`` block, in the same tap order as the numba kernels,
+    so the two agree to float32 rounding.
+    """
+    signal = np.asarray(signal_tc, dtype=np.float32)
+    T = signal.shape[0]
+    K = kernels_kc.shape[0]
+    half = K // 2
+    out = np.zeros(signal.shape, dtype=np.float32)
+    product = np.empty(signal.shape, dtype=np.float32)
+    for k in range(K):
+        offset = k - half  # out[n] += h[k] * x[n + offset], zero outside [0, T)
+        n0 = max(0, -offset)
+        n1 = min(T, T - offset)
+        if n1 <= n0:
+            continue
+        np.multiply(signal[n0 + offset : n1 + offset], kernels_kc[k], out=product[n0:n1])
+        out[n0:n1] += product[n0:n1]
+    return out
