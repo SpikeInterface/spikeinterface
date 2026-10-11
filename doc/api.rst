@@ -188,6 +188,8 @@ spikeinterface.preprocessing
     .. autofunction:: save_motion_info
     .. autofunction:: decimate
     .. autofunction:: depth_order
+    .. autofunction:: design_fir_bandpass
+    .. autofunction:: design_fir_highpass
     .. autofunction:: detect_bad_channels
     .. autofunction:: detect_and_interpolate_bad_channels
     .. autofunction:: detect_and_remove_bad_channels
@@ -197,6 +199,7 @@ spikeinterface.preprocessing
     .. autofunction:: detect_and_remove_artifacts
     .. autofunction:: directional_derivative
     .. autofunction:: filter
+    .. autofunction:: fir_filter
     .. autofunction:: gaussian_filter
     .. autofunction:: highpass_filter
     .. autofunction:: highpass_spatial_filter
