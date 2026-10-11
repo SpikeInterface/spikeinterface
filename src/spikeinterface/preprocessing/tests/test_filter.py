@@ -4,7 +4,7 @@ import numpy as np
 from spikeinterface.core import generate_recording
 from spikeinterface import NumpyRecording, set_global_tmp_folder
 
-from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter, causal_filter
+from spikeinterface.preprocessing import filter, bandpass_filter, highpass_filter, notch_filter, causal_filter
 
 
 class TestCausalFilter:
@@ -224,6 +224,94 @@ def test_filter_opencl():
     # plot_traces(rec_filtered, segment_index=0)
     # plot_traces(rec2_cached0, segment_index=0)
     # plt.show()
+
+
+def test_bandpass_filter_method_fir_equals_fir_filter():
+    from spikeinterface.core.testing import check_chunk_invariance
+    from spikeinterface.preprocessing import design_fir_bandpass, fir_filter
+
+    rec = generate_recording(num_channels=4, durations=[2.0], seed=0)
+    fs = rec.get_sampling_frequency()
+    kwargs = dict(transition_low_hz=300.0, transition_high_hz=1000.0, stopband_db=60.0)
+    wrapped = bandpass_filter(rec, freq_min=400.0, freq_max=5000.0, method="fir", **kwargs)
+    expected = fir_filter(rec, design_fir_bandpass(400.0, 5000.0, fs, **kwargs))
+    np.testing.assert_array_equal(wrapped.get_traces(), expected.get_traces())
+    window = dict(start_frame=777, end_frame=9000)
+    np.testing.assert_array_equal(wrapped.get_traces(**window), expected.get_traces(**window))
+    for chunk_size in (1000, 7001):
+        check_chunk_invariance(wrapped, chunk_size, atol=1e-5 * np.abs(expected.get_traces()).max())
+
+
+def test_bandpass_filter_method_fir_errors():
+    rec = generate_recording(num_channels=2, durations=[1.0], seed=0)
+    with pytest.raises(ValueError, match="method"):
+        bandpass_filter(rec, method="fir_magnitude_matched")
+    for name, value in [("filter_order", 3), ("ftype", "cheby1"), ("filter_mode", "ba"), ("direction", "forward")]:
+        with pytest.raises(ValueError, match=name):
+            bandpass_filter(rec, method="fir", **{name: value})
+    with pytest.raises(ValueError, match="coeff"):
+        bandpass_filter(rec, method="fir", coeff=np.ones((1, 6)))
+    with pytest.raises(ValueError, match="transition bands"):
+        bandpass_filter(rec, freq_min=80.0, method="fir")
+    # margin_ms is ignored
+    bandpass_filter(rec, method="fir", margin_ms=1.0)
+
+
+def test_bandpass_filter_method_fir_save_load(tmp_path):
+    from spikeinterface import load
+
+    rec = bandpass_filter(generate_recording(num_channels=2, durations=[1.0], seed=0), method="fir", stopband_db=40.0)
+    rec.dump_to_json(tmp_path / "rec.json")
+    loaded = load(tmp_path / "rec.json")
+    assert loaded._kwargs["method"] == "fir" and loaded._kwargs["stopband_db"] == 40.0
+    assert "taps" not in loaded._kwargs
+    np.testing.assert_array_equal(loaded.get_traces(), rec.get_traces())
+    saved = rec.save(folder=tmp_path / "saved")
+    np.testing.assert_array_equal(saved.get_traces(), rec.get_traces())
+
+
+def test_highpass_filter_method_fir_equals_fir_filter():
+    from spikeinterface.core.testing import check_chunk_invariance
+    from spikeinterface.preprocessing import design_fir_highpass, fir_filter
+
+    rec = generate_recording(num_channels=4, durations=[2.0], seed=0)
+    fs = rec.get_sampling_frequency()
+    kwargs = dict(transition_low_hz=300.0, stopband_db=60.0)
+    wrapped = highpass_filter(rec, freq_min=400.0, method="fir", **kwargs)
+    expected = fir_filter(rec, design_fir_highpass(400.0, fs, **kwargs))
+    np.testing.assert_array_equal(wrapped.get_traces(), expected.get_traces())
+    window = dict(start_frame=777, end_frame=9000)
+    np.testing.assert_array_equal(wrapped.get_traces(**window), expected.get_traces(**window))
+    for chunk_size in (1000, 7001):
+        check_chunk_invariance(wrapped, chunk_size, atol=1e-5 * np.abs(expected.get_traces()).max())
+
+
+def test_highpass_filter_method_fir_errors():
+    rec = generate_recording(num_channels=2, durations=[1.0], seed=0)
+    with pytest.raises(ValueError, match="method"):
+        highpass_filter(rec, method="fir_magnitude_matched")
+    for name, value in [("filter_order", 3), ("ftype", "cheby1"), ("filter_mode", "ba"), ("direction", "forward")]:
+        with pytest.raises(ValueError, match=name):
+            highpass_filter(rec, method="fir", **{name: value})
+    with pytest.raises(ValueError, match="coeff"):
+        highpass_filter(rec, method="fir", coeff=np.ones((1, 6)))
+    with pytest.raises(ValueError, match="transition band"):
+        highpass_filter(rec, freq_min=80.0, method="fir")
+    # margin_ms is ignored
+    highpass_filter(rec, method="fir", margin_ms=1.0)
+
+
+def test_highpass_filter_method_fir_save_load(tmp_path):
+    from spikeinterface import load
+
+    rec = highpass_filter(generate_recording(num_channels=2, durations=[1.0], seed=0), method="fir", stopband_db=40.0)
+    rec.dump_to_json(tmp_path / "rec.json")
+    loaded = load(tmp_path / "rec.json")
+    assert loaded._kwargs["method"] == "fir" and loaded._kwargs["stopband_db"] == 40.0
+    assert "taps" not in loaded._kwargs
+    np.testing.assert_array_equal(loaded.get_traces(), rec.get_traces())
+    saved = rec.save(folder=tmp_path / "saved")
+    np.testing.assert_array_equal(saved.get_traces(), rec.get_traces())
 
 
 if __name__ == "__main__":
