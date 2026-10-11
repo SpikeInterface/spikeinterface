@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from spikeinterface import NumpyRecording, load
 from spikeinterface.core.testing import check_recordings_equal
 
@@ -177,6 +178,38 @@ def test_phase_shift_fft_still_matches_stock_after_taper_refactor():
     rms = float(np.sqrt(np.mean(traces**2)))
     err = float(np.sqrt(np.mean((t2 - t3) ** 2)))
     assert err / rms < 0.001
+
+
+@pytest.mark.parametrize("parent_dtype", ["int16", "float32"])
+@pytest.mark.parametrize("output_dtype", [None, "float32"])
+def test_phase_shift_fir_numpy_fallback_matches_numba(monkeypatch, parent_dtype, output_dtype):
+    """Without numba, method='fir' runs a numpy path that matches the numba kernels."""
+    import importlib
+
+    # the package re-exports the phase_shift function under the module's name
+    phase_shift_module = importlib.import_module("spikeinterface.preprocessing.phase_shift")
+    if not phase_shift_module._HAS_NUMBA:
+        pytest.skip("needs numba for the reference output")
+    rng = np.random.default_rng(0)
+    num_channels = 24
+    traces = (rng.standard_normal((5000, num_channels)) * 200).astype(parent_dtype)
+    rec = NumpyRecording([traces], 30000.0)
+    rec.set_property("inter_sample_shift", (np.arange(num_channels) // 2 % 13) / 13.0)
+    fir_rec = phase_shift(rec, method="fir", output_dtype=output_dtype)
+    channel_ids = rec.channel_ids[3:11]
+    windows = [dict(), dict(start_frame=0, end_frame=1000), dict(start_frame=2000, end_frame=4990)]
+
+    expected = [fir_rec.get_traces(**w) for w in windows] + [fir_rec.get_traces(channel_ids=channel_ids)]
+    monkeypatch.setattr(phase_shift_module, "_HAS_NUMBA", False)
+    actual = [fir_rec.get_traces(**w) for w in windows] + [fir_rec.get_traces(channel_ids=channel_ids)]
+
+    for a, e in zip(actual, expected):
+        assert a.dtype == e.dtype
+        if np.issubdtype(e.dtype, np.integer):
+            # values near .5 may round either way after float32 summation-order differences
+            assert np.abs(a.astype(np.int64) - e).max() <= 1
+        else:
+            np.testing.assert_allclose(a, e, rtol=0, atol=1e-5 * np.abs(e).max())
 
 
 if __name__ == "__main__":
