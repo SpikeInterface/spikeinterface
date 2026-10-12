@@ -595,29 +595,23 @@ def get_chunks(time_series: TimeSeries, concatenated=True, get_data_kwargs=None,
 
 
 def apply_raised_cosine_taper(data, margin, *, inplace=True):
-    """Apply a raised-cosine taper on the first/last ``margin`` rows of *data*.
+    """Taper the first and last `margin` rows of `data` with a raised cosine that is zero at the ends.
 
-    FFT-specific preprocessing: smooths the transition between zero-padded
-    margin and real signal, minimising spectral leakage when the padded
-    buffer is subsequently transformed.  Previously inlined in
-    :func:`get_time_series_chunk_with_margin`'s ``window_on_margin=True`` path; factored
-    out so bounded-support filters (FIR, convolutions with compact support)
-    can fetch margined chunks without paying for — or being constrained by —
-    an FFT-only cosmetic step.  A zero-padded FIR at chunk edges is already
-    exact under linear convolution semantics; the taper is unnecessary there
-    and the per-element ``*= float`` forces a float buffer which fails on
-    int-typed chunks.
+    Use it on a zero-padded chunk before an FFT, to limit spectral leakage from the padded edges.
 
     Parameters
     ----------
     data : ndarray
-        ``(T, ...)`` buffer.  Must be floating-point if ``inplace=True``
-        (numpy's ``*=`` cannot downcast float → int under same-kind casting).
+        Array of shape ``(num_samples, ...)``; must be floating point when ``inplace=True``.
     margin : int
-        Number of samples at each edge to taper.
-    inplace : bool, default True
-        If True, modify *data* in place and return it.  Otherwise return a
-        new array.
+        Number of rows to taper at each end.
+    inplace : bool, default: True
+        If True, modify `data` and return it; otherwise return a tapered copy.
+
+    Returns
+    -------
+    ndarray
+        The tapered array.
     """
     if margin <= 0:
         return data
@@ -649,13 +643,7 @@ def get_time_series_chunk_with_margin(
     case zero padding is used, in the second case np.pad is called
     with mod="reflect".
 
-    .. deprecated::
-        ``window_on_margin`` mixes concerns: the raised-cosine taper it
-        applies is an FFT-specific cosmetic step and does not belong in a
-        general chunk-with-margin utility.  Callers that need it should
-        use :func:`apply_raised_cosine_taper` explicitly after this
-        function returns.  The kwarg still works but will be removed in a
-        future release.
+    `window_on_margin=True` is deprecated: call :func:`apply_raised_cosine_taper` on the returned chunk instead.
     """
     length = int(chunkable_segment.get_num_samples())
 
@@ -739,10 +727,8 @@ def get_time_series_chunk_with_margin(
                 data_chunk2[i0:i1, :] = data_chunk
                 if window_on_margin:
                     warnings.warn(
-                        "window_on_margin=True is deprecated and "
-                        "will be removed in a future release. It applies an FFT-specific "
-                        "raised-cosine taper that should be a caller-side concern. Use "
-                        "apply_raised_cosine_taper() explicitly after this call instead.",
+                        "window_on_margin=True is deprecated and will be removed in a future release; "
+                        "call apply_raised_cosine_taper() on the returned chunk instead.",
                         DeprecationWarning,
                         stacklevel=2,
                     )
