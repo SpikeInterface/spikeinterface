@@ -143,6 +143,7 @@ class TestKilosort4Long:
         recording = self._get_ground_truth_recording()
 
         paths = self._save_ground_truth_recording(recording, tmp_path)
+        recording = si.load(paths["recording_path"].parent)
 
         return (recording, paths)
 
