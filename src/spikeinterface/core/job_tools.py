@@ -65,6 +65,7 @@ job_keys = (
     "progress_bar",
     "mp_context",
     "max_threads_per_worker",
+    "num_chunk_per_batch",
 )
 
 # theses key are the same and should not be in th final dict
