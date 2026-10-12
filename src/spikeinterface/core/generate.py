@@ -404,7 +404,7 @@ class TransformSorting(BaseSorting):
             ]
         )
         spikes = spikes[sort_idxs]
-        self._cached_time_ordered_spike_vector = {"spikes": spikes, "segment_slices": None}
+        self._cached_time_ordered = {"spikes": spikes, "segment_slices": None}
         self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[sort_idxs]
         self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[sort_idxs]
 
@@ -563,7 +563,7 @@ class TransformSorting(BaseSorting):
         ## This function will remove the added spikes that will violate RPV, but does not affect the
         ## spikes in the original sorting. So if some RPV violation are present in this sorting,
         ## they will be left untouched
-        spikes = self._cached_time_ordered_spike_vector["spikes"]
+        spikes = self._cached_time_ordered["spikes"]
         unit_indices = np.unique(spikes["unit_index"])
         rpv = int(self.get_sampling_frequency() * self.refractory_period_ms / 1000)
         to_keep = ~self.added_spikes_from_existing_mask.copy()
@@ -574,7 +574,7 @@ class TransformSorting(BaseSorting):
                     to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
                 )
 
-        self._cached_time_ordered_spike_vector = {"spikes": spikes[to_keep], "segment_slices": None}
+        self._cached_time_ordered = {"spikes": spikes[to_keep], "segment_slices": None}
         self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[to_keep]
         self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[to_keep]
 

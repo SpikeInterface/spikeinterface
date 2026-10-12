@@ -527,7 +527,7 @@ class ZarrSortingExtractor(BaseSorting):
 
         # pre-populate segment slices so _get_spike_vector_segment_slices() never
         # needs to materialise the full segment_index array
-        self._cached_time_ordered_spike_vector = {
+        self._cached_time_ordered = {
             "spikes": spikes,
             "segment_slices": np.asarray(segment_slices_list, dtype="int64"),
         }
