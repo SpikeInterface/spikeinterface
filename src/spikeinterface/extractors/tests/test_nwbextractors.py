@@ -1276,6 +1276,7 @@ def _make_units_nwb(
     with_per_spike=False,
     with_electrical_series=False,
     single_channel=False,
+    series_electrodes=None,
 ):
     """Build a minimal NWB file with a Units table for read_nwb_sorting_analyzer tests.
 
@@ -1283,6 +1284,7 @@ def _make_units_nwb(
     quality metric (`snr`), a non-canonical numeric column (`custom_score`), a string label
     (`ks_label`), and a per-unit `electrodes` region; the electrodes table carries `rel_x`/`rel_y`.
     With `single_channel`, each unit has one electrode (`unit % n_ch`) and a 1D `waveform_mean`.
+    `series_electrodes` are the electrodes of the ElectricalSeries (all of them by default).
     """
     from datetime import datetime
     from pynwb import NWBFile, NWBHDF5IO
@@ -1297,10 +1299,11 @@ def _make_units_nwb(
     if with_electrical_series:
         from pynwb.ecephys import ElectricalSeries
 
-        region = nwbfile.create_electrode_table_region(region=list(range(n_ch)), description="all electrodes")
+        series_electrodes = list(range(n_ch)) if series_electrodes is None else list(series_electrodes)
+        region = nwbfile.create_electrode_table_region(region=series_electrodes, description="series electrodes")
         series = ElectricalSeries(
             name="ElectricalSeries",
-            data=np.zeros((1_000, n_ch), dtype="int16"),
+            data=np.zeros((1_000, len(series_electrodes)), dtype="int16"),
             electrodes=region,
             rate=30_000.0,
             starting_time=5.0,
@@ -1610,6 +1613,13 @@ def test_read_nwb_sorting_analyzer_electrical_series_path(tmp_path):
         path, electrical_series_path=None, sampling_frequency=30_000.0, recording_duration=10.0, compute_extra=None
     )
     assert not analyzer.has_recording()
+
+    # a series that misses some of the units' electrodes does not match the sorting
+    path = _make_units_nwb(
+        tmp_path / "partial_series.nwb", n_ch=8, with_electrical_series=True, series_electrodes=range(6)
+    )
+    with pytest.raises(ValueError, match="not channels of the recording"):
+        read_nwb_sorting_analyzer(path, electrical_series_path="acquisition/ElectricalSeries", compute_extra=None)
 
 
 if __name__ == "__main__":

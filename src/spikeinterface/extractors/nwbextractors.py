@@ -2493,14 +2493,26 @@ def _make_sparsity_from_electrodes(sorting, electrodes_table, electrodes_indices
         electrode_row_to_channel_id = electrodes_table.index.to_numpy()
     position_of_channel_id = {channel_id: pos for pos, channel_id in enumerate(analyzer_channel_ids)}
 
+    # Every electrode of a unit has to be an analyzer channel. Only an attached recording can miss one (without it
+    # the channels are built from the units' electrodes), and then the recording does not match the sorting.
+    missing_electrodes = {}
+    for unit_id, region in zip(sorting.unit_ids, electrodes_indices):
+        missing = [electrode_row_to_channel_id[int(row)] for row in region]
+        missing = [channel_id for channel_id in missing if channel_id not in position_of_channel_id]
+        if len(missing) > 0:
+            missing_electrodes[unit_id] = missing
+    if len(missing_electrodes) > 0:
+        examples = ", ".join(f"{unit_id}: {missing}" for unit_id, missing in list(missing_electrodes.items())[:5])
+        raise ValueError(
+            f"{len(missing_electrodes)} units have electrodes that are not channels of the recording ({examples}), "
+            "so the recording does not match the sorting. Check that `electrical_series_path` is the series the "
+            "sorting was run on, or pass `electrical_series_path=None`."
+        )
+
     unit_local_channels = []
     sparsity_mask = np.zeros((sorting.get_num_units(), num_channels), dtype=bool)
     for unit_index, region in enumerate(electrodes_indices):
-        positions = [
-            position_of_channel_id[electrode_row_to_channel_id[int(electrode_row)]]
-            for electrode_row in region
-            if electrode_row_to_channel_id[int(electrode_row)] in position_of_channel_id
-        ]
+        positions = [position_of_channel_id[electrode_row_to_channel_id[int(row)]] for row in region]
         unit_local_channels.append(positions)
         sparsity_mask[unit_index, positions] = True
     sparsity = ChannelSparsity(
