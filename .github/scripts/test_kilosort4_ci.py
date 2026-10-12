@@ -504,7 +504,7 @@ class TestKilosort4Long:
         )
         sorting_ks4_force_binary = si.run_sorter(
             "kilosort4",
-            recording,
+            recording_zarr,
             folder=tmp_path / "ks4_output_force_bin",
             use_binary_file=True,
             remove_existing_folder=True,
