@@ -2196,7 +2196,7 @@ def read_nwb_sorting_analyzer(
         recording = None
         t_start_tmp = 0 if t_start is None else t_start
 
-    sorting_tmp = NwbSortingExtractor(
+    sorting = NwbSortingExtractor(
         file_path=file_path,
         electrical_series_path=electrical_series_path,
         unit_table_path=unit_table_path,
@@ -2210,7 +2210,16 @@ def read_nwb_sorting_analyzer(
         load_unit_properties=False,  # columns are read deliberately below, into their extensions
     )
 
-    sorting = sorting_tmp
+    # Read the spike count of each unit (from spike_times_index, ~KB) and, when the duration has to be estimated,
+    # the last stored spike time (one chunk) from the NWB arrays now. A group selection below replaces `sorting`
+    # with a UnitsSelectionSorting, which could only get them by building the parent's whole spike vector
+    # (~130-480 MB).
+    sorting_segment = sorting._sorting_segments[0]
+    per_unit_spike_counts = np.diff(sorting_segment.spike_times_index_data[:], prepend=0)
+    last_stored_spike_time = None
+    if recording is None and recording_duration is None:
+        spike_times_data = sorting_segment.spike_times_data
+        last_stored_spike_time = 0.0 if spike_times_data.shape[0] == 0 else float(np.asarray(spike_times_data[-1]))
     # Recordingless case: leave t_start at 0 (set when the sorting was constructed). NWB spike times are
     # in seconds from session start, so they are always >= 0 and map to non-negative frames with
     # t_start = 0. Anchoring t_start to the first spike would only remove empty space before it on the
@@ -2307,6 +2316,7 @@ def read_nwb_sorting_analyzer(
                         print(f"Selecting {sum(unit_mask)} / {len(units)} units from {group_name}")
                     sorting = sorting.select_units(unit_ids=sorting.unit_ids[unit_mask])
                     units = units.loc[units.index[unit_mask]]
+                    per_unit_spike_counts = per_unit_spike_counts[unit_mask]
                     electrodes_indices = [region for region, keep in zip(electrodes_indices, unit_mask) if keep]
 
     # Every scalar column not claimed as a quality metric becomes a sorting property (labels like
@@ -2333,13 +2343,10 @@ def read_nwb_sorting_analyzer(
         # the last stored spike (one chunk, ~4 MB) and double it. spike_times is stored per-unit-
         # concatenated (not globally time-sorted), so the last stored value is a lower bound on the true
         # last spike; doubling generously covers the gap while over-estimating only adds a harmless empty
-        # tail. Read from sorting_tmp because a group selection wraps `sorting` in a UnitsSelectionSorting
-        # whose segment has no spike_times_data.
+        # tail.
         if recording_duration is not None:
             placeholder_duration = recording_duration
         else:
-            spike_times_data = sorting_tmp._sorting_segments[0].spike_times_data
-            last_stored_spike_time = 0.0 if spike_times_data.shape[0] == 0 else float(np.asarray(spike_times_data[-1]))
             placeholder_duration = max(last_stored_spike_time * 2.0, 1.0)
             warnings.warn(
                 "No recording attached and no `recording_duration` given, so the recording duration is estimated. "
@@ -2397,14 +2404,8 @@ def read_nwb_sorting_analyzer(
 
     # templates (from the resolved templates column), and the required random_spikes extension
     if templates_column is not None and templates_column in units and unit_local_channels is not None:
-        # random_spikes only needs the total spike count of the (possibly group-selected) sorting. Read it
-        # from the NWB spike_times_index (per-unit cumulative counts, ~KB) on the unwrapped sorting_tmp,
-        # restricted to the selected units, rather than counting through the sorting object: a group
-        # selection wraps `sorting` in a UnitsSelectionSorting whose count materializes the parent's whole
-        # spike vector (~130-480 MB). np.isin keeps the units still present after any group selection.
-        per_unit_spike_counts = np.diff(sorting_tmp._sorting_segments[0].spike_times_index_data[:], prepend=0)
-        selected_units_mask = np.isin(sorting_tmp.unit_ids, sorting.unit_ids)
-        total_num_spikes = int(per_unit_spike_counts[selected_units_mask].sum())
+        # random_spikes only needs the total spike count of the selected units, read above
+        total_num_spikes = int(per_unit_spike_counts.sum())
         _make_random_spikes(analyzer, total_num_spikes)
         _make_templates(
             analyzer,
