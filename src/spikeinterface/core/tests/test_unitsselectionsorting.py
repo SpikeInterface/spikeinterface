@@ -147,7 +147,7 @@ def test_selection_keeps_extra_fields():
     stay with their spike through a selection."""
     wide_dtype = minimum_spike_dtype + [("channel_index", "int64")]
     parent = _make_parent_with_shuffled_ties(dtype=wide_dtype)
-    parent._cached_spike_vector["channel_index"] = np.arange(parent._cached_spike_vector.size)
+    parent._cached_time_ordered["spikes"]["channel_index"] = np.arange(parent._cached_time_ordered["spikes"].size)
 
     unit_ids = ["3", "22", "29"]
     child = UnitsSelectionSorting(parent, unit_ids=unit_ids)
@@ -188,7 +188,7 @@ def _assert_shares_parent_caches(child, parent):
     assert child._is_identity_selection is True
     assert child.to_spike_vector() is parent.to_spike_vector()
     assert child._get_spike_vector_segment_slices() is parent._get_spike_vector_segment_slices()
-    assert child._cached_lexsorted_spike_vector is parent._cached_lexsorted_spike_vector
+    assert child._cached_unit_grouped is parent._cached_unit_grouped
 
 
 @pytest.mark.parametrize("make_child", IDENTITY_SELECTIONS.values(), ids=IDENTITY_SELECTIONS.keys())
@@ -203,13 +203,13 @@ def test_identity_selection_shares_parent_cache(make_child):
     parent_reordered = parent.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False, return_slices=False)
     child_reordered = child.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False, return_slices=False)
     assert child_reordered is parent_reordered
-    assert len(parent._cached_lexsorted_spike_vector) == 1
+    assert parent._cached_unit_grouped is not None
 
     # The child computes the reordered spike vector first (via get_unit_spike_train); the parent must find it.
     parent = _make_parent_with_shuffled_ties()
     child = make_child(parent)
     child.get_unit_spike_train(child.unit_ids[0], segment_index=0)
-    assert len(parent._cached_lexsorted_spike_vector) == 1
+    assert parent._cached_unit_grouped is not None
     parent_reordered = parent.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False, return_slices=False)
     child_reordered = child.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False, return_slices=False)
     assert child_reordered is parent_reordered
@@ -241,11 +241,10 @@ def test_non_identity_selection_does_not_share(unit_ids):
     child = parent.select_units(unit_ids)
     assert child._is_identity_selection is False
     assert child.to_spike_vector() is not parent.to_spike_vector()
-    assert child._cached_lexsorted_spike_vector is not parent._cached_lexsorted_spike_vector
 
     child.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT)
-    assert len(child._cached_lexsorted_spike_vector) == 1
-    assert len(parent._cached_lexsorted_spike_vector) == 0
+    assert child._cached_unit_grouped is not None
+    assert parent._cached_unit_grouped is None
 
 
 @pytest.mark.requires_zarr_write

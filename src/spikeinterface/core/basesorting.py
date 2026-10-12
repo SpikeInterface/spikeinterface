@@ -166,9 +166,9 @@ class BaseSorting(BaseExtractor):
         positions : np.ndarray
             The insertion positions, relative to the start of the segment in the spike vector.
         """
-        if self._cached_spike_vector is None:
+        if self._cached_time_ordered is None:
             self._compute_and_cache_spike_vector()
-        spikes = self._cached_spike_vector
+        spikes = self._cached_time_ordered["spikes"]
         if not isinstance(spikes, np.ndarray):  # np.memmap is an ndarray
             # np.searchsorted would materialise a lazy vector on every call
             raise TypeError(
@@ -1112,33 +1112,15 @@ class BaseSorting(BaseExtractor):
         if cache["segment_slices"] is None:
             # compute the, this is needed when spikevector is loaded from format and not computed
             num_seg = self.get_num_segments()
-<<<<<<< HEAD
-            slices = np.searchsorted(cache["spikes"]["segment_index"], np.arange(num_seg + 1))
-            cache["segment_slices"] = np.zeros((num_seg, 2), dtype="int64")
-            for seg_index in range(num_seg):
-                cache["segment_slices"][seg_index, 0] = slices[seg_index]
-                cache["segment_slices"][seg_index, 1] = slices[seg_index + 1]
-        return cache["segment_slices"]
-||||||| 1666a0eab
-            slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg + 1))
-            self._cached_spike_vector_segment_slices = np.zeros((num_seg, 2), dtype="int64")
-            for seg_index in range(num_seg):
-                self._cached_spike_vector_segment_slices[seg_index, 0] = slices[seg_index]
-                self._cached_spike_vector_segment_slices[seg_index, 1] = slices[seg_index + 1]
-        return self._cached_spike_vector_segment_slices
-=======
             if num_seg == 1:
-                self._cached_spike_vector_segment_slices = np.array(
-                    [[0, self._cached_spike_vector.size]], dtype="int64"
-                )
+                cache["segment_slices"] = np.array([[0, cache["spikes"].size]], dtype="int64")
             else:
-                slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg + 1))
-                self._cached_spike_vector_segment_slices = np.zeros((num_seg, 2), dtype="int64")
+                slices = np.searchsorted(cache["spikes"]["segment_index"], np.arange(num_seg + 1))
+                cache["segment_slices"] = np.zeros((num_seg, 2), dtype="int64")
                 for seg_index in range(num_seg):
-                    self._cached_spike_vector_segment_slices[seg_index, 0] = slices[seg_index]
-                    self._cached_spike_vector_segment_slices[seg_index, 1] = slices[seg_index + 1]
-        return self._cached_spike_vector_segment_slices
->>>>>>> main
+                    cache["segment_slices"][seg_index, 0] = slices[seg_index]
+                    cache["segment_slices"][seg_index, 1] = slices[seg_index + 1]
+        return cache["segment_slices"]
 
     def to_reordered_spike_vector(
         self,

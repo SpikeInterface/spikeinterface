@@ -592,17 +592,9 @@ class ZarrSortingExtractor(BaseSorting):
             # we do not need to lexsort at init (very high cost) because there already sorted by frame before to be saved.
             # In version 0.104.X this was fully lexsorted, but we don't need it anymore because it's only important in the context of SpikeVectorBased extensions in the SortingAnalyzer, which stores its own copy of the Sorting object. This makes the extension data and the spike vector always matching their order.
             # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
-<<<<<<< HEAD
-
-||||||| 1666a0eab
-
-        self._cached_spike_vector = spikes
-=======
         self._lazy_spike_vector = lazy_spike_vector
         self._spikes_group = spikes_group
         self._sample_index_search = None
-        self._cached_spike_vector = spikes
->>>>>>> main
         # pre-populate segment slices so _get_spike_vector_segment_slices() never
         # needs to materialise the full segment_index array
         self._cached_time_ordered = {
@@ -652,7 +644,7 @@ class ZarrSortingExtractor(BaseSorting):
             if "sample_index_chunk_firsts" in self._spikes_group:
                 chunk_firsts = self._spikes_group["sample_index_chunk_firsts"][:]
             self._sample_index_search = ZarrSampleIndexSearch(self._spikes_group["sample_index"], chunk_firsts)
-        start, stop = self._cached_spike_vector_segment_slices[segment_index]
+        start, stop = self._cached_time_ordered["segment_slices"][segment_index]
         return self._sample_index_search.searchsorted(indices, int(start), int(stop))
 
     @staticmethod
