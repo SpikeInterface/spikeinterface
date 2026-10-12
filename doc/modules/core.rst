@@ -644,8 +644,8 @@ used when creating a :py:class:`~spikeinterface.core.SortingAnalyzer` which caus
 .. _save_load:
 
 
-Saving, loading, and compression
---------------------------------
+Saving and loading
+------------------
 
 The Base SpikeInterface objects (:py:class:`~spikeinterface.core.BaseRecording`,
 :py:class:`~spikeinterface.core.BaseSorting`, and
@@ -678,6 +678,9 @@ This saving/loading features enables us to store SpikeInterface objects efficien
     # save sorting to NPZ
     sorting_saved = sorting.save(folder="sorting")
 
+Compression
+-----------
+
 **NOTE:** the Zarr format by default applies data compression with :code:`Blosc.Zstandard` codec with BIT shuffling.
 Any other Zarr-compatible compressors and filters can be applied using the :code:`compressor` and :code:`filters`
 arguments. For example, in this case we apply `LZMA <https://numcodecs.readthedocs.io/en/stable/lzma.html>`_
@@ -694,6 +697,19 @@ and use a `Delta <https://numcodecs.readthedocs.io/en/stable/delta.html>`_ filte
     recording_custom_comp = recording.save(folder="recording", format="zarr",
                                            compressors=compressor, filters=filters,
                                            **job_kwargs)
+
+Zarr stores each dataset as a grid of **chunks**: the unit of compression and of reading, so a chunk is always
+decompressed as a whole. When saving a recording, the chunk size along time is set by the job parameters
+(e.g. :code:`chunk_duration="1s"`). Zarr v3 also supports **shards**, which group many chunks in a single file/object.
+Chunks are still compressed and read independently, but sharding drastically reduces the number of files, which is
+useful on cluster file systems and cloud storage. A shard must be a multiple of the chunk size, which is set with
+:code:`shard_factor` (shard size = :code:`shard_factor` x chunk size). For example, 1 s chunks and 20 s shards:
+
+.. code-block:: python
+
+    job_kwargs = dict(n_jobs=8, chunk_duration="1s")
+    recording_sharded = recording.save(folder="recording", format="zarr",
+                                       shard_factor=20, **job_kwargs)
 
 
 Parallel processing and job_kwargs

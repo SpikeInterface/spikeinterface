@@ -198,7 +198,7 @@ def test_zarr_save_with_sharding(create_cache_folder):
     # check that chunks and shards are correctly set
     spikes_group = sorting_zarr._root["spikes"]
     for field in spikes_group:
-        if field != "segment_slices":
+        if field not in ("segment_slices", "sample_index_chunk_firsts"):
             array = spikes_group[field]
             assert array.chunks is not None
             assert array.shards is not None
