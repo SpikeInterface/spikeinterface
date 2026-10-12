@@ -155,7 +155,8 @@ def _build_recording_with_interleaved_probes():
     if parse(si_version) <= parse("0.105.0"):
         rec_with_probe = rec.set_probegroup(probegroup, in_place=False)  # old API returns a new recording; portable across versions
     else:
-        rec_with_probe = rec.set_probegroup(probegroup)  # new API returns a new recording; portable across versions
+        rec.set_probegroup(probegroup)  # new API returns a new recording; portable across versions
+        rec_with_probe = rec
     return rec_with_probe
 
 
