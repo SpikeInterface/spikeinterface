@@ -48,38 +48,15 @@ class PhaseShiftRecording(BasePreprocessor):
           frequencies up to Nyquist.  Requires the 40 ms margin and a
           raised-cosine taper on the zero-padded edges to suppress FFT
           spectral leakage.
-        - ``"fir"``: a Kaiser-windowed sinc FIR (default 16 taps, β=8.6)
-          with per-channel DC-gain normalization.  ~170× faster than FFT
-          on typical Neuropixels chunks (measured on a 24-core host for
-          1M × 384 float32), with ≤0.02 % worst-case in-band RMS error
-          vs the FFT reference — well below the electrode thermal noise
-          floor.  Uses a K/2-sample margin (no 40 ms tax) and no taper
-          (a bounded-support FIR at a zero-padded boundary is already
-          exact under linear convolution semantics).
-
-          **The FIR also acts as an implicit soft lowpass.**  A K-tap
-          windowed sinc cannot be a perfect allpass; it has a flat
-          passband up to roughly ``≈ 0.33 · fs`` for the K=16 default,
-          rolling off above that.  For Neuropixels (analog cutoff at
-          ~10 kHz, fs = 30 kHz) the FIR's rolloff sits at the analog
-          cutoff, so it attenuates only out-of-band noise — a side
-          effect that's *beneficial* in practice (slightly cleaner data
-          at high frequencies; the analog filter already removed signal
-          there).  For applications where signal content extends past
-          ``~0.33 · fs`` (high-fs custom probes, broadband non-ephys
-          data, or any case where exact allpass behaviour is required)
-          either raise ``n_taps`` (K=32 widens the flat passband to
-          ``~0.4 · fs``; K=64 to ``~0.45 · fs``) or use ``method="fft"``.
+        - ``"fir"``: a Kaiser-windowed sinc FIR (β=8.6) with unit DC gain per channel. It needs only
+          ``n_taps // 2`` samples of margin and no taper, since linear convolution is exact at a
+          zero-padded edge. A finite kernel cannot be an exact allpass: with 16 taps the response is flat
+          to about ``0.33 * fs`` and rolls off above it, which for Neuropixels is where the analog
+          anti-aliasing filter has already removed the signal. Where signal extends higher, raise
+          ``n_taps`` or use ``"fft"``.
     n_taps : int, default: 16
-        FIR length when ``method="fir"``.  Must be even.  Ignored for FFT.
-        K=16 is matched to NPX 2.0 (12-bit ADC + 10 kHz analog passband
-        at fs=30 kHz); the FIR's residual error is ~5000:1 (≈ 12 bits),
-        i.e. at the ADC's precision limit.  Higher K trades compute for
-        a wider flat passband and tighter accuracy: K=32 reaches
-        ~21 000:1 (~14 bits) but is ~2× more expensive on compute-bound
-        machines (kernel time on DRAM-bandwidth-bound hosts is roughly
-        the same up to K~24).
-
+        FIR length when ``method="fir"``; must be even. Longer kernels widen the flat passband and cost more.
+        Ignored for ``"fft"``.
 
     Returns
     -------
@@ -446,16 +423,7 @@ if _HAS_NUMBA:
 
     @numba.njit(nogil=True, cache=True, boundscheck=False)
     def _sinc_fir_kernel_int16_tc(signal_tc, kernels_kc):
-        """int16-native variant: reads int16, accumulates in float32, writes float32.
-
-        ~8% faster than the float32 kernel on (1M, 384) on a 24-core host —
-        halved signal working set (12 KB vs 24 KB for the 16 × 384 sliding
-        window) leaves more L1 headroom, and the int16 → float32 cast
-        vectorizes cleanly.
-        More importantly, it lets callers skip the int16 → float64 → int16
-        round-trip that the FFT path requires, saving ~2.4 s/shard of cast
-        traffic when the parent is int16.
-        """
+        """int16-input variant: reads int16 and writes float32, so an int16 parent needs no cast first."""
         T, C = signal_tc.shape
         K = kernels_kc.shape[0]
         half = K // 2
