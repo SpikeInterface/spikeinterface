@@ -12,7 +12,11 @@ from spikeinterface.core import (
     BaseRecordingSegment,
     BaseSorting,
     BaseSortingSegment,
+    ChannelSparsity,
+    ComputeRandomSpikes,
+    ComputeTemplates,
     SortingAnalyzer,
+    generate_ground_truth_recording,
     get_default_analyzer_extension_params,
 )
 from spikeinterface.core.base import minimum_spike_dtype
@@ -2438,7 +2442,6 @@ def _make_placeholder_recording_from_electrodes(
     ordered channel ids.
     """
     from probeinterface import Probe
-    from spikeinterface.core import generate_ground_truth_recording
 
     # union of electrode rows referenced by any unit, in sorted order
     electrode_indices_all = []
@@ -2482,8 +2485,6 @@ def _make_sparsity_from_electrodes(sorting, electrodes_table, electrodes_indices
     if electrodes_indices is None:
         return None, None
 
-    from spikeinterface.core.sparsity import ChannelSparsity
-
     num_channels = len(analyzer_channel_ids)
     if "channel_name" in electrodes_table.columns:
         electrode_row_to_channel_id = electrodes_table["channel_name"].to_numpy()
@@ -2517,7 +2518,6 @@ def _make_random_spikes(analyzer, total_num_spikes):
     `method="all"` means the indices are just `arange(total_num_spikes)`; the caller supplies the count
     (read cheaply from `spike_times_index`) so this never materializes the spike vector.
     """
-    from spikeinterface.core.analyzer_extension_core import ComputeRandomSpikes
 
     random_spikes_ext = ComputeRandomSpikes(sorting_analyzer=analyzer)
     random_spikes_ext.set_params(method="all")
@@ -2557,7 +2557,6 @@ def _make_templates(
 ):
     """Attach the `templates` extension from the resolved templates column, scattering each unit's
     sparse waveform block onto its true channel positions."""
-    from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
     waveform_mean = np.array([np.asarray(t, dtype="float") for t in units[templates_column].values])
     # The schema also allows one waveform per unit with no electrode axis (e.g. DANDI 000363). It belongs to
