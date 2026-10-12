@@ -517,6 +517,11 @@ class BonsaiOnixArrowRecordingSegment(BaseRecordingSegment):
 
         import pyarrow as pa
 
+        if start_frame is None:
+            start_frame = 0
+        if end_frame is None:
+            end_frame = self.get_num_samples()
+
         # Arrow saves data in "batch"es, in the time dimension, which we can
         # load individually. We need to figure out which batches our requested
         # samples are in.
