@@ -71,6 +71,16 @@ class UnitsSelectionSorting(BaseSorting):
         )
         self._cached_spike_vector = spike_vector
 
+    def search_cached_spikes_sorted(
+        self,
+        indices: list[int],
+        segment_index: int | None = None,
+    ):
+        if self._is_identity_selection:
+            # same spikes in the same positions, and the parent knows how to search a lazy vector
+            return self._parent_sorting.search_cached_spikes_sorted(indices=indices, segment_index=segment_index)
+        return super().search_cached_spikes_sorted(indices=indices, segment_index=segment_index)
+
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):
     def __init__(self, parent_segment, ids_conversion):

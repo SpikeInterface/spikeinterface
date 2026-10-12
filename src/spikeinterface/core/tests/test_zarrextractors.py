@@ -146,6 +146,7 @@ def test_ZarrSampleIndexSearch(tmp_path):
         np.testing.assert_array_equal(search.searchsorted([5], 10, 10), [0])
 
 
+@pytest.mark.requires_zarr_write
 def test_ZarrSortingExtractor_lazy_search(tmp_path):
     sorting = generate_sorting(num_units=10, durations=[5.0, 3.0, 4.0], firing_rates=40.0, seed=0)
     folder = tmp_path / "sorting.zarr"
