@@ -2467,6 +2467,17 @@ def _make_templates(
     from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
     waveform_mean = np.array([np.asarray(t, dtype="float") for t in units[templates_column].values])
+    # The schema also allows one waveform per unit with no electrode axis (e.g. DANDI 000363). It belongs to
+    # the unit's electrode only when the region has exactly one, otherwise we cannot tell which one it is.
+    single_channel = waveform_mean.ndim == 2
+    if single_channel:
+        if any(len(positions) != 1 for positions in unit_local_channels):
+            warnings.warn(
+                f"`{templates_column}` has one waveform per unit but some units have several electrodes, "
+                "so the electrode of each waveform is unknown. The templates extension is not loaded."
+            )
+            return
+        waveform_mean = waveform_mean[:, :, np.newaxis]
     num_samples_template = waveform_mean.shape[1]
 
     # Scatter each unit's waveform onto its channels. This relies on the alignment contract that
@@ -2502,6 +2513,8 @@ def _make_templates(
     # declare only "average" rather than inventing data.
     if templates_std_column is not None and templates_std_column in units.columns:
         waveform_sd = np.array([np.asarray(t, dtype="float") for t in units[templates_std_column].values])
+        if single_channel:
+            waveform_sd = waveform_sd[:, :, np.newaxis]
         dense_std = np.zeros((analyzer.get_num_units(), num_samples_template, num_channels), dtype="float32")
         for unit_index, positions in enumerate(unit_local_channels):
             k = len(positions)

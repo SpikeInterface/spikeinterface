@@ -1267,13 +1267,21 @@ def test_time_series_recording_equality_with_pynwb_and_backend(generate_nwbfile_
 
 
 def _make_units_nwb(
-    path, n_units=6, n_ch=8, n_samp=30, with_std=False, with_per_spike=False, with_electrical_series=False
+    path,
+    n_units=6,
+    n_ch=8,
+    n_samp=30,
+    with_std=False,
+    with_per_spike=False,
+    with_electrical_series=False,
+    single_channel=False,
 ):
     """Build a minimal NWB file with a Units table for read_nwb_sorting_analyzer tests.
 
     Pure pynwb, no external writers. The Units table has `waveform_mean` (templates), a canonical
     quality metric (`snr`), a non-canonical numeric column (`custom_score`), a string label
     (`ks_label`), and a per-unit `electrodes` region; the electrodes table carries `rel_x`/`rel_y`.
+    With `single_channel`, each unit has one electrode (`unit % n_ch`) and a 1D `waveform_mean`.
     """
     from datetime import datetime
     from pynwb import NWBFile, NWBHDF5IO
@@ -1303,17 +1311,18 @@ def _make_units_nwb(
     if with_per_spike:
         nwbfile.add_unit_column(name="spike_amplitudes_uV", description="per-spike amplitudes", index=True)
     rng = np.random.default_rng(0)
+    waveform_shape = (n_samp,) if single_channel else (n_samp, n_ch)
     for u in range(n_units):
         kwargs = dict(
             spike_times=np.sort(rng.uniform(0, 100, size=int(rng.integers(50, 500)))),
-            electrodes=list(range(n_ch)),
-            waveform_mean=rng.standard_normal((n_samp, n_ch)),
+            electrodes=[u % n_ch] if single_channel else list(range(n_ch)),
+            waveform_mean=rng.standard_normal(waveform_shape),
             snr=float(rng.uniform(2, 10)),
             custom_score=float(rng.uniform(0, 1)),
             ks_label="good" if u % 2 == 0 else "mua",
         )
         if with_std:
-            kwargs["waveform_sd"] = np.abs(rng.standard_normal((n_samp, n_ch)))
+            kwargs["waveform_sd"] = np.abs(rng.standard_normal(waveform_shape))
         if with_per_spike:
             kwargs["spike_amplitudes_uV"] = rng.standard_normal(kwargs["spike_times"].size)
         nwbfile.add_unit(**kwargs)
@@ -1461,6 +1470,37 @@ def test_read_nwb_sorting_analyzer_non_ragged_electrodes(tmp_path, use_pynwb):
     channel_ids = analyzer.channel_ids
     for unit_id, peak_electrode in zip(analyzer.unit_ids, peak_electrodes):
         assert list(analyzer.sparsity.unit_id_to_channel_ids[unit_id]) == [channel_ids[peak_electrode]]
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_read_nwb_sorting_analyzer_single_channel_waveforms(tmp_path, use_pynwb):
+    """The schema allows a 1D `waveform_mean` per unit, recorded on the unit's single electrode."""
+    pytest.importorskip("pynwb")
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    n_units, n_ch = 6, 8
+    path = _make_units_nwb(tmp_path / "units.nwb", n_units=n_units, n_ch=n_ch, with_std=True, single_channel=True)
+    analyzer = read_nwb_sorting_analyzer(
+        path,
+        electrical_series_path=None,
+        use_pynwb=use_pynwb,
+        sampling_frequency=30000.0,
+        rescale_templates_to_uV=False,
+        compute_extra=None,
+    )
+
+    from pynwb import NWBHDF5IO
+
+    with NWBHDF5IO(path, "r") as io:
+        units = io.read().units
+        stored_mean = [units["waveform_mean"][unit_index] for unit_index in range(n_units)]
+    templates = analyzer.get_extension("templates")
+    assert "std" in templates.params["operators"]
+    average = templates.data["average"]
+    for unit_index in range(n_units):
+        electrode = unit_index % n_ch
+        np.testing.assert_allclose(average[unit_index][:, electrode], stored_mean[unit_index], rtol=1e-6)
+        assert not np.any(np.delete(average[unit_index], electrode, axis=1))
 
 
 def test_read_nwb_sorting_analyzer_electrical_series_path(tmp_path):
