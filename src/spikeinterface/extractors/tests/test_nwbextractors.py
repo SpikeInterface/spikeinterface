@@ -838,8 +838,9 @@ def test_sorting_sampling_frequency_missing_raises(tmp_path, use_pynwb):
             use_pynwb=use_pynwb,
         )
     expected_error = (
-        "Couldn't determine the sampling frequency. Provide it with the 'sampling_frequency' "
-        "argument, set the Units table 'resolution' attribute, or pass 'electrical_series_path'."
+        "The Units table has no 'resolution' attribute, so the sampling frequency of the spike times "
+        "is unknown. Pass it with 'sampling_frequency' (e.g. sampling_frequency=30000.0), or pass "
+        "'electrical_series_path' to take it from the recording the sorting was run on."
     )
     assert str(exc_info.value) == expected_error
 

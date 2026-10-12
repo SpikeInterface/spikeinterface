@@ -1400,8 +1400,9 @@ class NwbSortingExtractor(BaseSorting):
                 sampling_frequency = self._reader._sampling_frequency_from_units_metadata()
             if sampling_frequency is None:
                 raise ValueError(
-                    "Couldn't determine the sampling frequency. Provide it with the 'sampling_frequency' "
-                    "argument, set the Units table 'resolution' attribute, or pass 'electrical_series_path'."
+                    "The Units table has no 'resolution' attribute, so the sampling frequency of the spike times "
+                    "is unknown. Pass it with 'sampling_frequency' (e.g. sampling_frequency=30000.0), or pass "
+                    "'electrical_series_path' to take it from the recording the sorting was run on."
                 )
 
         unit_ids = self._reader.unit_ids()
