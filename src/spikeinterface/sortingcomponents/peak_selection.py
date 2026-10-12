@@ -108,6 +108,11 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
 
     rng = np.random.default_rng(seed=seed)
 
+    # raise error if "channel_index" is not in peaks dtype and select_channel
+    channel_index_array = method_kwargs.get("channel_index_array", None)
+    if channel_index_array is None and "channel_index" in peaks.dtype.names:
+        channel_index_array = peaks["channel_index"]
+
     if method == "uniform":
         params = {"select_per_channel": False, "n_peaks": None}
 
@@ -116,9 +121,11 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
         assert params["n_peaks"] is not None, "n_peaks should be defined!"
 
         if params["select_per_channel"]:
+            if channel_index_array is None:
+                raise ValueError("Peaks do not have 'channel_index' field and channel_index_array is not provided.")
             ## This method will randomly select max_peaks_per_channel peaks per channels
-            for channel in np.unique(peaks["channel_index"]):
-                peaks_indices = np.where(peaks["channel_index"] == channel)[0]
+            for channel in np.unique(channel_index_array):
+                peaks_indices = np.where(channel_index_array == channel)[0]
                 max_peaks = min(peaks_indices.size, params["n_peaks"])
                 selected_indices += [rng.choice(peaks_indices, size=max_peaks, replace=False)]
         else:
@@ -144,8 +151,10 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
             assert params["noise_levels"] is not None, "Noise levels should be provided"
 
             if params["select_per_channel"]:
-                for channel in np.unique(peaks["channel_index"]):
-                    peaks_indices = np.where(peaks["channel_index"] == channel)[0]
+                if channel_index_array is None:
+                    raise ValueError("Peaks do not have 'channel_index' field and channel_index_array is not provided.")
+                for channel in np.unique(channel_index_array):
+                    peaks_indices = np.where(channel_index_array == channel)[0]
                     if params["n_peaks"] > peaks_indices.size:
                         selected_indices += [peaks_indices]
                     else:
@@ -170,6 +179,10 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
                 if params["n_peaks"] > peaks.size:
                     selected_indices += [np.arange(peaks.size)]
                 else:
+                    if channel_index_array is None:
+                        raise ValueError(
+                            "Peaks do not have 'channel_index' field and channel_index_array is not provided."
+                        )
                     snrs = peaks["amplitude"] / params["noise_levels"][peaks["channel_index"]]
                     preprocessing = QuantileTransformer(output_distribution="uniform", n_quantiles=min(100, len(snrs)))
                     snrs = preprocessing.fit_transform(snrs[:, np.newaxis])

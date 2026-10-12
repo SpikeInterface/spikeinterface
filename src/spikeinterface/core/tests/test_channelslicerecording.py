@@ -1,6 +1,3 @@
-import shutil
-from pathlib import Path
-
 import pytest
 import numpy as np
 
@@ -127,6 +124,16 @@ def test_select_channels_preserves_probe_metadata():
     assert len(probes) == 1, "Only probe B should survive channel selection"
     assert probes[0].annotations.get("name") == "probe_B"
     assert probes[0].annotations.get("manufacturer") == "vendor_Y"
+
+
+def test_channel_slice_retain_original_groups():
+    rec = generate_recording(num_channels=8, durations=[1.0])  # has a probe attached
+    rec.set_property("group", [0, 0, 1, 1, 2, 2, 3, 3])
+    for g, sub in rec.split_by("group").items():
+        assert np.all(sub.get_property("group") == g)
+
+    rec_sliced = rec.remove_channels(remove_channel_ids=["1", "3", "5", "7"])
+    assert np.all(rec_sliced.get_property("group") == [0, 1, 2, 3])
 
 
 if __name__ == "__main__":

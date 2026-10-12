@@ -1,4 +1,5 @@
 import pytest
+import zarr
 
 import numpy as np
 from spikeinterface import (
@@ -89,7 +90,7 @@ def generate_motion_object():
     return motion
 
 
-@pytest.mark.parametrize("output_format", ["binary", "zarr"])
+@pytest.mark.parametrize("output_format", ["binary", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
 def test_load_binary_recording(generate_recording_sorting, tmp_path, output_format):
     rec, _ = generate_recording_sorting
     _ = rec.save(folder=tmp_path / "test_recording", format=output_format, overwrite=True)
@@ -102,7 +103,7 @@ def test_load_binary_recording(generate_recording_sorting, tmp_path, output_form
     check_recordings_equal(rec, rec_loaded)
 
 
-@pytest.mark.parametrize("output_format", ["numpy_folder", "zarr"])
+@pytest.mark.parametrize("output_format", ["numpy_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
 def test_load_binary_sorting(generate_recording_sorting, tmp_path, output_format):
     _, sort = generate_recording_sorting
     _ = sort.save(folder=tmp_path / "test_sorting", format=output_format, overwrite=True)
@@ -140,7 +141,9 @@ def test_load_ext_extractors(generate_recording_sorting, tmp_path, extension):
     check_sortings_equal(sort, sort_loaded, check_properties=False)
 
 
-@pytest.mark.parametrize("output_format", ["binary_folder", "zarr"])
+@pytest.mark.parametrize(
+    "output_format", ["binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
+)
 def test_load_sorting_analyzer(generate_sorting_analyzer, tmp_path, output_format):
     analyzer = generate_sorting_analyzer
     _ = analyzer.save_as(folder=tmp_path / "analyzer", format=output_format)
@@ -157,6 +160,7 @@ def test_load_sorting_analyzer(generate_sorting_analyzer, tmp_path, output_forma
         assert ext in analyzer_loaded.extensions
 
 
+@pytest.mark.requires_zarr_write
 def test_load_templates(tmp_path, generate_templates_object):
     templates = generate_templates_object
     templates_dict = templates.to_dict()
@@ -212,6 +216,8 @@ def test_remote_recording():
 
 @pytest.mark.streaming_extractors
 @pytest.mark.skipif(not HAVE_S3, reason="s3fs not installed")
+# TODO: remove once streaming zarr is supported with zarr>=3
+@pytest.mark.skipif(int(zarr.__version__.split(".")[0]) >= 3, reason="Streaming zarr is not supported yet with zarr>=3")
 def test_remote_analyzer():
     s3_path = "s3://spikeinterface-sorting-analyzer-test/analyzer_remote_test.zarr/"
     analyzer = load(s3_path)
