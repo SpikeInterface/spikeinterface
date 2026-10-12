@@ -262,9 +262,7 @@ def test_local_reference_can_use_3d_probe_geometry():
     recording.set_probe(probe)
 
     with pytest.warns(UserWarning, match="not have enough neighbors"):
-        reference_xy = common_reference(
-            recording, reference="local", local_radius=(60, 80), min_local_neighbors=1
-        )
+        reference_xy = common_reference(recording, reference="local", local_radius=(60, 80), min_local_neighbors=1)
     reference_xyz = common_reference(
         recording, reference="local", local_radius=(60, 80), min_local_neighbors=1, local_axes="xyz"
     )
