@@ -1595,25 +1595,6 @@ class NwbSortingSegment(BaseSortingSegment):
         sample_indices = self._times_to_samples(spike_times)
         return sample_indices, unit_indices
 
-    def get_last_spike_time(self, segment_index: int | None = None) -> float:
-        """Get the time of the last spike in a segment across all units.
-        Overridden from BaseSorting to use spike_times_data.
-
-        Parameters
-        ----------
-        segment_index : int or None, default: None
-            The segment index (required for multi-segment)
-
-        Returns
-        -------
-        float
-            The time of the last spike in seconds, or 0.0 if no spikes exist.
-        """
-        segment = self.segments[segment_index] if segment_index is not None else self.segments[0]
-        if segment.spike_times_data.size == 0:
-            return 0.0
-        return segment.spike_times_data[-1]
-
     def get_unit_spike_train_in_seconds(
         self,
         unit_id,
