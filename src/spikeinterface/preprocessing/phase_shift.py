@@ -442,7 +442,6 @@ def _build_fir_kernels_kc(shift_samples, n_taps, beta=8.6):
 
 try:
     import numba
-    from numba import prange
 
     _HAS_NUMBA = True
 except ImportError:  # pragma: no cover - the FIR path falls back to _sinc_fir_numpy_tc
@@ -450,10 +449,11 @@ except ImportError:  # pragma: no cover - the FIR path falls back to _sinc_fir_n
 
 
 if _HAS_NUMBA:
-
-    @numba.njit(parallel=True, cache=True, boundscheck=False)
+    # Single-threaded: chunk workers supply the parallelism, and parallel=True crashes under numba's workqueue
+    # layer with the thread engine and under its omp layer with forked processes.
+    @numba.njit(nogil=True, cache=True, boundscheck=False)
     def _sinc_fir_kernel_tc(signal_tc, kernels_kc):
-        """Per-channel FIR on ``(T, C)`` float32 signal, parallel over time.
+        """Per-channel FIR on ``(T, C)`` float32 signal.
 
         Interior iterations (most of the buffer) skip bounds checks; the
         first ``half`` and last ``K-1-half`` samples use a bounds-safe
@@ -465,8 +465,10 @@ if _HAS_NUMBA:
         half = K // 2
         interior_start = half
         interior_end = T - (K - 1 - half)
-        out = np.zeros((T, C), dtype=np.float32)
-        for n in prange(T):
+        # np.zeros would defer zeroing to page faults inside the loop; zeroing each row just before use keeps it in cache
+        out = np.empty((T, C), dtype=np.float32)
+        for n in range(T):
+            out[n] = 0.0
             if interior_start <= n < interior_end:
                 base = n - half
                 for k in range(K):
@@ -480,7 +482,7 @@ if _HAS_NUMBA:
                             out[n, c] += kernels_kc[k, c] * signal_tc[idx, c]
         return out
 
-    @numba.njit(parallel=True, cache=True, boundscheck=False)
+    @numba.njit(nogil=True, cache=True, boundscheck=False)
     def _sinc_fir_kernel_int16_tc(signal_tc, kernels_kc):
         """int16-native variant: reads int16, accumulates in float32, writes float32.
 
@@ -497,8 +499,10 @@ if _HAS_NUMBA:
         half = K // 2
         interior_start = half
         interior_end = T - (K - 1 - half)
-        out = np.zeros((T, C), dtype=np.float32)
-        for n in prange(T):
+        # np.zeros would defer zeroing to page faults inside the loop; zeroing each row just before use keeps it in cache
+        out = np.empty((T, C), dtype=np.float32)
+        for n in range(T):
+            out[n] = 0.0
             if interior_start <= n < interior_end:
                 base = n - half
                 for k in range(K):
