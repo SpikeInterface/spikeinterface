@@ -1933,8 +1933,6 @@ def read_nwb(file_path, load_recording=True, load_sorting=False, electrical_seri
 #   * "electrodes_columns": columns of the electrodes table
 #   * "peak_channel_group": a Units column holding each unit's peak electrode id; the unit covers every
 #     electrode in that electrode's group, ordered by the electrodes column "order_by"
-#   * "typed_container": an ndx-spikesorting object. This is a hook: the typed reader lives in
-#     ndx-spikesorting for now, so it never resolves here and the next place is used.
 DEFAULT_NWB_TO_ANALYZER_MAPPING = {
     # which electrodes each unit's waveform covers (sparsity, and where the templates are placed)
     "sparsity": [
@@ -1945,20 +1943,12 @@ DEFAULT_NWB_TO_ANALYZER_MAPPING = {
         {"source": "electrodes_columns", "x": "rel_x", "y": "rel_y"},
     ],
     "templates": [
-        {"source": "typed_container", "type": "Templates"},
         {"source": "units_columns", "mean": "waveform_mean", "std": "waveform_sd"},
     ],
     # "columns" is "canonical_quality" (the columns named like a SpikeInterface quality metric), a list of
     # column names, or a dict from SpikeInterface metric name to column name
     "quality_metrics": [
-        {"source": "typed_container", "type": "UnitsMetrics"},
         {"source": "units_columns", "columns": "canonical_quality"},
-    ],
-    "template_metrics": [
-        {"source": "typed_container", "type": "UnitsMetrics"},
-    ],
-    "unit_locations": [
-        {"source": "typed_container", "type": "UnitLocations"},
     ],
 }
 
@@ -1979,7 +1969,7 @@ def _resolve_nwb_to_analyzer_mapping(mapping, scalar_colnames, all_colnames):
 
     Returns which place gives each unit's electrodes, which columns hold the templates, which columns are
     quality metrics (as a dict from metric name to column) and which scalar columns become sorting
-    properties. "typed_container" places are skipped (see `DEFAULT_NWB_TO_ANALYZER_MAPPING`).
+    properties.
     `scalar_colnames` are the 1D per-unit columns eligible to be metrics or properties, `all_colnames` is
     every column name.
     """
