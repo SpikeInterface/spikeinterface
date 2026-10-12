@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-import scipy.signal
 
 from spikeinterface import NumpyRecording, load
 from spikeinterface.core.testing import check_chunk_invariance
@@ -103,6 +102,8 @@ def test_fir_filter_integer_output_rounds(recording):
 
 
 def test_fir_filter_reflect_padding():
+    import scipy.signal
+
     # A constant signal reflected at the edges stays constant through a unit-gain lowpass.
     traces = np.full((2000, 1), 10.0, dtype=np.float32)
     taps = scipy.signal.firwin(101, 1000.0, fs=FS)
@@ -112,6 +113,8 @@ def test_fir_filter_reflect_padding():
 
 
 def test_fir_filter_offsets_scale_by_dc_gain(recording):
+    import scipy.signal
+
     rec = NumpyRecording(recording.get_traces(), FS)
     rec.set_channel_gains(2.0)
     rec.set_channel_offsets(5.0)
@@ -142,6 +145,8 @@ def test_fir_filter_invalid_arguments(recording):
 
 
 def response_db(taps, freqs):
+    import scipy.signal
+
     return 20 * np.log10(np.abs(scipy.signal.freqz(taps, worN=np.asarray(freqs, dtype=float), fs=FS)[1]))
 
 
