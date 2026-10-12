@@ -151,13 +151,8 @@ def _build_recording_with_interleaved_probes():
     probegroup.add_probe(probe0)
     probegroup.add_probe(probe1)
     probegroup.set_global_device_channel_indices([0, 2, 4, 6, 1, 3, 5, 7])
-    # Interleave the two probes' channels: channel i alternates between probe0 and probe1.
-    if parse(si_version) <= parse("0.105.0"):
-        rec_with_probe = rec.set_probegroup(probegroup, in_place=False)  # old API returns a new recording; portable across versions
-    else:
-        rec.set_probegroup(probegroup)  # new API returns a new recording; portable across versions
-        rec_with_probe = rec
-    return rec_with_probe
+    rec_with_probe = rec.set_probegroup(probegroup)
+    return rec_with_probe if rec_with_probe is not None else rec
 
 
 def _check_recording_with_interleaved_probes(rec):
