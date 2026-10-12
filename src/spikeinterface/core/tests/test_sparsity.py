@@ -181,20 +181,26 @@ def test_estimate_sparsity_uses_single_probe_3d_geometry():
     sorting = NumpySorting.from_unit_dict({1: spike_samples}, sampling_frequency=20_000)
     expected_mask = [[True, True, False, False]]
 
-    direct = estimate_sparsity(
-        sorting, recording, method="radius", radius_um=80, main_channel_indices=[0]
-    )
+    direct = estimate_sparsity(sorting, recording, method="radius", radius_um=80, main_channel_indices=[0])
     np.testing.assert_array_equal(direct.mask, expected_mask)
 
     estimated = estimate_sparsity(
-        sorting, recording, method="radius", radius_um=80,
-        num_spikes_for_sparsity=len(spike_samples), n_jobs=1,
+        sorting,
+        recording,
+        method="radius",
+        radius_um=80,
+        num_spikes_for_sparsity=len(spike_samples),
+        n_jobs=1,
     )
     np.testing.assert_array_equal(estimated.mask, expected_mask)
 
     closest = estimate_sparsity(
-        sorting, recording, method="closest_channels", num_channels=2,
-        num_spikes_for_sparsity=len(spike_samples), n_jobs=1,
+        sorting,
+        recording,
+        method="closest_channels",
+        num_channels=2,
+        num_spikes_for_sparsity=len(spike_samples),
+        n_jobs=1,
     )
     np.testing.assert_array_equal(closest.mask, expected_mask)
 
