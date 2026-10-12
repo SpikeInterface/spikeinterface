@@ -142,7 +142,7 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     from scipy.fft import irfft, next_fast_len, rfft
 
     signal_length = signal.shape[axis]
-    # A length with a large prime factor makes the FFT up to three times slower. Zero padding after the tapered end
+    # A length with a large prime factor makes the FFT slow. Zero padding after the tapered end
     # changes only the period of the circular shift, which moves the output by far less than one int16 step.
     fft_length = next_fast_len(signal_length, real=True)
     frequency_domain_signal = rfft(signal, n=fft_length, axis=axis, overwrite_x=True)
