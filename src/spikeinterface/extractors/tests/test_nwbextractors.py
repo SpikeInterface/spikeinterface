@@ -1355,7 +1355,7 @@ def test_read_nwb_sorting_analyzer_default(tmp_path):
     assert "snr" not in properties
 
 
-def test_read_nwb_sorting_analyzer_extension_map_override(tmp_path):
+def test_read_nwb_sorting_analyzer_mapping_override(tmp_path):
     pytest.importorskip("pynwb")
     from spikeinterface.extractors import read_nwb_sorting_analyzer
 
@@ -1366,14 +1366,14 @@ def test_read_nwb_sorting_analyzer_extension_map_override(tmp_path):
         use_pynwb=False,
         sampling_frequency=30000.0,
         compute_extra=None,
-        extension_map={"quality_metrics": [{"source": "columns", "columns": ["snr", "custom_score"]}]},
+        nwb_to_analyzer_mapping={"quality_metrics": [{"source": "units_columns", "columns": ["snr", "custom_score"]}]},
     )
     assert set(analyzer.get_extension("quality_metrics").get_data().columns) == {"snr", "custom_score"}
     # custom_score is now a metric, so it is no longer a property
     assert "custom_score" not in analyzer.sorting.get_property_keys()
 
 
-def test_read_nwb_sorting_analyzer_extension_map_disable(tmp_path):
+def test_read_nwb_sorting_analyzer_mapping_disable(tmp_path):
     pytest.importorskip("pynwb")
     from spikeinterface.extractors import read_nwb_sorting_analyzer
 
@@ -1384,7 +1384,7 @@ def test_read_nwb_sorting_analyzer_extension_map_disable(tmp_path):
         use_pynwb=False,
         sampling_frequency=30000.0,
         compute_extra=None,
-        extension_map={"quality_metrics": None},
+        nwb_to_analyzer_mapping={"quality_metrics": None},
     )
     assert not analyzer.has_extension("quality_metrics")
     # with quality_metrics disabled, every scalar column (including snr) becomes a property
@@ -1501,6 +1501,88 @@ def test_read_nwb_sorting_analyzer_single_channel_waveforms(tmp_path, use_pynwb)
         electrode = unit_index % n_ch
         np.testing.assert_allclose(average[unit_index][:, electrode], stored_mean[unit_index], rtol=1e-6)
         assert not np.any(np.delete(average[unit_index], electrode, axis=1))
+
+
+def test_read_nwb_sorting_analyzer_peak_channel_group_mapping(tmp_path):
+    """A file laid out like the Allen Institute ones: no Units `electrodes` column, a peak electrode id per
+    unit, each waveform stored as electrodes x samples over every electrode of the probe, the positions in
+    other electrodes columns and a metric under another name."""
+    pytest.importorskip("pynwb")
+    import h5py
+    from datetime import datetime
+    from pynwb import NWBFile, NWBHDF5IO
+    from spikeinterface.extractors import read_nwb_sorting_analyzer
+
+    n_probes, n_ch, n_samp, n_units = 2, 6, 20, 5
+    nwbfile = NWBFile(session_description="t", identifier="id", session_start_time=datetime(2020, 1, 1).astimezone())
+    device = nwbfile.create_device(name="probe")
+    for column in ("probe_horizontal_position", "probe_vertical_position", "local_index"):
+        nwbfile.add_electrode_column(name=column, description=column)
+    for probe_index in range(n_probes):
+        group = nwbfile.create_electrode_group(name=f"probe{probe_index}", description="d", location="l", device=device)
+        # rows are stored in reverse local_index order, so the reader has to sort by local_index
+        for local_index in reversed(range(n_ch)):
+            nwbfile.add_electrode(
+                group=group,
+                location="brain",
+                probe_horizontal_position=float(local_index % 2) * 16.0,
+                probe_vertical_position=float(local_index) * 20.0,
+                local_index=local_index,
+            )
+    nwbfile.add_unit_column(name="peak_channel_id", description="electrode id of the peak channel")
+    nwbfile.add_unit_column(name="isi_violations", description="isi violations ratio")
+    rng = np.random.default_rng(0)
+    peak_channel_ids = [1, 3, 7, 8, 11]  # units 0-1 on probe0 (ids 0-5), units 2-4 on probe1 (ids 6-11)
+    for unit_index in range(n_units):
+        nwbfile.add_unit(
+            spike_times=np.sort(rng.uniform(0, 100, size=50)),
+            peak_channel_id=peak_channel_ids[unit_index],
+            isi_violations=float(rng.uniform(0, 1)),
+        )
+    path = tmp_path / "allen_like.nwb"
+    with NWBHDF5IO(str(path), "w") as io:
+        io.write(nwbfile)
+    # pynwb writes waveform_mean as samples x electrodes per unit, so write the ragged electrodes x samples
+    # layout with h5py: row j of a unit's block is the electrode with local_index j of its probe
+    blocks = rng.standard_normal((n_units, n_ch, n_samp))
+    with h5py.File(path, "r+") as file:
+        file["units"].create_dataset("waveform_mean", data=blocks.reshape(n_units * n_ch, n_samp))
+        file["units"].create_dataset("waveform_mean_index", data=np.arange(1, n_units + 1) * n_ch)
+
+    allen_mapping = {
+        "sparsity": [{"source": "peak_channel_group", "peak_channel": "peak_channel_id", "order_by": "local_index"}],
+        "channel_locations": [
+            {"source": "electrodes_columns", "x": "probe_horizontal_position", "y": "probe_vertical_position"}
+        ],
+        "quality_metrics": [{"source": "units_columns", "columns": {"isi_violations_ratio": "isi_violations"}}],
+    }
+    analyzer = read_nwb_sorting_analyzer(
+        str(path),
+        electrical_series_path=None,
+        sampling_frequency=30000.0,
+        recording_duration=100.0,
+        group_name="probe1",
+        nwb_to_analyzer_mapping=allen_mapping,
+        rescale_templates_to_uV=False,
+        compute_extra=None,
+    )
+
+    # the probe1 units cover every probe1 electrode, at the positions of the mapped columns
+    assert analyzer.get_num_units() == 3
+    channel_ids = np.asarray(analyzer.channel_ids).astype(int)
+    assert set(channel_ids) == set(range(6, 12))
+    local_index_of_channel = 11 - channel_ids  # ids 6-11 hold local_index 5-0
+    expected_locations = np.stack([(local_index_of_channel % 2) * 16.0, local_index_of_channel * 20.0], axis=1)
+    np.testing.assert_allclose(analyzer.get_channel_locations(), expected_locations)
+
+    # each waveform row lands on the electrode with that local_index
+    average = analyzer.get_extension("templates").data["average"]
+    for selected_index, unit_index in enumerate([2, 3, 4]):
+        expected = blocks[unit_index][local_index_of_channel].T
+        np.testing.assert_allclose(average[selected_index], expected, rtol=1e-6)
+
+    metrics = analyzer.get_extension("quality_metrics").get_data()
+    assert list(metrics.columns) == ["isi_violations_ratio"]
 
 
 def test_read_nwb_sorting_analyzer_electrical_series_path(tmp_path):
