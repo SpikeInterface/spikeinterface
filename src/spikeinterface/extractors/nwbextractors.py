@@ -2122,7 +2122,8 @@ def read_nwb_sorting_analyzer(
         "templates", "quality_metrics", ...) and maps to a list of places tried in order. Setting a key to
         None disables it.
     rescale_templates_to_uV : bool, default: True
-        Infer the scale of `waveform_mean` from its magnitude and convert the templates to microvolts.
+        Convert the templates to microvolts. The scale comes from the `unit` attribute of `waveform_mean` when
+        it is set to something other than the default "volts", and is inferred from the magnitude otherwise.
     verbose : bool, default: False
         If True, print progress messages.
 
@@ -2268,6 +2269,11 @@ def read_nwb_sorting_analyzer(
     if unit_electrodes is not None and unit_electrodes["source"] == "units_columns":
         electrodes_column = unit_electrodes["electrodes"]
 
+    # the unit and alignment attributes of the templates column (read before a group selection replaces `sorting`)
+    templates_attributes = {}
+    if templates_column is not None:
+        templates_attributes = _column_attributes(sorting.units_table, templates_column)
+
     if not use_pynwb:
         # deliberate read: only the resolved template column(s), the electrodes region, and the scalar
         # columns that become metrics or properties are materialized; ragged/per-spike columns are not.
@@ -2409,6 +2415,8 @@ def read_nwb_sorting_analyzer(
             unit_local_channels,
             num_channels,
             rescale_to_uV=rescale_templates_to_uV,
+            waveform_unit=templates_attributes.get("unit"),
+            time_before_peak_ms=templates_attributes.get("time_before_peak_in_ms"),
         )
 
     # the resolved quality-metric columns -> quality_metrics extension
@@ -2533,14 +2541,28 @@ def _make_random_spikes(analyzer, total_num_spikes):
     analyzer.extensions["random_spikes"] = random_spikes_ext
 
 
+# factor from a waveform `unit` attribute to microvolts
+_WAVEFORM_UNIT_TO_UV = {"volts": 1e6, "V": 1e6, "millivolts": 1e3, "mV": 1e3, "microvolts": 1.0, "uV": 1.0, "µV": 1.0}
+
+
+def _column_attributes(units_table, column):
+    """The attributes of a Units column, from a pynwb table or an h5py/zarr group."""
+    column_object = units_table[column]
+    column_object = getattr(column_object, "target", column_object)  # a ragged pynwb column is its VectorIndex
+    dataset = getattr(column_object, "data", column_object)
+    attributes = {}
+    for key, value in getattr(dataset, "attrs", {}).items():
+        attributes[key] = value.decode("utf-8") if isinstance(value, bytes) else value
+    return attributes
+
+
 def _infer_template_scale_to_uV(dense_templates):
     """Infer the factor that brings templates into microvolts, SpikeInterface's convention.
 
-    The NWB waveform unit attribute is schema-fixed to "volts" and never reflects the true scale
-    (pynwb issue #2162), so it cannot drive the conversion. The template magnitude can: an extracellular
-    spike peaks at roughly tens to hundreds of microvolts, so pick the factor in {1, 1e3, 1e6} that lands
-    the median per-unit peak in that physiological window. This reads no extra data (it operates on the
-    already-built templates). Returns 1.0 if the magnitude is unusable (all zero).
+    Used when the waveform `unit` attribute cannot be trusted (see `_make_templates`). An extracellular spike
+    peaks at roughly tens to hundreds of microvolts, so pick the factor in {1, 1e3, 1e6} that lands the median
+    per-unit peak in that physiological window. This reads no extra data (it operates on the already-built
+    templates). Returns 1.0 if the magnitude is unusable (all zero).
     """
     per_unit_peak = np.abs(dense_templates).max(axis=(1, 2))
     per_unit_peak = per_unit_peak[per_unit_peak > 0]
@@ -2561,9 +2583,12 @@ def _make_templates(
     unit_local_channels,
     num_channels,
     rescale_to_uV=False,
+    waveform_unit=None,
+    time_before_peak_ms=None,
 ):
     """Attach the `templates` extension from the resolved templates column, scattering each unit's
-    sparse waveform block onto its true channel positions."""
+    sparse waveform block onto its true channel positions. `waveform_unit` and `time_before_peak_ms` are the
+    `unit` and `time_before_peak_in_ms` attributes of the templates column, when it has them."""
 
     waveform_mean = np.array([np.asarray(t, dtype="float") for t in units[templates_column].values])
     # The schema also allows one waveform per unit with no electrode axis (e.g. DANDI 000363). It belongs to
@@ -2588,29 +2613,35 @@ def _make_templates(
         waveform_mean = waveform_mean.transpose(0, 2, 1)
     num_samples_template = waveform_mean.shape[1]
 
-    # Scatter each unit's waveform onto its channels. This relies on the alignment contract that
-    # waveform_mean[:, i] corresponds to the unit's electrodes-region entry i. The IBL writer guarantees
-    # it by ordering each unit's real channels first (padding last) and building the electrodes region
-    # from exactly those real channels in the same order, so the first k = len(region) columns are the
-    # real channels in region order and any trailing padding columns are correctly dropped by [:, :k].
+    # Scatter each unit's waveform onto its channels: column i is the unit's electrodes-region entry i. In
+    # the schema's single waveform array every unit has the same number of columns, so a writer whose units
+    # cover different numbers of electrodes pads the shorter ones at the end (e.g. the IBL files). The first
+    # k = len(region) columns are the unit's electrodes and the padding after them is dropped by [:, :k].
     dense_templates = np.zeros((analyzer.get_num_units(), num_samples_template, num_channels), dtype="float32")
     for unit_index, positions in enumerate(unit_local_channels):
         k = len(positions)
         dense_templates[unit_index][:, positions] = waveform_mean[unit_index][:, :k]
 
-    # The stored waveform unit attribute is schema-fixed to "volts" and never reflects the real scale
-    # (pynwb #2162), so it cannot drive a conversion. When rescaling is requested, infer the factor from
-    # the template magnitude instead and apply the same factor to the std templates below so both stay in
-    # the same unit. On by default (read_nwb_sorting_analyzer) so templates read in microvolts; it can be
-    # turned off to keep the file's native unit, since the scale does not affect peak channel, shape,
-    # location, or sparsity.
-    template_scale = _infer_template_scale_to_uV(dense_templates) if rescale_to_uV else 1.0
+    # Convert to microvolts when requested, applying the same factor to the std templates below. Before NWB
+    # 2.11 the waveform `unit` attribute was fixed to "volts" whatever the real scale, and since then it can
+    # be set but still defaults to "volts". So a unit other than "volts" is trusted, and otherwise the factor
+    # is inferred from the template magnitude. It can be turned off to keep the file's native unit, since the
+    # scale does not affect peak channel, shape, location, or sparsity.
+    template_scale = 1.0
+    if rescale_to_uV:
+        template_scale = None if waveform_unit == "volts" else _WAVEFORM_UNIT_TO_UV.get(waveform_unit)
+        if template_scale is None:
+            template_scale = _infer_template_scale_to_uV(dense_templates)
     if template_scale != 1.0:
         dense_templates *= template_scale
 
-    # scalar alignment (nbefore): the sample where the average peak-channel amplitude is largest
-    peak_amplitude_per_sample = np.abs(np.nan_to_num(waveform_mean)).max(axis=2).mean(axis=0)
-    nbefore = int(np.argmax(peak_amplitude_per_sample))
+    # scalar alignment (nbefore): the `time_before_peak_in_ms` attribute (NWB 2.11) when the file has it,
+    # otherwise the sample where the average peak-channel amplitude is largest
+    if time_before_peak_ms is not None:
+        nbefore = int(round(float(time_before_peak_ms) * analyzer.sampling_frequency / 1000))
+    else:
+        peak_amplitude_per_sample = np.abs(np.nan_to_num(waveform_mean)).max(axis=2).mean(axis=0)
+        nbefore = int(np.argmax(peak_amplitude_per_sample))
 
     templates_ext = ComputeTemplates(sorting_analyzer=analyzer)
     templates_ext.data["average"] = dense_templates

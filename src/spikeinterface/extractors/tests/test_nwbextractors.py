@@ -1277,6 +1277,10 @@ def _make_units_nwb(
     with_electrical_series=False,
     single_channel=False,
     series_electrodes=None,
+    n_unit_electrodes=None,
+    padding=0,
+    waveform_scale=1.0,
+    waveform_attributes=None,
 ):
     """Build a minimal NWB file with a Units table for read_nwb_sorting_analyzer tests.
 
@@ -1285,6 +1289,9 @@ def _make_units_nwb(
     (`ks_label`), and a per-unit `electrodes` region; the electrodes table carries `rel_x`/`rel_y`.
     With `single_channel`, each unit has one electrode (`unit % n_ch`) and a 1D `waveform_mean`.
     `series_electrodes` are the electrodes of the ElectricalSeries (all of them by default).
+    With `n_unit_electrodes`, unit u covers electrodes `(u + j) % n_ch` for j < n_unit_electrodes, and every
+    waveform has `padding` extra columns after them, as in the IBL files. `waveform_scale` multiplies the
+    waveforms and `waveform_attributes` are written on the waveform datasets.
     """
     from datetime import datetime
     from pynwb import NWBFile, NWBHDF5IO
@@ -1315,33 +1322,55 @@ def _make_units_nwb(
     if with_per_spike:
         nwbfile.add_unit_column(name="spike_amplitudes_uV", description="per-spike amplitudes", index=True)
     rng = np.random.default_rng(0)
-    waveform_shape = (n_samp,) if single_channel else (n_samp, n_ch)
+    if single_channel:
+        waveform_shape = (n_samp,)
+    elif n_unit_electrodes is not None:
+        waveform_shape = (n_samp, n_unit_electrodes + padding)
+    else:
+        waveform_shape = (n_samp, n_ch)
     for u in range(n_units):
+        if single_channel:
+            electrodes = [u % n_ch]
+        elif n_unit_electrodes is not None:
+            electrodes = [(u + j) % n_ch for j in range(n_unit_electrodes)]
+        else:
+            electrodes = list(range(n_ch))
         kwargs = dict(
             spike_times=np.sort(rng.uniform(0, 100, size=int(rng.integers(50, 500)))),
-            electrodes=[u % n_ch] if single_channel else list(range(n_ch)),
-            waveform_mean=rng.standard_normal(waveform_shape),
+            electrodes=electrodes,
+            waveform_mean=rng.standard_normal(waveform_shape) * waveform_scale,
             snr=float(rng.uniform(2, 10)),
             custom_score=float(rng.uniform(0, 1)),
             ks_label="good" if u % 2 == 0 else "mua",
         )
         if with_std:
-            kwargs["waveform_sd"] = np.abs(rng.standard_normal(waveform_shape))
+            kwargs["waveform_sd"] = np.abs(rng.standard_normal(waveform_shape)) * waveform_scale
         if with_per_spike:
             kwargs["spike_amplitudes_uV"] = rng.standard_normal(kwargs["spike_times"].size)
         nwbfile.add_unit(**kwargs)
     with NWBHDF5IO(str(path), "w") as io:
         io.write(nwbfile)
+    if waveform_attributes is not None:
+        import h5py
+
+        with h5py.File(path, "r+") as file:
+            for column in ("waveform_mean", "waveform_sd"):
+                if column in file["units"]:
+                    file["units"][column].attrs.update(waveform_attributes)
     return str(path)
 
 
-def test_read_nwb_sorting_analyzer_default(tmp_path):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_read_nwb_sorting_analyzer_default(tmp_path, use_pynwb):
     pytest.importorskip("pynwb")
+    import h5py
     from spikeinterface.extractors import read_nwb_sorting_analyzer
 
-    path = _make_units_nwb(tmp_path / "units.nwb")
+    # waveforms in volts, each unit on 5 of the 8 electrodes with 3 padding columns, as in the IBL files
+    n_unit_electrodes = 5
+    path = _make_units_nwb(tmp_path / "units.nwb", n_unit_electrodes=n_unit_electrodes, padding=3, waveform_scale=1e-4)
     analyzer = read_nwb_sorting_analyzer(
-        path, electrical_series_path=None, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None
+        path, electrical_series_path=None, use_pynwb=use_pynwb, sampling_frequency=30000.0, compute_extra=None
     )
 
     # recordingless, sparse, with templates for every unit
@@ -1349,6 +1378,18 @@ def test_read_nwb_sorting_analyzer_default(tmp_path):
     assert analyzer.sparsity is not None
     assert analyzer.has_extension("templates")
     assert analyzer.get_extension("templates").get_data().shape[0] == analyzer.get_num_units()
+
+    # each waveform column is on its electrode, in microvolts, and the padding is dropped
+    with h5py.File(path, "r") as file:
+        stored_mean = file["units"]["waveform_mean"][:]
+    average = analyzer.get_extension("templates").data["average"]
+    position_of_electrode = {int(channel_id): pos for pos, channel_id in enumerate(analyzer.channel_ids)}
+    for unit_index in range(analyzer.get_num_units()):
+        electrodes = [(unit_index + j) % 8 for j in range(n_unit_electrodes)]
+        positions = [position_of_electrode[electrode] for electrode in electrodes]
+        expected = stored_mean[unit_index][:, :n_unit_electrodes] * 1e6
+        np.testing.assert_allclose(average[unit_index][:, positions], expected, rtol=1e-5)
+        assert not np.any(np.delete(average[unit_index], positions, axis=1))
 
     # by default only canonical quality columns become quality_metrics; the rest become properties, and
     # template_metrics is never synthesized from value columns
@@ -1395,18 +1436,31 @@ def test_read_nwb_sorting_analyzer_mapping_disable(tmp_path):
     assert {"snr", "custom_score", "ks_label"} <= set(analyzer.sorting.get_property_keys())
 
 
-def test_read_nwb_sorting_analyzer_waveform_sd(tmp_path):
+@pytest.mark.parametrize("use_pynwb", [True, False])
+def test_read_nwb_sorting_analyzer_waveform_sd(tmp_path, use_pynwb):
     pytest.importorskip("pynwb")
+    import h5py
     from spikeinterface.extractors import read_nwb_sorting_analyzer
 
-    path = _make_units_nwb(tmp_path / "units.nwb", with_std=True)
+    # waveforms in millivolts, declared with the NWB 2.11 unit and alignment attributes. The magnitude alone
+    # (peaks of a few units) would not be rescaled, so the conversion has to come from the unit attribute.
+    path = _make_units_nwb(
+        tmp_path / "units.nwb", with_std=True, waveform_attributes={"unit": "millivolts", "time_before_peak_in_ms": 0.5}
+    )
     analyzer = read_nwb_sorting_analyzer(
-        path, electrical_series_path=None, use_pynwb=False, sampling_frequency=30000.0, compute_extra=None
+        path, electrical_series_path=None, use_pynwb=use_pynwb, sampling_frequency=30000.0, compute_extra=None
     )
     templates = analyzer.get_extension("templates")
     # the std operator is populated only because the file stores waveform_sd
     assert "std" in templates.params["operators"]
     assert "std" in templates.data
+
+    with h5py.File(path, "r") as file:
+        stored_mean = file["units"]["waveform_mean"][:]
+        stored_sd = file["units"]["waveform_sd"][:]
+    np.testing.assert_allclose(templates.data["average"], stored_mean * 1e3, rtol=1e-5)
+    np.testing.assert_allclose(templates.data["std"], stored_sd * 1e3, rtol=1e-5)
+    assert templates.params["ms_before"] == pytest.approx(0.5)
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
