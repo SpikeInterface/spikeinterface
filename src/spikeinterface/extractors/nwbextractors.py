@@ -2211,7 +2211,7 @@ def read_nwb_sorting_analyzer(
     if recording is None and recording_duration is None:
         spike_times_data = sorting_segment.spike_times_data
         last_stored_spike_time = 0.0 if spike_times_data.shape[0] == 0 else float(np.asarray(spike_times_data[-1]))
-    # Recordingless case: leave t_start at 0 (set when the sorting was constructed). NWB spike times are
+    # Recordingless case without a `t_start`: leave it at 0 (set when the sorting was constructed). NWB spike times are
     # in seconds from session start, so they are always >= 0 and map to non-negative frames with
     # t_start = 0. Anchoring t_start to the first spike would only remove empty space before it on the
     # timeline (cosmetic) and would cost a streamed read, so we skip it to keep the build cheap.
