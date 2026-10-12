@@ -226,7 +226,7 @@ def divide_segment_into_chunks(num_frames, chunk_size):
     return chunks
 
 
-def divide_time_series_into_chunks(recording, chunk_size, num_chunk_per_batch):
+def divide_time_series_into_chunks(recording, chunk_size, num_chunk_per_batch=None):
     slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
