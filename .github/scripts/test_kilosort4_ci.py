@@ -482,12 +482,15 @@ class TestKilosort4Long:
         from the recording.
         """
         recording = self._get_ground_truth_recording()
-        recording_bin = recording.save(folder=tmp_path / "recording_for_ks4")
+        # Non-binary wrapper
+        recording_zarr = recording.save(folder=tmp_path / "recording_for_ks4.zarr", format="zarr")
+        # Binary wrapper
+        recording_bin = recording.save(folder=tmp_path / "recording_for_ks4", format="binary")
 
         # run with SI wrapper
         sorting_ks4 = si.run_sorter(
             "kilosort4",
-            recording,
+            recording_zarr,
             folder=tmp_path / "ks4_output_si_wrapper_default",
             use_binary_file=None,
             remove_existing_folder=True,
@@ -517,7 +520,7 @@ class TestKilosort4Long:
         # test deleting recording.dat
         sorting_ks4_force_binary_keep = si.run_sorter(
             "kilosort4",
-            recording,
+            recording_zarr,
             folder=tmp_path / "ks4_output_force_bin_keep",
             use_binary_file=True,
             delete_recording_dat=False,
@@ -528,6 +531,7 @@ class TestKilosort4Long:
         check_sortings_equal(sorting_ks4, sorting_ks4_bin)
         check_sortings_equal(sorting_ks4, sorting_ks4_force_binary)
         check_sortings_equal(sorting_ks4, sorting_ks4_force_non_binary)
+        check_sortings_equal(sorting_ks4, sorting_ks4_force_binary_keep)
 
     @pytest.mark.parametrize(
         "param_to_test",
@@ -564,6 +568,7 @@ class TestKilosort4Long:
         recording = si.whiten(recording, mode="local", apply_mean=False)
 
         paths = self._save_ground_truth_recording(recording, tmp_path)
+        recording = si.load(paths["recording_path"].parent)
 
         kilosort_output_dir = tmp_path / "kilosort_output_dir"
         spikeinterface_output_dir = tmp_path / "spikeinterface_output_dir"
