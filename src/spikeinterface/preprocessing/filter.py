@@ -194,14 +194,16 @@ class FilterRecordingSegment(BasePreprocessorSegment):
 
         from scipy.signal import sosfiltfilt, filtfilt, sosfilt, lfilter
 
-        # Channels are filtered independently, so filtering one channel at a time gives the same result with a
-        # much lower peak memory (scipy makes several float copies of its input) and no loss in speed
+        # Channels are filtered independently, so filtering in banks gives the same result with a
+        # much lower peak memory (scipy makes several float copies of its input)
         num_samples = traces_chunk.shape[0] - left_margin - right_margin
         num_channels = traces_chunk.shape[1]
+        num_channels_per_bank = 16
         filtered_traces = np.empty((num_samples, num_channels), dtype=self.dtype)
 
-        for channel_index in range(num_channels):
-            block = traces_chunk[:, channel_index : channel_index + 1]
+        for channel_index in range(0, num_channels, num_channels_per_bank):
+            channel_slice = slice(channel_index, channel_index + num_channels_per_bank)
+            block = traces_chunk[:, channel_slice]
 
             if self.direction == "forward-backward":
                 if self.filter_mode == "sos":
@@ -227,7 +229,7 @@ class FilterRecordingSegment(BasePreprocessorSegment):
             if np.issubdtype(self.dtype, np.integer):
                 filtered_block = filtered_block.round()
 
-            filtered_traces[:, channel_index : channel_index + 1] = filtered_block
+            filtered_traces[:, channel_slice] = filtered_block
 
         return filtered_traces
 
