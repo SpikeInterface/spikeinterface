@@ -38,10 +38,8 @@ class PhaseShiftRecording(BasePreprocessor):
         If "inter_sample_shift" is not in recording properties,
         we can externally provide one.
     dtype : None | str | dtype, default: None
-        Dtype of input and output `recording` objects.  When parent is
-        integer-typed and ``method="fir"`` with ``output_dtype=None``, the
-        FIR fast-path advertises ``float32`` output instead to skip a full
-        int16 → float64 → int16 round-trip (see ``output_dtype``).
+        Dtype of the output. None keeps the parent's. With ``method="fir"``, an int16 parent and
+        ``dtype="float32"``, the FIR reads int16 directly and skips rounding back to int16.
     method : "fft" | "fir", default: "fft"
         Interpolation method.
 
@@ -81,13 +79,6 @@ class PhaseShiftRecording(BasePreprocessor):
         ~21 000:1 (~14 bits) but is ~2× more expensive on compute-bound
         machines (kernel time on DRAM-bandwidth-bound hosts is roughly
         the same up to K~24).
-    output_dtype : None | dtype, default: None
-        When ``method="fir"`` and the parent is integer-typed, setting
-        ``output_dtype=np.float32`` enables the int16-native fast path:
-        the FIR reads int16 directly and writes float32, skipping the
-        round-trip back to int16 that SI's default performs.  Default
-        None preserves backward-compatible behavior (round + cast back
-        to parent's dtype, identical to the FFT path).
 
 
     Returns
@@ -104,7 +95,6 @@ class PhaseShiftRecording(BasePreprocessor):
         dtype=None,
         method="fft",
         n_taps=_DEFAULT_FIR_TAPS,
-        output_dtype=None,
     ):
         if method not in ("fft", "fir"):
             raise ValueError(f"method must be 'fft' or 'fir', got {method!r}")
@@ -135,14 +125,7 @@ class PhaseShiftRecording(BasePreprocessor):
             margin = n_taps // 2
             tmp_dtype = None  # unused on FIR path
 
-        # int16-native advertising: parent is int, caller asked for float32 output.
         advertised_dtype = np.dtype(dtype)
-        parent_dtype = np.dtype(recording.get_dtype())
-        if method == "fir" and output_dtype is not None:
-            advertised_dtype = np.dtype(output_dtype)
-        elif method == "fir" and parent_dtype.kind in ("i", "u") and dtype is recording.get_dtype():
-            # caller didn't pin dtype; keep backward-compat (int16 in → int16 out).
-            pass
 
         BasePreprocessor.__init__(self, recording, dtype=advertised_dtype)
         for parent_segment in recording.segments:
@@ -167,7 +150,6 @@ class PhaseShiftRecording(BasePreprocessor):
             dtype=advertised_dtype.str,
             method=method,
             n_taps=int(n_taps),
-            output_dtype=None if output_dtype is None else np.dtype(output_dtype).str,
         )
 
 
@@ -192,7 +174,10 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         # FIR kernel cache — built once per segment since sample_shifts are fixed.
         self._fir_kernels_kc = None
         if method == "fir":
-            self._fir_kernels_kc = _build_fir_kernels_kc(self.sample_shifts, self.n_taps)
+            # The kernels correlate, out[n] += kernels_kc[k] * x[n - half + k], in (K, C) so the channel loop is
+            # contiguous.
+            taps = _build_fir_taps(self.sample_shifts, self.n_taps)
+            self._fir_kernels_kc = np.ascontiguousarray(taps[:, ::-1].T, dtype=np.float32)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
@@ -403,44 +388,21 @@ def apply_fshift_ibl(w, s, axis=0, ns=None):
 # ---------------------------------------------------------------------
 
 
-def _build_fir_kernels_kc(shift_samples, n_taps, beta=8.6):
-    """Per-channel windowed-sinc kernels in ``(K, C)`` layout (float32).
+def _build_fir_taps(shift_samples, n_taps, beta=8.6):
+    """Per-channel Kaiser-windowed sinc kernels that delay each channel by its fractional shift, as ``(C, K)``.
 
-    The kernel at channel ``c`` is a Kaiser-windowed sinc sampled to delay
-    by exactly ``shift_samples[c]`` (a fractional-sample shift).
-    Convention matches SI's ``apply_frequency_shift``: positive shift = delay
-    (``y[n] = x[n - shift]``).
-
-    Parameters
-    ----------
-    shift_samples : ndarray
-        Fractional number of samples to shift each channel by.
-    n_taps : int
-        Number of taps for FIR filter.
-    beta : float, optional
-        Kaiser window β ≈ 8.6 by default ⇒ ~-80 dB stopband attenuation,
-        matching scipy/matlab.
+    Rows are in ``fir_filter``'s tap order, ``y[n] = sum_j taps[j] * x[n + center - j]`` with its default
+    ``center = (K - 1) // 2``. A positive shift delays, ``y[n] = x[n - shift]``, as in ``apply_frequency_shift``.
+    ``beta=8.6`` gives about -80 dB sidelobes.
     """
-    half = n_taps // 2
-    # Grid: n = k - half for k in [0, K), so k=half corresponds to n=0.
-    # For the convolution  y[n] = Σ_k h[k] * x[n - half + k],
-    # expanding the ideal sinc gives  h[k] = sinc(k - half + shift) * window[k].
-    # That is the (n + d) term below.
-    n = np.arange(-half, n_taps - half, dtype=np.float64)
-    window = np.kaiser(n_taps, beta=beta).astype(np.float64)
-    d = np.asarray(shift_samples, dtype=np.float64)[:, np.newaxis]  # (C, 1)
-    kernels_ck = np.sinc(n[np.newaxis, :] + d) * window[np.newaxis, :]  # (C, K)
-    # Normalize each channel's kernel to unity DC gain.  Without this, the
-    # windowed-sinc has a shift-dependent magnitude offset (Σh[k] = 0.9975…1.0
-    # for Kaiser β=8.6 on NPX inter-sample shifts), producing per-ADC-group
-    # amplitude banding ~0.3 % p-p across the probe.  Dividing by Σh[k]
-    # eliminates the offset and flattens the passband to ≤7 ppm RMS error vs
-    # FFT — a 600× improvement at zero runtime cost.  Standard practice for
-    # fractional-delay FIRs.
-    kernels_ck /= kernels_ck.sum(axis=1, keepdims=True)
-    # (K, C) contiguous float32 so the inner c-loop auto-vectorizes on the
-    # contiguous axis matching the signal/output layout.
-    return np.ascontiguousarray(kernels_ck.T, dtype=np.float32)
+    # Tap j weighs x[n + center - j], an offset of t = center - j samples, so the ideal delay gives sinc(t + shift).
+    offsets = (n_taps - 1) // 2 - np.arange(n_taps, dtype=np.float64)
+    shifts = np.asarray(shift_samples, dtype=np.float64)[:, np.newaxis]
+    taps = np.sinc(offsets + shifts) * np.kaiser(n_taps, beta=beta)
+    # Unity DC gain: the windowed sinc's sum varies with the shift (0.9975 to 1.0 on Neuropixels shifts), which
+    # would band the probe's amplitudes by ADC group.
+    taps /= taps.sum(axis=1, keepdims=True)
+    return taps
 
 
 try:

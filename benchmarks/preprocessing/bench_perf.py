@@ -7,7 +7,7 @@ so the numbers are reproducible without external ephys data:
 2. CommonReferenceRecording median: n_workers=1 vs n_workers=16
 3. PhaseShiftRecording: method="fft" vs method="fir" (same parent dtype)
 4. PhaseShiftRecording int16-native: method="fft" int16 vs
-   method="fir" + output_dtype=float32
+   method="fir" + dtype=float32
 
 Measured on a 24-core x86_64 host with 1M x 384 chunks (SI 0.103 dev,
 numpy 2.1, scipy 1.14, numba 0.60, full get_traces() path end-to-end):
@@ -67,13 +67,13 @@ def _make_aind_pipeline(source_rec, method, preserve_f32=False):
         then casts back to int16 at its output.  Matches the saved provenance
         in AIND analyzer zarrs.
       - f32 propagation (preserve_f32=True): PS uses method=fir with
-        output_dtype=float32 (when method allows), HP and CMR set dtype=float32.
+        dtype=float32 (when method allows), HP and CMR set dtype=float32.
         Avoids the per-stage round-back-to-int16.  Matches what a
         mipmap-zarr-style consumer could do if it rewrote the provenance.
     """
     if preserve_f32:
-        ps_output_dtype = np.float32 if method == "fir" else None
-        ps = PhaseShiftRecording(source_rec, method=method, output_dtype=ps_output_dtype)
+        ps_dtype = np.float32 if method == "fir" else None
+        ps = PhaseShiftRecording(source_rec, method=method, dtype=ps_dtype)
         hp = HighpassFilterRecording(ps, freq_min=300.0, dtype=np.float32)
         cmr = CommonReferenceRecording(hp, dtype=np.float32)
     else:
@@ -146,7 +146,7 @@ def bench_phase_shift_int16():
     print("=== PhaseShift int16-native (1M x 384 int16) ===")
     rec = _make_recording(dtype=np.int16)
     fft_rec = PhaseShiftRecording(rec, method="fft")  # stock: int16 in -> int16 out
-    fir_rec = PhaseShiftRecording(rec, method="fir", output_dtype=np.float32)
+    fir_rec = PhaseShiftRecording(rec, method="fir", dtype=np.float32)
     t_fft = _time_get_traces(fft_rec)
     t_fir = _time_get_traces(fir_rec)
     print(f'  method="fft" (int16 out):    {t_fft:6.2f} s')
@@ -185,7 +185,7 @@ def bench_pipeline_mipmap_f32():
 
     A variant where the consumer rewrites the AIND provenance to set
     dtype=float32 on HP and CMR (or builds a fresh chain from scratch),
-    and PS uses output_dtype=float32.  Each stage skips the round-back-to-int16
+    and PS uses dtype=float32.  Each stage skips the round-back-to-int16
     step.  Output is float32 — different contract than AIND-preserving but
     what a viewer / mipmap builder that already consumes float32 downstream
     could use.
