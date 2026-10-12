@@ -500,7 +500,9 @@ class BonsaiOnixArrowRecordingSegment(BaseRecordingSegment):
         Returns:
             SampleIndex : Number of samples in the signal block
         """
-        return 18_000_000
+        # arrow has fast access to number of samples per batch
+        num_samples = sum(self._reader.get_batch(i).num_rows for i in range(self._reader.num_record_batches))
+        return num_samples
 
     def get_traces(
         self,
