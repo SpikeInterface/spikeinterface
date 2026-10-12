@@ -188,7 +188,7 @@ def test_resample_rational_grid():
         approximate = not np.isclose(achieved_rate, requested_rate, rtol=1e-12, atol=0)
         for explicit_times in [False, True]:
             if explicit_times:
-                parent.set_times(parent.get_times(), with_warning=False)
+                parent.set_times(parent.get_times())
             with pytest.warns(UserWarning, match="achieves") if approximate else nullcontext():
                 processed = resample(parent, requested_rate, max_denominator=max_denominator)
             assert processed.get_sampling_frequency() == pytest.approx(achieved_rate, rel=1e-15)
@@ -207,7 +207,7 @@ def test_resample_rational_grid():
 def test_resample_short_sections():
     for rate in [100, 1500]:
         parent = NumpyRecording(np.array([[1.0], [9.0]]), 1000)
-        parent.set_times(np.array([10.0, 20.0]), with_warning=False)
+        parent.set_times(np.array([10.0, 20.0]))
         processed = resample(parent, rate, gap_tolerance_ms=0)
         sections = [resample(parent.frame_slice(i, i + 1), rate) for i in range(2)]
         expected = np.concatenate([section.get_traces() for section in sections])

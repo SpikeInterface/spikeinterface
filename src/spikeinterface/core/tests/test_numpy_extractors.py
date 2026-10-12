@@ -90,6 +90,22 @@ def test_NumpySorting(setup_NumpyRecording):
     sorting = NumpySorting.from_sorting(other_sorting)
     # print(sorting)
 
+    # Verify recording segment offsets and shifted sorting times survive conversion to NumpySorting.
+    recording = generate_recording(num_channels=2, durations=[1.0, 1.0])
+    recording.shift_times(shift=5.0, segment_index=0)
+    recording.shift_times(shift=120.0, segment_index=1)
+    other_sorting.register_recording(recording)
+    other_sorting.shift_times(2.0)
+    sorting_with_times = NumpySorting.from_sorting(other_sorting)
+
+    for segment_index in range(other_sorting.get_num_segments()):
+        assert sorting_with_times.get_start_time(segment_index) == other_sorting.get_start_time(segment_index)
+        for unit_id in other_sorting.unit_ids:
+            assert np.array_equal(
+                sorting_with_times.get_unit_spike_train(unit_id, segment_index=segment_index, return_times=True),
+                other_sorting.get_unit_spike_train(unit_id, segment_index=segment_index, return_times=True),
+            )
+
     # construct back from kwargs keep the same array
     sorting2 = load(sorting.to_dict())
     assert np.shares_memory(sorting2._cached_spike_vector, sorting._cached_spike_vector)
