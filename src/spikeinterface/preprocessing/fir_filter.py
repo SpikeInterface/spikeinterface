@@ -38,7 +38,7 @@ def _overlap_save_fft_length(signal_length, num_taps):
     """FFT length minimising FFT work per output sample, as ``scipy.signal.oaconvolve`` chooses it.
 
     Unlike ``oaconvolve``, the length is rounded up to one that is fast for a real FFT: lengths with a factor of 7
-    or 11 are fast for a complex FFT but up to 1.5 times slower for ``rfft``.
+    or 11 are fast for a complex FFT but slower for ``rfft``.
     """
     import scipy.fft
     from scipy.special import lambertw
