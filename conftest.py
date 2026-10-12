@@ -32,7 +32,7 @@ def pytest_addoption(parser):
 
 def pytest_configure(config):
     mp_context = config.getoption("--mp-context")
-    if mp_context is not None:
+    if mp_context is not None and mp_context.lower() != "none":
         import multiprocessing
         import spikeinterface.core.globals as si_globals
 
@@ -57,7 +57,7 @@ def pytest_collection_modifyitems(config, items):
         if item.get_closest_marker("requires_zarr_write") and not _is_zarr_write_supported():
             item.add_marker(pytest.mark.skip(reason="Writing to zarr is not supported yet with zarr>=3"))
 
-        if config.getoption("--mp-context") is not None and item.name == "test_global_job_kwargs":
+        if config.getoption("--mp-context") is not None and config.getoption("--mp-context").lower() != "none" and item.name == "test_global_job_kwargs":
             item.add_marker(pytest.mark.skip(reason="--mp-context changes the default job kwargs"))
 
         try:

@@ -184,7 +184,7 @@ def test_ChunkExecutor():
         job_name="job_name",
     )
     processor.run()
-    num_chunks = len(divide_time_series_into_chunks(recording, processor.chunk_size))
+    num_chunks = len(divide_time_series_into_chunks(recording, processor.chunk_size, None))
 
     assert gathering_func2.pos == num_chunks
 
