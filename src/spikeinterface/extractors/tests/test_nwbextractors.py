@@ -1560,6 +1560,15 @@ def test_read_nwb_sorting_analyzer_peak_channel_group_mapping(tmp_path):
         ],
         "quality_metrics": [{"source": "units_columns", "columns": {"isi_violations_ratio": "isi_violations"}}],
     }
+    # the units span two groups, so one has to be named, and it has to exist
+    read_kwargs = dict(electrical_series_path=None, sampling_frequency=30000.0, recording_duration=100.0)
+    with pytest.raises(ValueError, match="span 2 electrode groups"):
+        read_nwb_sorting_analyzer(str(path), nwb_to_analyzer_mapping=allen_mapping, compute_extra=None, **read_kwargs)
+    with pytest.raises(ValueError, match="No units in group 'probeX'"):
+        read_nwb_sorting_analyzer(
+            str(path), group_name="probeX", nwb_to_analyzer_mapping=allen_mapping, compute_extra=None, **read_kwargs
+        )
+
     analyzer = read_nwb_sorting_analyzer(
         str(path),
         electrical_series_path=None,

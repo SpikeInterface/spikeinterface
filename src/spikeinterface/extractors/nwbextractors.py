@@ -2305,19 +2305,23 @@ def read_nwb_sorting_analyzer(
         # here we assume all groups are the same for each unit, so we just check one.
         if "group_name" in electrodes_table.columns:
             group_names = np.array([electrodes_table.iloc[int(ei[0])]["group_name"] for ei in electrodes_indices])
-            if len(np.unique(group_names)) > 1:
-                if group_name is None:
-                    raise Exception(
-                        f"More than one group, use group_name option to select units. Available groups: {np.unique(group_names)}"
-                    )
-                else:
-                    unit_mask = group_names == group_name
-                    if verbose:
-                        print(f"Selecting {sum(unit_mask)} / {len(units)} units from {group_name}")
-                    sorting = sorting.select_units(unit_ids=sorting.unit_ids[unit_mask])
-                    units = units.loc[units.index[unit_mask]]
-                    per_unit_spike_counts = per_unit_spike_counts[unit_mask]
-                    electrodes_indices = [region for region, keep in zip(electrodes_indices, unit_mask) if keep]
+            unique_group_names = np.unique(group_names)
+            available_groups = ", ".join(repr(str(name)) for name in unique_group_names)
+            if group_name is None and len(unique_group_names) > 1:
+                raise ValueError(
+                    f"The units span {len(unique_group_names)} electrode groups. Pass `group_name` to load one: "
+                    f"{available_groups}"
+                )
+            if group_name is not None and group_name not in unique_group_names:
+                raise ValueError(f"No units in group {group_name!r}. The units' groups are: {available_groups}")
+            if group_name is not None and len(unique_group_names) > 1:
+                unit_mask = group_names == group_name
+                if verbose:
+                    print(f"Selecting {sum(unit_mask)} / {len(units)} units from {group_name}")
+                sorting = sorting.select_units(unit_ids=sorting.unit_ids[unit_mask])
+                units = units.loc[units.index[unit_mask]]
+                per_unit_spike_counts = per_unit_spike_counts[unit_mask]
+                electrodes_indices = [region for region, keep in zip(electrodes_indices, unit_mask) if keep]
 
     # Every scalar column not claimed as a quality metric becomes a sorting property (labels like
     # cluster_uuid, and any non-canonical numeric column). Properties show up in the GUI's unit table
