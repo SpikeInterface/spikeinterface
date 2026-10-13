@@ -1,11 +1,8 @@
 """Exact per-row median of a ``(T, C)`` array, for common median referencing.
 
 ``np.median(axis=1)`` partitions each row with data-dependent branches, mispredicting about one per value.
-Integer rows are counted into a histogram over a window around the previous row's median, since filtered
-integer traces repeat few values and adjacent samples have nearly the same median. float32 rows narrow a value
-interval around the two middle ranks with branchless counting passes that vectorise over the row, seeded at the
-row mean and stepped by interpolating the row's empirical CDF, then sort the few values left in the interval.
-Both equal ``np.median``, including for float rows holding NaN or inf.
+The numba kernels in ``_row_median_numba`` replace most of those branches with counting: integer rows go through
+a histogram, float32 rows through counting passes that vectorise. That module describes both algorithms. Both equal ``np.median``, including for float rows holding NaN or inf.
 """
 
 from __future__ import annotations
