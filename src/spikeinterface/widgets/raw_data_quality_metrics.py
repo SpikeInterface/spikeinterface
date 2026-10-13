@@ -9,6 +9,8 @@ class RawDataQualityMetricsWidget(BaseWidget):
     """
     Plot rolling RMS and PSD, with one column per recording type.
 
+    When rolling RMS was not computed, show only its sampled median summary and PSD.
+
     Parameters
     ----------
     results : dict
@@ -40,7 +42,7 @@ class RawDataQualityMetricsWidget(BaseWidget):
 
             channel_ids = recording.get_channel_ids()[channel_indices]
 
-            rolling = results["rolling_rms"][recording_name]
+            rolling = results["rolling_rms"].get(recording_name)
 
             title = display_names.get(recording_name, recording_name)
             if len(summary["rms_median"]) > 1:
@@ -49,8 +51,8 @@ class RawDataQualityMetricsWidget(BaseWidget):
             # The saved RMS medians are per channel; summarize them across channels for the title.
             recording_data[recording_name] = dict(
                 title=title,
-                rms=rolling["rms"][segment_index][:, channel_indices],
-                times=rolling["times"][segment_index],
+                rms=rolling["rms"][segment_index][:, channel_indices] if rolling is not None else None,
+                times=rolling["times"][segment_index] if rolling is not None else None,
                 psd=summary["psd"][segment_index][:, channel_indices],
                 freqs=summary["freqs"][segment_index],
                 median_channel_rms=np.median(summary["rms_median"][segment_index]),
@@ -97,9 +99,15 @@ class RawDataQualityMetricsWidget(BaseWidget):
             )
             psd_axis.set_title("PSD", fontsize=15)
 
-            rms_image = self._plot_map(rms_axis, recording_data["times"], recording_data["rms"])
-            rms_axis.set_xlabel("Time (s)")
-            self.figure.colorbar(rms_image, ax=rms_axis, label="RMS (µV)")
+            if recording_data["rms"] is not None:
+                rms_image = self._plot_map(rms_axis, recording_data["times"], recording_data["rms"])
+                rms_axis.set_xlabel("Time (s)")
+                self.figure.colorbar(rms_image, ax=rms_axis, label="RMS (µV)")
+            else:
+                rms_axis.set_axis_off()
+                rms_axis.text(
+                    0.5, 0.5, "Rolling RMS not computed", transform=rms_axis.transAxes, ha="center", va="center"
+                )
 
             # Zero power cannot be shown on a log scale; keep all-zero data linear.
             psd = recording_data["psd"]

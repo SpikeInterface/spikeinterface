@@ -20,6 +20,7 @@ def raw_data_quality_metrics(
     num_chunks: int = 30,
     rolling_rms_window_size_s: float = 3.0,
     folder: Path | str | None = None,
+    compute_raw_rolling_rms: bool = False,
     verbose: bool = False,
     **job_kwargs,
 ):
@@ -68,6 +69,8 @@ def raw_data_quality_metrics(
         has one row per channel for median RMS and a separate ``all_channels`` row
         for the 10th and 90th percentiles. Multi-segment columns have a segment suffix.
         Array-valued results remain in the return value.
+    compute_raw_rolling_rms:
+        If  `True`, the rolling RMS will be output for the raw dataset.
     verbose :
         Whether to print the progress of the quality metric computation.
     **job_kwargs : dict
@@ -149,11 +152,15 @@ def raw_data_quality_metrics(
             recording, sparse_slices_for_recording, verbose, sparse_job_kwargs
         )
 
+        all_chunk_results[recording_name] = chunk_results
+
+        if recording_name == "raw_ap_recording" and not compute_raw_rolling_rms:
+            continue
+
         # Compute the RMS over the entire recording in blocks
         # of size `rolling_rms_window_size_s`.
         rolling_rms = _compute_rolling_rms(recording, verbose, rolling_job_kwargs)
 
-        all_chunk_results[recording_name] = chunk_results
         all_rolling_rms[recording_name] = rolling_rms
 
     if folder is not None:
