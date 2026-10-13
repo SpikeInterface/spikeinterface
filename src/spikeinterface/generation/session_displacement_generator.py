@@ -96,6 +96,7 @@ def generate_session_displacement_recordings(
         when the probe shifts new units from outside the original recorded
         region are shifted into the recording. When `True`, new units
         are shifted into the generated recording.
+        Extra units extend only in the y-direction and by a maximum shift of one probe length.
     generate_sorting_kwargs : dict
         Only `firing_rates` and `refractory_period_ms` are expected if passed.
 
@@ -454,8 +455,9 @@ def _update_kwargs_for_extended_units(
 
     # Set unit locations above and below the probe and extend
     # the `unit_locations` array.
+    probe_height = np.ptp(channel_locations[:, 1])
     channel_locations_extend_top = channel_locations.copy()
-    channel_locations_extend_top[:, 1] -= np.max(channel_locations[:, 1])
+    channel_locations_extend_top[:, 1] -= probe_height
 
     extend_top_locations = generate_unit_locations(
         num_units,
@@ -465,7 +467,7 @@ def _update_kwargs_for_extended_units(
     )
 
     channel_locations_extend_bottom = channel_locations.copy()
-    channel_locations_extend_bottom[:, 1] += np.max(channel_locations[:, 1])
+    channel_locations_extend_bottom[:, 1] += probe_height
 
     extend_bottom_locations = generate_unit_locations(
         num_units,
