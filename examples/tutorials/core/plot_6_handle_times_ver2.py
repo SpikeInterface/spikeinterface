@@ -52,7 +52,7 @@ For a refresher, review the explanation below.
 import spikeinterface.full as si
 
 # Generate a recording for this example
-recording, sorting = si.generate_ground_truth_recording(durations=[10])
+recording, sorting = si.generate_ground_truth_recording(durations=[10], seed=0)
 
 # Print recording details
 print("Number of samples:", recording.get_num_samples())
@@ -129,10 +129,10 @@ print(recording.get_times())
 # SpikeInterface provides methods to convert between time points and sample indices.
 
 # %%
-sample_index = recording.time_to_sample_index(120)
+sample_index = recording.time_to_sample_index(58.0)
 print("Sample index:", sample_index)
 
-timepoint = recording.sample_index_to_time(125000)
+timepoint = recording.sample_index_to_time(50000)
 print("Time (s):", timepoint)
 
 
@@ -158,7 +158,7 @@ print("Total duration (s):", recording_segments.get_total_duration())
 # Sorting Times
 # -------------
 # The sorting can also have times attached to it. By default, it will inherit the
-# times of the attached recording. However, a sorting object cam have its own unique time stamps.
+# times of the attached recording. However, a sorting object can have its own time offset.
 #
 # A sorting has its own time offset: ``sorting.shift_times()`` shifts spike times
 # in seconds without changing sample indices or the recording. Shifting the recording
