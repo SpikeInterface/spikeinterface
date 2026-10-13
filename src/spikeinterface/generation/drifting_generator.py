@@ -328,6 +328,8 @@ def calculate_displacement_unit_factor(
     The projections of the gradient vector (x, y)
     and unit locations (x, y) are normalised to range between
     0 and 1 (i.e. based on relative location to the gradient).
+    When all projections are equal, including for a single unit,
+    all factors are 1 and the displacement is rigid.
 
     Parameters
     ----------
@@ -354,8 +356,11 @@ def calculate_displacement_unit_factor(
     gradient_direction = drift_stop_um - drift_start_um
     gradient_direction /= np.linalg.norm(gradient_direction)
 
-    proj = np.dot(unit_locations, gradient_direction).squeeze()
-    factors = (proj - np.min(proj)) / (np.max(proj) - np.min(proj))
+    proj = np.dot(unit_locations, gradient_direction)
+    projection_range = np.max(proj) - np.min(proj)
+    if projection_range == 0:
+        return np.ones_like(proj)
+    factors = (proj - np.min(proj)) / projection_range
 
     if non_rigid_gradient < 0:  # reverse
         factors = 1 - factors
