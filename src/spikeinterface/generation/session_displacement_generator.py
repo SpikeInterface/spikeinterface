@@ -180,7 +180,7 @@ def generate_session_displacement_recordings(
             )
         )
 
-        # Start looping over parameters, creating recordings shifted
+    # Start looping over parameters, creating recordings shifted
     # and scaled as required
     extra_outputs_dict = {
         "unit_locations": [],
@@ -450,7 +450,7 @@ def _update_kwargs_for_extended_units(
     the density of neurons above / below the probe (it is not random).
     """
     seed_top = seed + 1 if seed is not None else None
-    seed_bottom = seed - 1 if seed is not None else None
+    seed_bottom = seed + 2 if seed is not None else None
 
     # Set unit locations above and below the probe and extend
     # the `unit_locations` array.

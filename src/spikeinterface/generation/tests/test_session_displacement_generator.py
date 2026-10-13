@@ -422,6 +422,8 @@ class TestSessionDisplacementGenerator:
         is on and that the kwargs for the central set of units match those
         as when `shift_units_outside_probe` is `False`.
         """
+        # Zero is a valid seed, including for the additional units.
+        options["kwargs"]["seed"] = 0
         num_sessions = len(options["kwargs"]["recording_durations"])
         _, _, baseline_outputs = generate_session_displacement_recordings(
             **options["kwargs"],
