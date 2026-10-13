@@ -79,8 +79,8 @@ These tutorials focus on the :py:mod:`spikeinterface.core` module.
 
    .. grid-item-card:: Handle time information
       :link-type: ref
-      :link: sphx_glr_tutorials_core_plot_6_handle_times.py
-      :img-top: /tutorials/core/images/thumb/sphx_glr_plot_6_handle_times_thumb.png
+      :link: sphx_glr_tutorials_core_plot_6_handle_times_ver2.py
+      :img-top: /tutorials/core/images/thumb/sphx_glr_plot_6_handle_times_ver2_thumb.png
       :img-alt: Handle time information
       :class-card: gallery-card
       :text-align: center

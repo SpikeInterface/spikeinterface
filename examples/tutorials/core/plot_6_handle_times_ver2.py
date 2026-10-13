@@ -36,7 +36,7 @@ For a refresher, review the explanation below.
 #       :align: center
 #
 #    In real-world applications, signals are sampled much faster. For example, Neuropixels samples at
-#    30 kHz (30,000 samples per second) with a sampling step of :math:`\frac{1}{30000} = 0.0003` seconds.
+#    30 kHz (30,000 samples per second) with a sampling step of :math:`\frac{1}{30000} \approx 0.0000333` seconds.
 #
 #    Computers typically represent time as a long array of numbers, referred to here as a
 #    'time array' (e.g., ``[0, 0.25, 0.5, 0.75, ...]``).
@@ -55,65 +55,73 @@ import spikeinterface.full as si
 recording, sorting = si.generate_ground_truth_recording(durations=[10])
 
 # Print recording details
-print(f"Number of samples: {recording.get_num_samples()}")
-print(f"Sampling frequency: {recording.get_sampling_frequency()}")
-print(f"Time vector: {recording.get_times()}")
+print("Number of samples:", recording.get_num_samples())
+print("Sampling frequency:", recording.get_sampling_frequency())
+print("Time vector:", recording.get_times())
 
 # %%
+# Retrieving information about times
+# ----------------------------------
+#
 # In this example, no time metadata was associated with the recording, so a default time array was
 # generated based on the number of samples and sampling frequency. The time array starts at 0 seconds
-# and continues to 10 seconds (10 * `sampling frequency` samples) in steps of the sampling step size,
-# :math:`\dfrac{1}{\text{sampling frequency}}`.
+# and continues to :math:`10 - 1/f_s` seconds (where :math:`f_s` is the sampling frequency),
+# in steps of :math:`1/f_s`. The recording duration is 10 seconds.
+#
+# There are a number of helper functions we can use to get information about the times,
+# including:
+
+print("Time vector (s):", recording.get_times())
+print("Start time (s):", recording.get_start_time())
+print("End time (s):", recording.get_end_time())
+print("Duration (s):", recording.get_duration())
 
 # %%
 # Shifting the Start Time
 # -----------------------
-# You may want to change the start time of your recording. This can be done using the `shift_start_time()`
-# method, which adjusts the first time point of the recording.
+# You may want to change the start time of your recording. This can be done using the `shift_times()`
+# method, which adds an offset in seconds to all timestamps in place.
 
 # %%
-recording.shift_start_time(100.15)
+recording.shift_times(100.15)
 print(recording.get_times())  # Time now starts at 100.15 seconds
 
-recording.shift_start_time(-50.15)
+recording.shift_times(-50.15)
 print(recording.get_times())  # Time now starts at 50 seconds
-
-# %%
-# Setting Time Vector Changes Spike Times
-# ---------------------------------------
-# If we use the sorting object with the default times, the spike times will reflect those times.
-# You can register the recording to change the spike times accordingly.
-
-# %%
-unit_id_to_show = sorting.unit_ids[0]
-spike_times_orig = sorting.get_unit_spike_train(unit_id_to_show, return_times=True)
-
-# Register the recording to adjust spike times
-sorting.register_recording(recording)
-
-spike_times_new = sorting.get_unit_spike_train(unit_id_to_show, return_times=True)
 
 # %%
 # Manually Setting a Time Vector
 # ------------------------------
+#
 # It is also possible to manually set a time vector on your recording. This can be useful if you
-# have true sample timestamps that were not loaded from metadata.
+# have true sample timestamps that were not loaded from metadata. The benefit of the full time
+# vector is it can include small sampling rate drifts that are not captured when computing
+# the time from number of samples and sampling frequency alone.
 
 # %%
 import numpy as np
 
-times = np.linspace(0, 10, recording.get_num_samples())
-offset = np.cumsum(np.linspace(0, 0.1, recording.get_num_samples()))
-true_times = times + offset
+fs = recording.get_sampling_frequency()
+
+times = 50 + np.arange(recording.get_num_samples()) / fs  # Starts at 50 seconds
+drift = np.cumsum(np.linspace(0, 0.001 / fs, recording.get_num_samples()))
+
+true_times = times + drift
 
 recording.set_times(true_times)
 print(recording.get_times())
 
 # %%
+# Use ``reset_times()`` to discard explicit timestamps and start-time offsets in memory.
+# Times are regenerated from the sampling frequency, starting at zero for every segment;
+# timestamp files on disk are unchanged.
+
+# %%
 # .. warning::
 #
-#    For regularly spaced time vectors, it is better to shift the default times rather
-#    than set your own time vector to save memory.
+#    If your time vector is regularly sampled at the recording's sampling frequency,
+#    it is better to shift the default times rather than set your own time vector,
+#    to save memory.
 
 # %%
 # Retrieving Timepoints from Sample Index
@@ -121,11 +129,61 @@ print(recording.get_times())
 # SpikeInterface provides methods to convert between time points and sample indices.
 
 # %%
-sample_index = recording.time_to_sample_index(5.0)
-print(sample_index)
+sample_index = recording.time_to_sample_index(120)
+print("Sample index:", sample_index)
 
 timepoint = recording.sample_index_to_time(125000)
-print(timepoint)
+print("Time (s):", timepoint)
+
+
+# %%
+# Multi-segment times
+# -------------------
+# Each segment has its own timestamps and start time. Specify ``segment_index``
+# when retrieving times or durations from a multi-segment recording.
+
+recording_segments = si.generate_recording(durations=[10, 20], t_starts=[0, 20])
+
+print("First segment start (s):", recording_segments.get_start_time(segment_index=0))
+print("Second segment start (s):", recording_segments.get_start_time(segment_index=1))
+print("First segment duration (s):", recording_segments.get_duration(segment_index=0))
+
+# %%
+# ``get_total_duration()`` sums the segment durations, excluding gaps between segments.
+
+print("Total duration (s):", recording_segments.get_total_duration())
+
+
+# %%
+# Sorting Times
+# -------------
+# The sorting can also have times attached to it. By default, it will inherit the
+# times of the attached recording. However, a sorting object cam have its own unique time stamps.
+#
+# A sorting has its own time offset: ``sorting.shift_times()`` shifts spike times
+# in seconds without changing sample indices or the recording. Shifting the recording
+# after registration does not automatically apply the same shift to the sorting.
+
+sorting.register_recording(recording)
+
+sorting.shift_times(1.0)
+
+print("Sorting start time (s):", sorting.get_start_time())
+print("Recording start time (s):", recording.get_start_time())
+
+# %%
+# Spike trains are returned as sample indices by default. Using ``return_times=True``
+# returns spike times in seconds. Here we show the first five spike times.
+
+unit_id_to_show = sorting.unit_ids[0]
+print(sorting.get_unit_spike_train(unit_id_to_show, return_times=True)[:5])
+
+# %%
+# Shifting the sorting back by 51 seconds moves its start time to zero.
+# The same five spikes now have timestamps 51 seconds earlier.
+
+sorting.shift_times(-51.0)
+print(sorting.get_unit_spike_train(unit_id_to_show, return_times=True)[:5])
 
 # %%
 # Aligning Events Across Timestreams
