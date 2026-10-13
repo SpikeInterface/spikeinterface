@@ -330,8 +330,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
         Compute the PCs on waveforms extacted within the by ComputeWaveforms.
         Projections are computed only on the waveforms sampled by the SortingAnalyzer.
         """
-        if self.sorting_analyzer._lazy:
-            raise RuntimeError("PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode.")
         p = self.params
         mode = p["mode"]
 
