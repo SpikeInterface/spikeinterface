@@ -1964,6 +1964,49 @@ def _mapping_structural_colnames(mapping):
     return structural
 
 
+def _mapping_waveform_colnames(mapping):
+    """The Units columns that the mapping reads as waveforms. They are read apart from the rest of the table,
+    only for the selected units (see `_read_unit_rows`)."""
+    waveform_colnames = set()
+    for place in mapping.get("templates") or []:
+        if place.get("source") == "units_columns":
+            waveform_colnames.update(place.get(role) for role in ("mean", "std") if place.get(role))
+    return waveform_colnames
+
+
+def _read_unit_rows(units_table, column, unit_rows):
+    """Read the values of a Units column for the units at the (sorted) positions `unit_rows` only.
+
+    Works on a pynwb table and on an h5py/zarr group, for regular and ragged columns, and returns one array per
+    unit. It reads the range of rows from the first to the last selected unit in one request: over a stream a
+    few large reads are much faster than many small ones, and the selected units are usually stored together
+    (e.g. the units of one probe). At worst the range is the whole column, which is what reading it all costs.
+    """
+    column_object = units_table[column]
+    if hasattr(units_table, "colnames"):  # pynwb: a ragged column is its VectorIndex
+        ragged = hasattr(column_object, "target")
+        data = column_object.target.data if ragged else column_object.data
+        index = column_object.data if ragged else None
+    else:  # h5py or zarr group
+        data = column_object
+        index = units_table[f"{column}_index"] if f"{column}_index" in units_table else None
+
+    unit_rows = np.asarray(unit_rows)
+    if unit_rows.size == 0:
+        return []
+    first, last = int(unit_rows[0]), int(unit_rows[-1])
+    if index is None:
+        values = np.asarray(data[first : last + 1])
+        return [values[row - first] for row in unit_rows]
+
+    # ragged: unit u holds the data rows stops[u - 1]:stops[u]
+    stops = np.asarray(index[: last + 1], dtype="int64")
+    starts = np.concatenate(([0], stops[:-1]))
+    span_start = int(starts[first])
+    values = np.asarray(data[span_start : int(stops[last])])
+    return [values[starts[row] - span_start : stops[row] - span_start] for row in unit_rows]
+
+
 def _resolve_nwb_to_analyzer_mapping(mapping, scalar_colnames, all_colnames):
     """Resolve the Units-table places of the mapping against the columns of the Units table.
 
@@ -2228,10 +2271,16 @@ def read_nwb_sorting_analyzer(
         colnames = list(units_table.colnames)
         # ragged columns (per-spike data) are excluded so to_dataframe never reads them; electrodes is
         # ragged too but is the per-unit region needed for sparsity
-        # the structural columns (electrodes region, waveforms) are kept even when ragged
+        # the structural columns (electrodes region, waveforms) are kept even when ragged, and the waveforms
+        # are read later, only for the selected units
         structural = _mapping_structural_colnames(mapping)
-        ragged_colnames = {c for c in colnames if c not in structural and isinstance(units_table[c], VectorIndex)}
-        units = units_table.to_dataframe(index=True, exclude=ragged_colnames)
+        waveform_colnames = _mapping_waveform_colnames(mapping)
+        excluded_colnames = {
+            c
+            for c in colnames
+            if c in waveform_colnames or (c not in structural and isinstance(units_table[c], VectorIndex))
+        }
+        units = units_table.to_dataframe(index=True, exclude=excluded_colnames)
         metric_colnames = [c for c in units.columns if c not in structural and units[c].dtype.kind in "fiu"]
         label_colnames = [
             c
@@ -2270,16 +2319,21 @@ def read_nwb_sorting_analyzer(
         electrodes_column = unit_electrodes["electrodes"]
 
     # the unit and alignment attributes of the templates column (read before a group selection replaces `sorting`)
+    units_table_object = sorting.units_table
     templates_attributes = {}
     if templates_column is not None:
-        templates_attributes = _column_attributes(sorting.units_table, templates_column)
+        templates_attributes = _column_attributes(units_table_object, templates_column)
 
     if not use_pynwb:
-        # deliberate read: only the resolved template column(s), the electrodes region, and the scalar
-        # columns that become metrics or properties are materialized; ragged/per-spike columns are not.
-        needed = [c for c in (templates_column, templates_std_column, electrodes_column) if c and c in colnames]
+        # deliberate read: only the electrodes region and the scalar columns that become metrics or properties
+        # are materialized here; ragged/per-spike columns are not, and the waveforms are read later, only for
+        # the selected units
+        needed = [electrodes_column] if electrodes_column in colnames else []
         needed += scalar_colnames
         units = _create_df_from_nwb_table(units_group, columns=needed)
+
+    # positions in the Units table of the units that are loaded, narrowed by a group selection below
+    unit_rows = np.arange(len(units))
 
     if use_pynwb:
         electrodes_table = sorting._reader.nwbfile.electrodes.to_dataframe(index=True)
@@ -2316,6 +2370,7 @@ def read_nwb_sorting_analyzer(
                     print(f"Selecting {sum(unit_mask)} / {len(units)} units from {group_name}")
                 sorting = sorting.select_units(unit_ids=sorting.unit_ids[unit_mask])
                 units = units.loc[units.index[unit_mask]]
+                unit_rows = unit_rows[unit_mask]
                 per_unit_spike_counts = per_unit_spike_counts[unit_mask]
                 electrodes_indices = [region for region, keep in zip(electrodes_indices, unit_mask) if keep]
 
@@ -2403,15 +2458,19 @@ def read_nwb_sorting_analyzer(
     num_channels = len(analyzer_channel_ids)
 
     # templates (from the resolved templates column), and the required random_spikes extension
-    if templates_column is not None and templates_column in units and unit_local_channels is not None:
+    if templates_column is not None and unit_local_channels is not None:
         # random_spikes only needs the total spike count of the selected units, read above
         total_num_spikes = int(per_unit_spike_counts.sum())
         _make_random_spikes(analyzer, total_num_spikes)
+        waveform_mean_rows = _read_unit_rows(units_table_object, templates_column, unit_rows)
+        waveform_sd_rows = None
+        if templates_std_column is not None:
+            waveform_sd_rows = _read_unit_rows(units_table_object, templates_std_column, unit_rows)
         _make_templates(
             analyzer,
-            units,
             templates_column,
-            templates_std_column,
+            waveform_mean_rows,
+            waveform_sd_rows,
             unit_local_channels,
             num_channels,
             rescale_to_uV=rescale_templates_to_uV,
@@ -2577,20 +2636,21 @@ def _infer_template_scale_to_uV(dense_templates):
 
 def _make_templates(
     analyzer,
-    units,
     templates_column,
-    templates_std_column,
+    waveform_mean_rows,
+    waveform_sd_rows,
     unit_local_channels,
     num_channels,
     rescale_to_uV=False,
     waveform_unit=None,
     time_before_peak_ms=None,
 ):
-    """Attach the `templates` extension from the resolved templates column, scattering each unit's
-    sparse waveform block onto its true channel positions. `waveform_unit` and `time_before_peak_ms` are the
-    `unit` and `time_before_peak_in_ms` attributes of the templates column, when it has them."""
+    """Attach the `templates` extension from the waveforms of the resolved templates column (and its std
+    column, when there is one), one array per unit, scattering each unit's sparse waveform block onto its true
+    channel positions. `waveform_unit` and `time_before_peak_ms` are the `unit` and `time_before_peak_in_ms`
+    attributes of the templates column, when it has them."""
 
-    waveform_mean = np.array([np.asarray(t, dtype="float") for t in units[templates_column].values])
+    waveform_mean = np.array([np.asarray(t, dtype="float") for t in waveform_mean_rows])
     # The schema also allows one waveform per unit with no electrode axis (e.g. DANDI 000363). It belongs to
     # the unit's electrode only when the region has exactly one, otherwise we cannot tell which one it is.
     single_channel = waveform_mean.ndim == 2
@@ -2650,8 +2710,8 @@ def _make_templates(
     # Only expose the "std" operator when the file actually stores a std column (resolved). Fabricating a
     # zero std would falsely imply the unit's spikes have no waveform variability, so when it is absent we
     # declare only "average" rather than inventing data.
-    if templates_std_column is not None and templates_std_column in units.columns:
-        waveform_sd = np.array([np.asarray(t, dtype="float") for t in units[templates_std_column].values])
+    if waveform_sd_rows is not None:
+        waveform_sd = np.array([np.asarray(t, dtype="float") for t in waveform_sd_rows])
         if single_channel:
             waveform_sd = waveform_sd[:, :, np.newaxis]
         if electrodes_by_samples:
