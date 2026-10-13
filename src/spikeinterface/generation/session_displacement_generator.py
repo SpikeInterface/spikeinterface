@@ -13,7 +13,7 @@ from spikeinterface.core.generate import (
 import numpy as np
 from spikeinterface.generation.noise_tools import generate_noise
 from spikeinterface.core.generate import setup_inject_templates_recording, _ensure_firing_rates
-from spikeinterface.core import InjectTemplatesRecording
+from spikeinterface.core import InjectTemplatesRecording, ms_to_samples
 
 
 def generate_session_displacement_recordings(
@@ -248,7 +248,7 @@ def generate_session_displacement_recordings(
         # Bring it all together in a `InjectTemplatesRecording` and
         # propagate all relevant metadata to the recording.
         ms_before = fixed_generate_templates_kwargs["ms_before"]
-        nbefore = int(sampling_frequency * ms_before / 1000.0)
+        nbefore = ms_to_samples(ms_before, sampling_frequency)
 
         recording = InjectTemplatesRecording(
             sorting=sorting,
