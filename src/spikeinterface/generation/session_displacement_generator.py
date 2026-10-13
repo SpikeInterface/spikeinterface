@@ -189,6 +189,7 @@ def generate_session_displacement_recordings(
     }
     output_recordings = []
     output_sortings = []
+    amplitude_scaling_order = None
 
     for rec_idx, (shift, duration) in enumerate(zip(recording_shifts, recording_durations)):
 
@@ -234,16 +235,15 @@ def generate_session_displacement_recordings(
 
         if recording_amplitude_scalings is not None:
 
-            first_rec_templates = (
-                templates_array_moved if rec_idx == 0 else extra_outputs_dict["templates_array_moved"][0]
-            )
-            _amplitude_scale_templates_in_place(
-                first_rec_templates,
-                templates_array_moved,
-                recording_amplitude_scalings,
-                fixed_generate_sorting_kwargs,
-                rec_idx,
-            )
+            if rec_idx == 0:
+                amplitude_scaling_order = _get_amplitude_scaling_order(
+                    templates_array_moved,
+                    fixed_generate_sorting_kwargs["firing_rates"],
+                    recording_amplitude_scalings["method"],
+                )
+
+            scalings = np.asarray(recording_amplitude_scalings["scalings"][rec_idx])
+            templates_array_moved[amplitude_scaling_order] *= scalings[:, np.newaxis, np.newaxis]
 
         # Bring it all together in a `InjectTemplatesRecording` and
         # propagate all relevant metadata to the recording.
@@ -323,66 +323,43 @@ def _get_inter_session_displacements(shift, non_rigid_gradient, num_units, unit_
     return displacement_vector, displacement_unit_factor
 
 
-def _amplitude_scale_templates_in_place(
-    first_rec_templates, moved_templates, recording_amplitude_scalings, fixed_generate_sorting_kwargs, rec_idx
-):
+def _get_amplitude_scaling_order(first_rec_templates, firing_rates_hz, method):
     """
-    Scale a set of templates given a set of scaling values. The scaling
-    values can be applied in the order passed, or instead in order of
-    the unit firing range (max to min) or unit amplitude * firing rate (max to min).
-    This will chang the `templates_array` in place. This must be done after
-    the templates are moved.
+    Compute the unit order for applying amplitude scalings across sessions.
+    The order is based on the first session's unscaled templates and reused
+    so that scaling or displacement does not change the unit ranking.
 
     Parameters
     ----------
     first_rec_templates : np.array
         The (num_units, num_samples, num_channels) templates array from the
-        first recording. Scaling by amplitude scales based on the amplitudes in
-        the first session.
-    moved_templates : np.array
-        A (num_units, num_samples, num_channels) array moved templates to the
-        current recording, that will be scaled.
-    recording_amplitude_scalings : dict
-        see `generate_session_displacement_recordings()`.
-    fixed_generate_sorting_kwargs : dict
-        Dict holding the firing frequency of all units.
-        The unit order is assumed to match the templates.
-    rec_idx : int
-        The index of the recording for which the templates are being scaled.
+        first recording before scaling.
+    firing_rates_hz : np.ndarray
+        Firing rates in the same unit order as the templates.
+    method : str
+        "by_passed_order", "by_firing_rate", or "by_amplitude_and_firing_rate".
+
+    Returns
+    -------
+    order_idx : np.ndarray
+        Original unit order for "by_passed_order", otherwise highest score first.
 
     Notes
     -----
-    This method is used in the context of inter-session displacement. Often,
-    units may drop out of the recording across sessions. This simulates this by
-    directly scaling the template (e.g. if scaling by 0, the template is completely
-    dropped out). The provided scalings can be applied in the order passed, or
-    in the order of unit firing rate or firing rate *  amplitude. The idea is
-    that it may be desired to remove to downscale the most activate neurons
-    that contribute most significantly to activity histograms. Similarly,
-    if amplitude is included in activity histograms the amplitude may
-    also want to be considered when ordering the units to downscale.
+    Ranking allows the supplied scalings to target units contributing most
+    strongly to activity histograms, by firing rate or amplitude * firing rate.
     """
-    method = recording_amplitude_scalings["method"]
-    scalings = np.asarray(recording_amplitude_scalings["scalings"][rec_idx])
-
     if method in ["by_amplitude_and_firing_rate", "by_firing_rate"]:
-
-        firing_rates_hz = fixed_generate_sorting_kwargs["firing_rates"]
-
         if method == "by_amplitude_and_firing_rate":
-            neg_ampl = np.min(np.min(first_rec_templates, axis=2), axis=1)
+            neg_ampl = np.min(first_rec_templates, axis=(1, 2))
             assert np.all(neg_ampl < 0), "assumes all amplitudes are negative here."
             score = firing_rates_hz * (-neg_ampl)
         else:
             score = firing_rates_hz
 
-        order_idx = np.argsort(-score)
-        moved_templates[order_idx] *= scalings[:, np.newaxis, np.newaxis]
-
+        return np.argsort(-score)
     elif method == "by_passed_order":
-
-        moved_templates *= scalings[:, np.newaxis, np.newaxis]
-
+        return np.arange(first_rec_templates.shape[0])
     else:
         raise ValueError("`recording_amplitude_scalings['method']` not recognised.")
 

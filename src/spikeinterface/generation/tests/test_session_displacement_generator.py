@@ -364,6 +364,10 @@ class TestSessionDisplacementGenerator:
         recording_amplitude_scalings["method"] = "by_amplitude_and_firing_rate"  # TODO: method -> order
         amplitudes = np.min(np.min(extra_outputs["templates_array_moved"][0], axis=2), axis=1)
         scores = -amplitudes * firing_rates
+        baseline_templates = extra_outputs["templates_array_moved"][0].copy()
+        # First-session scaling must not change the ranking used in later sessions.
+        first_scalings = np.array([0.0, 0.1, 0.5, 1.0, 2.0])
+        recording_amplitude_scalings["scalings"] = (first_scalings, true_scalings)
 
         _, output_sortings, extra_outputs = generate_session_displacement_recordings(
             **options["kwargs"],
@@ -371,10 +375,13 @@ class TestSessionDisplacementGenerator:
             generate_sorting_kwargs=generate_sorting_kwargs,
         )
 
-        test_scalings = self._calculate_scalings_from_output(extra_outputs)
         for unit_idx, score in enumerate(scores):
             rank = np.count_nonzero(scores > score)
-            assert np.isclose(test_scalings[unit_idx], true_scalings[rank])
+            for rec_idx, scalings in enumerate((first_scalings, true_scalings)):
+                np.testing.assert_allclose(
+                    extra_outputs["templates_array_moved"][rec_idx][unit_idx],
+                    baseline_templates[unit_idx] * scalings[rank],
+                )
 
     def _calculate_scalings_from_output(self, extra_outputs):
         first, second = extra_outputs["templates_array_moved"]
