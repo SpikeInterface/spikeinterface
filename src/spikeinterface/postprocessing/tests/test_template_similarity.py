@@ -129,6 +129,74 @@ def test_equal_results_numba(params):
     assert np.allclose(result_numpy, result_numba, 1e-3)
 
 
+def test_equal_results_numba_asymmetric_sparse():
+    rng = np.random.default_rng(seed=2205)
+    templates_array = rng.random(size=(2, 20, 8), dtype=np.float32)
+    other_templates_array = rng.random(size=(7, 20, 8), dtype=np.float32)
+    sparsity_mask = rng.random((2, 8)) > 0.4
+    other_sparsity_mask = rng.random((7, 8)) > 0.4
+    sparsity_mask[0] = np.array([True, True, False, False, False, False, False, False])
+    other_sparsity_mask[0] = np.array([False, False, True, True, False, False, False, False])
+
+    for method in ("cosine", "l1", "l2"):
+        for support in ("dense", "union", "intersection"):
+            result_numba = _compute_similarity_matrix_numba(
+                templates_array,
+                other_templates_array,
+                num_shifts=3,
+                method=method,
+                sparsity_mask=sparsity_mask,
+                other_sparsity_mask=other_sparsity_mask,
+                support=support,
+            )
+            result_numpy = _compute_similarity_matrix_numpy(
+                templates_array,
+                other_templates_array,
+                num_shifts=3,
+                method=method,
+                sparsity_mask=sparsity_mask,
+                other_sparsity_mask=other_sparsity_mask,
+                support=support,
+            )
+
+            np.testing.assert_allclose(result_numba, result_numpy, rtol=1e-5, atol=1e-5)
+
+
+def test_equal_results_numba_same_array_sparse():
+    # templates_array is passed as both sides so same_array=True, exercising the
+    # pair-list restriction to tgt_unit >= src_unit and the diagonal mirroring,
+    # which the asymmetric test above cannot reach.
+    rng = np.random.default_rng(seed=2205)
+    templates_array = rng.random(size=(6, 20, 8), dtype=np.float32)
+    sparsity_mask = rng.random((6, 8)) > 0.4
+    sparsity_mask[0] = np.array([True, True, False, False, False, False, False, False])
+    sparsity_mask[1] = np.array([False, False, True, True, False, False, False, False])
+
+    for method in ("cosine", "l1", "l2"):
+        for support in ("dense", "union", "intersection"):
+            for num_shifts in (0, 3):
+                result_numba = _compute_similarity_matrix_numba(
+                    templates_array,
+                    templates_array,
+                    num_shifts=num_shifts,
+                    method=method,
+                    sparsity_mask=sparsity_mask,
+                    other_sparsity_mask=sparsity_mask,
+                    support=support,
+                )
+                result_numpy = _compute_similarity_matrix_numpy(
+                    templates_array,
+                    templates_array,
+                    num_shifts=num_shifts,
+                    method=method,
+                    sparsity_mask=sparsity_mask,
+                    other_sparsity_mask=sparsity_mask,
+                    support=support,
+                )
+
+                np.testing.assert_allclose(result_numba, result_numpy, rtol=1e-5, atol=1e-5)
+
+
 if __name__ == "__main__":
     from spikeinterface.postprocessing.tests.common_extension_tests import get_dataset
     from spikeinterface.core import estimate_sparsity

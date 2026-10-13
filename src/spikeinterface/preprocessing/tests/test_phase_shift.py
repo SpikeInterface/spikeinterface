@@ -93,5 +93,24 @@ def test_phase_shift():
     # ~ plt.show()
 
 
+def test_phase_shift_recovers_delayed_signal():
+    sampling_frequency = 1000.0
+    times = np.arange(5000) / sampling_frequency
+    inter_sample_shift = np.tile([0.0, 0.25, 0.5, 0.75], 8)
+
+    def signal(time):
+        return np.sin(2 * np.pi * 2.5 * time) + np.sin(2 * np.pi * 8.5 * time)
+
+    traces = signal(times[:, np.newaxis] + inter_sample_shift / sampling_frequency)
+    recording = NumpyRecording([traces], sampling_frequency)
+    recording.set_property("inter_sample_shift", inter_sample_shift)
+
+    shifted_traces = phase_shift(recording).get_traces()
+
+    interior = slice(100, -100)
+    expected = np.broadcast_to(signal(times)[:, np.newaxis], traces.shape)
+    np.testing.assert_allclose(shifted_traces[interior], expected[interior], atol=1e-3)
+
+
 if __name__ == "__main__":
     test_phase_shift()

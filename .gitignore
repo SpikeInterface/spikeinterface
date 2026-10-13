@@ -2,6 +2,10 @@
 
 spikeinterface/widgets/tests/mearec_test/*
 
+# for sam
+dev_*.ipynb
+dev_*.py
+
 # Vscode
 .vscode/*
 
@@ -146,3 +150,4 @@ test_folder/
 # Mac OS
 .DS_Store
 test_data.json
+uv.lock

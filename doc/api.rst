@@ -25,7 +25,6 @@ spikeinterface.core
     .. autoclass:: Motion
         :members:
     .. autoclass:: BinaryRecordingExtractor
-    .. autoclass:: ZarrRecordingExtractor
     .. autoclass:: BinaryFolderRecording
     .. autoclass:: NumpyFolderSorting
     .. autoclass:: NpyFolderSnippets
@@ -50,9 +49,8 @@ spikeinterface.core
     .. autofunction:: get_chunk_with_margin
     .. autofunction:: order_channels_by_depth
     .. autofunction:: get_template_amplitudes
-    .. autofunction:: get_template_extremum_channel
-    .. autofunction:: get_template_extremum_channel_peak_shift
-    .. autofunction:: get_template_extremum_amplitude
+    .. autofunction:: get_template_peak_shift_on_main_channel
+    .. autofunction:: get_template_amplitude_on_main_channel
     .. autofunction:: append_recordings
     .. autofunction:: concatenate_recordings
     .. autofunction:: split_recording
@@ -62,6 +60,7 @@ spikeinterface.core
     .. autofunction:: select_segment_sorting
     .. autofunction:: read_binary
     .. autofunction:: read_zarr
+    .. autofunction:: read_zarr_array
     .. autofunction:: apply_merges_to_sorting
     .. autofunction:: spike_vector_to_spike_trains
     .. autofunction:: random_spikes_selection
@@ -73,7 +72,7 @@ Low-level
 .. automodule:: spikeinterface.core
     :noindex:
 
-    .. autoclass:: ChunkRecordingExecutor
+    .. autoclass:: TimeSeriesChunkExecutor
 
 
 Back-compatibility with ``WaveformExtractor`` (version > 0.100.0)
@@ -112,6 +111,7 @@ NEO-based
     .. autofunction:: read_neuralynx
     .. autofunction:: read_neuralynx_sorting
     .. autofunction:: read_neuroexplorer
+    .. autofunction:: read_neuroexplorer_sorting
     .. autofunction:: read_neuroscope
     .. autofunction:: read_nix
     .. autofunction:: read_openephys
@@ -170,8 +170,8 @@ spikeinterface.preprocessing
 .. automodule:: spikeinterface.preprocessing
 
     .. autofunction:: apply_preprocessing_pipeline
-    .. autofunction:: get_preprocessing_dict_from_analyzer
-    .. autofunction:: get_preprocessing_dict_from_file
+    .. autofunction:: get_preprocessing_list_from_analyzer
+    .. autofunction:: get_preprocessing_list_from_file
     .. autofunction:: astype
     .. autofunction:: average_across_direction
     .. autofunction:: bandpass_filter
@@ -186,10 +186,15 @@ spikeinterface.preprocessing
     .. autofunction:: get_motion_parameters_preset
     .. autofunction:: load_motion_info
     .. autofunction:: save_motion_info
+    .. autofunction:: decimate
     .. autofunction:: depth_order
     .. autofunction:: detect_bad_channels
     .. autofunction:: detect_and_interpolate_bad_channels
     .. autofunction:: detect_and_remove_bad_channels
+    .. autofunction:: detect_artifact_periods
+    .. autofunction:: detect_artifact_periods_by_envelope
+    .. autofunction:: detect_saturation_periods
+    .. autofunction:: detect_and_remove_artifacts
     .. autofunction:: directional_derivative
     .. autofunction:: filter
     .. autofunction:: gaussian_filter
@@ -204,6 +209,7 @@ spikeinterface.preprocessing
     .. autofunction:: remove_artifacts
     .. autofunction:: resample
     .. autofunction:: scale
+    .. autofunction:: scale_to_uV
     .. autofunction:: silence_periods
     .. autofunction:: unsigned_to_signed
     .. autofunction:: whiten
@@ -217,7 +223,6 @@ spikeinterface.postprocessing
 .. automodule:: spikeinterface.postprocessing
 
     .. autofunction:: compute_noise_levels
-    .. autofunction:: compute_template_metrics
     .. autofunction:: compute_principal_components
     .. autofunction:: compute_spike_amplitudes
     .. autofunction:: compute_unit_locations
@@ -287,8 +292,6 @@ spikeinterface.comparison
     .. autofunction:: compare_sorter_to_ground_truth
     .. autofunction:: compare_templates
     .. autofunction:: compare_multiple_templates
-    .. autofunction:: create_hybrid_units_recording
-    .. autofunction:: create_hybrid_spikes_recording
 
     .. autoclass:: GroundTruthComparison
         :members:
@@ -378,6 +381,8 @@ spikeinterface.curation
     .. autofunction:: bombcell_label_units
     .. autofunction:: bombcell_get_default_thresholds
     .. autofunction:: model_based_label_units
+    .. autofunction:: get_required_metrics_from_model
+    .. autofunction:: check_required_metrics_are_present
     .. autofunction:: load_model
     .. autofunction:: train_model
     .. autofunction:: unitrefine_label_units
@@ -390,7 +395,7 @@ such as merging and splitting units, as well as defining labels for units.
 
 .. automodule:: spikeinterface.curation.curation_model
 
-    .. autopydantic_model:: CurationModel
+    .. autopydantic_model:: Curation
     .. autopydantic_model:: Merge
     .. autopydantic_model:: Split
     .. autopydantic_model:: ManualLabel
@@ -402,7 +407,6 @@ Deprecated
     :noindex:
 
     .. autofunction:: apply_sortingview_curation
-    .. autofunction:: get_potential_auto_merge
     .. autoclass:: CurationSorting
     .. autoclass:: MergeUnitsSorting
     .. autoclass:: SplitUnitSorting

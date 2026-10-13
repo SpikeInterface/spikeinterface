@@ -1,0 +1,85 @@
+.. _release0.105.1:
+
+SpikeInterface 0.105.1 release notes
+------------------------------------
+
+October 9th 2026
+
+Minor release with bug fixes and performance improvements
+
+
+core:
+
+* Override search_cached_spikes_sorted for identity selections (#4845)
+* Fix group (and other property) propagation in channel slice (#4838)
+* Fix: remove ``set_times`` warning (#4834)
+* Enable case omission  on ``get_unit_spike_train_in_seconds`` (#4811)
+* Optimize ``SpikeRetriever`` and RAM usage for extensions (#4809)
+* Fix: provenance handling in ``SortingAnalyzer`` (#4805)
+* Fix: drop new_unit_ids of non-mergeable units (#4804)
+* Fix: zarr pickling in ``SortingAnalyzer`` with ``try``/``except`` (#4801)
+* Fix: make seed JSON serializable (#4798)
+* Fix sorting times segment propagation (#4796)
+* UnitSelectionSorting improvements: remove lexsort, fix bug, save memory by sharing parent cache when possible (#4783)
+* Extract waveforms to zarr dataset (#4708)
+
+extractors:
+
+* Add ``NeuroExplorerSortingExtractor`` (#4825)
+* Don't mount remote paths when running a sorter in a container (#4821)
+* Build one probe per electrode group in NwbRecordingExtractor (#4820)
+* Read the last spike from the unit end offsets in ``NwbSortingExtractor`` (#4819)
+* Don't follow symlinks when storing extractor paths (#4812)
+
+preprocessing:
+
+* Fix: artifact detection crossing chunks (#4803)
+* Speed up FFT phase shifts for Neuropixels recordings (#4802)
+* Fix: frame slicing after resample/decimation (#4799)
+
+sorters:
+
+* Don't mount remote paths when running a sorter in a container (#4821)
+
+postprocessing:
+
+* Test empty postprocessing and metric extension outputs (#4807)
+* Precompute unit-pair spatial overlap once in find_collisions (#4797)
+* Avoid dense waveform allocation when exporting PC features (#4789)
+* Speed up template similarity with pair-level parallelism (#4785)
+
+curation:
+
+* Fix: cast infinites to NaN is overflow error (#4830)
+
+sortingcomponents:
+
+* Speed up Wobble peak search with a linear maximum filter (#4782)
+
+documentation:
+
+* Fix manual split example in process_by_channel_group docs (#4846)
+* Clarify PSD threshold units and recording scaling (#4808)
+
+continuous integration:
+
+* Drop the separate core test workflow (#4822)
+* Run the tests with ``forkserver`` on Linux (#4818)
+
+packaging:
+
+* Support python 3.14 (#4173)
+
+testing:
+
+* Test empty postprocessing and metric extension outputs (#4807)
+
+Contributors:
+
+* @alejoe91
+* @AtomicGlance
+* @grahamfindlay
+* @guptaishaan
+* @h-mayorquin
+* @JESUSROYETH
+* @JoeZiminski

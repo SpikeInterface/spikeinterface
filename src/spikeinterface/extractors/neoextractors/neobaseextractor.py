@@ -304,7 +304,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             scalar_annotations = {name: value for name, value in sig_ann.items() if not name.startswith("__")}
 
             # name in neo corresponds to stream name
-            # We don't propagate the name as an annotation because that has a differnt meaning on spikeinterface
+            # We don't propagate the name as an annotation because that has a different meaning on spikeinterface
             stream_name = scalar_annotations.pop("name", None)
             if stream_name:
                 self.set_annotation(annotation_key="stream_name", value=stream_name)
@@ -379,7 +379,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     neo_returns_frames = True
     # `neo_returns_frames` is a class attribute indicating whether
     # `neo_reader.get_spike_timestamps` returns frames instead of timestamps (!),
-    # If False, then the segments need to transform timestamps to to frames.
+    # If False, then the segments need to transform timestamps to frames.
     # For formats that return timestamps (e.g. Mearec, Blackrock, Neuralynx) this should be set to
     # False in the format class that inherits from this.
 
@@ -599,7 +599,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
             t_start = None
             warning_message = (
                 "Multiple streams ids with corresponding sampling frequency found \n "
-                "Each stream has the correspoding t_start: \n"
+                "Each stream has the corresponding t_start: \n"
                 f"{stream_id_to_t_start} \n"
                 f"Setting t_start to None. \n"
             )
@@ -618,11 +618,10 @@ class NeoSortingSegment(BaseSortingSegment):
         sampling_frequency,
         neo_returns_frames,
     ):
-        BaseSortingSegment.__init__(self)
+        BaseSortingSegment.__init__(self, t_start=t_start)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.block_index = block_index
-        self._t_start = t_start
         self._sampling_frequency = sampling_frequency
         self.neo_returns_frames = neo_returns_frames
 

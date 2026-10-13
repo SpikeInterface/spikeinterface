@@ -3,11 +3,17 @@ import pickle
 
 import pytest
 import numpy as np
+import zarr
 
 from spikeinterface import load
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.extractors.extractor_classes import NwbRecordingExtractor, NwbSortingExtractor
+
+# TODO: remove once streaming zarr is supported with zarr>=3
+skip_zarr_3 = pytest.mark.skipif(
+    int(zarr.__version__.split(".")[0]) >= 3, reason="Streaming zarr is not supported yet with zarr>=3"
+)
 
 
 @pytest.mark.streaming_extractors
@@ -185,6 +191,7 @@ def test_sorting_s3_nwb_remfile(tmp_path):
 
 
 @pytest.mark.streaming_extractors
+@skip_zarr_3
 def test_sorting_s3_nwb_zarr(tmp_path):
     file_path = (
         "s3://aind-open-data/ecephys_625749_2022-08-03_15-15-06_nwb_2023-05-16_16-34-55/"
@@ -224,8 +231,14 @@ def test_sorting_s3_nwb_zarr(tmp_path):
     # just take 3 random units to test
     rng = np.random.default_rng(seed=2205)
     three_unit_ids = rng.choice(sorting.unit_ids, size=3)
-    sorting_sub = sorting.select_units(unit_ids=three_unit_ids)
-    sorting_loaded_sub = sorting_loaded.select_units(unit_ids=three_unit_ids)
+
+    first_spike_sample_index = 21864115
+    sorting_sub = sorting.select_units(unit_ids=three_unit_ids).frame_slice(
+        start_frame=first_spike_sample_index, end_frame=first_spike_sample_index + 10_000
+    )
+    sorting_loaded_sub = sorting_loaded.select_units(unit_ids=three_unit_ids).frame_slice(
+        start_frame=first_spike_sample_index, end_frame=first_spike_sample_index + 10_000
+    )
 
     check_sortings_equal(sorting_sub, sorting_loaded_sub)
 

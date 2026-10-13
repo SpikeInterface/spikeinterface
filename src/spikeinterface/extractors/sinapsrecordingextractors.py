@@ -84,7 +84,7 @@ class SinapsResearchPlatformRecordingExtractor(ChannelSliceRecording):
         if (stream_name == "filt") | (stream_name == "raw"):
             probe = get_sinaps_probe(probe_type)
             if probe is not None:
-                self.set_probe(probe, in_place=True)
+                self.set_probe(probe)
 
         self._kwargs = {"file_path": str(file_path.absolute()), "stream_name": stream_name}
 
@@ -143,7 +143,7 @@ class SinapsResearchPlatformH5RecordingExtractor(BaseRecording):
         # set probe
         probe = get_sinaps_probe(sinaps_info["probe_type"])
         if probe is not None:
-            self.set_probe(probe, in_place=True)
+            self.set_probe(probe)
 
         self._kwargs = {"file_path": str(Path(file_path).absolute()), "stream_name": stream_name}
 

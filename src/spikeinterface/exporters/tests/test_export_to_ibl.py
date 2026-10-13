@@ -2,7 +2,6 @@ import pytest
 
 from spikeinterface.preprocessing import bandpass_filter, decimate
 from spikeinterface.exporters import export_to_ibl_gui
-
 from spikeinterface.exporters.tests.common import (
     make_sorting_analyzer,
     sorting_analyzer_sparse_for_export,

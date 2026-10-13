@@ -38,6 +38,7 @@ If you use one of the following spike sorting algorithms (i.e. you use the :code
 please include the appropriate citation for the :code:`sorter_name` parameter you use:
 *Note: unless otherwise stated, the reference given is to be used for all versions of the sorter*
 
+- :code:`dartsort` [Boussard2023]_
 - :code:`combinato` [Niediek]_
 - :code:`hdsort` [Diggelmann]_
 - :code:`herdingspikes` [Muthmann]_ [Hilgen]_
@@ -109,6 +110,8 @@ References
 .. [Beau] `A deep learning strategy to identify cell types across species from high-density extracellular recordings. 2025. <https://doi.org/10.1016/j.cell.2025.01.041>`_
 
 .. [Boussard] `Three-dimensional spike localization and imporved motion correction for Neuropixels recordings. 2021 <https://www.biorxiv.org/content/10.1101/2021.11.05.467503v1>`_
+
+.. [Boussard2023] `DARTsort: A modular drift tracking spike sorter for high-density multi-electrode probes. 2023 <https://www.biorxiv.org/content/10.1101/2023.08.11.553023v1>`_
 
 .. [Buccino] `SpikeInterface, a unified framework for spike sorting. 2020. <https://pubmed.ncbi.nlm.nih.gov/33170122/>`_
 

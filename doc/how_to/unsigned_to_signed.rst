@@ -16,8 +16,8 @@ For those that want a deeper understanding of dtypes `NumPy provides a great exp
 For our purposes it is important to know that many pieces of recording equipment opt to store their electrophysiological data as unsigned integers
 (e.g., Intan, Maxwell Biosystems, 3Brain Biocam).
 Similarly to signed integers, in order to convert to real units these file formats only need to store a :code:`gain`
-and an :code:`offset`. Our :code:`RecordingExtractor`'s maintain the dtype that the file format utilizes, which means that some of our
-:code:`RecordingExtractor`'s will have unsigned dtypes.
+and an :code:`offset`. Our :code:`BaseRecording`'s maintain the dtype that the file format utilizes, which means that some of our
+:code:`BaseRecording`'s will have unsigned dtypes.
 
 The problem with using unsigned dtypes is that many types of functions (including the ones we use from :code:`SciPy`) perform poorly with unsigned integers.
 This is made worse by the fact that these failures are silent (i.e. no error is triggered but the operation leads to nonsensical data). So the
@@ -53,7 +53,6 @@ For users that receive an error because their :code:`Recording` is unsigned, the
 
 Now with the signed dtype of the :code:`Recording` one can use a SpikeInterface pipeline as usual.
 
-
 If you are curious if your :code:`Recording` is unsigned you can simply check the repr or use :code:`get_dtype()`
 
 .. code:: python
@@ -87,6 +86,39 @@ while converting the data from unsigned to signed.
     recording_unsigned = se.read_biocam('path/to/my/file.brw')
     # we can now convert to signed with the correct bit depth
     recording_signed = spre.unsigned_to_signed(recording_unsigned, bit_depth=12)
+
+
+Reading an unsigned binary file
+-------------------------------
+
+If you have a binary file saved in unsigned integers, you can use the ``si.read_binary`` function to read it into
+SpikeInterface:
+
+.. code:: python
+
+    recording_unsigned = se.read_binary(
+        file_path,
+        sampling_frequency=30000.,
+        dtype=np.uint16,
+        num_channels=384,
+        gain_to_uV=3.05176,
+        offset_to_uV=0,
+    )
+
+Note that the ``offset_to_uV`` is not meant to be used to correct for the unsigned nature of the data,
+but rather to correct for any additional offset that may be present in the data (e.g., due to the recording equipment).
+
+The ``unsigned_to_signed`` function will take care of the conversion from unsigned to signed, so you can simply pass
+the ``recording_unsigned`` to it:
+
+.. code:: python
+
+    recording_signed = spre.unsigned_to_signed(recording_unsigned, bit_depth=12)
+
+
+When retrieving traces and scaling them to µV, first the data will be converted from unsigned to signed using the
+specified bit depth, and then the gain and offset (in this case 0) will be applied to convert the data to µV.
+This ensures that the data is correctly centered around 0 and scaled to the appropriate units for further analysis.
 
 
 Additional Notes

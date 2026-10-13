@@ -2,11 +2,11 @@ from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import rectify
 
 
-def test_rectify():
+def test_rectify(create_cache_folder):
     rec = generate_recording()
 
     rec2 = rectify(rec)
-    rec2.save(verbose=False)
+    rec2.save(folder=create_cache_folder / "rec2", verbose=False)
 
     traces = rec2.get_traces(segment_index=0, channel_ids=["1"])
     assert traces.shape[1] == 1

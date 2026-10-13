@@ -3,7 +3,7 @@ import shutil
 
 import numpy as np
 
-from spikeinterface.core import NpzFolderSorting, NumpyFolderSorting, load_extractor
+from spikeinterface.core import NpzFolderSorting, NumpyFolderSorting
 from spikeinterface.core import generate_sorting
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 
@@ -39,6 +39,7 @@ def test_NpzFolderSorting(create_cache_folder):
 
     sorting_loaded = NpzFolderSorting(folder)
     check_sortings_equal(sorting_loaded, sorting)
+
     assert np.array_equal(sorting_loaded.unit_ids, sorting.unit_ids)
     assert np.array_equal(
         sorting_loaded.to_spike_vector(),
@@ -47,5 +48,10 @@ def test_NpzFolderSorting(create_cache_folder):
 
 
 if __name__ == "__main__":
-    test_NumpyFolderSorting()
-    test_NpzFolderSorting()
+    import tempfile
+    from pathlib import Path
+
+    cache_folder = Path(tempfile.mkdtemp())
+
+    test_NumpyFolderSorting(cache_folder)
+    test_NpzFolderSorting(cache_folder)

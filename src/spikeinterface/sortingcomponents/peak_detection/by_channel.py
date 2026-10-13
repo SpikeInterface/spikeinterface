@@ -56,11 +56,10 @@ class ByChannelPeakDetector(PeakDetector):
         self.peak_sign = peak_sign
         self.detect_threshold = detect_threshold
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.exclude_sweep_size
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin):
-
         traces_center = traces[self.exclude_sweep_size : -self.exclude_sweep_size, :]
         length = traces_center.shape[0]
 

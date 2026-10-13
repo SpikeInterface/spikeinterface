@@ -32,11 +32,3 @@ from .multicomparisons import (
 from .groundtruthstudy import GroundTruthStudy
 from .collision import CollisionGTComparison
 from .correlogram import CorrelogramGTComparison
-
-from .hybrid import (
-    HybridSpikesRecording,
-    HybridUnitsRecording,
-    generate_sorting_to_inject,
-    create_hybrid_units_recording,
-    create_hybrid_spikes_recording,
-)

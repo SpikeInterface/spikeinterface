@@ -66,6 +66,11 @@ class BaseEvent(BaseExtractor):
     def get_num_segments(self):
         return len(self._event_segments)
 
+    def select_segment(self, segment_indices: int | list[int]):
+        from .segmentutils import SelectSegmentEvent
+
+        return SelectSegmentEvent(self, segment_indices=segment_indices)
+
     def get_events(
         self,
         channel_id: int | str | None = None,

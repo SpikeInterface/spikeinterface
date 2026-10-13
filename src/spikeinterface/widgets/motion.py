@@ -159,23 +159,8 @@ class DriftRasterMapWidget(BaseRasterWidget):
         backend: str | None = None,
         **backend_kwargs,
     ):
-        import warnings
         from matplotlib.pyplot import colormaps
         from matplotlib.colors import Normalize
-
-        # Handle deprecation of segment_index parameter
-        if segment_index is not None:
-            warnings.warn(
-                "The 'segment_index' parameter is deprecated and will be removed in a future version. "
-                "Use 'segment_indices' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if segment_indices is None:
-                if isinstance(segment_index, int):
-                    segment_indices = [segment_index]
-                else:
-                    segment_indices = segment_index
 
         assert peaks is not None or sorting_analyzer is not None
 
@@ -303,9 +288,9 @@ class DriftRasterMapWidget(BaseRasterWidget):
 
 class MotionInfoWidget(BaseWidget):
     """
-    Plot motion information from the motion_info dictionary returned by the `correct_motion()` funciton.
+    Plot motion information from the motion_info dictionary returned by the `correct_motion()` function.
     This widget plots:
-        * the motion iself
+        * the motion itself
         * the drift raster map (peak depth vs time) before correction
         * the drift raster map (peak depth vs time) after correction
 

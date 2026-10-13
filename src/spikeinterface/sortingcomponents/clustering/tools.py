@@ -3,6 +3,7 @@ from typing import Any
 import numpy as np
 
 from spikeinterface.core import Templates, estimate_templates, fix_job_kwargs
+from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.base import minimum_spike_dtype
 
 # TODO find a way to attach a a sparse_mask to a given features (waveforms, pca, tsvd ....)
@@ -190,8 +191,8 @@ def get_templates_from_peaks_and_recording(
     labels, indices = np.unique(valid_labels, return_inverse=True)
 
     fs = recording.get_sampling_frequency()
-    nbefore = int(ms_before * fs / 1000.0)
-    nafter = int(ms_after * fs / 1000.0)
+    nbefore = ms_to_samples(ms_before, fs)
+    nafter = ms_to_samples(ms_after, fs)
 
     spikes = np.zeros(valid_peaks.size, dtype=minimum_spike_dtype)
     spikes["sample_index"] = valid_peaks["sample_index"]
@@ -280,8 +281,8 @@ def get_templates_from_peaks_and_svd(
     labels = np.unique(valid_labels)
 
     fs = recording.get_sampling_frequency()
-    nbefore = int(ms_before * fs / 1000.0)
-    nafter = int(ms_after * fs / 1000.0)
+    nbefore = ms_to_samples(ms_before, fs)
+    nafter = ms_to_samples(ms_after, fs)
     num_channels = recording.get_num_channels()
 
     templates_array = np.zeros((len(labels), nbefore + nafter, num_channels), dtype=np.float32)

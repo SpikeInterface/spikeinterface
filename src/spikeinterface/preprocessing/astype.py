@@ -42,7 +42,7 @@ class AstypeRecording(BasePreprocessor):
         if round is None:
             round = np.issubdtype(dtype, np.integer)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = AstypeRecordingSegment(
                 parent_segment,
                 dtype,

@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 import numpy as np
 
@@ -7,10 +9,7 @@ from spikeinterface.core import (
     NumpySorting,
     aggregate_units,
 )
-
 from spikeinterface.metrics.quality.misc_metrics import compute_snrs, compute_drift_metrics
-
-
 from spikeinterface.metrics import (
     compute_quality_metrics,
 )
@@ -71,13 +70,13 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
         skip_pc_metrics=False,
         seed=2205,
     )
-    print(metrics.columns)
     assert "isolation_distance" in metrics.columns
 
 
 def test_merging_quality_metrics(sorting_analyzer_simple):
 
     sorting_analyzer = sorting_analyzer_simple
+    sorting_analyzer.compute("principal_components")
 
     metrics = compute_quality_metrics(
         sorting_analyzer,
@@ -88,7 +87,9 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
     )
 
     # sorting_analyzer_simple has ten units
-    new_sorting_analyzer = sorting_analyzer.merge_units([[0, 1]])
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message="No other units found in the vicinity")
+        new_sorting_analyzer, new_unit_ids = sorting_analyzer.merge_units([["0", "1"]], return_new_unit_ids=True)
     new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
 
     # we should copy over the metrics after merge
@@ -99,6 +100,9 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
 
     # 10 units vs 9 units
     assert len(metrics.index) > len(new_metrics.index)
+
+    merged_unit_metrics = new_metrics.loc[new_unit_ids[0]]
+    assert merged_unit_metrics["nn_hit_rate"] != 1 or merged_unit_metrics["nn_miss_rate"] != 0
 
 
 def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
@@ -114,6 +118,9 @@ def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):
 
     # make a copy and make it recordingless
     sorting_analyzer_norec = sorting_analyzer.save_as(format="memory")
+
+    # keep the same `main_channel_indices` as before
+    sorting_analyzer_norec._main_channel_indices = sorting_analyzer._main_channel_indices
     sorting_analyzer_norec.delete_extension("quality_metrics")
     sorting_analyzer_norec._recording = None
     assert not sorting_analyzer_norec.has_recording()
@@ -143,6 +150,7 @@ def test_empty_units(sorting_analyzer_simple):
         {100: empty_spike_train, 200: empty_spike_train, 300: empty_spike_train},
         sampling_frequency=sorting_analyzer.sampling_frequency,
     )
+    empty_sorting.set_property("main_channel_id", ["1", "1", "1"])
     sorting_empty = aggregate_units([sorting_analyzer.sorting, empty_sorting])
     assert len(sorting_empty.get_empty_unit_ids()) == 3
 
@@ -218,7 +226,7 @@ def test_quality_metrics_with_periods():
         seed=2205,
     )
 
-    # test failure when both periods and use_valid_periods are set
+    # test failure when periods and valid_unit_periods do not match
     with pytest.raises(ValueError):
         compute_quality_metrics(
             sorting_analyzer,
@@ -228,6 +236,17 @@ def test_quality_metrics_with_periods():
             periods=periods,
             seed=2205,
         )
+
+    # should not fail if external periods are the same as valid unit periods
+    valid_periods = sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
+    metrics_ext_periods = compute_quality_metrics(
+        sorting_analyzer,
+        metric_names=None,
+        skip_pc_metrics=True,
+        use_valid_periods=True,
+        periods=valid_periods,
+        seed=2205,
+    )
 
     # test failure if use valid_periods is True but valid_unit_periods extension is missing
     sorting_analyzer.delete_extension("valid_unit_periods")

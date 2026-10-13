@@ -50,7 +50,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = DirectionalDerivativeRecordingSegment(
                 parent_segment,
                 parent_channel_locations,
