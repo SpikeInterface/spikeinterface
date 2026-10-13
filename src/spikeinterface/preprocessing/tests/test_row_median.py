@@ -3,15 +3,7 @@ import pytest
 
 from spikeinterface.core import NumpyRecording
 from spikeinterface.preprocessing import common_reference
-from spikeinterface.preprocessing._row_median import (
-    HAVE_NUMBA,
-    _INT_WINDOW,
-    _get_float_kernel,
-    _get_int_kernel,
-    row_median,
-)
-
-pytestmark = pytest.mark.skipif(not HAVE_NUMBA, reason="row_median falls back to np.median without numba")
+from spikeinterface.preprocessing._row_median import HAVE_NUMBA, _INT_WINDOW, _get_int_kernel, row_median
 
 
 def assert_matches_np_median(x):
@@ -21,6 +13,7 @@ def assert_matches_np_median(x):
     np.testing.assert_array_equal(median, expected)
 
 
+@pytest.mark.skipif(not HAVE_NUMBA, reason="integer rows fall back to np.median without numba")
 @pytest.mark.parametrize("dtype", ["int16", "uint16", "int8", "uint8"])
 @pytest.mark.parametrize("num_channels", [1, 2, 3, 384])
 def test_row_median_int(dtype, num_channels):
@@ -34,6 +27,7 @@ def test_row_median_int(dtype, num_channels):
         np.testing.assert_array_equal(_get_int_kernel()(x, _INT_WINDOW), np.median(x, axis=1))
 
 
+@pytest.mark.skipif(not HAVE_NUMBA, reason="integer rows fall back to np.median without numba")
 def test_row_median_int_outside_window():
     rng = np.random.default_rng(0)
     x = rng.normal(0, 10, (1000, 384)).astype("int16")
@@ -43,30 +37,32 @@ def test_row_median_int_outside_window():
     assert_matches_np_median(x)
 
 
-@pytest.mark.parametrize("num_channels", [1, 2, 3, 63, 64, 384, 385])
-def test_row_median_float32(num_channels):
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+@pytest.mark.parametrize("num_channels", [1, 2, 3, 4, 64, 384, 385])
+def test_row_median_float(dtype, num_channels):
     rng = np.random.default_rng(0)
     for x in (
         rng.standard_normal((300, num_channels)),
         rng.integers(-3, 4, (300, num_channels)),
         np.zeros((300, num_channels)),
     ):
-        x = x.astype("float32")
+        x = x.astype(dtype)
         assert_matches_np_median(x)
         assert_matches_np_median(np.asfortranarray(x))
-        # row_median sends few channels to np.median, so test the kernel there directly
-        np.testing.assert_array_equal(_get_float_kernel()(x), np.median(x, axis=1))
+        assert_matches_np_median(x[::2, ::-1])
 
 
-def test_row_median_float32_non_finite():
-    x = np.random.default_rng(0).standard_normal((5, 384)).astype("float32")
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_row_median_float_non_finite(dtype):
+    x = np.random.default_rng(0).standard_normal((6, 384)).astype(dtype)
     x[0, 5] = np.nan
     x[1, 7] = np.inf
     x[2, 3] = -np.inf
     x[3, [1, 2]] = [np.inf, -np.inf]
-    x[4] = 3e38  # the row sum overflows
-    with np.errstate(over="ignore"):
-        np.testing.assert_array_equal(row_median(x), np.median(x, axis=1, keepdims=True))
+    x[4] = np.finfo(dtype).max  # the sum of the middle values overflows
+    x[5, [0, 1]] = [np.nan, np.inf]
+    with np.errstate(over="ignore", invalid="ignore"):
+        assert_matches_np_median(x)
 
 
 @pytest.mark.parametrize("dtype", ["int16", "float32"])
