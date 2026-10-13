@@ -27,6 +27,7 @@ from .core_tools import (
     retrieve_importing_provenance,
     is_path_remote,
     clean_zarr_folder_name,
+    _check_zarr_write_is_supported,
 )
 from .sorting_tools import (
     generate_unit_ids_for_merge_group,
@@ -1013,6 +1014,8 @@ class SortingAnalyzer:
 
     def _get_zarr_root(self, mode="r+"):
         assert mode in ("r+", "a", "r"), "mode must be 'r+', 'a' or 'r'"
+        if mode != "r":
+            _check_zarr_write_is_supported()
 
         storage_options = self._backend_options.get("storage_options", {})
         zarr_root = super_zarr_open(self.folder, mode=mode, storage_options=storage_options)
@@ -1034,6 +1037,7 @@ class SortingAnalyzer:
     ) -> "SortingAnalyzer":
         from .zarrextractors import add_sorting_to_zarr_group, ZarrSortingExtractor
 
+        _check_zarr_write_is_supported()
         is_remote = is_path_remote(folder)
         if not is_remote:
             folder = clean_zarr_folder_name(folder)
@@ -1171,22 +1175,13 @@ class SortingAnalyzer:
         settings = cls._handle_backward_compatibility_settings_pre_init(settings)
 
         # Load sorting (in memory or lazy)
-        if lazy:
-            copy_spike_vector = False
-            lazy_spike_vector = True
-        else:
-            copy_spike_vector = True
-            lazy_spike_vector = False
-        sorting = NumpySorting.from_sorting(
-            ZarrSortingExtractor(
-                folder,
-                zarr_group="sorting",
-                storage_options=storage_options,
-                lazy_spike_vector=lazy_spike_vector,
-            ),
-            with_metadata=True,
-            copy_spike_vector=copy_spike_vector,
+        zarr_sorting = ZarrSortingExtractor(
+            folder, zarr_group="sorting", storage_options=storage_options, lazy_spike_vector=lazy
         )
+        if lazy:
+            sorting = zarr_sorting
+        else:
+            sorting = NumpySorting.from_sorting(zarr_sorting, with_metadata=True, copy_spike_vector=True)
 
         # Load recording (if available)
         if recording is None:
