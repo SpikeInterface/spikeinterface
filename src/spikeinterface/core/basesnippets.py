@@ -1,12 +1,12 @@
-from __future__ import annotations
-
-from typing import Union
-from .base import BaseSegment
-from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
 from warnings import warn
 
-# snippets segments?
+from copy import deepcopy
+
+from pathlib import Path
+
+from .base import BaseSegment
+from .baserecordingsnippets import BaseRecordingSnippets
 
 
 class BaseSnippets(BaseRecordingSnippets):
@@ -14,12 +14,16 @@ class BaseSnippets(BaseRecordingSnippets):
     Abstract class representing several multichannel snippets.
     """
 
-    _main_properties = ["group", "location", "gain_to_uV", "offset_to_uV"]
+    _main_properties = ["group", "gain_to_uV", "offset_to_uV"]
     _main_features = []
 
-    def __init__(
-        self, sampling_frequency: float, nbefore: Union[int, None], snippet_len: int, channel_ids: list, dtype
-    ):
+    def __init__(self, sampling_frequency: float, nbefore: int | None, snippet_len: int, channel_ids: list, dtype):
+        warn(
+            "`BaseSnippets` is deprecated and will be removed in version 0.106.0."
+            "Only continuous recordings with `BaseRecording` will be supported.",
+            FutureWarning,
+            stacklevel=2,
+        )
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
@@ -79,15 +83,7 @@ class BaseSnippets(BaseRecordingSnippets):
     def get_num_segments(self):
         return len(self._snippets_segments)
 
-    def has_scaled_snippets(self):
-        warn(
-            "`has_scaled_snippets` is deprecated and will be removed in version 0.103.0. Please use `has_scaleable_traces()` instead",
-            category=DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.has_scaleable_traces()
-
-    def get_frames(self, indices=None, segment_index: Union[int, None] = None):
+    def get_frames(self, indices=None, segment_index: int | None = None):
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
         return spts.get_frames(indices)
@@ -95,19 +91,39 @@ class BaseSnippets(BaseRecordingSnippets):
     def get_snippets(
         self,
         indices=None,
-        segment_index: Union[int, None] = None,
-        channel_ids: Union[list, None] = None,
-        return_scaled=False,
+        segment_index: int | None = None,
+        channel_ids: list | None = None,
+        return_in_uV: bool = False,
     ):
+        """
+        Return the snippets, optionally for a subset of samples and/or channels
+
+        Parameters
+        ----------
+        indices : list[int], default: None
+            Indices of the snippets to return. If None, all snippets are returned.
+        segment_index : int | None, default: None
+            The segment index to get snippets from. If snippets is multi-segment, it is required.
+        channel_ids : list | None, default: None
+            The channel ids. If None, all channels are used.
+        return_in_uV : bool, default: False
+            If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
+            snippets are scaled to uV
+
+        Returns
+        -------
+        np.array
+            The snippets (num_snippets, num_samples, num_channels)
+        """
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
         wfs = spts.get_snippets(indices, channel_indices=channel_indices)
 
-        if return_scaled:
+        if return_in_uV:
             if not self.has_scaleable_traces():
                 raise ValueError(
-                    "These snippets do not support return_scaled=True (need gain_to_uV and offset_" "to_uV properties)"
+                    "These snippets do not support return_in_uV=True (need gain_to_uV and offset_" "to_uV properties)"
                 )
             else:
                 gains = self.get_property("gain_to_uV")
@@ -119,37 +135,44 @@ class BaseSnippets(BaseRecordingSnippets):
 
     def get_snippets_from_frames(
         self,
-        segment_index: Union[int, None] = None,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_ids: Union[list, None] = None,
-        return_scaled=False,
+        segment_index: int | None = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_ids: list | None = None,
+        return_in_uV: bool = False,
     ):
+        """
+        Return the snippets from frames, optionally for a subset of samples and/or channels
+
+        Parameters
+        ----------
+        segment_index : int | None, default: None
+            The segment index to get snippets from. If snippets is multi-segment, it is required.
+        start_frame : int | None, default: None
+            The start frame. If None, 0 is used.
+        end_frame : int | None, default: None
+            The end frame. If None, the number of samples in the segment is used.
+        channel_ids : list | None, default: None
+            The channel ids. If None, all channels are used.
+        return_in_uV : bool, default: False
+            If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
+            snippets are scaled to uV
+
+        Returns
+        -------
+        np.array
+            The snippets (num_snippets, num_samples, num_channels)
+        """
         segment_index = self._check_segment_index(segment_index)
         spts = self._snippets_segments[segment_index]
         indices = spts.frames_to_indices(start_frame, end_frame)
 
-        return self.get_snippets(indices, channel_ids=channel_ids, return_scaled=return_scaled)
+        return self.get_snippets(indices, channel_ids=channel_ids, return_in_uV=return_in_uV)
 
-    def _save(self, format="binary", **save_kwargs):
-        raise NotImplementedError
-
-    def select_channels(self, channel_ids: list | np.array | tuple) -> "BaseSnippets":
+    def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseSnippets":
         from .channelslice import ChannelSliceSnippets
 
         return ChannelSliceSnippets(self, channel_ids)
-
-    def _channel_slice(self, channel_ids, renamed_channel_ids=None):
-        from .channelslice import ChannelSliceSnippets
-        import warnings
-
-        warnings.warn(
-            "Snippets.channel_slice will be removed in version 0.103, use `select_channels` or `rename_channels` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        sub_recording = ChannelSliceSnippets(self, channel_ids, renamed_channel_ids=renamed_channel_ids)
-        return sub_recording
 
     def _remove_channels(self, remove_channel_ids):
         from .channelslice import ChannelSliceSnippets
@@ -163,36 +186,20 @@ class BaseSnippets(BaseRecordingSnippets):
 
         return SelectSegmentSnippets(self, segment_indices=segment_indices)
 
-    def _save(self, format="npy", **save_kwargs):
+    def save(self, format="npy", **save_kwargs):
         """
-        At the moment only "npy" and "memory" avaiable:
-        """
+        Save a `BaseSnippets` object to a specified format:
 
+        * "npy"
+        * "memory"
+        """
         if format == "npy":
-            from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
-
-            folder = save_kwargs["folder"]
-            file_paths = [folder / f"traces_cached_seg{i}.npy" for i in range(self.get_num_segments())]
-            dtype = save_kwargs.get("dtype", None)
-            if dtype is None:
-                dtype = self.get_dtype()
-
-            from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
-
-            NpySnippetsExtractor.write_snippets(snippets=self, file_paths=file_paths, dtype=dtype)
-            cached = NpySnippetsExtractor(
-                file_paths=file_paths,
-                sampling_frequency=self.get_sampling_frequency(),
-                channel_ids=self.get_channel_ids(),
-                nbefore=self.nbefore,
-                gain_to_uV=self.get_channel_gains(),
-                offset_to_uV=self.get_channel_offsets(),
-            )
-            cached.dump(folder / "npy.json", relative_to=folder)
-
             from spikeinterface.core.npyfoldersnippets import NpyFolderSnippets
 
-            cached = NpyFolderSnippets(folder_path=folder)
+            folder = save_kwargs["folder"]
+            folder = Path(folder)
+
+            cached = NpyFolderSnippets.write_snippets(self, folder, dtype=save_kwargs.get("dtype", None))
 
         elif format == "memory":
             snippets_list = []
@@ -210,13 +217,11 @@ class BaseSnippets(BaseRecordingSnippets):
                 nbefore=self.nbefore,
                 channel_ids=self.channel_ids,
             )
-
+            if self.has_probe():
+                probegroup = self.get_probegroup()
+                cached.set_probegroup(probegroup)
         else:
             raise ValueError(f"format {format} not supported")
-
-        if self.get_property("contact_vector") is not None:
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup)
 
         return cached
 
@@ -235,7 +240,7 @@ class BaseSnippetsSegment(BaseSegment):
     def get_snippets(
         self,
         indices,
-        channel_indices: Union[list, None] = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
@@ -244,7 +249,7 @@ class BaseSnippetsSegment(BaseSegment):
         ----------
         indices : list[int]
             Indices of the snippets to return
-        channel_indices : Union[list, None], default: None
+        channel_indices : list | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
@@ -270,15 +275,15 @@ class BaseSnippetsSegment(BaseSegment):
         """
         raise NotImplementedError
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         """
         Return the slice of snippets
 
         Parameters
         ----------
-        start_frame : Union[int, None], default: None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame : Union[int, None], default: None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
 
         Returns

@@ -1,20 +1,21 @@
-from __future__ import annotations
-
 import numpy as np
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
 
 from .base import BaseTemplateMatching, _base_matching_dtype
-from spikeinterface.core.template import Templates
+import importlib.util
 
-try:
-    import torch
-    import torch.nn.functional as F
-
-    HAVE_TORCH = True
-    from torch.nn.functional import conv1d
-except ImportError:
+torch_spec = importlib.util.find_spec("torch")
+if torch_spec is not None:
+    torch_nn_functional_spec = importlib.util.find_spec("torch.nn")
+    if torch_nn_functional_spec is not None:
+        HAVE_TORCH = True
+        import torch
+        from torch.nn.functional import conv1d
+    else:
+        HAVE_TORCH = False
+else:
     HAVE_TORCH = False
 
 
@@ -54,6 +55,9 @@ class WobbleParameters:
         The engine to use for the convolutions
     torch_device : string in ["cpu", "cuda", None]. Default "cpu"
         Controls torch device if the torch engine is selected
+    shared_memory : bool, default True
+        If True, the overlaps are stored in shared memory, which is more efficient when
+        using numerous cores
 
     Notes
     -----
@@ -77,6 +81,7 @@ class WobbleParameters:
     scale_amplitudes: bool = False
     engine: str = "numpy"
     torch_device: str = "cpu"
+    shared_memory: bool = True
 
     def __post_init__(self):
         assert self.amplitude_variance >= 0, "amplitude_variance must be a non-negative scalar"
@@ -120,7 +125,7 @@ class TemplateMetadata:
     jitter2template_shift : ndarray
         Maps the optimal jitter from the jitter_window to the optimal template shift.
     jitter2spike_time_shift : ndarray
-        Maps the optimal jitter from teh jitter_window to the optimal shift in spike time index.
+        Maps the optimal jitter from the jitter_window to the optimal shift in spike time index.
 
     Notes
     -----
@@ -271,10 +276,17 @@ class WobbleSparsity:
             Dataclass object for aggregating channel sparsity variables together.
         """
         visible_channels = templates.sparsity.mask
-        unit_overlap = np.sum(
-            np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
-        )
-        unit_overlap = unit_overlap > 0
+        num_templates = templates.get_dense_templates().shape[0]
+        unit_overlap = np.zeros((num_templates, num_templates), dtype=bool)
+
+        for i in range(num_templates):
+            unit_overlap[i] = np.sum(np.logical_and(visible_channels[i], visible_channels), axis=1) > 0
+
+        # unit_overlap = np.sum(
+        #    np.logical_and(visible_channels[:, np.newaxis, :], visible_channels[np.newaxis, :, :]), axis=2
+        # )
+        # unit_overlap = unit_overlap > 0
+
         unit_overlap = np.repeat(unit_overlap, params.jitter_factor, axis=0)
         sparsity = cls(visible_channels=visible_channels, unit_overlap=unit_overlap)
         return sparsity
@@ -312,6 +324,30 @@ class TemplateData:
 
     def __post_init__(self):
         self.temporal, self.singular, self.spatial, self.temporal_jittered = self.compressed_templates
+
+
+def _find_strict_peaks(objective, order, threshold):
+    """Find values strictly greater than their neighbors within ``order`` samples."""
+    from scipy.ndimage import maximum_filter1d
+
+    if objective.size < 3:
+        return np.zeros(0, dtype=np.intp)
+    if np.isnan(objective).any():
+        from scipy.signal import argrelmax
+
+        peak_indices = argrelmax(objective, order=order)[0]
+        return peak_indices[objective[peak_indices] > threshold]
+
+    trailing_maximum = maximum_filter1d(objective, size=order, origin=(order - 1) // 2, mode="nearest")
+    left_maximum = np.empty_like(objective)
+    left_maximum[0] = objective[0]
+    left_maximum[1:] = trailing_maximum[:-1]
+
+    trailing_maximum = maximum_filter1d(objective[::-1], size=order, origin=(order - 1) // 2, mode="nearest")
+    right_maximum = np.empty_like(objective)
+    right_maximum[-1] = objective[-1]
+    right_maximum[:-1] = trailing_maximum[-2::-1]
+    return np.flatnonzero((objective > threshold) & (objective > left_maximum) & (objective > right_maximum))
 
 
 class WobbleMatch(BaseTemplateMatching):
@@ -352,18 +388,33 @@ class WobbleMatch(BaseTemplateMatching):
     #     "templates": None,
     # }
 
+    name = "wobble"
+    need_noise_levels = False
+
+    params_doc = """
+    parameters : dict
+        Parameters for the WobbleMatch algorithm. See WobbleParameters dataclass for more details.
+    engine : string in ["numpy", "torch", "auto"]. Default "auto"
+            The engine to use for the convolutions
+    torch_device : string in ["cpu", "cuda", None]. Default "cpu"
+            Controls torch device if the torch engine is selected
+    shared_memory : bool, default True
+            If True, the overlaps are stored in shared memory, which is more efficient when
+            using numerous cores
+    """
+
     def __init__(
         self,
         recording,
+        templates,
         return_output=True,
-        parents=None,
-        templates=None,
         parameters={},
         engine="numpy",
         torch_device="cpu",
+        shared_memory=True,
     ):
 
-        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
 
         templates_array = templates.get_dense_templates().astype(np.float32)
 
@@ -399,6 +450,24 @@ class WobbleMatch(BaseTemplateMatching):
             compressed_templates, params.jitter_factor, params.approx_rank, template_meta.jittered_indices, sparsity
         )
 
+        self.shared_memory = shared_memory
+
+        if self.shared_memory:
+            self.max_overlaps = max([len(o) for o in pairwise_convolution])
+            num_samples = len(pairwise_convolution[0][0])
+            num_templates = len(templates_array)
+            num_jittered = num_templates * params.jitter_factor
+            from spikeinterface.core.core_tools import make_shared_array
+
+            arr, shm = make_shared_array((num_jittered, self.max_overlaps, num_samples), dtype=np.float32)
+            for jittered_index in range(num_jittered):
+                units_are_overlapping = sparsity.unit_overlap[jittered_index, :]
+                overlapping_units = np.where(units_are_overlapping)[0]
+                n_overlaps = len(overlapping_units)
+                arr[jittered_index, :n_overlaps] = pairwise_convolution[jittered_index]
+            pairwise_convolution = [arr]
+            self.shm = shm
+
         norm_squared = compute_template_norm(sparsity.visible_channels, templates_array)
 
         spatial = np.moveaxis(spatial, [0, 1, 2], [1, 0, 2])
@@ -424,6 +493,19 @@ class WobbleMatch(BaseTemplateMatching):
         # self.margin = int(buffer_ms*1e-3 * recording.sampling_frequency)
         self.margin = 300  # To ensure equivalence with spike-psvae version of the algorithm
 
+    def clean(self):
+        if self.shared_memory and self.shm is not None:
+            self.template_meta = None
+            self.shm.close()
+            self.shm.unlink()
+            self.shm = None
+
+    def __del__(self):
+        if self.shared_memory and self.shm is not None:
+            self.template_meta = None
+            self.shm.close()
+            self.shm = None
+
     def _push_to_torch(self):
         if self.engine == "torch":
             temporal, singular, spatial, temporal_jittered = self.template_data.compressed_templates
@@ -434,7 +516,7 @@ class WobbleMatch(BaseTemplateMatching):
             self.template_data.compressed_templates = (temporal, singular, spatial, temporal_jittered)
         self.is_pushed = True
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
@@ -560,16 +642,16 @@ class WobbleMatch(BaseTemplateMatching):
         Finally, it generates a new spike train from the spike times, and returns it along with additional metrics about
         each spike.
         """
-        from scipy import signal
-
         # Get spike times (indices) using peaks in the objective
         objective_template_max = np.max(objective_normalized, axis=0)
         spike_window = (template_meta.num_samples - 1, objective_normalized.shape[1] - template_meta.num_samples)
         objective_windowed = objective_template_max[spike_window[0] : spike_window[1]]
-        spike_time_indices = signal.argrelmax(objective_windowed, order=template_meta.num_samples - 1)[0]
+        spike_time_indices = _find_strict_peaks(
+            objective_windowed,
+            order=template_meta.num_samples - 1,
+            threshold=params.threshold,
+        )
         spike_time_indices += template_meta.num_samples - 1
-        objective_spikes = objective_template_max[spike_time_indices]
-        spike_time_indices = spike_time_indices[objective_spikes > params.threshold]
 
         if len(spike_time_indices) == 0:  # No new spikes found
             return np.zeros((0, 2), dtype=np.int32), np.zeros(0), np.zeros(0)
@@ -644,7 +726,12 @@ class WobbleMatch(BaseTemplateMatching):
             id_scaling = scalings[id_mask]
             overlapping_templates = sparsity.unit_overlap[jittered_index]
             # Note: pairwise_conv only has overlapping template convolutions already
-            pconv = template_data.pairwise_convolution[jittered_index]
+            if params.shared_memory:
+                overlapping_units = np.where(overlapping_templates)[0]
+                n_overlaps = len(overlapping_units)
+                pconv = template_data.pairwise_convolution[0][jittered_index, :n_overlaps]
+            else:
+                pconv = template_data.pairwise_convolution[jittered_index]
             # TODO: If optimizing for speed -- check this loop
             for spike_start_index, spike_scaling in zip(id_spiketrain, id_scaling):
                 spike_stop_index = spike_start_index + convolution_resolution_len

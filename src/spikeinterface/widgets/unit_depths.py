@@ -1,13 +1,10 @@
-from __future__ import annotations
-
 import numpy as np
-from warnings import warn
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
 
-from ..core.template_tools import get_template_extremum_amplitude
+from spikeinterface.core.template_tools import get_template_amplitude_on_main_channel
 
 
 class UnitDepthsWidget(BaseWidget):
@@ -18,17 +15,14 @@ class UnitDepthsWidget(BaseWidget):
     ----------
     sorting_analyzer : SortingAnalyzer
         The SortingAnalyzer object
-    unit_colors :  dict or None, default: None
-        If given, a dictionary with unit ids as keys and colors as values
+    unit_colors : dict | None, default: None
+        Dict of colors with unit ids as keys and colors as values. Colors can be any type accepted
+        by matplotlib. If None, default colors are chosen using the `get_some_colors` function.
     depth_axis : int, default: 1
         The dimension of unit_locations that is depth
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        Sign of peak for amplitudes
     """
 
-    def __init__(
-        self, sorting_analyzer, unit_colors=None, depth_axis=1, peak_sign="neg", backend=None, **backend_kwargs
-    ):
+    def __init__(self, sorting_analyzer, unit_colors=None, depth_axis=1, backend=None, **backend_kwargs):
 
         sorting_analyzer = self.ensure_sorting_analyzer(sorting_analyzer)
 
@@ -44,7 +38,7 @@ class UnitDepthsWidget(BaseWidget):
         unit_locations = ulc.get_data(outputs="numpy")
         unit_depths = unit_locations[:, depth_axis]
 
-        unit_amplitudes = get_template_extremum_amplitude(sorting_analyzer, peak_sign=peak_sign)
+        unit_amplitudes = get_template_amplitude_on_main_channel(sorting_analyzer)
         unit_amplitudes = np.abs([unit_amplitudes[unit_id] for unit_id in unit_ids])
 
         num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit(outputs="array")

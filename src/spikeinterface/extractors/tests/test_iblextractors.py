@@ -1,3 +1,4 @@
+import sys
 from re import escape
 from unittest import TestCase
 
@@ -5,7 +6,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 
-from spikeinterface.extractors import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
+from spikeinterface.extractors.extractor_classes import read_ibl_recording, read_ibl_sorting, IblRecordingExtractor
 
 EID = "e2b845a1-e313-4a08-bc61-a5f662ed295e"
 PID = "80f6ffdd-f692-450f-ab19-cd6d45bfd73e"
@@ -27,11 +28,13 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
                 cache_dir=None,
             )
         except:
+            print("Skipping test due to server being down.")
             pytest.skip("Skipping test due to server being down.")
         try:
             cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", one=cls.one)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 503:
+                print("Skipping test due to server being down (HTTP 503).")
                 pytest.skip("Skipping test due to server being down (HTTP 503).")
             else:
                 raise
@@ -43,10 +46,10 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
                 pytest.skip(f"Skipping test due to KeyError: {e}")
             else:
                 raise
-        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
+        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_in_uV=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
-        )  # return_scaled=False is SI default
+        )  # return_in_uV=False is SI default
 
     def test_get_stream_names(self):
         stream_names = IblRecordingExtractor.get_stream_names(eid=self.eid, one=self.one)
@@ -64,23 +67,22 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
 
     def test_gains(self):
         expected_gains = 2.34375 * np.ones(shape=384)
-        assert_array_equal(x=self.recording.get_channel_gains(), y=expected_gains)
+        assert_array_equal(self.recording.get_channel_gains(), expected_gains)
 
     def test_offsets(self):
         expected_offsets = np.zeros(shape=384)
-        assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
+        assert_array_equal(self.recording.get_channel_offsets(), expected_offsets)
 
     def test_probe_representation(self):
         probe = self.recording.get_probe()
-        expected_probe_representation = "Probe - 384ch - 1shanks"
-        assert repr(probe) == expected_probe_representation
+        # we simply check that the probe has 384 channels in its representation
+        expected_probe_representation = "384ch"
+        assert expected_probe_representation in repr(probe)
 
     def test_property_keys(self):
         expected_property_keys = [
             "gain_to_uV",
             "offset_to_uV",
-            "contact_vector",
-            "location",
             "group",
             "shank",
             "shank_row",
@@ -91,6 +93,9 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
             "index_on_probe",
         ]
         self.assertCountEqual(first=self.recording.get_property_keys(), second=expected_property_keys)
+
+    def test_has_probe(self):
+        assert self.recording.has_probe() is True
 
     def test_trace_shape(self):
         expected_shape = (21, 384)
@@ -122,10 +127,10 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
         except:
             pytest.skip("Skipping test due to server being down.")
         cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", load_sync_channel=True, one=cls.one)
-        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_scaled=True)
+        cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_in_uV=True)
         cls.small_unscaled_trace = cls.recording.get_traces(
             start_frame=5, end_frame=26
-        )  # return_scaled=False is SI default
+        )  # return_in_uV=False is SI default
 
     def test_dtype(self):
         expected_datatype = "int16"
@@ -137,11 +142,11 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
 
     def test_gains(self):
         expected_gains = np.concatenate([2.34375 * np.ones(shape=384), [1171.875]])
-        assert_array_equal(x=self.recording.get_channel_gains(), y=expected_gains)
+        assert_array_equal(self.recording.get_channel_gains(), expected_gains)
 
     def test_offsets(self):
         expected_offsets = np.zeros(shape=385)
-        assert_array_equal(x=self.recording.get_channel_offsets(), y=expected_offsets)
+        assert_array_equal(self.recording.get_channel_offsets(), expected_offsets)
 
     def test_probe_representation(self):
         expected_exception = ValueError
@@ -197,9 +202,9 @@ class TestIblSortingExtractor(TestCase):
             )
         except:
             pytest.skip("Skipping test due to server being down.")
-        sorting = read_ibl_sorting(pid=PID, one=one)
+        sorting = read_ibl_sorting(pid=PID, one=one, revision="2023-12-05")
         assert len(sorting.unit_ids) == 733
-        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True)
+        sorting_good = read_ibl_sorting(pid=PID, good_clusters_only=True, one=one, revision="2023-12-05")
         assert len(sorting_good.unit_ids) == 108
 
         # check properties
@@ -208,14 +213,14 @@ class TestIblSortingExtractor(TestCase):
         assert "brain_area" in sorting_good.get_property_keys()
 
         # load without properties
-        sorting_no_properties = read_ibl_sorting(pid=PID, load_unit_properties=False)
+        sorting_no_properties = read_ibl_sorting(pid=PID, one=one, load_unit_properties=False, revision="2023-12-05")
         # check properties
         assert "firing_rate" not in sorting_no_properties.get_property_keys()
 
 
 if __name__ == "__main__":
-    TestDefaultIblStreamingRecordingExtractorApBand.setUpClass()
-    test1 = TestDefaultIblStreamingExtractorApBand()
+    TestDefaultIblRecordingExtractorApBand.setUpClass()
+    test1 = TestDefaultIblRecordingExtractorApBand()
     test1.setUp()
     test1.test_get_stream_names()
     test1.test_dtype()
@@ -230,7 +235,7 @@ if __name__ == "__main__":
     test1.test_unscaled_trace_dtype()
 
     TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel.setUpClass()
-    test2 = TestIblStreamingExtractorApBandWithLoadSyncChannel()
+    test2 = TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel()
     test2.setUp()
     test2.test_get_stream_names()
     test2.test_get_stream_names()

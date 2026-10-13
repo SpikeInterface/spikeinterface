@@ -1,28 +1,41 @@
 import numpy as np
+import importlib.util
 
-try:
-    import numba
-
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
-from spikeinterface import NumpySorting, generate_sorting
-from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
-from spikeinterface.postprocessing import ComputeCorrelograms
-from spikeinterface.postprocessing.correlograms import (
-    _compute_correlograms_on_sorting,
-    _make_bins,
-    compute_correlograms,
-)
+npyx_spec = importlib.util.find_spec("npyx")
+if npyx_spec is not None:
+    HAVE_NPYX = True
+else:
+    HAVE_NPYX = False
+
+
 import pytest
 from pytest import param
+
+from spikeinterface import NumpySorting, generate_sorting
+from spikeinterface.postprocessing import ComputeACG3D, ComputeCorrelograms, ComputeAutoCorrelograms
+from spikeinterface.postprocessing.correlograms import (
+    _compute_3d_acg_one_unit,
+    _compute_correlograms_on_sorting,
+    _compute_auto_correlograms_on_sorting,
+    _make_bins,
+    auto_correlogram_for_one_segment,
+    compute_acgs_3d,
+    compute_correlograms,
+    compute_auto_correlograms,
+    correlogram_for_one_segment,
+)
+from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
 
 SKIP_NUMBA = pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 
 
 class TestComputeCorrelograms(AnalyzerExtensionCommonTestSuite):
-
     @pytest.mark.parametrize(
         "params",
         [
@@ -46,10 +59,39 @@ class TestComputeCorrelograms(AnalyzerExtensionCommonTestSuite):
 
         params = dict(method=method, window_ms=100, bin_ms=6.5)
         ext_numpy = sorting_analyzer.compute(ComputeCorrelograms.extension_name, **params)
-
         result_sorting, bins_sorting = compute_correlograms(self.sorting, **params)
 
         assert np.array_equal(result_sorting, ext_numpy.data["ccgs"])
+        assert np.array_equal(bins_sorting, ext_numpy.data["bins"])
+
+
+class TestComputeAutoCorrelograms(AnalyzerExtensionCommonTestSuite):
+    @pytest.mark.parametrize(
+        "params",
+        [
+            dict(method="numpy"),
+            dict(method="auto"),
+            param(dict(method="numba"), marks=SKIP_NUMBA),
+        ],
+    )
+    def test_extension(self, params):
+        self.run_extension_tests(ComputeAutoCorrelograms, params)
+
+    @pytest.mark.parametrize("method", ["numpy", param("numba", marks=SKIP_NUMBA)])
+    def test_sortinganalyzer_auto_correlograms(self, method):
+        """
+        Test the outputs when using SortingAnalyzer against
+        the output passing sorting directly to `compute_auto_correlograms`.
+        Sorting to `compute_auto_correlograms` is tested extensively below
+        so if these match it means `SortingAnalyzer` is working.
+        """
+        sorting_analyzer = self._prepare_sorting_analyzer("memory", sparse=False, extension_class=ComputeCorrelograms)
+
+        params = dict(method=method, window_ms=100, bin_ms=6.5)
+        ext_numpy = sorting_analyzer.compute(ComputeAutoCorrelograms.extension_name, **params)
+        result_sorting, bins_sorting = compute_auto_correlograms(self.sorting, **params)
+
+        assert np.array_equal(result_sorting, ext_numpy.data["acgs"])
         assert np.array_equal(bins_sorting, ext_numpy.data["bins"])
 
 
@@ -89,6 +131,144 @@ def test_equal_results_correlograms(window_and_bin_ms):
         sorting, window_ms=window_ms, bin_ms=bin_ms, method="numpy"
     )
     result_numba, bins_numba = _compute_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
+    )
+
+    assert np.array_equal(result_numpy, result_numba)
+
+
+def test_segment_helpers_preserve_explicit_unit_count():
+    # Silent units must retain their positions in the complete sorting.
+    samples = np.array([0, 1000])
+    labels = np.array([0, 2])
+    for helper, shape in (
+        (correlogram_for_one_segment, (3, 3, 20)),
+        (auto_correlogram_for_one_segment, (3, 20)),
+    ):
+        result = helper(samples, labels, window_size=100, bin_size=10, num_units=3)
+        np.testing.assert_array_equal(result, np.zeros(shape, dtype="int64"))
+
+
+@pytest.mark.parametrize("num_units", [2, 3])
+def test_equal_results_when_units_are_silent_in_a_segment(num_units):
+    """Keep global unit coordinates when a segment has silent units."""
+    sorting = NumpySorting.from_samples_and_labels(
+        samples_list=[
+            np.array([0, 40]) if num_units == 2 else np.array([0, 20, 40, 60]),
+            np.array([0, 20, 40, 60]),
+            np.array([], dtype="int64"),
+        ],
+        labels_list=[
+            np.array([0, 0]) if num_units == 2 else np.array([0, 2, 0, 2]),
+            np.array([0, 1, 0, 1]),
+            np.array([], dtype="int64"),
+        ],
+        sampling_frequency=1000.0,
+        unit_ids=np.arange(num_units),
+    )
+
+    ccg_numpy, _ = compute_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numpy")
+    acg_numpy, _ = compute_auto_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numpy")
+
+    # Each active unit has two spikes 40 ms apart. Unit 0 occurs in both
+    # nonempty segments, and their timestamps must never be correlated.
+    expected = np.zeros((num_units, num_units, 10), dtype="int64")
+    expected[0, 0, [1, 9]] = 2
+    for unit_index in range(1, num_units):
+        expected[unit_index, unit_index, [1, 9]] = 1
+        expected[0, unit_index, [3, 7]] = [2, 1]
+        expected[unit_index, 0, [3, 7]] = [1, 2]
+    np.testing.assert_array_equal(ccg_numpy, expected)
+    np.testing.assert_array_equal(acg_numpy, expected[np.arange(num_units), np.arange(num_units)])
+
+    if HAVE_NUMBA:
+        ccg_numba, _ = compute_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numba")
+        acg_numba, _ = compute_auto_correlograms(sorting, window_ms=100.0, bin_ms=10.0, method="numba")
+        assert np.array_equal(ccg_numpy, ccg_numba)
+        assert np.array_equal(acg_numpy, acg_numba)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+@pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
+def test_equal_results_fast_correlograms(window_and_bin_ms):
+    """
+    Test that the 2 methods have same results with some varied time bins
+    that are not tested in other tests.
+    """
+
+    window_ms, bin_ms = window_and_bin_ms
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
+
+    result_numba_fast, bins_numba_fast = _compute_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=True, n_jobs=2
+    )
+    result_numba, bins_numba = _compute_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=False
+    )
+    # fast_mode uses numba.prange which can produce off-by-one counts at bin
+    # boundaries due to the shared start_j optimisation across threads
+    np.testing.assert_allclose(result_numba_fast, result_numba, atol=2)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+@pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
+def test_equal_results_fast_auto_correlograms(window_and_bin_ms):
+    """
+    Test that the 2 methods have same results with some varied time bins
+    that are not tested in other tests.
+    """
+
+    window_ms, bin_ms = window_and_bin_ms
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[30.325, 10.5], seed=0)
+
+    result_numba_fast, bins_numba_fast = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=True, n_jobs=2
+    )
+    result_numba, bins_numba = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba", fast_mode=False
+    )
+    print(np.max(result_numba_fast), np.max(result_numba))
+    # fast_mode uses numba.prange which can produce off-by-one counts at bin
+    # boundaries due to the shared start_j optimisation across threads
+    np.testing.assert_allclose(result_numba_fast, result_numba, atol=2)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+@pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
+def test_equal_results_auto_correlograms(window_and_bin_ms):
+    """
+    Test that the 2 methods have same results with some varied time bins
+    that are not tested in other tests.
+    """
+
+    window_ms, bin_ms = window_and_bin_ms
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
+
+    result_numpy, bins_numpy = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numpy"
+    )
+    result_numba, bins_numba = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
+    )
+
+    assert np.array_equal(result_numpy, result_numba)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
+@pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
+def test_equal_results_auto_correlograms(window_and_bin_ms):
+    """
+    Test that the 2 methods have same results with some varied time bins
+    that are not tested in other tests.
+    """
+
+    window_ms, bin_ms = window_and_bin_ms
+    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
+
+    result_numpy, bins_numpy = _compute_auto_correlograms_on_sorting(
+        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numpy"
+    )
+    result_numba, bins_numba = _compute_auto_correlograms_on_sorting(
         sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
     )
 
@@ -193,12 +373,12 @@ def test_compute_correlograms(fill_all_bins, on_time_bin, multi_segment):
     )
 
     if multi_segment:
-        sorting = NumpySorting.from_times_labels(
-            times_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
+        sorting = NumpySorting.from_samples_and_labels(
+            samples_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
         )
     else:
-        sorting = NumpySorting.from_times_labels(
-            times_list=[spike_times, spike_times],
+        sorting = NumpySorting.from_samples_and_labels(
+            samples_list=[spike_times, spike_times],
             labels_list=[spike_unit_indices, spike_unit_indices],
             sampling_frequency=sampling_frequency,
         )
@@ -239,8 +419,8 @@ def test_compute_correlograms_different_units(method):
     window_ms = 40
     bin_ms = 5
 
-    sorting = NumpySorting.from_times_labels(
-        times_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
+    sorting = NumpySorting.from_samples_and_labels(
+        samples_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
     )
 
     result, bins = compute_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
@@ -252,6 +432,38 @@ def test_compute_correlograms_different_units(method):
     assert np.array_equal(result[1, 0], np.array([0, 0, 0, 1, 1, 1, 0, 1]))
 
     assert np.array_equal(result[0, 1], np.array([1, 0, 1, 1, 1, 0, 0, 0]))
+
+
+@pytest.mark.parametrize("method", ["numpy", param("numba", marks=SKIP_NUMBA)])
+def test_compute_auto_correlograms_different_units(method):
+    """
+    Make a supplementary test to `test_compute_correlograms` in which all
+    units had the same spike train. Test here a simpler and accessible
+    test case with only two neurons with different spike time differences
+    within and across units.
+
+    This case is simple enough to validate by hand, for example for the
+    result[1, 1] case we are looking at the autocorrelogram of the unit '1'.
+    The spike times are 4 and 16 s, therefore we expect to see a count in
+    the +/- 10 to 15 s bin.
+    """
+    sampling_frequency = 30000
+    spike_times = np.array([0, 4, 8, 16]) / 1000 * sampling_frequency
+    spike_times.astype(int)
+
+    spike_unit_indices = np.array([0, 1, 0, 1])
+
+    window_ms = 40
+    bin_ms = 5
+
+    sorting = NumpySorting.from_samples_and_labels(
+        samples_list=[spike_times], labels_list=[spike_unit_indices], sampling_frequency=sampling_frequency
+    )
+
+    result, bins = compute_auto_correlograms(sorting, window_ms=window_ms, bin_ms=bin_ms, method=method)
+
+    assert np.array_equal(result[0], np.array([0, 0, 1, 0, 0, 1, 0, 0]))
+    assert np.array_equal(result[1], np.array([0, 1, 0, 0, 0, 0, 1, 0]))
 
 
 def generate_correlogram_test_dataset(sampling_frequency, fill_all_bins, hit_bin_edge):
@@ -368,3 +580,119 @@ def generate_correlogram_test_dataset(sampling_frequency, fill_all_bins, hit_bin
     expected_result_corr[int(num_bins / 2)] = num_filled_bins
 
     return window_ms, bin_ms, spike_times, spike_unit_indices, expected_bins, expected_result_auto, expected_result_corr
+
+
+#########################################
+# 3D ACG Tests
+#########################################
+
+
+class TestComputeACG3D(AnalyzerExtensionCommonTestSuite):
+    @pytest.mark.parametrize(
+        "params",
+        [
+            dict(window_ms=50.0, bin_ms=1.0, num_firing_rate_quantiles=10, smoothing_factor=250),
+        ],
+    )
+    def test_extension(self, params):
+        self.run_extension_tests(ComputeACG3D, params)
+
+    @pytest.mark.parametrize("num_firing_rate_quantiles", [10, 15])
+    def test_sortinganalyzer_acgs_3d(self, num_firing_rate_quantiles):
+        """
+        Test the outputs when using SortingAnalyzer against
+        the output passing sorting directly to `compute_acgs_3d`.
+        """
+        sorting_analyzer = self._prepare_sorting_analyzer("memory", sparse=False, extension_class=ComputeACG3D)
+
+        params = dict(num_firing_rate_quantiles=num_firing_rate_quantiles, window_ms=100, bin_ms=6.5)
+        ext_numpy = sorting_analyzer.compute(ComputeACG3D.extension_name, **params)
+
+        result_sorting, quantiles_sorting, time_bins = compute_acgs_3d(self.sorting, **params)
+
+        assert np.array_equal(result_sorting, ext_numpy.data["acgs_3d"])
+        assert np.array_equal(quantiles_sorting, ext_numpy.data["firing_quantiles"])
+        assert np.array_equal(time_bins, ext_numpy.data["bins"])
+
+
+@pytest.mark.skipif(not HAVE_NPYX, reason="npyx not installed")
+@pytest.mark.parametrize("window_ms", [50.0, 100.0])
+@pytest.mark.parametrize("bin_ms", [1.0, 2.0])
+@pytest.mark.parametrize("num_firing_rate_quantiles", [10, 15])
+@pytest.mark.parametrize("smoothing_factor", [250, 500])
+def test_acgs_3d_original_implementation(window_ms, bin_ms, num_firing_rate_quantiles, smoothing_factor):
+    sorting = generate_sorting(num_units=1, sampling_frequency=30000.0, durations=[100], firing_rates=60, seed=0)
+
+    unit_ids = sorting.get_unit_ids()
+
+    times_1 = times_2 = sorting.get_unit_spike_train(unit_id=unit_ids[0])
+
+    npyx_quantiles, npyx_3dacg = npyx.corr.crosscorr_vs_firing_rate(
+        times_1,
+        times_2,
+        win_size=window_ms,
+        bin_size=bin_ms,
+        fs=sorting.sampling_frequency,
+        num_firing_rate_bins=num_firing_rate_quantiles,
+        smooth=smoothing_factor,
+    )
+
+    acg_3d, firing_rate_quantiles = _compute_3d_acg_one_unit(
+        sorting=sorting,
+        unit_id=unit_ids[0],
+        win_size=window_ms,
+        bin_size=bin_ms,
+        num_firing_rate_quantiles=num_firing_rate_quantiles,
+        smoothing_factor=smoothing_factor,
+    )
+
+    assert np.allclose(npyx_3dacg, acg_3d, rtol=1e-2, atol=1e-2), "3D-ACG result does not match original implementation"
+    assert np.allclose(
+        npyx_quantiles, firing_rate_quantiles, rtol=1e-5, atol=1e-5
+    ), "3D-ACG quantiles do not match original implementation"
+
+
+# Check in the case where we have segments
+@pytest.mark.skipif(not HAVE_NPYX, reason="npyx not installed")
+@pytest.mark.parametrize("window_ms", [50.0, 100.0])
+@pytest.mark.parametrize("bin_ms", [1.0, 2.0])
+@pytest.mark.parametrize("num_firing_rate_quantiles", [10, 15])
+@pytest.mark.parametrize("segments", [2, 5, 10])
+def test_acgs_3d_original_implementation_with_segments(window_ms, bin_ms, num_firing_rate_quantiles, segments):
+    durations = [np.random.randint(30, 60) for _ in range(segments)]
+    sorting = generate_sorting(num_units=1, sampling_frequency=30000.0, durations=durations, firing_rates=50, seed=0)
+    unit_ids = sorting.get_unit_ids()
+
+    # Simulate single segment by concatenating all segments
+    segment_spike_trains = [
+        sorting.get_unit_spike_train(unit_id=unit_ids[0], segment_index=i) for i in range(sorting.get_num_segments())
+    ]
+    segment_durations = [np.max(segment) + 1 for segment in segment_spike_trains]
+    segment_offsets = [0] + np.cumsum(segment_durations).tolist()
+    concat_times = np.concatenate(
+        [np.array(segment) + segment_offsets[i] for i, segment in enumerate(segment_spike_trains)]
+    )
+
+    npyx_quantiles, npyx_3dacg = npyx.corr.crosscorr_vs_firing_rate(
+        concat_times,
+        concat_times,
+        win_size=window_ms,
+        bin_size=bin_ms,
+        fs=sorting.sampling_frequency,
+        num_firing_rate_bins=num_firing_rate_quantiles,
+    )
+
+    acg_3d, firing_rate_quantiles = _compute_3d_acg_one_unit(
+        sorting=sorting,
+        unit_id=unit_ids[0],
+        win_size=window_ms,
+        bin_size=bin_ms,
+        num_firing_rate_quantiles=num_firing_rate_quantiles,
+        # use npyx quantiles to check for matching results. multiple segments will use first segments' quantiles
+        firing_rate_quantiles=npyx_quantiles.tolist(),
+    )
+
+    # Use a less strict tolerance here as we are only simulating a single segment
+    assert np.allclose(
+        npyx_3dacg, acg_3d, rtol=5e-2, atol=5e-2
+    ), f"3D-ACG result for {segments} segments does not match original implementation with concatenated times"

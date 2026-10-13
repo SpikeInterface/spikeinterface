@@ -370,8 +370,8 @@ Noise levels can be estimated on the scaled traces or on the raw
 .. code:: ipython3
 
     # we can estimate the noise on the scaled traces (microV) or on the raw one (which is in our case int16).
-    noise_levels_microV = si.get_noise_levels(rec, return_scaled=True)
-    noise_levels_int16 = si.get_noise_levels(rec, return_scaled=False)
+    noise_levels_microV = si.get_noise_levels(rec, return_in_uV=True)
+    noise_levels_int16 = si.get_noise_levels(rec, return_in_uV=False)
 
 .. code:: ipython3
 
@@ -442,7 +442,7 @@ Let’s use here the ``locally_exclusive`` method for detection and the
 
     from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 
-    peak_locations = localize_peaks(rec, peaks, method='center_of_mass', radius_um=50., **job_kwargs)
+    peak_locations = localize_peaks(rec, peaks, method='center_of_mass', method_kwargs=dict(radius_um=50.), **job_kwargs)
 
 
 
@@ -516,7 +516,7 @@ pipeline, in SpikeInterface this is dead-simple: one function.
 -  most of sorters are wrapped from external tools (kilosort,
    kisolort2.5, spykingcircus, montainsort4 …) that often also need
    other requirements (e.g., MATLAB, CUDA)
--  some sorters are internally developed (spyekingcircus2)
+-  some sorters are internally developed (spykingcircus2, tridesclous2, lupin)
 -  external sorter can be run inside a container (docker, singularity)
    WITHOUT pre-installation
 
@@ -567,7 +567,7 @@ In this example:
     # run kilosort2.5 without drift correction
     params_kilosort2_5 = {'do_correction': False}
 
-    sorting = si.run_sorter('kilosort2_5', rec, output_folder=base_folder / 'kilosort2.5_output',
+    sorting = si.run_sorter('kilosort2_5', rec, folder=base_folder / 'kilosort2.5_output',
                             docker_image=True, verbose=True, **params_kilosort2_5)
 
 .. code:: ipython3
@@ -699,15 +699,14 @@ make a copy of the analyzer and all computed extensions.
 Quality metrics
 ---------------
 
-We have a single function ``compute_quality_metrics(SortingAnalyzer)``
-that returns a ``pandas.Dataframe`` with the desired metrics.
+The ``analyzer.compute("quality_metrics").get_data()`` returns a ``pandas.Dataframe`` with the desired metrics.
 
 Note that this function is also an extension and so can be saved. And so
-this is equivalent to do :
+this is equivalent to do:
 ``metrics = analyzer.compute("quality_metrics").get_data()``
 
 Please visit the `metrics
-documentation <https://spikeinterface.readthedocs.io/en/latest/modules/qualitymetrics.html>`__
+documentation <https://spikeinterface.readthedocs.io/en/latest/modules/metrics/quality.html>`__
 for more information and a list of all supported metrics.
 
 Some metrics are based on PCA (like
@@ -721,18 +720,10 @@ PCA for their computation. This can be achieved with:
     metric_names=['firing_rate', 'presence_ratio', 'snr', 'isi_violation', 'amplitude_cutoff']
 
 
-    # metrics = analyzer.compute("quality_metrics").get_data()
-    # equivalent to
-    metrics = si.compute_quality_metrics(analyzer, metric_names=metric_names)
+    metrics_ext = analyzer.compute("quality_metrics", metric_names=metric_names)
+    metrics = metrics_ext.get_data()
 
     metrics
-
-
-.. parsed-literal::
-
-    /home/samuel.garcia/Documents/SpikeInterface/spikeinterface/src/spikeinterface/qualitymetrics/misc_metrics.py:846: UserWarning: Some units have too few spikes : amplitude_cutoff is set to NaN
-      warnings.warn(f"Some units have too few spikes : amplitude_cutoff is set to NaN")
-
 
 
 
@@ -1138,3 +1129,12 @@ And push the results to sortingview webased viewer
 .. code:: python
 
    si.plot_sorting_summary(analyzer_clean, backend='sortingview')
+
+
+
+Additional resources
+--------------------
+
+For additional resources about Neuropixels, you can take a look to the `awesome_neuropixel`_ github repo.
+
+.. _awesome_neuropixel: https://github.com/Julie-Fabre/awesome_neuropixels

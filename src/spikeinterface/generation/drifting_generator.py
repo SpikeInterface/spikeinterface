@@ -1,5 +1,5 @@
 """
-This module implements generation of more realistics signal than `spikeinterface.core.generate`
+This module implements generation of more realistic signal than `spikeinterface.core.generate`
 
   * drift
   * correlated noise
@@ -10,49 +10,71 @@ This module implements generation of more realistics signal than `spikeinterface
 
 import numpy as np
 
-from probeinterface import generate_multi_columns_probe
+from probeinterface import generate_multi_columns_probe, get_probe, generate_tetrode
 
 from spikeinterface import Templates
+from spikeinterface.core import ms_to_samples
+from spikeinterface.core.core_tools import _ensure_seed
 from spikeinterface.core.generate import (
     generate_unit_locations,
     generate_sorting,
     generate_templates,
+    synthesize_amplitude_factor,
     _ensure_unit_params,
 )
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 from .noise_tools import generate_noise
 
 
-# this should be moved in probeinterface but later
-_toy_probes = {
-    "Neuropixel-384": dict(
-        num_columns=4,
-        num_contact_per_column=[96] * 4,
-        xpitch=16,
-        ypitch=40,
-        y_shift_per_column=[20, 0, 20, 0],
-        contact_shapes="square",
-        contact_shape_params={"width": 12},
-    ),
-    "Neuropixel-128": dict(
-        num_columns=4,
-        num_contact_per_column=[32] * 4,
-        xpitch=16,
-        ypitch=40,
-        y_shift_per_column=[20, 0, 20, 0],
-        contact_shapes="square",
-        contact_shape_params={"width": 12},
-    ),
-    "Neuronexus-32": dict(
-        num_columns=3,
-        num_contact_per_column=[10, 12, 10],
-        xpitch=30,
-        ypitch=30,
-        y_shift_per_column=[0, -15, 0],
-        contact_shapes="circle",
-        contact_shape_params={"radius": 8},
-    ),
-}
+def _make_probe_by_name(probe_name: str):
+    """
+    Generates a probe from probeinterface library, using the manufacturer name combined with the probe name, e.g.
+        - 'cambridgeneurotech/ASSY-37-H7b'
+        - 'cambridgeneurotech#ASSY-37-H7b'
+        - 'imec#NP1000"
+
+    This function replace the old `_toy_probes` dict that generate probe using `generate_multi_columns_probe()`
+    """
+    if probe_name == "Neuropixels1-384":
+        probe = get_probe("imec", "NP1000")
+        probe = probe.get_slice(np.arange(384))
+    elif probe_name == "Neuropixels1-128":
+        probe = get_probe("imec", "NP1000")
+        probe = probe.get_slice(np.arange(128))
+    elif probe_name == "Neuropixels2-384":
+        probe = get_probe("imec", "NP2000")
+        probe = probe.get_slice(np.arange(384))
+    elif probe_name == "Neuropixels2-128":
+        probe = get_probe("imec", "NP2000")
+        probe = probe.get_slice(np.arange(128))
+    elif probe_name == "Neuronexus-32":
+        # this probe was not existing really, it was a 'generic' 32 channels
+        # lets keep as before
+        probe = generate_multi_columns_probe(
+            num_columns=3,
+            num_contact_per_column=[10, 12, 10],
+            xpitch=30,
+            ypitch=30,
+            y_shift_per_column=[0, -15, 0],
+            contact_shapes="circle",
+            contact_shape_params={"radius": 8},
+        )
+    elif probe_name == "tetrode":
+        probe = generate_tetrode()
+    elif probe_name == "sinaps-128":
+        probe = get_probe("sinaps-research-platform", "p1024s1NHP")
+        order = np.argsort(probe.contact_ids.astype("int64"))
+        probe = probe.get_slice(order[:128])
+    elif "/" in probe_name:
+        manufacturer, probe_name_ = probe_name.split("/")
+        probe = get_probe(manufacturer, probe_name_)
+    elif "#" in probe_name:
+        manufacturer, probe_name_ = probe_name.split("#")
+        probe = get_probe(manufacturer, probe_name_)
+    else:
+        raise ValueError("wrong probe_name")
+
+    return probe
 
 
 def make_one_displacement_vector(
@@ -68,11 +90,13 @@ def make_one_displacement_vector(
     seed=None,
 ):
     """
-    Generates a toy displacement vector with ziagzag or bumps patterns.
+    Generates a toy displacement vector with zigzag or bumps patterns.
+    This displacement vector has no amplitude, this generate only the shape
+    in the range [-0.5, 0.5]
 
     Parameters
     ----------
-    drift_mode : "zigzag" | "bumps", default: "zigzag"
+    drift_mode : "zigzag" | "bumps" | "random_walk", default: "zigzag"
         The drift mode.
     duration : float, default: 600
         Duration in seconds
@@ -94,9 +118,9 @@ def make_one_displacement_vector(
     Returns
     -------
     displacement_vector: np.array
-        The discplacement vector in micrometers
+        The displacement vector in micrometers
     """
-    import scipy.signal
+    from scipy.signal import sawtooth
 
     t_start_drift = 0.0 if t_start_drift is None else t_start_drift
     t_end_drift = duration if t_end_drift is None else t_end_drift
@@ -113,7 +137,7 @@ def make_one_displacement_vector(
         times = np.arange(end_drift_index - start_drift_index) / displacement_sampling_frequency
 
         freq = 1.0 / period_s
-        triangle = np.abs(scipy.signal.sawtooth(2 * np.pi * freq * times + np.pi / 2))
+        triangle = np.abs(sawtooth(2 * np.pi * freq * times + np.pi / 2))
         # triangle *= amplitude_um
         # triangle -= amplitude_um / 2.0
         triangle -= 0.5
@@ -126,7 +150,7 @@ def make_one_displacement_vector(
 
         min_bump_interval, max_bump_interval = bump_interval_s
 
-        rg = np.random.RandomState(seed=seed)
+        rg = np.random.default_rng(seed=seed)
         diff = rg.uniform(min_bump_interval, max_bump_interval, size=int(duration / min_bump_interval))
         bumps_times = np.cumsum(diff) + t_start_drift
         bumps_times = bumps_times[bumps_times < t_end_drift]
@@ -141,8 +165,19 @@ def make_one_displacement_vector(
             else:
                 displacement_vector[ind0:ind1] = -0.5
 
+    elif drift_mode == "random_walk":
+        rg = np.random.default_rng(seed=seed)
+        steps = rg.integers(low=0, high=1, size=num_samples, endpoint=True)
+        steps = steps.astype("float64")
+        # 0 -> -1 and 1 -> 1
+        steps = steps * 2 - 1
+        steps[:start_drift_index] = 0
+        steps[end_drift_index:] = 0
+        displacement_vector = np.cumsum(steps, dtype="float64")
+        displacement_vector /= np.max(np.abs(displacement_vector)) * 2
+
     else:
-        raise ValueError("drift_mode must be 'zigzag' or 'bump'")
+        raise ValueError("drift_mode must be 'zigzag' or 'bump' or 'random_walk'")
 
     return displacement_vector * amplitude_factor
 
@@ -151,8 +186,8 @@ def generate_displacement_vector(
     duration,
     unit_locations,
     displacement_sampling_frequency=5.0,
-    drift_start_um=[0, 20.0],
-    drift_stop_um=[0, -20.0],
+    drift_start_um=[0, 30.0],
+    drift_stop_um=[0, -30.0],
     drift_step_um=1,
     motion_list=[
         dict(
@@ -199,6 +234,8 @@ def generate_displacement_vector(
 
     Returns
     -------
+    unit_displacements : numpy.ndarray
+        The final per unit, displacement vector with shape (num_times, num_units, 2)
     displacement_vectors : numpy.ndarray
         The drift vector is a numpy array with shape (num_times, 2, num_motions)
         num_motions is generally 1, but can be > 1 in case of combining several drift vectors
@@ -234,7 +271,9 @@ def generate_displacement_vector(
             **motion_kwargs,
             seed=seed,
         )
+
         one_displacement = one_displacement[:, np.newaxis] * (drift_stop_um - drift_start_um) + mid
+
         displacement_vectors.append(one_displacement[:, :, np.newaxis])
 
         if non_rigid_gradient is None:
@@ -253,15 +292,39 @@ def generate_displacement_vector(
 
     displacement_vectors = np.concatenate(displacement_vectors, axis=2)
 
-    return displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps
+    # unit_displacements is the sum of all displacements (times, units, direction_x_y)
+    unit_displacements = np.zeros((displacement_vectors.shape[0], num_units, 2))
+    for direction in (0, 1):
+        # x and y
+        for i in range(displacement_vectors.shape[2]):
+            m = displacement_vectors[:, direction, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
+            unit_displacements[:, :, direction] += m
+
+        lim0 = min(drift_start_um[direction], drift_stop_um[direction])
+        lim1 = max(drift_start_um[direction], drift_stop_um[direction])
+        if np.min(unit_displacements[:, :, direction]) < lim0 or np.max(unit_displacements[:, :, direction]) > lim1:
+            raise ValueError(
+                "unit_displacements is too big when combining several motion (with motion_list)."
+                "Please consider a smaller 'amplitude_factor' for each motion"
+            )
+
+    return (
+        unit_displacements,
+        displacement_vectors,
+        displacement_unit_factor,
+        displacement_sampling_frequency,
+        displacements_steps,
+    )
 
 
 def generate_drifting_recording(
     num_units=250,
     duration=600.0,
     sampling_frequency=30000.0,
-    probe_name="Neuropixel-128",
+    probe_name="Neuropixels1-128",
+    probe=None,
     generate_probe_kwargs=None,
+    unit_locations=None,
     generate_unit_locations_kwargs=dict(
         margin_um=20.0,
         minimum_z=5.0,
@@ -269,7 +332,11 @@ def generate_drifting_recording(
         minimum_distance=18.0,
         max_iteration=100,
         distance_strict=False,
+        distribution="uniform",
+        # distribution="multimodal",
+        # num_modes=2,
     ),
+    displacement_data=None,
     generate_displacement_vector_kwargs=dict(
         displacement_sampling_frequency=5.0,
         drift_start_um=[0, 20],
@@ -290,12 +357,18 @@ def generate_drifting_recording(
         ms_after=3.0,
         mode="ellipsoid",
         unit_params=dict(
-            alpha=(150.0, 500.0),
+            alpha=(100.0, 500.0),
             spatial_decay=(10, 45),
+            ellipse_shrink=(0.4, 1),
+            ellipse_angle=(0, np.pi * 2),
         ),
     ),
+    sorting=None,
     generate_sorting_kwargs=dict(firing_rates=(2.0, 8.0), refractory_period_ms=4.0),
-    generate_noise_kwargs=dict(noise_levels=(12.0, 15.0), spatial_decay=25.0),
+    noise=None,
+    generate_noise_kwargs=dict(noise_levels=(6.0, 8.0), spatial_decay=25.0),
+    amplitude_std: float | None = None,
+    amplitude_factor: np.ndarray | None = None,
     extra_outputs=False,
     seed=None,
 ):
@@ -309,25 +382,40 @@ def generate_drifting_recording(
         Number of units.
     duration : float, default: 600.
         The duration in seconds.
-    sampling_frequency : float, dfault: 30000.
+    sampling_frequency : float, default: 30000.
         The sampling frequency.
-    probe_name : str, default: "Neuropixel-128"
-        The probe type if generate_probe_kwargs is None.
+    probe: Probe object, default None
+        If provided, the Probe geometry to consider
+    probe_name : str, default: "Neuropixels1-128"
+        The probe type if generate_probe_kwargs is None and probe is None.
     generate_probe_kwargs : None or dict
         A dict to generate the probe, this supersede probe_name when not None.
+    unit_locations: array, default None
+        The unit locations of the cells
     generate_unit_locations_kwargs : dict
-        Parameters given to generate_unit_locations().
+        Parameters given to generate_unit_locations() if unit_locations is None
+    displacement_data: tuple of arrays, default None
+        The output of generate_displacement_vector(), if precomputed by the user
     generate_displacement_vector_kwargs : dict
-        Parameters given to generate_displacement_vector().
+        Parameters given to generate_displacement_vector() if displacement_data is None
     generate_templates_kwargs : dict
         Parameters given to generate_templates()
+    sorting: NumpySorting, default None
+        The sorting to generate data from
     generate_sorting_kwargs : dict
-        Parameters given to generate_sorting().
+        Parameters given to generate_sorting() if sorting is None
+    noise: NoiseGenerator, default None
+        Noise generator used to generate background noise
     generate_noise_kwargs : dict
-        Parameters given to generate_noise().
+        Parameters given to generate_noise() if no noise is None
+    amplitude_std : float, default: 0.05
+        The standard deviation of the modulation to apply to the spikes when injecting them
+        into the recording.
+    amplitude_factor: np.ndarray, optional
+        Optional fixed per-spike amplitude modulation
     extra_outputs : bool, default False
-        Return optionaly a dict with more variables.
-    seed : None ot int
+        Return optionally a dict with more variables.
+    seed : None or int
         A unique seed for all steps.
 
     Returns
@@ -337,7 +425,7 @@ def generate_drifting_recording(
     drifting_recording : Recording
         A generated recording with motion.
     sorting : Sorting
-        The ground trith soring object.
+        The ground truth sorting object.
         Same for both recordings.
     extra_infos:
         If extra_outputs=True, then return also a dict that contain various information like:
@@ -348,14 +436,39 @@ def generate_drifting_recording(
             * displacement_unit_factor
             * unit_displacements
 
-        This can be helpfull for motion benchmark.
+        This can be helpful for motion benchmark.
     """
+
+    seed = _ensure_seed(seed)
+
+    if sorting is None:
+        sorting = generate_sorting(
+            num_units=num_units,
+            sampling_frequency=sampling_frequency,
+            durations=[
+                duration,
+            ],
+            **generate_sorting_kwargs,
+            seed=seed,
+        )
+    else:
+        num_units = sorting.get_num_units()
+        sampling_frequency = sorting.sampling_frequency
+        if sorting._recording is not None:
+            assert (
+                sorting.get_total_duration() == duration
+            ), "Sorting should have the same duration as the generated data"
+
     # probe
-    if generate_probe_kwargs is None:
-        generate_probe_kwargs = _toy_probes[probe_name]
-    probe = generate_multi_columns_probe(**generate_probe_kwargs)
-    num_channels = probe.get_contact_count()
-    probe.set_device_channel_indices(np.arange(num_channels))
+    if probe is None:
+        if generate_probe_kwargs is not None:
+            probe = generate_multi_columns_probe(**generate_probe_kwargs)
+        else:
+            probe = _make_probe_by_name(probe_name)
+        # the wiring do not matter because the traces are generated after using the channel locations
+        num_channels = probe.get_contact_count()
+        probe.set_device_channel_indices(np.arange(num_channels))
+
     channel_locations = probe.contact_positions
     # import matplotlib.pyplot as plt
     # import probeinterface.plotting
@@ -364,24 +477,34 @@ def generate_drifting_recording(
     # plt.show()
 
     # unit locations
-    unit_locations = generate_unit_locations(
-        num_units,
-        channel_locations,
-        seed=seed,
-        **generate_unit_locations_kwargs,
-    )
+    if unit_locations is None:
+        unit_locations = generate_unit_locations(
+            num_units,
+            channel_locations,
+            seed=seed,
+            **generate_unit_locations_kwargs,
+        )
+    else:
+        assert len(unit_locations) == num_units, "We should have num_units unit locations"
 
-    displacement_vectors, displacement_unit_factor, displacement_sampling_frequency, displacements_steps = (
-        generate_displacement_vector(duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs)
-    )
-
-    # unit_displacements is the sum of all discplacements (times, units, direction_x_y)
-    unit_displacements = np.zeros((displacement_vectors.shape[0], num_units, 2))
-    for direction in (0, 1):
-        # x and y
-        for i in range(displacement_vectors.shape[2]):
-            m = displacement_vectors[:, direction, i][:, np.newaxis] * displacement_unit_factor[:, i][np.newaxis, :]
-            unit_displacements[:, :, direction] += m
+    if displacement_data is None:
+        (
+            unit_displacements,
+            displacement_vectors,
+            displacement_unit_factor,
+            displacement_sampling_frequency,
+            displacements_steps,
+        ) = generate_displacement_vector(
+            duration, unit_locations[:, :2], seed=seed, **generate_displacement_vector_kwargs
+        )
+    else:
+        (
+            unit_displacements,
+            displacement_vectors,
+            displacement_unit_factor,
+            displacement_sampling_frequency,
+            displacements_steps,
+        ) = displacement_data
 
     # unit_params need to be fixed before the displacement steps
     generate_templates_kwargs = generate_templates_kwargs.copy()
@@ -407,42 +530,48 @@ def generate_drifting_recording(
         )
 
     ms_before = generate_templates_kwargs["ms_before"]
-    nbefore = int(sampling_frequency * ms_before / 1000.0)
+    nbefore = ms_to_samples(ms_before, sampling_frequency)
     templates = Templates(
         templates_array=templates_array,
         sampling_frequency=sampling_frequency,
         nbefore=nbefore,
         probe=probe,
-        is_scaled=True,
+        is_in_uV=True,
     )
 
     drifting_templates = DriftingTemplates.from_static_templates(templates)
 
-    sorting = generate_sorting(
-        num_units=num_units,
-        sampling_frequency=sampling_frequency,
-        durations=[
-            duration,
-        ],
-        **generate_sorting_kwargs,
-        seed=seed,
-    )
-
     sorting.set_property("gt_unit_locations", unit_locations)
 
+    distances = np.linalg.norm(unit_locations[:, np.newaxis, :2] - channel_locations[np.newaxis, :, :], axis=2)
+    max_channel_index = np.argmin(distances, axis=1)
+    sorting.set_property("max_channel_index", max_channel_index)
+
     ## Important precompute displacement do not work on border and so do not work for tetrode
-    # here we bypass the interpolation and regenrate templates at severals positions.
+    # here we bypass the interpolation and regenerate templates at several positions.
     ## drifting_templates.precompute_displacements(displacements_steps)
     # shape (num_displacement, num_templates, num_samples, num_channels)
     drifting_templates.templates_array_moved = templates_array_moved
     drifting_templates.displacements = displacements_steps
 
-    noise = generate_noise(
-        probe=probe,
-        sampling_frequency=sampling_frequency,
-        durations=[duration],
+    if noise is None:
+        noise = generate_noise(
+            probe=probe,
+            sampling_frequency=sampling_frequency,
+            durations=[duration],
+            seed=seed,
+            **generate_noise_kwargs,
+        )
+    else:
+        assert noise.sampling_frequency == sampling_frequency, "Noise sampling frequency mismatch"
+        assert noise.probe.get_contact_count() == probe.get_contact_count(), "Noise num channels mismatch"
+        assert noise.get_total_duration() == duration, "Noise duration should be the same as the recording duration"
+
+    amplitude_factor = synthesize_amplitude_factor(
+        num_spikes=sorting.count_total_num_spikes(),
+        amplitude_factor=amplitude_factor,
+        amplitude_std=amplitude_std,
         seed=seed,
-        **generate_noise_kwargs,
     )
 
     static_recording = InjectDriftingTemplatesRecording(
@@ -453,7 +582,7 @@ def generate_drifting_recording(
         displacement_sampling_frequency=displacement_sampling_frequency,
         displacement_unit_factor=np.zeros_like(displacement_unit_factor),
         num_samples=[int(duration * sampling_frequency)],
-        amplitude_factor=None,
+        amplitude_factor=amplitude_factor,
     )
 
     drifting_recording = InjectDriftingTemplatesRecording(
@@ -464,7 +593,7 @@ def generate_drifting_recording(
         displacement_sampling_frequency=displacement_sampling_frequency,
         displacement_unit_factor=displacement_unit_factor,
         num_samples=[int(duration * sampling_frequency)],
-        amplitude_factor=None,
+        amplitude_factor=amplitude_factor,
     )
 
     if extra_outputs:
@@ -474,6 +603,8 @@ def generate_drifting_recording(
             unit_locations=unit_locations,
             displacement_unit_factor=displacement_unit_factor,
             unit_displacements=unit_displacements,
+            templates=templates,
+            generate_templates_kwargs=generate_templates_kwargs,
         )
         return static_recording, drifting_recording, sorting, extra_infos
     else:

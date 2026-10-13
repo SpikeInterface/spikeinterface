@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 import numpy as np
+
 from spikeinterface.core import (
     BaseRecording,
     BaseSorting,
@@ -11,13 +10,10 @@ from spikeinterface.core import (
     BaseSnippets,
     BaseSnippetsSegment,
 )
-from .basesorting import minimum_spike_dtype
+from .base import minimum_spike_dtype
 from .core_tools import make_shared_array
 from .recording_tools import write_memory_recording
 from multiprocessing.shared_memory import SharedMemory
-
-
-from typing import Union
 
 
 class NumpyRecording(BaseRecording):
@@ -81,10 +77,10 @@ class NumpyRecording(BaseRecording):
         }
 
     @staticmethod
-    def from_recording(source_recording, **job_kwargs):
+    def from_recording(source_recording, with_metadata=True, with_time_vector=False, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, dtype=None, **job_kwargs)
 
-        t_starts = source_recording._get_t_starts()
+        t_starts = source_recording.get_segment_t_starts()
 
         if shms[0] is not None:
             # if the computation was done in parallel then traces_list is shared array
@@ -101,6 +97,17 @@ class NumpyRecording(BaseRecording):
             t_starts=t_starts,
             channel_ids=source_recording.channel_ids,
         )
+
+        if with_metadata:
+            source_recording.copy_metadata(recording)
+
+        if with_time_vector:
+            for segment_index in range(source_recording.get_num_segments()):
+                if source_recording.has_time_vector(segment_index):
+                    # the use of get_times is preferred since timestamps are converted to array
+                    time_vector = source_recording.get_times(segment_index=segment_index)
+                    recording.set_times(time_vector, segment_index=segment_index)
+
         return recording
 
 
@@ -123,7 +130,7 @@ class NumpyRecordingSegment(BaseRecordingSegment):
 
 class SharedMemoryRecording(BaseRecording):
     """
-    In memory recording with shared memmory buffer.
+    In memory recording with shared memory buffer.
 
     Parameters
     ----------
@@ -156,6 +163,8 @@ class SharedMemoryRecording(BaseRecording):
             shm = SharedMemory(shm_name, create=False)
             self.shms.append(shm)
             traces = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
+            # Force read only
+            traces.flags.writeable = False
             traces_list.append(traces)
 
         if channel_ids is None:
@@ -200,17 +209,17 @@ class SharedMemoryRecording(BaseRecording):
         }
 
     def __del__(self):
-        self._recording_segments = []
+        self._segments = []
         for shm in self.shms:
             shm.close()
             if self.main_shm_owner:
                 shm.unlink()
 
     @staticmethod
-    def from_recording(source_recording, **job_kwargs):
+    def from_recording(source_recording, with_metadata=True, with_time_vector=False, **job_kwargs):
         traces_list, shms = write_memory_recording(source_recording, buffer_type="sharedmem", **job_kwargs)
 
-        t_starts = source_recording._get_t_starts()
+        t_starts = source_recording.get_segment_t_starts()
 
         recording = SharedMemoryRecording(
             shm_names=[shm.name for shm in shms],
@@ -221,6 +230,16 @@ class SharedMemoryRecording(BaseRecording):
             t_starts=t_starts,
             main_shm_owner=True,
         )
+
+        if with_metadata:
+            source_recording.copy_metadata(recording)
+
+        if with_time_vector:
+            for segment_index in range(source_recording.get_num_segments()):
+                if source_recording.has_time_vector(segment_index):
+                    # the use of get_times is preferred since timestamps are converted to array
+                    time_vector = source_recording.get_times(segment_index=segment_index)
+                    recording.set_times(time_vector, segment_index=segment_index)
 
         for shm in shms:
             # the sharedmem are handle by the new SharedMemoryRecording
@@ -236,7 +255,8 @@ class NumpySorting(BaseSorting):
 
     But we have convenient class methods to instantiate from:
       * other sorting object: `NumpySorting.from_sorting()`
-      * from time+labels: `NumpySorting.from_times_labels()`
+      * from samples+labels: `NumpySorting.from_samples_and_labels()`
+      * from times+labels: `NumpySorting.from_times_and_labels()`
       * from dict of list: `NumpySorting.from_unit_dict()`
       * from neo: `NumpySorting.from_neo_spiketrain_list()`
 
@@ -256,8 +276,7 @@ class NumpySorting(BaseSorting):
 
         self._serializability["memory"] = True
         self._serializability["json"] = False
-        # theorically this should be False but for simplicity make generators simples we still need this.
-        self._serializability["pickle"] = True
+        self._serializability["pickle"] = False
 
         if spikes.size == 0:
             nseg = 1
@@ -282,22 +301,27 @@ class NumpySorting(BaseSorting):
         if copy_spike_vector:
             spike_vector = spike_vector.copy()
         sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
+        if source_sorting.has_recording():
+            sorting._recording = source_sorting._recording
+        for source_segment, target_segment in zip(source_sorting._sorting_segments, sorting._sorting_segments):
+            target_segment._t_start = source_segment._t_start
+            target_segment._native_t_start = source_segment._native_t_start
         if with_metadata:
             source_sorting.copy_metadata(sorting)
         return sorting
 
     @staticmethod
-    def from_times_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+    def from_samples_and_labels(samples_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
         """
         Construct NumpySorting extractor from:
-          * an array of spike times (in frames)
-          * an array of spike labels and adds all the
+          * an array of spike samples
+          * an array of spike labels
         In case of multisegment, it is a list of array.
 
         Parameters
         ----------
-        times_list : list of array (or array)
-            An array of spike times (in frames)
+        samples_list : list of array (or array)
+            An array of spike samples
         labels_list : list of array (or array)
             An array of spike labels corresponding to the given times
         unit_ids : list or None, default: None
@@ -305,22 +329,22 @@ class NumpySorting(BaseSorting):
             If None, then it will be np.unique(labels_list)
         """
 
-        if isinstance(times_list, np.ndarray):
+        if isinstance(samples_list, np.ndarray):
             assert isinstance(labels_list, np.ndarray)
-            times_list = [times_list]
+            samples_list = [samples_list]
             labels_list = [labels_list]
 
-        times_list = [np.asarray(e) for e in times_list]
+        samples_list = [np.asarray(e) for e in samples_list]
         labels_list = [np.asarray(e) for e in labels_list]
 
-        nseg = len(times_list)
+        nseg = len(samples_list)
 
         if unit_ids is None:
             unit_ids = np.unique(np.concatenate([np.unique(labels_list[i]) for i in range(nseg)]))
 
         spikes = []
         for i in range(nseg):
-            times, labels = times_list[i], labels_list[i]
+            times, labels = samples_list[i], labels_list[i]
             unit_index = np.zeros(labels.size, dtype="int64")
             for u, unit_id in enumerate(unit_ids):
                 unit_index[labels == unit_id] = u
@@ -328,7 +352,7 @@ class NumpySorting(BaseSorting):
             spikes_in_seg["sample_index"] = times
             spikes_in_seg["unit_index"] = unit_index
             spikes_in_seg["segment_index"] = i
-            order = np.argsort(times)
+            order = np.argsort(times, stable=True)
             spikes_in_seg = spikes_in_seg[order]
             spikes.append(spikes_in_seg)
         spikes = np.concatenate(spikes)
@@ -338,11 +362,37 @@ class NumpySorting(BaseSorting):
         return sorting
 
     @staticmethod
+    def from_times_and_labels(times_list, labels_list, sampling_frequency, unit_ids=None) -> "NumpySorting":
+        """
+        Construct NumpySorting extractor from:
+          * an array of spike times (in s)
+          * an array of spike labels
+        In case of multisegment, it is a list of array.
+
+        Parameters
+        ----------
+        times_list : list of array (or array)
+            An array of spike samples
+        labels_list : list of array (or array)
+            An array of spike labels corresponding to the given times
+        unit_ids : list or None, default: None
+            The explicit list of unit_ids that should be extracted from labels_list
+            If None, then it will be np.unique(labels_list)
+        """
+        if isinstance(times_list, np.ndarray):
+            assert isinstance(labels_list, np.ndarray)
+            times_list = [times_list]
+            labels_list = [labels_list]
+
+        sample_list = [np.round(t * sampling_frequency).astype("int64") for t in times_list]
+        return NumpySorting.from_samples_and_labels(sample_list, labels_list, sampling_frequency, unit_ids)
+
+    @staticmethod
     def from_unit_dict(units_dict_list, sampling_frequency) -> "NumpySorting":
         """
         Construct NumpySorting from a list of dict.
         The list length is the segment count.
-        Each dict have unit_ids as keys and spike times as values.
+        Each dict have unit_ids as keys and spike sample indices as values.
 
         Parameters
         ----------
@@ -361,15 +411,14 @@ class NumpySorting(BaseSorting):
             sample_indices = []
             unit_indices = []
             for u, unit_id in enumerate(unit_ids):
-                spike_times = units_dict[unit_id]
-                sample_indices.append(spike_times)
-
-                unit_indices.append(np.full(spike_times.size, u, dtype="int64"))
+                spike_sample_indices = units_dict[unit_id]
+                sample_indices.append(spike_sample_indices)
+                unit_indices.append(np.full(spike_sample_indices.size, u, dtype="int64"))
             if len(sample_indices) > 0:
                 sample_indices = np.concatenate(sample_indices)
                 unit_indices = np.concatenate(unit_indices)
 
-                order = np.argsort(sample_indices)
+                order = np.argsort(sample_indices, stable=True)
                 sample_indices = sample_indices[order]
                 unit_indices = unit_indices[order]
 
@@ -381,9 +430,6 @@ class NumpySorting(BaseSorting):
         spikes = np.concatenate(spikes)
 
         sorting = NumpySorting(spikes, sampling_frequency, unit_ids)
-
-        # Trick : populate the cache with dict that already exists
-        sorting._cached_spike_trains = {seg_ind: d for seg_ind, d in enumerate(units_dict_list)}
 
         return sorting
 
@@ -653,7 +699,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
     def get_snippets(
         self,
         indices,
-        channel_indices: Union[list, None] = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
@@ -662,7 +708,7 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
         ----------
         indices : list[int]
             Indices of the snippets to return
-        channel_indices : Union[list, None], default: None
+        channel_indices : list | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
@@ -677,15 +723,15 @@ class NumpySnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         """
         Return the slice of snippets
 
         Parameters
         ----------
-        start_frame : Union[int, None], default: None
+        start_frame : int | None, default: None
             start sample index, or zero if None
-        end_frame : Union[int, None], default: None
+        end_frame : int | None, default: None
             end_sample, or number of samples if None
         Returns
         -------

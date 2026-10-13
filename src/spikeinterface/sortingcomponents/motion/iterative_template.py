@@ -1,6 +1,7 @@
 import numpy as np
 
-from .motion_utils import Motion, get_spatial_windows, get_spatial_bin_edges, make_3d_motion_histograms
+from spikeinterface.core.motion import Motion
+from .motion_utils import get_spatial_windows, get_spatial_bin_edges, make_3d_motion_histograms
 
 
 class IterativeTemplateRegistration:
@@ -129,7 +130,7 @@ class IterativeTemplateRegistration:
         # convert to um
         motion_array = -(shift_indices * bin_um)
 
-        if extra:
+        if extra is not None:
             extra["non_rigid_windows"] = non_rigid_windows
             extra["motion_histograms"] = motion_histograms
             extra["target_histogram"] = target_histogram

@@ -1,109 +1,93 @@
-from __future__ import annotations
-
+import warnings
 import numpy as np
 
+from probeinterface import Probe
 
-def get_neuropixels_sample_shifts(num_channels=384, num_channels_per_adc=12, num_cycles=None):
+
+def get_neuropixels_sample_shifts_from_probe(probe: Probe) -> np.ndarray:
     """
-    Calculates the relative sampling phase of each channel that results
-    from Neuropixels ADC multiplexing.
-
-    This information is needed to perform the preprocessing.phase_shift operation.
-
-    See https://github.com/int-brain-lab/ibllib/blob/master/ibllib/ephys/neuropixel.py
-
-
-    for the original implementation.
+    Get the inter-sample shifts for Neuropixels probes based on the probe information.
 
     Parameters
     ----------
-    num_channels : int, default: 384
-        The total number of channels in a recording.
-        All currently available Neuropixels variants have 384 channels.
-    num_channels_per_adc : int, default: 12
-        The number of channels per ADC on the probe.
-        Neuropixels 1.0 probes have 12 ADCs.
-        Neuropixels 2.0 probes have 16 ADCs.
-    num_cycles: int or None, default: None
-        The number of cycles in the ADC on the probe.
-        Neuropixels 1.0 probes have 13 cycles for AP and 12 for LFP.
-        Neuropixels 2.0 probes have 16 cycles.
-        If None, the num_channels_per_adc is used.
+    probe : Probe
+        The probe object containing channel and ADC information.
 
     Returns
     -------
-    sample_shifts : ndarray
-        The relative phase (from 0-1) of each channel
+    sample_shifts : np.ndarray
+        Array of relative phase shifts for each channel.
     """
-    if num_cycles is None:
-        num_cycles = num_channels_per_adc
+    # get inter-sample shifts based on the probe information and ADC sampling pattern
+    num_channels_per_adc = probe.annotations.get("num_channels_per_adc", None)
+    adc_sample_order = probe.contact_annotations.get("adc_sample_order", None)
+    ap_sample_frequency_hz = probe.annotations.get("ap_sample_frequency_hz", None)
+    lf_sample_frequency_hz = probe.annotations.get("lf_sample_frequency_hz", None)
 
-    adc_indices = np.floor(np.arange(num_channels) / (num_channels_per_adc * 2)) * 2 + np.mod(
-        np.arange(num_channels), 2
-    )
+    if (
+        num_channels_per_adc is None
+        or adc_sample_order is None
+        or ap_sample_frequency_hz is None
+        or lf_sample_frequency_hz is None
+    ):
+        warning_message = (
+            "Unable to find inter-sample shifts in the Neuropixels probe metadata. "
+            "The sample shifts will not be loaded. "
+        )
+        warnings.warn(warning_message, UserWarning, stacklevel=2)
+        return None
 
-    sample_shifts = np.zeros_like(adc_indices)
+    # The number of cycles is determined by the number of channels per ADC times 1 + the ratio
+    # between the lf and ap sample rate.
+    # For NP 1.0, this gives 13 cycles: 12 * (1 + 2500 / 30000) = 13
+    # For NP 2.0, the lf sample rate is 0 and so the number of cycles is equal to the number of
+    # channels per ADC.
+    # see: https://github.com/billkarsh/ProbeTable/issues/3#issuecomment-3438263027
+    num_cycles_in_adc = int(num_channels_per_adc * (1 + lf_sample_frequency_hz / ap_sample_frequency_hz))
 
-    for a in adc_indices:
-        sample_shifts[adc_indices == a] = np.arange(num_channels_per_adc) / num_cycles
+    # The inter-sample shifts are given by the adc sample order divided by the number of cycles in ADC
+    # This makes sure we also handle cases where only a subset of channels are recorded
+    # see: https://github.com/SpikeInterface/spikeinterface/issues/4144
+    sample_shifts = adc_sample_order / num_cycles_in_adc
 
     return sample_shifts
 
 
-def get_neuropixels_channel_groups(num_channels=384, num_adcs=12):
+def compute_saturation_threshold_from_probe(probe: Probe, stream_name: str) -> float:
     """
-    Returns groups of simultaneously sampled channels on a Neuropixels probe.
-
-    The Neuropixels ADC sampling pattern is as follows:
-
-    Channels:   ADCs:
-    |||         |||
-    ...         ...
-    26 27       2 3
-    24 25       2 3
-    22 23       0 1
-    ...         ...
-    2 3         0 1
-    0 1         0 1 <-- even and odd channels are digitized by separate ADCs
-    |||         |||
-     V           V
-
-    This information is needed to perform the preprocessing.common_reference operation
-    on channels that are sampled synchronously.
+    Compute the saturation threshold in microvolts for a Neuropixels probe based on the probe information.
 
     Parameters
     ----------
-    num_channels : int, default: 384
-        The total number of channels in a recording.
-        All currently available Neuropixels variants have 384 channels.
-    num_channels_per_adc : int, default: 12
-        The number of channels per ADC on the probe.
-        Neuropixels 1.0 probes have 12 ADCs.
-        Neuropixels 2.0 probes have 16 ADCs.
+    probe : Probe
+        The probe object containing channel and ADC information.
+    stream_name : str
+        The name of the stream. If it contains "lf" (or "LF"), the function will look for the
+        lf gain and saturation in the probe annotations.
 
     Returns
     -------
-    groups : list
-        A list of lists of simultaneously sampled channel indices
+    saturation_threshold_uV : float
+        The saturation threshold in microvolts, or None if it cannot be computed.
     """
+    adc_range_vpp = probe.annotations.get("adc_range_vpp", None)
+    gain = None
+    if "lf" in stream_name.lower():
+        gain = probe.annotations.get("lf_gain", None)
+    else:
+        gain = probe.annotations.get("ap_gain", None)
 
-    groups = []
+    if adc_range_vpp is not None and gain is not None:
+        saturation_threshold_uV = (adc_range_vpp / 2) / gain * 1e6
+        return saturation_threshold_uV
 
-    for i in range(num_channels_per_adc):
-        groups.append(
-            list(
-                np.sort(
-                    np.concatenate(
-                        [
-                            np.arange(i * 2, num_channels, num_channels_per_adc * 2),
-                            np.arange(i * 2 + 1, num_channels, num_channels_per_adc * 2),
-                        ]
-                    )
-                )
-            )
-        )
-
-    return groups
+    warnings.warn(
+        "Unable to compute saturation threshold from the Neuropixels probe metadata. "
+        "The saturation threshold will not be loaded. ",
+        UserWarning,
+        stacklevel=2,
+    )
+    return None
 
 
 def synchronize_neuropixel_streams(recording_ref, recording_other):
@@ -122,12 +106,12 @@ def synchronize_neuropixel_streams(recording_ref, recording_other):
     raise NotImplementedError
 
     synhcro_chan_id = recording_ref.channel_ids[-1]
-    trig_ref = recording_ref.get_traces(channel_ids=[synhcro_chan_id], return_scaled=False)
+    trig_ref = recording_ref.get_traces(channel_ids=[synhcro_chan_id], return_in_uV=False)
     trig_ref = trig_ref[:, 0]
     times_ref = recording_ref.get_times()
 
     synhcro_chan_id = recording_other.channel_ids[-1]
-    trig_other = recording_other.get_traces(channel_ids=[synhcro_chan_id], return_scaled=False)
+    trig_other = recording_other.get_traces(channel_ids=[synhcro_chan_id], return_in_uV=False)
     trig_other = trig_other[:, 0]
     times_other = recording_other.get_times()
 

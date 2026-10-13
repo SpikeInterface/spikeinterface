@@ -1,12 +1,9 @@
-from __future__ import annotations
-
 import os
 import json
 import struct
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Union, List
 
 import numpy as np
 
@@ -72,6 +69,7 @@ class MdaRecordingExtractor(BaseRecording):
         params_fname="params.json",
         geom_fname="geom.csv",
         dtype=None,
+        verbose=False,
         **job_kwargs,
     ):
         """Write a recording to file in MDA format.
@@ -93,6 +91,8 @@ class MdaRecordingExtractor(BaseRecording):
             File name of geom file
         dtype : dtype or None, default: None
             Data type to be used. If None dtype is same as recording traces.
+        verbose : bool
+            If True, shows progress bar when saving recording.
         **job_kwargs:
             Use by job_tools modules to set:
 
@@ -130,6 +130,7 @@ class MdaRecordingExtractor(BaseRecording):
             dtype=dtype,
             byte_offset=header_size,
             add_file_extension=False,
+            verbose=verbose,
             **job_kwargs,
         )
 
@@ -158,9 +159,9 @@ class MdaRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         if start_frame is None:
             start_frame = 0
@@ -175,6 +176,13 @@ class MdaRecordingSegment(BaseRecordingSegment):
 
 class MdaSortingExtractor(BaseSorting):
     """Load MDA format data as a sorting extractor.
+
+    NOTE: As in the MDA format, the max_channel property indexes the channels that are given as input
+    to the sorter.
+    If sorting was run on a subset of channels of the recording, then the max_channel values are
+    based on that subset, so care must be taken when associating these values with a recording.
+    If additional sorting segments are added to this sorting extractor after initialization,
+    then max_channel will not be updated. The max_channel indices begin at 1.
 
     Parameters
     ----------
@@ -198,6 +206,19 @@ class MdaSortingExtractor(BaseSorting):
         sorting_segment = MdaSortingSegment(firings)
         self.add_sorting_segment(sorting_segment)
 
+        # Store the max channel for each unit
+        # Every spike assigned to a unit (label) has the same max channel
+        # ref: https://github.com/SpikeInterface/spikeinterface/issues/3695#issuecomment-2663329006
+        max_channels = []
+        segment = self.segments[0]
+        for unit_id in self.unit_ids:
+            label_mask = segment._labels == unit_id
+            # since all max channels are the same, we can just grab the first occurrence for the unit
+            max_channel = segment._max_channels[label_mask][0]
+            max_channels.append(max_channel)
+
+        self.set_property(key="max_channel", values=max_channels)
+
         self._kwargs = {
             "file_path": str(Path(file_path).absolute()),
             "sampling_frequency": sampling_frequency,
@@ -205,7 +226,7 @@ class MdaSortingExtractor(BaseSorting):
 
     @staticmethod
     def write_sorting(sorting, save_path, write_primary_channels=False):
-        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment " "sorting"
+        assert sorting.get_num_segments() == 1, "MdaSorting.write_sorting() can only write a single segment sorting"
         unit_ids = sorting.get_unit_ids()
         times_list = []
         labels_list = []
@@ -219,7 +240,7 @@ class MdaSortingExtractor(BaseSorting):
             else:
                 labels_list.append(np.ones(times.shape, dtype=int) * unit_index)
             if write_primary_channels:
-                if "max_channel" in sorting.get_unit_property_names(unit_id):
+                if "max_channel" in sorting.get_property_keys():
                     primary_channels_list.append([sorting.get_unit_property(unit_id, "max_channel")] * times.shape[0])
                 else:
                     raise ValueError(
@@ -231,7 +252,7 @@ class MdaSortingExtractor(BaseSorting):
         all_times = _concatenate(times_list)
         all_labels = _concatenate(labels_list)
         all_primary_channels = _concatenate(primary_channels_list)
-        sort_inds = np.argsort(all_times)
+        sort_inds = np.argsort(all_times, stable=True)
         all_times = all_times[sort_inds]
         all_labels = all_labels[sort_inds]
         all_primary_channels = all_primary_channels[sort_inds]
@@ -255,8 +276,8 @@ class MdaSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         # must be implemented in subclass
         if start_frame is None:
@@ -383,7 +404,7 @@ class DiskReadMda:
             return self._read_chunk_1d(i1, N1)
         elif i3 < 0:
             if N1 != self.N1():
-                print("Unable to support N1 {} != {}".format(N1, self.N1()))
+                print(f"Unable to support N1 {N1} != {self.N1()}")
                 return None
             X = self._read_chunk_1d(i1 + N1 * i2, N1 * N2)
 
@@ -396,10 +417,10 @@ class DiskReadMda:
             return np.reshape(X, (N1, N2), order="F")
         else:
             if N1 != self.N1():
-                print("Unable to support N1 {} != {}".format(N1, self.N1()))
+                print(f"Unable to support N1 {N1} != {self.N1()}")
                 return None
             if N2 != self.N2():
-                print("Unable to support N2 {} != {}".format(N2, self.N2()))
+                print(f"Unable to support N2 {N2} != {self.N2()}")
                 return None
             if self._npy_mode:
                 A = np.load(self._path, mmap_mode="r")
@@ -476,7 +497,7 @@ def _read_header(path):
             uses64bitdims = True
             num_dims = -num_dims
         if num_dims < 1 or num_dims > 6:  # allow single dimension as of 12/6/17
-            print("Invalid number of dimensions: {}".format(num_dims))
+            print(f"Invalid number of dimensions: {num_dims}")
             f.close()
             return None
         dims = []
@@ -493,7 +514,7 @@ def _read_header(path):
                 dims.append(tmp0)
         dt = _dt_from_dt_code(dt_code)
         if dt is None:
-            print("Invalid data type code: {}".format(dt_code))
+            print(f"Invalid data type code: {dt_code}")
             f.close()
             return None
         H = MdaHeader(dt, dims)
@@ -599,7 +620,7 @@ def readmda(path):
         return readnpy(path)
     H = _read_header(path)
     if H is None:
-        print("Problem reading header of: {}".format(path))
+        print(f"Problem reading header of: {path}")
         return None
     f = open(path, "rb")
     try:
@@ -665,7 +686,7 @@ def _writemda(X, fname, dt):
     num_bytes_per_entry = get_num_bytes_per_entry_from_dt(dt)
     dt_code = _dt_code_from_dt(dt)
     if dt_code is None:
-        print("Unexpected data type: {}".format(dt))
+        print(f"Unexpected data type: {dt}")
         return False
 
     if type(fname) == str:
@@ -744,7 +765,7 @@ def appendmda(X, path):
         raise Exception("appendmda not yet implemented for .npy files")
     H = _read_header(path)
     if H is None:
-        print("Problem reading header of: {}".format(path))
+        print(f"Problem reading header of: {path}")
         return None
     if len(H.dims) != len(X.shape):
         print("Incompatible number of dimensions in appendmda", H.dims, X.shape)
@@ -803,7 +824,7 @@ def _header_from_file(f):
             uses64bitdims = True
             num_dims = -num_dims
         if num_dims < 1 or num_dims > 6:  # allow single dimension as of 12/6/17
-            print("Invalid number of dimensions: {}".format(num_dims))
+            print(f"Invalid number of dimensions: {num_dims}")
             return None
         dims = []
         dimprod = 1
@@ -819,7 +840,7 @@ def _header_from_file(f):
                 dims.append(tmp0)
         dt = _dt_from_dt_code(dt_code)
         if dt is None:
-            print("Invalid data type code: {}".format(dt_code))
+            print(f"Invalid data type code: {dt_code}")
             return None
         H = MdaHeader(dt, dims)
         if uses64bitdims:

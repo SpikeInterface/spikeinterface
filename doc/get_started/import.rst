@@ -26,10 +26,10 @@ to import the :code:`core` module followed by:
     import spikeinterface.extractors as se
     import spikeinterface.preprocessing as spre
     import spikeinterface.sorters as ss
-    import spikinterface.postprocessing as spost
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.postprocessing as spost
+    import spikeinterface.metrics as sm
     import spikeinterface.exporters as sexp
-    import spikeinterface.comparsion as scmp
+    import spikeinterface.comparison as scmp
     import spikeinterface.curation as scur
     import spikeinterface.sortingcomponents as sc
     import spikeinterface.widgets as sw
@@ -73,7 +73,7 @@ For example:
 .. code-block:: python
 
     from spikeinterface.preprocessing import bandpass_filter, common_reference
-    from spikeinterface.core import extract_waveforms
+    from spikeinterface.core import create_sorting_analyzer
     from spikeinterface.extractors import read_binary
 
 As mentioned this approach only imports exactly what you plan on using so it is the most minimalist. It does require

@@ -5,8 +5,6 @@ import shutil
 
 from spikeinterface.benchmark.tests.common_benchmark_testing import make_dataset
 from spikeinterface.benchmark.benchmark_clustering import ClusteringStudy
-from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
-from spikeinterface.core.template_tools import get_template_extremum_channel
 
 from pathlib import Path
 
@@ -16,7 +14,7 @@ def test_benchmark_clustering(create_cache_folder):
     cache_folder = create_cache_folder
     job_kwargs = dict(n_jobs=0.8, chunk_duration="1s")
 
-    recording, gt_sorting, gt_analyzer = make_dataset()
+    recording, gt_sorting, gt_analyzer = make_dataset(job_kwargs)
 
     num_spikes = gt_sorting.to_spike_vector().size
     spike_indices = np.arange(0, num_spikes, 5)
@@ -33,12 +31,13 @@ def test_benchmark_clustering(create_cache_folder):
 
         # sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False)
         # sorting_analyzer.compute(["random_spikes", "templates"])
-        extremum_channel_inds = get_template_extremum_channel(gt_analyzer, outputs="index")
-        spikes = gt_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds)
+        main_channel_indices = gt_analyzer.get_main_channels(outputs="index", with_dict=False)
+
+        spikes = gt_analyzer.sorting.to_spike_vector(main_channel_indices=main_channel_indices)
         peaks[dataset] = spikes
 
     cases = {}
-    for method in ["random_projections", "circus", "tdc_clustering"]:
+    for method in ["random_projections", "circus", "tdc-clustering"]:
         cases[method] = {
             "label": f"{method} on toy",
             "dataset": "toy",
@@ -52,14 +51,13 @@ def test_benchmark_clustering(create_cache_folder):
     print(study)
 
     # this study needs analyzer
-    # study.create_sorting_analyzer_gt(**job_kwargs)
     study.compute_metrics()
 
     study = ClusteringStudy(study_folder)
 
     # run and result
     study.run(**job_kwargs)
-    study.compute_results()
+    study.compute_results(**job_kwargs)
 
     # load study to check persistency
     study = ClusteringStudy(study_folder)

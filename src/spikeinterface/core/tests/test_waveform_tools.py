@@ -5,7 +5,7 @@ import platform
 
 import numpy as np
 
-from spikeinterface.core import generate_recording, generate_sorting, generate_ground_truth_recording
+from spikeinterface.core import generate_recording, generate_sorting, generate_ground_truth_recording, ms_to_samples
 from spikeinterface.core.waveform_tools import (
     extract_waveforms_to_buffers,
     extract_waveforms_to_single_buffer,
@@ -56,11 +56,11 @@ def test_waveform_tools(create_cache_folder):
     recording, sorting = get_dataset()
     sampling_frequency = recording.sampling_frequency
 
-    nbefore = int(3.0 * sampling_frequency / 1000.0)
-    nafter = int(4.0 * sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(3.0, sampling_frequency)
+    nafter = ms_to_samples(4.0, sampling_frequency)
 
     dtype = recording.get_dtype()
-    # return_scaled = False
+    # return_in_uV = False
 
     spikes = sorting.to_spike_vector()
 
@@ -113,7 +113,7 @@ def test_waveform_tools(create_cache_folder):
                     unit_ids,
                     nbefore,
                     nafter,
-                    return_scaled=False,
+                    return_in_uV=False,
                     dtype=dtype,
                     copy=True,
                     **sparsity_kwargs,
@@ -136,10 +136,9 @@ def test_waveform_tools(create_cache_folder):
                 all_waveforms = extract_waveforms_to_single_buffer(
                     recording,
                     spikes,
-                    unit_ids,
                     nbefore,
                     nafter,
-                    return_scaled=False,
+                    return_in_uV=False,
                     dtype=dtype,
                     copy=True,
                     **sparsity_kwargs,
@@ -158,14 +157,116 @@ def test_waveform_tools(create_cache_folder):
     _check_all_wf_equal(list_wfs_sparse)
 
 
+@pytest.mark.requires_zarr_write
+@pytest.mark.parametrize("sparse", [False, True])
+def test_extract_waveforms_to_single_buffer_zarr(tmp_path, sparse):
+    # the "zarr" mode writes waveforms directly to a zarr dataset. Workers return their block and
+    # the main process writes it (single writer), so parallel writes must match a reference and
+    # never race, even with n_jobs > 1.
+    import zarr
+
+    recording, sorting = get_dataset()
+    sampling_frequency = recording.sampling_frequency
+    nbefore = ms_to_samples(3.0, sampling_frequency)
+    nafter = ms_to_samples(4.0, sampling_frequency)
+    spikes = sorting.to_spike_vector()
+    unit_ids = sorting.unit_ids
+    dtype = recording.get_dtype()
+
+    if sparse:
+        sparsity_mask = np.random.RandomState(0).randint(
+            0, 2, size=(unit_ids.size, recording.channel_ids.size), dtype="bool"
+        )
+    else:
+        sparsity_mask = None
+
+    common = dict(return_in_uV=False, dtype=dtype, sparsity_mask=sparsity_mask, copy=True, progress_bar=False)
+
+    # reference computed in shared memory, single job
+    reference = extract_waveforms_to_single_buffer(
+        recording, spikes, nbefore, nafter, mode="shared_memory", n_jobs=1, **common
+    )
+
+    # zarr mode, single and parallel jobs, must match the reference and reload from disk
+    for n_jobs in (1, 2):
+        dataset_path = tmp_path / f"analyzer_{sparse}_{n_jobs}.zarr" / "extensions" / "waveforms" / "waveforms"
+        zarr_waveforms = extract_waveforms_to_single_buffer(
+            recording,
+            spikes,
+            nbefore,
+            nafter,
+            mode="zarr",
+            file_path=dataset_path,
+            n_jobs=n_jobs,
+            chunk_duration="0.3s",
+            **common,
+        )
+        assert isinstance(zarr_waveforms, zarr.Array)
+        assert zarr_waveforms.shape == reference.shape
+        assert np.array_equal(reference, zarr_waveforms[:])
+
+        # reload from disk
+        store_path = tmp_path / f"analyzer_{sparse}_{n_jobs}.zarr"
+        reloaded = zarr.open(str(store_path), mode="r")["extensions"]["waveforms"]["waveforms"]
+        assert np.array_equal(reference, reloaded[:])
+
+
+@pytest.mark.requires_zarr_write
+def test_waveforms_at_segment_borders(tmp_path):
+    # spikes near the segment borders are partially filled: samples outside of the segment are 0
+    from spikeinterface.core import NumpySorting
+
+    recording = generate_recording(num_channels=4, durations=[2.0, 3.0], seed=0)
+    nbefore, nafter = 30, 60
+    samples_list, labels_list = [], []
+    for segment_index in range(recording.get_num_segments()):
+        num_samples = recording.get_num_samples(segment_index=segment_index)
+        samples_list.append(np.array([5, 1000, num_samples - 10]))
+        labels_list.append(np.array([0, 1, 0]))
+    sorting = NumpySorting.from_samples_and_labels(samples_list, labels_list, recording.sampling_frequency)
+    spikes = sorting.to_spike_vector()
+
+    expected = np.zeros((spikes.size, nbefore + nafter, recording.get_num_channels()), dtype="float32")
+    for i, spike in enumerate(spikes):
+        segment_index = spike["segment_index"]
+        num_samples = recording.get_num_samples(segment_index=segment_index)
+        start, end = spike["sample_index"] - nbefore, spike["sample_index"] + nafter
+        traces = recording.get_traces(
+            start_frame=max(start, 0), end_frame=min(end, num_samples), segment_index=segment_index
+        )
+        expected[i, max(0, -start) : max(0, -start) + traces.shape[0]] = traces
+
+    job_kwargs = dict(n_jobs=1, chunk_duration="0.5s", progress_bar=False)
+    common = dict(return_in_uV=False, dtype="float32", **job_kwargs)
+    shared = extract_waveforms_to_single_buffer(recording, spikes, nbefore, nafter, mode="shared_memory", **common)
+    zarr_waveforms = extract_waveforms_to_single_buffer(
+        recording, spikes, nbefore, nafter, mode="zarr", file_path=tmp_path / "wf.zarr" / "waveforms", **common
+    )
+    by_units = extract_waveforms_to_buffers(
+        recording, spikes, sorting.unit_ids, nbefore, nafter, mode="shared_memory", copy=True, **common
+    )
+    np.testing.assert_array_equal(shared, expected)
+    np.testing.assert_array_equal(zarr_waveforms[:], expected)
+    for unit_index, unit_id in enumerate(sorting.unit_ids):
+        np.testing.assert_array_equal(by_units[unit_id], expected[spikes["unit_index"] == unit_index])
+
+    templates = estimate_templates_with_accumulator(
+        recording, spikes, sorting.unit_ids, nbefore, nafter, return_in_uV=False, **job_kwargs
+    )
+    for unit_index in range(sorting.unit_ids.size):
+        np.testing.assert_allclose(
+            templates[unit_index], expected[spikes["unit_index"] == unit_index].mean(axis=0), rtol=1e-5, atol=1e-5
+        )
+
+
 def test_estimate_templates_with_accumulator():
     recording, sorting = get_dataset()
 
     ms_before = 1.0
     ms_after = 1.5
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+    nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
     spikes = sorting.to_spike_vector()
     # take one spikes every 10
@@ -173,21 +274,43 @@ def test_estimate_templates_with_accumulator():
 
     job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
-    templates = estimate_templates_with_accumulator(
-        recording, spikes, sorting.unit_ids, nbefore, nafter, return_scaled=True, **job_kwargs
-    )
-    print(templates.shape)
-    assert templates.shape[0] == sorting.unit_ids.size
-    assert templates.shape[1] == nbefore + nafter
-    assert templates.shape[2] == recording.get_num_channels()
+    # here we compare the result with the same mechanism with with several worker pool size
+    # this means that that acumulator are splitted and then agglomerated back
+    # this should lead to very small diff
+    # n_jobs=1 is done in loop
+    templates_by_worker = []
 
-    assert np.any(templates != 0)
+    if platform.system() == "Linux":
+        engine_loop = ["thread", "process"]
+    else:
+        engine_loop = ["thread"]
 
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # for unit_index, unit_id in enumerate(sorting.unit_ids):
-    #     ax.plot(templates[unit_index, :, :].T.flatten())
-    # plt.show()
+    for pool_engine in engine_loop:
+        for n_jobs in (1, 2, 8):
+            job_kwargs = dict(pool_engine=pool_engine, n_jobs=n_jobs, progress_bar=True, chunk_duration="1s")
+            templates = estimate_templates_with_accumulator(
+                recording, spikes, sorting.unit_ids, nbefore, nafter, return_in_uV=True, **job_kwargs
+            )
+            assert templates.shape[0] == sorting.unit_ids.size
+            assert templates.shape[1] == nbefore + nafter
+            assert templates.shape[2] == recording.get_num_channels()
+            assert np.any(templates != 0)
+
+            templates_by_worker.append(templates)
+            if len(templates_by_worker) > 1:
+                templates_loop = templates_by_worker[0]
+                np.testing.assert_almost_equal(templates, templates_loop, decimal=4)
+
+                # import matplotlib.pyplot as plt
+                # fig, axs = plt.subplots(nrows=2, sharex=True)
+                # for unit_index, unit_id in enumerate(sorting.unit_ids):
+                #     ax = axs[0]
+                #     ax.set_title(f"{pool_engine} {n_jobs}")
+                #     ax.plot(templates[unit_index, :, :].T.flatten())
+                #     ax.plot(templates_loop[unit_index, :, :].T.flatten(), color="k", ls="--")
+                #     ax = axs[1]
+                #     ax.plot((templates - templates_loop)[unit_index, :, :].T.flatten(), color="k", ls="--")
+                # plt.show()
 
 
 def test_estimate_templates():
@@ -196,8 +319,8 @@ def test_estimate_templates():
     ms_before = 1.0
     ms_after = 1.5
 
-    nbefore = int(ms_before * recording.sampling_frequency / 1000.0)
-    nafter = int(ms_after * recording.sampling_frequency / 1000.0)
+    nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
+    nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
     spikes = sorting.to_spike_vector()
     # take one spikes every 10
@@ -205,16 +328,36 @@ def test_estimate_templates():
 
     job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
+    # mask with differents sparsity
+    sparsity_mask = np.ones((sorting.unit_ids.size, recording.channel_ids.size), dtype=bool)
+    sparsity_mask[:4, : recording.channel_ids.size // 2 - 1] = False
+    sparsity_mask[4:, recording.channel_ids.size // 2 :] = False
+
     for operator in ("average", "median"):
-        templates = estimate_templates(
-            recording, spikes, sorting.unit_ids, nbefore, nafter, operator=operator, return_scaled=True, **job_kwargs
+        templates_array = estimate_templates(
+            recording, spikes, sorting.unit_ids, nbefore, nafter, operator=operator, return_in_uV=True, **job_kwargs
         )
         # print(templates.shape)
-        assert templates.shape[0] == sorting.unit_ids.size
-        assert templates.shape[1] == nbefore + nafter
-        assert templates.shape[2] == recording.get_num_channels()
+        assert templates_array.shape[0] == sorting.unit_ids.size
+        assert templates_array.shape[1] == nbefore + nafter
+        assert templates_array.shape[2] == recording.get_num_channels()
 
-        assert np.any(templates != 0)
+        assert np.any(templates_array != 0)
+
+        sparse_templates_array = estimate_templates(
+            recording,
+            spikes,
+            sorting.unit_ids,
+            nbefore,
+            nafter,
+            operator=operator,
+            return_in_uV=True,
+            sparsity_mask=sparsity_mask,
+            **job_kwargs,
+        )
+        n_chan = np.max(np.sum(sparsity_mask, axis=1))
+        assert n_chan == sparse_templates_array.shape[2]
+        assert np.any(sparse_templates_array == 0)
 
     #     import matplotlib.pyplot as plt
     #     fig, ax = plt.subplots()
@@ -225,6 +368,7 @@ def test_estimate_templates():
 
 
 if __name__ == "__main__":
-    test_waveform_tools()
-    test_estimate_templates_with_accumulator()
-    test_estimate_templates()
+    cache_folder = Path(__file__).resolve().parents[4] / "cache_folder" / "core"
+    test_waveform_tools(cache_folder)
+    # test_estimate_templates_with_accumulator()
+    # test_estimate_templates()

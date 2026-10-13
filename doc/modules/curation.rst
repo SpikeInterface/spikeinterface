@@ -12,7 +12,7 @@ Curation with the ``SortingAnalyzer``
 -------------------------------------
 
 The :py:class:`~spikeinterface.core.SortingAnalyzer`, as seen in previous modules,
-is a powerful tool to posprocess the spike sorting output, as it can compute many
+is a powerful tool to postprocess the spike sorting output, as it can compute many
 extensions and metrics to further characterize the spike sorting results.
 
 To facilitate the spike sorting workflow, the :py:class:`~spikeinterface.core.SortingAnalyzer`
@@ -34,7 +34,7 @@ a subset of units from a spike sorting output and to perform some merges:
     remove_unit_ids = [1, 2]
     sorting_analyzer2 = sorting_analyzer.remove_units(remove_unit_ids=remove_unit_ids)
 
-    # merge some units
+    # merge units 4 and 5, and separately merge units 7, 8 and 12
     merge_unit_groups = [[4, 5], [7, 8, 12]]
     sorting_analyzer3 = sorting_analyzer2.merge_units(
         merge_unit_groups=merge_unit_groups,
@@ -98,7 +98,8 @@ The function can act both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
     clean_sorting = remove_redundant_units(
         sorting,
         duplicate_threshold=0.9,
-        remove_strategy="max_spikes"
+        remove_strategy="max_spikes",
+        align=False,
     )
 
     # remove redundant units from SortingAnalyzer object
@@ -106,23 +107,89 @@ The function can act both on a ``BaseSorting`` or a ``SortingAnalyzer`` object.
     clean_sorting = remove_redundant_units(
         sorting_analyzer,
         duplicate_threshold=0.9,
-        remove_strategy="min_shift"
+        remove_strategy="minimum_shift",
     )
     # in order to have a SortingAnalyer with only the non-redundant units one must
     # select the designed units remembering to give format and folder if one wants
     # a persistent SortingAnalyzer.
     clean_sorting_analyzer = sorting_analyzer.select_units(clean_sorting.unit_ids)
 
-We recommend using the ``SortingAnalyzer`` approach, since the ``min_shift`` strategy keeps
+We recommend using the ``SortingAnalyzer`` approach, since the ``minimum_shift`` strategy keeps
 the unit (among the redundant ones), with a better template alignment.
 
+Auto-labeling units
+^^^^^^^^^^^^^^^^^^^
+
+The :py:mod:`~spikeinterface.curation` function allows you to automatically label units based on a set of rules.
+The simplest way to do so is to use the :py:func:`~spikeinterface.curation.threshold_metrics_label_units` function,
+which applies a set of thresholds based on the available metrics (template/quality metrics, etc.):
+
+.. code-block:: python
+
+    from spikeinterface.curation import threshold_metrics_label_units
+
+    # auto-label units based on some thresholds
+    labels = threshold_metrics_label_units(
+        sorting_analyzer=sorting_analyzer,
+        thresholds={
+            "snr": {"greater": 5},
+            "rp_contamination": {"less": 0.2},
+        },
+        pass_label="good",
+        fail_label="bad",
+        column_name="simple_threshold"
+    )
+
+The returned ``labels`` is a ``pandas.DataFrame`` with the unit_ids as index and the assigned labels in the ``simple_threshold`` column.
+
+
+A second and much more powerful way to auto-label units is to run ``Bombcell`` [Fabre]_, a tool that uses a large set of
+metrics and heuristic rules based on metrics to classify units as ``noise``, ``mua`` or ``good`` (and even ``non-soma``).
+To run ``Bombcell``, you can use the :py:func:`~spikeinterface.curation.bombcell_label_units`:
+
+.. code-block:: python
+
+    from spikeinterface.curation import bombcell_label_units, bombcell_get_default_thresholds
+
+    # auto-label units with Bombcell
+    labels = bombcell_label_units(
+        sorting_analyzer=sorting_analyzer,
+        thresholds=bombcell_get_default_thresholds()
+    )
+
+The labels are returned in a ``pandas.DataFrame`` with the unit_ids as index and the assigned labels in the
+``bombcell_label`` column.
+You can also provide your own set of thresholds to the ``bombcell_label_units`` function.
+
+Finally, a third way to auto-label units is to train machine learning models based on the available metrics and use the
+trained model to predict labels for the units. This is done by the ``UnitRefine`` [Jain]_ tool, which is based on a
+random forest classifier trained on a large dataset of manually curated units.
+Classification is done in two steps: first, the model predicts whether a unit is ``noise`` or ``neural``; then,
+for the non-noise units, the model predicts whether they are ``sua`` (aka good) or ``mua``.
+We provide pre-built models on `HuggingFace <https://huggingface.co/collections/SpikeInterface/curation-models>`_,
+and you can use the :py:func:`~spikeinterface.curation.unitrefine_label_units` function to apply the model to your data:
+
+.. code-block:: python
+
+    from spikeinterface.curation import unitrefine_label_units
+
+    # auto-label units with UnitRefine
+    labels = unitrefine_label_units(
+        sorting_analyzer=sorting_analyzer,
+        noise_neural_model="SpikeInterface/UnitRefine_noise_neural_classifier",
+        sua_mua_model="SpikeInterface/UnitRefine_sua_mua_classifier"
+    )
+
+
+The labels are returned in a ``pandas.DataFrame`` with the unit_ids as index and the assigned labels in the
+``unitrefine_label`` column.
 
 Auto-merging units
 ^^^^^^^^^^^^^^^^^^
 
-The :py:func:`~spikeinterface.curation.get_potential_auto_merge` function returns a list of potential merges.
+The :py:func:`~spikeinterface.curation.compute_merge_unit_groups` function returns a list of potential merges.
 The list of potential merges can be then applied to the sorting output.
-:py:func:`~spikeinterface.curation.get_potential_auto_merge` has many internal tricks and steps to identify potential
+:py:func:`~spikeinterface.curation.compute_merge_unit_groups` has many internal tricks and steps to identify potential
 merges. It offers multiple "presets" and the flexibility to apply individual steps, with different parameters.
 **Read the function documentation carefully and do not apply it blindly!**
 
@@ -130,7 +197,7 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
 .. code-block:: python
 
     from spikeinterface import create_sorting_analyzer
-    from spikeinterface.curation import get_potential_auto_merge
+    from spikeinterface.curation import compute_merge_unit_groups
 
     analyzer = create_sorting_analyzer(sorting=sorting, recording=recording)
 
@@ -138,14 +205,14 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
     analyzer.compute(["random_spikes", "templates", "template_similarity", "correlograms"])
 
     # merges is a list of unit pairs, with unit_ids to be merged.
-    merge_unit_pairs = get_potential_auto_merge(
-        analyzer=analyzer,
+    merge_unit_pairs = compute_merge_unit_groups(
+        sorting_analyzer=analyzer,
         preset="similarity_correlograms",
     )
     # with resolve_graph=True, merges_resolved is a list of merge groups,
     # which can contain more than two units
-    merge_unit_groups = get_potential_auto_merge(
-        analyzer=analyzer,
+    merge_unit_groups = compute_merge_unit_groups(
+        sorting_analyzer=analyzer,
         preset="similarity_correlograms",
         resolve_graph=True
     )
@@ -153,12 +220,53 @@ merges. It offers multiple "presets" and the flexibility to apply individual ste
     # here we apply the merges
     analyzer_merged = analyzer.merge_units(merge_unit_groups=merge_unit_groups)
 
+Currently, we support the following presets: 'similarity_correlograms', 'temporal_splits', 'x_contaminations',
+'feature_neighbors' and 'slay'. Find out more about SLAy in their preprint: [Koukuntla]_.
+
+There is also the convenient :py:func:`~spikeinterface.curation.auto_merge_units` function that combines the
+:py:func:`~spikeinterface.curation.compute_merge_unit_groups` and :py:func:`~spikeinterface.core.SortingAnalyzer.merge_units` functions.
+This is a high level function that allows you to apply either one or several presets/lists of steps in one go. For example, let's
+assume you want to apply the "x_contamination" preset, but iteratively and with slightly different parameters: first,
+you want to focus on the templates that are very similar, according to their template similarities, before
+considering those that might be more distant. Such a greedy and iterative scheme has been proved to be less
+prone to wrong merges. To do so, you'll need to do the following:
+
+.. code-block:: python
+
+    from spikeinterface import create_sorting_analyzer
+    from spikeinterface.curation import auto_merge_units
+
+    analyzer = create_sorting_analyzer(sorting=sorting, recording=recording)
+
+    # some extensions are required
+    analyzer.compute(["random_spikes", "templates", "template_similarity", "correlograms"])
+    analyzer.compute("unit_locations", method="monopolar_triangulation")
+
+    template_diff_thresh = [0.05, 0.15, 0.25]
+    presets = ["x_contaminations"] * len(template_diff_thresh)
+    steps_params = [
+        {"template_similarity": {"template_diff_thresh": i}}
+        for i in template_diff_thresh
+    ]
+
+    analyzer_merged = auto_merge_units(
+        analyzer,
+        presets=presets,
+        steps_params=steps_params,
+        recursive=True,
+        **job_kwargs,
+    )
+
+The extra keyword ``recursive`` specifies that for each presets/sequences of steps, merges are performed
+until no further merges are possible. The ``job_kwargs`` are the parameters for the parallelization.
+**Be careful: the merges can not be reverted, so be sure to not erase your analyzer and instead create a new one**
+
 
 Manual curation
 ---------------
 
 While automatic curation tools can be very useful, manual curation is still widely used to
-clean spike sorting outputs and it is sometoimes necessary to have a human in the loop.
+clean spike sorting outputs and it is sometimes necessary to have a human in the loop.
 
 
 Curation format
@@ -177,7 +285,7 @@ This format has two part:
     * "format_version" : format specification
     * "unit_ids" : the list of unit_ds
     * "label_definitions" : list of label categories and possible labels per category.
-                            Every category can be *exclusive=True* onely one label or *exclusive=False* several labels possible
+                            Every category can be *exclusive=True* (only one label) or *exclusive=False* (several labels possible).
 
   * **manual output** curation with the folowing keys:
 
@@ -271,18 +379,17 @@ a ``BaseSorting`` or ``SortingAnalyzer`` object using the :py:func:`~spikeinterf
 
 .. code-block:: python
 
-    from spikeinterface.curation import apply_curation
+    from spikeinterface.curation import load_curation, apply_curation
 
     # load the curation JSON file
-    curation_json = "path/to/curation.json"
-    with open(curation_json, 'r') as f:
-        curation_dict = json.load(f)
+    curation_filepath = "path/to/curation.json"
+    curation = load_curation(curation_filepath)
 
     # apply the curation to the sorting output
-    clean_sorting = apply_curation(sorting, curation_dict=curation_dict)
+    clean_sorting = apply_curation(sorting, curation_dict_or_model=curation)
 
     # apply the curation to the sorting analyzer
-    clean_sorting_analyzer = apply_curation(sorting_analyzer, curation_dict=curation_dict)
+    clean_sorting_analyzer = apply_curation(sorting_analyzer, curation_dict_or_model=curation)
 
 
 Using the ``SpikeInterface GUI``

@@ -1,8 +1,6 @@
-from __future__ import annotations
-
 import warnings
 from pathlib import Path
-from typing import Union, Optional
+from xml.etree import ElementTree as Etree
 
 import numpy as np
 
@@ -10,10 +8,6 @@ from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 
 from .neobaseextractor import NeoBaseRecordingExtractor
-
-
-PathType = Union[str, Path]
-OptionalPathType = Optional[PathType]
 
 
 class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
@@ -64,6 +58,7 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
         if xml_file_path is not None:
             xml_file_path = str(Path(xml_file_path).absolute())
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), xml_file_path=xml_file_path))
+        self.xml_file_path = xml_file_path if xml_file_path is not None else Path(file_path).with_suffix(".xml")
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path, xml_file_path=None):
@@ -77,6 +72,71 @@ class NeuroScopeRecordingExtractor(NeoBaseRecordingExtractor):
             neo_kwargs = {"filename": Path(file_path)}
 
         return neo_kwargs
+
+    def _parse_xml_file(self, xml_file_path):
+        """
+        Comes from NeuroPhy package by Diba Lab
+        """
+        tree = Etree.parse(xml_file_path)
+        myroot = tree.getroot()
+
+        for sf in myroot.findall("acquisitionSystem"):
+            n_channels = int(sf.find("nChannels").text)
+
+        channel_groups, skipped_channels, anatomycolors = [], [], {}
+        for x in myroot.findall("anatomicalDescription"):
+            for y in x.findall("channelGroups"):
+                for z in y.findall("group"):
+                    chan_group = []
+                    for chan in z.findall("channel"):
+                        if int(chan.attrib["skip"]) == 1:
+                            skipped_channels.append(int(chan.text))
+
+                        chan_group.append(int(chan.text))
+                    if chan_group:
+                        channel_groups.append(np.array(chan_group))
+
+        for x in myroot.findall("neuroscope"):
+            for y in x.findall("channels"):
+                for i, z in enumerate(y.findall("channelColors")):
+                    try:
+                        channel_id = str(z.find("channel").text)
+                        color = z.find("color").text
+
+                    except AttributeError:
+                        channel_id = i
+                        color = "#0080ff"
+                    anatomycolors[channel_id] = color
+
+        discarded_channels = [ch for ch in range(n_channels) if all(ch not in group for group in channel_groups)]
+        kept_channels = [ch for ch in range(n_channels) if ch not in skipped_channels and ch not in discarded_channels]
+
+        return channel_groups, kept_channels, discarded_channels, anatomycolors
+
+    def _set_neuroscope_groups(self):
+        """
+        Set the group ids and colors based on the xml file.
+        These group ids are usually different brain/body anatomical areas, or shanks from multi-shank probes.
+        The group ids are set as a property of the recording extractor.
+        """
+        n = self.get_num_channels()
+        group_ids = np.full(n, -1, dtype=int)  # Initialize all positions to -1
+
+        channel_groups, kept_channels, discarded_channels, colors = self._parse_xml_file(self.xml_file_path)
+        for group_id, numbers in enumerate(channel_groups):
+            group_ids[numbers] = group_id  # Assign group_id to the positions in `numbers`
+        self.set_property("neuroscope_group", group_ids)
+        discarded_ppty = np.full(n, False, dtype=bool)
+        discarded_ppty[discarded_channels] = True
+        self.set_property("discarded_channels", discarded_ppty)
+        self.set_property("colors", values=list(colors.values()), ids=list(colors.keys()))
+
+    def prepare_neuroscope_for_ephyviewer(self):
+        """
+        Prepare the recording extractor for ephyviewer by setting the group ids and colors.
+        This function is not called when the extractor is initialized, and the user must call it manually.
+        """
+        self._set_neuroscope_groups()
 
 
 class NeuroScopeSortingExtractor(BaseSorting):
@@ -119,12 +179,12 @@ class NeuroScopeSortingExtractor(BaseSorting):
 
     def __init__(
         self,
-        folder_path: OptionalPathType = None,
-        resfile_path: OptionalPathType = None,
-        clufile_path: OptionalPathType = None,
+        folder_path: str | Path | None = None,
+        resfile_path: str | Path | None = None,
+        clufile_path: str | Path | None = None,
         keep_mua_units: bool = True,
-        exclude_shanks: Optional[list] = None,
-        xml_file_path: OptionalPathType = None,
+        exclude_shanks: list | None = None,
+        xml_file_path: str | Path | None = None,
     ):
         from lxml import etree as et
 
@@ -278,7 +338,7 @@ class NeuroScopeSortingSegment(BaseSortingSegment):
         return times
 
 
-def _find_xml_file_path(folder_path: PathType):
+def _find_xml_file_path(folder_path: str | Path):
     xml_files = [f for f in folder_path.iterdir() if f.is_file() if f.suffix == ".xml"]
     assert any(xml_files), "No .xml files found in the folder_path."
     assert len(xml_files) == 1, "More than one .xml file found in the folder_path! Specify xml_file_path."
@@ -286,7 +346,7 @@ def _find_xml_file_path(folder_path: PathType):
     return xml_file_path
 
 
-def _handle_xml_file_path(folder_path: PathType, initial_xml_file_path: PathType):
+def _handle_xml_file_path(folder_path: str | Path, initial_xml_file_path: str | Path):
     if initial_xml_file_path is None:
         xml_file_path = _find_xml_file_path(folder_path=folder_path)
     else:

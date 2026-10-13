@@ -30,8 +30,8 @@ def setup_module(tmp_path_factory):
 
 def test_find_recording_folders(setup_module):
     cache_folder = setup_module
-    rec1 = si.load_extractor(cache_folder / "mono")
-    rec2 = si.load_extractor(cache_folder / "multi" / "binary.json", base_folder=cache_folder / "multi")
+    rec1 = si.load(cache_folder / "mono")
+    rec2 = si.load(cache_folder / "multi" / "binary.json", base_folder=cache_folder / "multi")
 
     d1 = rec1.to_dict()
     d2 = rec2.to_dict()
@@ -62,6 +62,12 @@ def test_find_recording_folders(setup_module):
     # Not a good test on windows because all the paths resolve to C when absolute in `find_recording_folders`
     if platform.system() != "Windows":
         assert len(f3) == 3
+
+
+def test_find_recording_folders_skips_remote_paths(tmp_path):
+    """A remote path is read from inside the container, so it is not mounted (GH-2370)."""
+    recording_dict = {"kwargs": {"file_paths": [str(tmp_path / "recording.bin"), "s3://bucket/recording.zarr"]}}
+    assert find_recording_folders(recording_dict) == [tmp_path.resolve()]
 
 
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")

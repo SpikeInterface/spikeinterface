@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from probeinterface import Probe
@@ -135,7 +133,7 @@ def toy_example(
         assert isinstance(spike_labels, list)
         assert len(spike_times) == len(spike_labels)
         assert len(spike_times) == num_segments
-        sorting = NumpySorting.from_times_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
+        sorting = NumpySorting.from_samples_and_labels(spike_times, spike_labels, sampling_frequency, unit_ids=unit_ids)
     else:
         sorting = generate_sorting(
             num_units=num_units,

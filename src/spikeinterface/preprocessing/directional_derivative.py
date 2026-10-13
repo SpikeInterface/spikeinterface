@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 
 class DirectionalDerivativeRecording(BasePreprocessor):
@@ -52,7 +50,7 @@ class DirectionalDerivativeRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = DirectionalDerivativeRecordingSegment(
                 parent_segment,
                 parent_channel_locations,
@@ -136,6 +134,6 @@ class DirectionalDerivativeRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-directional_derivative = define_function_from_class(
+directional_derivative = define_function_handling_dict_from_class(
     source_class=DirectionalDerivativeRecording, name="directional_derivative"
 )

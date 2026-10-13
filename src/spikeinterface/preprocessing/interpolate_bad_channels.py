@@ -1,10 +1,14 @@
-from __future__ import annotations
-
 import numpy as np
 
-from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
-from spikeinterface.core.core_tools import define_function_from_class
+from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment, BaseRecording
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from spikeinterface.preprocessing import preprocessing_tools
+from .detect_bad_channels import (
+    _bad_channel_detection_kwargs_doc,
+    detect_bad_channels,
+    _get_all_detect_bad_channel_kwargs,
+)
+from inspect import signature
 
 
 class InterpolateBadChannelsRecording(BasePreprocessor):
@@ -61,7 +65,7 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
             locations_bad = locations[self._bad_channel_idxs]
             weights = preprocessing_tools.get_kriging_channel_weights(locations_good, locations_bad, sigma_um, p)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = InterpolateBadChannelsSegment(
                 parent_segment, self._good_channel_idxs, self._bad_channel_idxs, weights
             )
@@ -80,6 +84,59 @@ class InterpolateBadChannelsRecording(BasePreprocessor):
 
         if recording.get_probe().si_units != "um":
             raise NotImplementedError("Channel spacing units must be um")
+
+
+class DetectAndInterpolateBadChannelsRecording(InterpolateBadChannelsRecording):
+    """
+    Detects and interpolates bad channels. If `bad_channel_ids` are given,
+    the detection is skipped and uses these instead.
+
+    {}
+    bad_channel_ids : np.ndarray | list | None, default: None
+        If given, these are used rather than being detected.
+    channel_labels : np.ndarray | list | None, default: None
+        If given, these are labels given to the channels by the
+        detection process. Only intended for use when loading.
+
+    Returns
+    -------
+    interpolated_bad_channels_recording : DetectAndInterpolateBadChannelsRecording
+        The recording with bad channels removed
+    """
+
+    _precomputable_kwarg_names = ["bad_channel_ids"]
+
+    def __init__(
+        self,
+        recording: BaseRecording,
+        bad_channel_ids=None,
+        **detect_bad_channels_kwargs,
+    ):
+        if bad_channel_ids is None:
+            bad_channel_ids, channel_labels = detect_bad_channels(recording=recording, **detect_bad_channels_kwargs)
+        else:
+            channel_labels = None
+
+        InterpolateBadChannelsRecording.__init__(
+            self,
+            recording,
+            bad_channel_ids=bad_channel_ids,
+        )
+
+        self._kwargs.update({"bad_channel_ids": bad_channel_ids})
+        if channel_labels is not None:
+            self._kwargs.update({"channel_labels": channel_labels})
+
+        all_bad_channels_kwargs = _get_all_detect_bad_channel_kwargs(detect_bad_channels_kwargs)
+        self._kwargs.update(all_bad_channels_kwargs)
+
+
+DetectAndInterpolateBadChannelsRecording.__doc__ = DetectAndInterpolateBadChannelsRecording.__doc__.format(
+    _bad_channel_detection_kwargs_doc
+)
+detect_and_interpolate_bad_channels = define_function_handling_dict_from_class(
+    source_class=DetectAndInterpolateBadChannelsRecording, name="detect_and_interpolate_bad_channels"
+)
 
 
 class InterpolateBadChannelsSegment(BasePreprocessorSegment):
@@ -108,11 +165,11 @@ def estimate_recommended_sigma_um(recording):
     Get the most common distance between channels on the y-axis
     """
     y_sorted = np.sort(recording.get_channel_locations()[:, 1])
-    import scipy.stats
+    from scipy.stats import mode
 
-    return scipy.stats.mode(np.diff(np.unique(y_sorted)), keepdims=False)[0]
+    return mode(np.diff(np.unique(y_sorted)), keepdims=False)[0]
 
 
-interpolate_bad_channels = define_function_from_class(
+interpolate_bad_channels = define_function_handling_dict_from_class(
     source_class=InterpolateBadChannelsRecording, name="interpolate_bad_channels"
 )

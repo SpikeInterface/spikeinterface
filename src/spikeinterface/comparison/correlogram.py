@@ -1,7 +1,7 @@
-from __future__ import annotations
-
 from .paircomparisons import GroundTruthComparison
-from .groundtruthstudy import GroundTruthStudy
+
+# this import was previously used. Leave for now.
+# from .groundtruthstudy import GroundTruthStudy
 from spikeinterface.postprocessing import compute_correlograms
 
 
@@ -17,9 +17,9 @@ class CorrelogramGTComparison(GroundTruthComparison):
 
     Parameters
     ----------
-    gt_sorting : SortingExtractor
+    gt_sorting : BaseSorting
         The first sorting for the comparison
-    tested_sorting : SortingExtractor
+    tested_sorting : BaseSorting
         The second sorting for the comparison
     bin_ms : float, default: 1.0
         Size of bin for correlograms

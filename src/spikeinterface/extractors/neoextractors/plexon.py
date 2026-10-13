@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from spikeinterface.core.core_tools import define_function_from_class
@@ -56,7 +54,7 @@ class PlexonRecordingExtractor(NeoBaseRecordingExtractor):
             use_names_as_ids=use_names_as_ids,
             **neo_kwargs,
         )
-        self._kwargs.update({"file_path": str(Path(file_path).resolve())})
+        self._kwargs.update({"file_path": str(Path(file_path).absolute())})
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):
@@ -84,7 +82,7 @@ class PlexonSortingExtractor(NeoBaseSortingExtractor):
         self.neo_reader = NeoBaseSortingExtractor.get_neo_io_reader(self.NeoRawIOClass, **neo_kwargs)
         sampling_frequency = self.neo_reader._global_ssampling_rate
         NeoBaseSortingExtractor.__init__(self, sampling_frequency=sampling_frequency, **neo_kwargs)
-        self._kwargs = {"file_path": str(Path(file_path).resolve())}
+        self._kwargs = {"file_path": str(Path(file_path).absolute())}
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

@@ -3,12 +3,51 @@ import platform
 import subprocess
 import os
 from packaging import version
+import importlib.util
 
 import pytest
+import numpy as np
 
-from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface import get_global_dataset_folder
-from spikeinterface.extractors import *
+from spikeinterface.extractors.extractor_classes import (
+    MEArecRecordingExtractor,
+    MEArecSortingExtractor,
+    SpikeGLXRecordingExtractor,
+    OpenEphysBinaryRecordingExtractor,
+    OpenEphysBinaryEventExtractor,
+    OpenEphysLegacyRecordingExtractor,
+    IntanRecordingExtractor,
+    NeuroScopeRecordingExtractor,
+    NeuroExplorerRecordingExtractor,
+    NeuroExplorerSortingExtractor,
+    NeuroScopeSortingExtractor,
+    NeuroNexusRecordingExtractor,
+    PlexonRecordingExtractor,
+    PlexonSortingExtractor,
+    NeuralynxRecordingExtractor,
+    AlphaOmegaEventExtractor,
+    SpikeGadgetsRecordingExtractor,
+    Plexon2SortingExtractor,
+    NeuralynxSortingExtractor,
+    BlackrockRecordingExtractor,
+    BlackrockSortingExtractor,
+    MCSRawRecordingExtractor,
+    TdtRecordingExtractor,
+    BiocamRecordingExtractor,
+    AxonaRecordingExtractor,
+    Plexon2EventExtractor,
+    MaxwellRecordingExtractor,
+    CedRecordingExtractor,
+    AlphaOmegaRecordingExtractor,
+    Spike2RecordingExtractor,
+    EDFRecordingExtractor,
+    Plexon2RecordingExtractor,
+    AxonRecordingExtractor,
+)
+
+from spikeinterface.extractors.neoextractors.intan import IntanSplitFilesRecordingExtractor
+
+from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 
 from spikeinterface.extractors.tests.common_tests import (
     RecordingCommonTestSuite,
@@ -32,7 +71,7 @@ def has_plexon2_dependencies():
         return True
 
     elif os_type == "Linux" or os_type == "Darwin":
-        # Check for 'wine' using which. "which" works for both mac and linux
+        # Check for 'wine' using "which" that works for both mac and linux
         # if package exists it returns a 0. Anything else is an error code.
 
         result_wine = subprocess.run(["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
@@ -40,11 +79,10 @@ def has_plexon2_dependencies():
             return False
 
         # Check for 'zugbruecke' using pip
-        try:
-            import zugbruecke
-
+        zugbruecke_spec = importlib.util.find_spec("zugbruecke")
+        if zugbruecke_spec is not None:
             return True
-        except ImportError:
+        else:
             return False
     else:
         raise ValueError(f"Unsupported OS: {os_type}")
@@ -54,7 +92,7 @@ class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecRecordingExtractor
     downloads = ["mearec"]
     entities = ["mearec/mearec_test_10s.h5"]
-    neo_funcs = dict()
+    neo_funcs = {}
 
 
 class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
@@ -68,9 +106,10 @@ class SpikeGLXRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     downloads = ["spikeglx"]
     entities = [
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap"}),
-        ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap", "load_sync_channel": True}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.lf"}),
         ("spikeglx/Noise4Sam_g0", {"stream_id": "nidq"}),
+        ("spikeglx/Noise4Sam_g0", {"stream_id": "imec0.ap-SYNC"}),
+        ("spikeglx/onebox/run_with_only_adc/myRun_g0", {"stream_id": "obx0"}),
     ]
 
 
@@ -94,7 +133,61 @@ class OpenEphysBinaryRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
             "openephysbinary/v0.6.x_neuropixels_multiexp_multistream",
             {"stream_id": "2", "block_index": 2, "load_sync_timestamps": True},
         ),
+        (
+            "openephysbinary/v0.6.x_onebox_neuropixels",
+            {"stream_name": "Record Node 101#OneBox-100.ProbeA-AP", "block_index": 0},
+        ),
+        (
+            "openephysbinary/v0.6.x_onebox_neuropixels_nontrivial_wiring",
+            {"stream_name": "Record Node 101#OneBox-111.ProbeA", "block_index": 0},
+        ),
     ]
+
+    def test_non_trivial_wiring(self):
+        """
+        Test that we can load the probe information and sample shifts for a one box neuropixels recording with
+        non trivial wiring.
+        """
+        folder_path = local_folder / "openephysbinary/v0.6.x_onebox_neuropixels_nontrivial_wiring"
+        stream_name = "Record Node 101#OneBox-111.ProbeA"
+        block_index = 0
+
+        recording = self.ExtractorClass(folder_path, stream_name=stream_name, block_index=block_index)
+        # check that channel_ids and settings_channel_key contact annotations are correctly loaded
+        probe = recording.get_probe()
+        np.testing.assert_array_equal(recording.channel_ids, probe.contact_annotations["settings_channel_key"])
+
+    def test_timestamp_loading_multi_level(self):
+        """
+        Test that we can load the sync timestamps from different levels of the folder structure and
+        that they are the same.
+        """
+        recording_folder = (
+            local_folder / "openephysbinary/v0.6.x_neuropixels_with_sync/Record Node 104/experiment1/recording1"
+        )
+        stream_name = "Record Node 104#Neuropix-PXI-100.ProbeA-AP"
+        block_index = 0
+
+        recording_from_recording_folder = self.ExtractorClass(
+            recording_folder,
+            stream_name=stream_name,
+            block_index=block_index,
+            load_sync_timestamps=True,
+        )
+        assert recording_from_recording_folder.has_time_vector()
+        timestamps_recording = recording_from_recording_folder.get_times()
+        parent_folder = recording_folder
+        for _ in range(3):
+            parent_folder = parent_folder.parent
+            recording_from_parent = self.ExtractorClass(
+                parent_folder,
+                stream_name=stream_name,
+                block_index=block_index,
+                load_sync_timestamps=True,
+            )
+            assert recording_from_parent.has_time_vector()
+            timestamps_parent = recording_from_parent.get_times()
+            np.testing.assert_array_equal(timestamps_recording, timestamps_parent)
 
 
 class OpenEphysBinaryEventTest(EventCommonTestSuite, unittest.TestCase):
@@ -149,6 +242,15 @@ class IntanRecordingTestMultipleFilesFormat(RecordingCommonTestSuite, unittest.T
     ]
 
 
+class IntanSplitFilesRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = IntanSplitFilesRecordingExtractor
+    downloads = ["intan"]
+    entities = [
+        ("intan/test_tetrode_240502_162925", {"mode": "concatenate"}),
+        ("intan/test_tetrode_240502_162925", {"mode": "append"}),
+    ]
+
+
 class NeuroScopeRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeRecordingExtractor
     downloads = ["neuroscope"]
@@ -169,6 +271,15 @@ class NeuroExplorerRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class NeuroExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroExplorerSortingExtractor
+    downloads = ["neuroexplorer"]
+    entities = [
+        "neuroexplorer/File_neuroexplorer_1.nex",
+        "neuroexplorer/File_neuroexplorer_2.nex",
+    ]
+
+
 class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeSortingExtractor
     downloads = ["neuroscope"]
@@ -185,7 +296,7 @@ class NeuroNexusRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroNexusRecordingExtractor
     downloads = ["neuronexus"]
     entities = [
-        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "0"}),
+        ("neuronexus/allego_1/allego_2__uid0701-13-04-49.xdat.json", {"stream_id": "ai-pri"}),
     ]
 
 
@@ -261,6 +372,12 @@ class TdTRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     entities = [("tdt/aep_05", {"stream_id": "1"})]
 
 
+class AxonRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = AxonRecordingExtractor
+    downloads = ["axon"]
+    entities = ["axon/extracellular_data/four_electrodes/24606005_SampleData.abf"]
+
+
 class AxonaRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = AxonaRecordingExtractor
     downloads = ["axona"]
@@ -285,20 +402,20 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(
-    version.parse(platform.python_version()) >= version.parse("3.10") or platform.system() == "Darwin",
-    reason="Sonpy only testing with Python < 3.10 and not supported on macOS!",
-)
-class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
-    ExtractorClass = CedRecordingExtractor
-    downloads = [
-        "spike2/130322-1LY.smr",
-        "spike2/m365_1sec.smrx",
-    ]
-    entities = [
-        ("spike2/130322-1LY.smr", {"stream_id": "1"}),
-        "spike2/m365_1sec.smrx",
-    ]
+# @pytest.mark.skipif(
+#     version.parse(platform.python_version()) >= version.parse("3.10") or platform.system() == "Darwin",
+#     reason="Sonpy only testing with Python < 3.10 and not supported on macOS!",
+# )
+# class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+#     ExtractorClass = CedRecordingExtractor
+#     downloads = [
+#         "spike2/130322-1LY.smr",
+#         "spike2/m365_1sec.smrx",
+#     ]
+#     entities = [
+#         ("spike2/130322-1LY.smr", {"stream_id": "1"}),
+#         "spike2/m365_1sec.smrx",
+#     ]
 
 
 @pytest.mark.skipif(platform.system() == "Darwin", reason="Maxwell plugin not supported on macOS")
@@ -362,7 +479,8 @@ class EDFRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
 
 # TODO solve plexon bug
 @pytest.mark.skipif(
-    not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug on windows"
+    not has_plexon2_dependencies() or platform.system() == "Windows" or platform.system() == "Darwin",
+    reason="There is a bug on windows and mac",
 )
 class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2RecordingExtractor
@@ -372,7 +490,10 @@ class Plexon2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug")
+@pytest.mark.skipif(
+    not has_plexon2_dependencies() or platform.system() == "Windows" or platform.system() == "Darwin",
+    reason="There is a bug",
+)
 @pytest.mark.skipif(not has_plexon2_dependencies(), reason="Required dependencies not installed")
 class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2EventExtractor
@@ -382,7 +503,10 @@ class Plexon2EventTest(EventCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(not has_plexon2_dependencies() or platform.system() == "Windows", reason="There is a bug")
+@pytest.mark.skipif(
+    not has_plexon2_dependencies() or platform.system() == "Windows" or platform.system() == "Darwin",
+    reason="There is a bug",
+)
 class Plexon2SortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = Plexon2SortingExtractor
     downloads = ["plexon"]

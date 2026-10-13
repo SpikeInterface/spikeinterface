@@ -1,9 +1,10 @@
-from .base import load_extractor  # , load_extractor_from_dict, load_extractor_from_json, load_extractor_from_pickle
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment, SpikeVectorSortingSegment
 from .baseevent import BaseEvent, BaseEventSegment
 from .basesnippets import BaseSnippets, BaseSnippetsSegment
 from .baserecordingsnippets import BaseRecordingSnippets
+
+from .loading import load
 
 # main extractor from dump and cache
 from .binaryrecordingextractor import BinaryRecordingExtractor, read_binary
@@ -16,7 +17,7 @@ from .numpyextractors import (
     NumpyEvent,
     NumpySnippets,
 )
-from .zarrextractors import ZarrRecordingExtractor, ZarrSortingExtractor, read_zarr, get_default_zarr_compressor
+from .zarrextractors import read_zarr, read_zarr_array, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .sortingfolder import NumpyFolderSorting, NpzFolderSorting, read_numpy_sorting_folder, read_npz_folder
 from .npysnippetsextractor import NpySnippetsExtractor, read_npy_snippets
@@ -43,8 +44,7 @@ from .generate import (
     inject_some_split_units,
     synthetize_spike_train_bad_isi,
     generate_templates,
-    NoiseGeneratorRecording,
-    noise_generator_recording,
+    MockRecording,
     generate_recording_by_size,
     InjectTemplatesRecording,
     inject_templates,
@@ -82,6 +82,7 @@ from .globals import (
     get_global_job_kwargs,
     set_global_job_kwargs,
     reset_global_job_kwargs,
+    is_set_global_job_kwargs_set,
 )
 
 # tools
@@ -89,10 +90,20 @@ from .core_tools import (
     read_python,
     write_python,
     normal_pdf,
+    ms_to_samples,
 )
-from .job_tools import ensure_n_jobs, ensure_chunk_size, ChunkRecordingExecutor, split_job_kwargs, fix_job_kwargs
+from .job_tools import (
+    get_best_job_kwargs,
+    ensure_n_jobs,
+    ensure_chunk_size,
+    TimeSeriesChunkExecutor,
+    split_job_kwargs,
+    fix_job_kwargs,
+)
 from .recording_tools import (
     write_binary_recording,
+    write_memory_recording,
+    write_recording_to_zarr,
     write_to_h5_dataset_format,
     get_random_data_chunks,
     get_channel_distances,
@@ -101,7 +112,13 @@ from .recording_tools import (
     get_chunk_with_margin,
     order_channels_by_depth,
 )
-from .sorting_tools import spike_vector_to_spike_trains, random_spikes_selection, apply_merges_to_sorting
+from .sorting_tools import (
+    spike_vector_to_spike_trains,
+    spike_vector_to_indices,
+    random_spikes_selection,
+    apply_merges_to_sorting,
+    apply_splits_to_sorting,
+)
 
 from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_with_accumulator
 from .snippets_tools import snippets_from_sorting
@@ -130,13 +147,6 @@ from .old_api_utils import (
 # templates addition
 # from .injecttemplates import InjectTemplatesRecording, InjectTemplatesRecordingSegment, inject_templates
 
-# template tools
-from .template_tools import (
-    get_template_amplitudes,
-    get_template_extremum_channel,
-    get_template_extremum_channel_peak_shift,
-    get_template_extremum_amplitude,
-)
 
 # channel sparsity
 from .sparsity import ChannelSparsity, compute_sparsity, estimate_sparsity
@@ -153,6 +163,18 @@ from .sortinganalyzer import (
     get_default_analyzer_extension_params,
 )
 
+# template tools
+from .template_tools import (
+    get_template_amplitudes,
+    get_template_peak_shift_on_main_channel,
+    get_template_amplitude_on_main_channel,
+    # this is not needed anymore
+    get_template_extremum_channel,  # keep for backward compatibility can be removed in 0.106
+    get_template_extremum_channel_peak_shift,  # keep for backward compatibility can be removed in 0.106
+    get_template_extremum_amplitude,  # keep for backward compatibility can be removed in 0.106
+)
+
+
 from .analyzer_extension_core import (
     ComputeRandomSpikes,
     compute_random_spikes,
@@ -164,6 +186,8 @@ from .analyzer_extension_core import (
     compute_noise_levels,
 )
 
+from .motion import Motion
+
 # Important not for compatibility!!
 # This wil be uncommented after 0.100
 from .waveforms_extractor_backwards_compatibility import (
@@ -171,3 +195,25 @@ from .waveforms_extractor_backwards_compatibility import (
     load_waveforms,
     load_sorting_analyzer_or_waveforms,
 )
+
+
+def __getattr__(name):
+    if name in ("NoiseGeneratorRecording", "noise_generator_recording"):
+        import warnings
+
+        warnings.warn(
+            f"Importing {name} from spikeinterface.core is deprecated. "
+            f"Import from spikeinterface.generation instead: "
+            f"`from spikeinterface.generation import {name}`. "
+            f"This will be removed in version 0.106.0.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        from spikeinterface.generation.noise_tools import NoiseGeneratorRecording, noise_generator_recording
+
+        _map = {
+            "NoiseGeneratorRecording": NoiseGeneratorRecording,
+            "noise_generator_recording": noise_generator_recording,
+        }
+        return _map[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

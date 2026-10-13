@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 
@@ -53,7 +51,7 @@ class MotionInterpolationBenchmark(Benchmark):
         sorting = run_sorter(
             sorter_name,
             recording,
-            output_folder=self.sorter_folder,
+            folder=self.sorter_folder,
             **sorter_params,
             delete_output_folder=False,
         )

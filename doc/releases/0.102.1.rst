@@ -1,0 +1,33 @@
+.. _release0.102.1:
+
+SpikeInterface 0.102.1 release notes
+------------------------------------
+
+19th February 2025
+
+Minor release with bug fixes
+
+core:
+
+* Add parents in HTML representation and always print class name (#3700)
+* Add `SortingAnalyzer.set_sorting_property()/get_sorting_property()` functions (#3694)
+* Add `_parent` to `select_segment` classes (#3692)
+* Fix `chunk_size_limit` in `get_random_recording_slices` (#3691)
+* Fix bug in `super_zarr_open` (#3686)
+* Fix `si.load` for `WaveformExtarctor` (#3680)
+
+sorters:
+
+* Add `BaseSorter._dynamic_params()` to be to retrieve parameters dynamically (#3697)
+
+continuous integration:
+
+* Add `torch` to test installation (#3706)
+
+testing:
+
+* Test Python 3.13 (#3683)
+
+Contributors:
+
+* @alejoe91

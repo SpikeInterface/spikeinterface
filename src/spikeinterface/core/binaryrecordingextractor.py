@@ -1,4 +1,3 @@
-from __future__ import annotations
 import mmap
 import warnings
 from pathlib import Path
@@ -23,8 +22,6 @@ class BinaryRecordingExtractor(BaseRecording):
         The sampling frequency
     num_channels : int
         Number of channels
-    num_chan : int [deprecated, use num_channels instead, will be removed as early as v0.100.0]
-        Number of channels
     dtype : str or dtype
         The dtype of the binary file
     time_axis : int, default: 0
@@ -41,6 +38,8 @@ class BinaryRecordingExtractor(BaseRecording):
         The offset to apply to the traces
     is_filtered : bool or None, default: None
         If True, the recording is assumed to be filtered. If None, is_filtered is not set.
+    file_timestamps_paths : str or Path or list, default: None
+        Path to the binary file containing timestamps for each segment. If None, timestamps are not loaded
 
     Notes
     -----
@@ -54,26 +53,19 @@ class BinaryRecordingExtractor(BaseRecording):
 
     def __init__(
         self,
-        file_paths,
-        sampling_frequency,
-        dtype,
-        num_channels=None,
-        t_starts=None,
-        channel_ids=None,
-        time_axis=0,
-        file_offset=0,
-        gain_to_uV=None,
-        offset_to_uV=None,
-        is_filtered=None,
-        num_chan=None,
+        file_paths: str | Path | list[str | Path],
+        sampling_frequency: float,
+        dtype: str | np.dtype,
+        num_channels: int | None = None,
+        t_starts: list[float] | None = None,
+        channel_ids: list[str | int] | None = None,
+        time_axis: int = 0,
+        file_offset: int = 0,
+        gain_to_uV: float | np.ndarray | None = None,
+        offset_to_uV: float | np.ndarray | None = None,
+        is_filtered: bool | None = None,
+        file_timestamps_paths: str | Path | list[str | Path] | None = None,
     ):
-        # This assigns num_channels if num_channels is not None, otherwise num_chan is assigned
-        # num_chan needs to be be kept for backward compatibility but should not be used by the
-        # end user
-        num_channels = num_channels or num_chan
-        assert num_channels is not None, "You must provide num_channels or num_chan"
-        if num_chan is not None:
-            warnings.warn("`num_chan` is to be deprecated as of version 0.100, please use `num_channels` instead")
 
         if channel_ids is None:
             channel_ids = list(range(num_channels))
@@ -93,6 +85,12 @@ class BinaryRecordingExtractor(BaseRecording):
             assert len(t_starts) == len(file_path_list), "t_starts must be a list of the same size as file_paths"
             t_starts = [float(t_start) for t_start in t_starts]
 
+        if file_timestamps_paths is not None:
+            if isinstance(file_timestamps_paths, list):
+                file_timestamps_paths = [Path(p) for p in file_timestamps_paths]
+            else:
+                file_timestamps_paths = [Path(file_timestamps_paths)]
+
         dtype = np.dtype(dtype)
 
         for i, file_path in enumerate(file_path_list):
@@ -100,8 +98,20 @@ class BinaryRecordingExtractor(BaseRecording):
                 t_start = None
             else:
                 t_start = t_starts[i]
+            if file_timestamps_paths is None:
+                file_timestamps_path = None
+            else:
+                file_timestamps_path = file_timestamps_paths[i]
+
             rec_segment = BinaryRecordingSegment(
-                file_path, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset
+                file_path,
+                sampling_frequency,
+                t_start,
+                num_channels,
+                dtype,
+                time_axis,
+                file_offset,
+                file_timestamps_path,
             )
             self.add_recording_segment(rec_segment)
 
@@ -126,7 +136,19 @@ class BinaryRecordingExtractor(BaseRecording):
             "gain_to_uV": gain_to_uV,
             "offset_to_uV": offset_to_uV,
             "is_filtered": is_filtered,
+            "file_timestamps_paths": (
+                [str(Path(e).absolute()) for e in file_timestamps_paths] if file_timestamps_paths is not None else None
+            ),
         }
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "num_chan" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["num_channels"] = new_kwargs.pop("num_chan")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
     @staticmethod
     def write_recording(recording, file_paths, dtype=None, **job_kwargs):
@@ -165,7 +187,17 @@ BinaryRecordingExtractor.write_recording.__doc__ = BinaryRecordingExtractor.writ
 
 
 class BinaryRecordingSegment(BaseRecordingSegment):
-    def __init__(self, file_path, sampling_frequency, t_start, num_channels, dtype, time_axis, file_offset):
+    def __init__(
+        self,
+        file_path,
+        sampling_frequency,
+        t_start,
+        num_channels,
+        dtype,
+        time_axis,
+        file_offset,
+        file_timestamps_path=None,
+    ):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
         self.num_channels = num_channels
         self.dtype = np.dtype(dtype)
@@ -176,6 +208,9 @@ class BinaryRecordingSegment(BaseRecordingSegment):
         self.bytes_per_sample = self.num_channels * self.dtype.itemsize
         self.data_size_in_bytes = Path(file_path).stat().st_size - file_offset
         self.num_samples = self.data_size_in_bytes // self.bytes_per_sample
+        self.file_timestamps_path = file_timestamps_path
+        if file_timestamps_path is not None:
+            self._time_vector = np.memmap(file_timestamps_path, dtype="float64", mode="r", shape=(self.num_samples,))
 
     def get_num_samples(self) -> int:
         """Returns the number of samples in this signal block
@@ -232,6 +267,22 @@ class BinaryRecordingSegment(BaseRecordingSegment):
             traces = traces[:, channel_indices]
 
         return traces
+
+    def __del__(self):
+        # Ensure that the file handle is closed when the segment is garbage-collected
+        try:
+            if hasattr(self, "file") and self.file and not self.file.closed:
+                self.file.close()
+        except Exception as e:
+            warnings.warn(f"Error closing file handle in BinaryRecordingSegment: {e}")
+            pass
+
+        if self._time_vector is not None:
+            try:
+                self._time_vector._mmap.close()  # Close the underlying mmap object
+                del self._time_vector
+            except Exception as e:
+                pass
 
 
 # For backward compatibility (old good time)

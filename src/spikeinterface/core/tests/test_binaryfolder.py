@@ -5,7 +5,7 @@ import shutil
 
 import numpy as np
 
-from spikeinterface.core import BinaryFolderRecording, read_binary_folder, load_extractor
+from spikeinterface.core import load
 from spikeinterface.core import generate_recording
 
 
@@ -20,7 +20,7 @@ def test_BinaryFolderRecording(create_cache_folder):
     saved_rec = rec.save(folder=folder)
     print(saved_rec)
 
-    loaded_rec = load_extractor(folder)
+    loaded_rec = load(folder)
     print(loaded_rec)
 
 

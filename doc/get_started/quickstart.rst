@@ -42,7 +42,7 @@ We need to import one by one different submodules separately
     import spikeinterface.preprocessing as spre
     import spikeinterface.sorters as ss
     import spikeinterface.postprocessing as spost
-    import spikeinterface.qualitymetrics as sqm
+    import spikeinterface.metrics.quality as sqm
     import spikeinterface.comparison as sc
     import spikeinterface.exporters as sexp
     import spikeinterface.curation as scur
@@ -198,8 +198,9 @@ to set it *manually*.
 
 
 If your recording does not have a ``Probe``, you can set it using
-``set_probe``. Note: ``set_probe`` creates a copy of the recording with
-the new probe, rather than modifying the existing recording in place.
+``set_probe``. Note: ``set_probe`` modifies the recording in place. To
+get a new recording object with a subset of channels attached to a probe,
+use ``select_channels_with_probe``.
 There is more information
 `here <https://spikeinterface.readthedocs.io/en/latest/modules_gallery/core/plot_3_handle_probe_info.html>`__.
 
@@ -247,7 +248,7 @@ object to disk.
 
 
 To reload a preprocessed recording that was saved to disk, you can use
-``load_extractor()`` function from the ``core`` module.
+``load()`` function from the ``core`` module.
 
 Now you are ready to spike sort using the ``spikeinterface.sorters``
 module! Let’s first check which sorters are implemented and which are
@@ -287,7 +288,7 @@ available parameters are dictionaries and can be accessed with:
      'detect_threshold': 5,
      'freq_max': 5000.0,
      'freq_min': 400.0,
-     'max_threads_per_process': 1,
+     'max_threads_per_worker': 1,
      'mp_context': None,
      'n_jobs': 20,
      'nested_params': None,
@@ -336,7 +337,7 @@ Alternatively we can pass a full dictionary containing the parameters:
 
     # parameters set by params dictionary
     sorting_TDC_2 = ss.run_sorter(
-        sorter_name="tridesclous", recording=recording_preprocessed, output_folder="tdc_output2", **other_params
+        sorter_name="tridesclous", recording=recording_preprocessed, folder="tdc_output2", **other_params
     )
     print(sorting_TDC_2)
 
@@ -627,7 +628,7 @@ compute quality metrics (some quality metrics require certain extensions
 
 .. code:: ipython3
 
-    qm_params = sqm.get_default_qm_params()
+    qm_params = sqm.get_default_quality_metrics_params()
     pprint(qm_params)
 
 
@@ -673,7 +674,7 @@ compute quality metrics (some quality metrics require certain extensions
                               'min_spikes': 0,
                               'window_size_s': 1},
      'snr': {'peak_mode': 'extremum', 'peak_sign': 'neg'},
-     'synchrony': {'synchrony_sizes': (2, 4, 8)}}
+     'synchrony': {}
 
 
 Since the recording is very short, let’s change some parameters to

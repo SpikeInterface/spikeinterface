@@ -1,0 +1,198 @@
+.. _release0.103.0:
+
+SpikeInterface 0.103.0 release notes
+------------------------------------
+
+Jul 31st 2025
+
+Main changes:
+
+* Simplified pipelines for group processing (#4005, #4037) (see :ref:`process_by_group`)
+* Added curation pydantic model and splitting in curation module (#3760, #3817)
+* Added ``PreprocessingPipeline`` class to handle, represent, and reproduce preprocessing steps (#3438, #4000, #3685)
+* Added ``3D-ACG`` postprocessing extension (#3860) and ``noise_cutoff`` quality metric (#4072)
+* Added ``RTSort`` as an external sorter (#3597)
+* Upgraded ``SpykingCircus2`` and ``Tridesclous2`` to ``v2025.07`` (#3923)
+* API and breaking changes:
+
+    * ``return_scaled`` --> ``return_in_uV`` in ``BaseRecording.get_traces()`` (#3794, #4090, #4093)
+    * ``is_scaled`` --> ``is_in_uV`` in ``Templates`` class (#4036)
+    * Unsigned integers not automatically cast to signed integers anymore in preprocessing (#3982) (see :ref:`unsigned_to_signed`)
+
+
+
+core:
+
+* Fix set_properties_after_merging when property is boolean. (#4084)
+* Cast samples to int64 after round (#4061)
+* Check for remote paths in check_paths_relative (#4060)
+* Allow `create_sorting_analyzer` to accept dicts (#4037)
+* Fix soft vs hard merge issue in analyzer (#4025)
+* Fix sampling rate issue when aggregating (#4024)
+* Add `get_unit_spike_train_in_seconds` to sorting extractor (#4012)
+* Optional loading of compression ratio in zarr recording (#3995)
+* Remove auto_cast_uint, cast_unsigned, and modify fix_dtype (#3982)
+* keep probe_planar_contour when aggregating channels  (#3958)
+* Add informative assertions to `slice_time` (#3942)
+* More informative errors in frame slicing (#3933)
+* Add documentation to handle (physical) units of recording channels (#3844)
+
+extractors:
+
+* Updates for probeinterface v0.3.0 for inter-sample-shift computation (#4092)
+* Add append mode to `IntanSplitFile` building on #4070 (#4075)
+* Fix one box reading in spikeglx (#4069)
+* Add `Axon` recording (#4021)
+* Add `get_unit_spike_train_in_seconds` to sorting extractor (#4012)
+* Fix get_neo_* functions (#4010)
+* Allow white matter recording to pass gain_to_uV (#4008)
+* Fix double definition of openephys warnings (#3980)
+* Automatically install the maxwell plugin in the `MaxwellRecordingExtractor`  (#3961)
+* Fix loading data from the sync stream in spikeglx (#3959)
+* Fix timestamps None in `NWBRecordingExtractor` (#3932)
+* Read spikeglx neuropixels data without ap meta (#3931)
+* Better `Neuroscope` support (#3862)
+
+preprocessing:
+
+* `PreprocessingPipeline`: support remote zarr in load_from_analyzer (#4000)
+* Remove auto_cast_uint, cast_unsigned, and modify fix_dtype (#3982)
+* Add documentation to handle (physical) units of recording channels (#3844)
+* Add `DetectAndRemoveBadChannelsRecording` and `DetectAndInterpolateBadChannelsRecording` classes (#3685)
+* Add `PreprocessingPipeline` (#3438)
+
+sorters:
+
+* Add archived sorters and change rt-sort to rtsort (#4077)
+* Fix Kilosort tests for 4.0.39 (#4063)
+* Allow `run_sorter` to accept dicts (#4005)
+* Fix last mock call to slurm launcher (#3988)
+* Avoid crash of SC2 if no templates are detected after clustering (#3976)
+* Expose hidden KiloSort1 parameters and descriptions (#3956)
+* Fix kcoords for non-int groups (#3944)
+* Update TDC2 and SC2 with various improvement in sorting components (clustering + matching) (#3923)
+* Add in missing `get_nvidia_docker_dependencies` (#3911)
+* Method to bypass matching, and assign a labels to all peaks given templates and SVD representation (#3856)
+* Sc2 deterministic mode (#3854)
+* Handle automatic chunks duration for SC2 (#3721)
+* Implemented RT-Sort as an external sorter (#3597)
+* update to run_sorter_jobs() and slurm (#3105)
+
+postprocessing:
+
+* Add "3D Auto-correlograms" (3D ACGs) postprocessing extension  (#3860)
+
+qualitymetrics:
+
+* Add IBL's "noise cutoff" quality metric (again) (#4072)
+* Add `concatenated` to `_get_data` for amps and locs; use in `_get_amplitudes_by_units` (#4029)
+
+curation:
+
+* Add splitting functionality to curation and `SortingAnalyzer` (#3817)
+* Add pydantic curation model, improve merging rules, and add splitting model (#3760)
+
+widgets:
+
+* Fix plot_amplitudes for sortingview widgets (#4097)
+* Add multi-segment capability to BaseRasterWidget and children (#4035)
+* Allow for `SortingAnalyzer` or `BaseSorter` in `plot_*` (#3941)
+* Plot drifting templates (#3842)
+
+exporters:
+
+* Add `to_pynapple_tsgroup` function exporters (#4074)
+
+generators:
+
+* Fix durations in generate_hybrid_recording (#3985)
+* Improve generators (#3973)
+
+sortingcomponents:
+
+* Method to bypass matching, and assign a labels to all peaks given templates and SVD representation (#3856)
+* Sc2 deterministic mode (#3854)
+* Handle automatic chunks duration for SC2 (#3721)
+
+motion correction:
+
+* Make `get_spatial_windows()` easier (and not fail) for short probes (#4086)
+* Bug fix: cast corrected motion recording to float (#3934)
+* Refactor `correct_motion` into compute motion, then make interpolation (#3905)
+
+documentation:
+
+* Add huggingface_hub to docs requirements (#4085)
+* Add missing functions in API (#4079)
+* Add additional `unsigned_to_signed` doc (#4076)
+* typo: ephsy -> ephys (#4065)
+* Updates to the `get_started` folder of docs (#4059)
+* Update `job_kwargs` shared docs (#4058)
+* Add motion functions to api docs (#4057)
+* Add working with tetrodes doc (#4055)
+* Add Additional Citations to Ref page (#4054)
+* Switch RTD to UV (#4052)
+* Remove MEArec downloads from docs (#4051)
+* Fix typo on readme (#3981)
+* Fix for handle_drift bullet points (#3970)
+* Fix recording slicing docstrings and documentation typo (#3939)
+* spike_amplitudes description (#3925)
+* phykilosortextractors.py Phy/Kilosort (#3924)
+* Clarify docstrings in neuropixels_utils (#3895)
+* Add documentation to handle (physical) units of recording channels (#3844)
+
+continuous integration:
+
+* Use Github token to help with Windows Testing (#4062)
+
+packaging:
+
+* Requires `probeinterface>=0.3.0` (#4092)
+* Add `read_neuroscope` to `__all__` for extractors (#4064)
+* Release python version once testing with 3.13.5+ (#3991)
+* Cleanup unused import across codebase (#3972)
+* Remove classes from extractor and preprocessing `__init__` (#3898)
+* Installation tips using uv (#3503)
+
+testing:
+
+* Fix uniqueness of locations in test_average_across_directions (#4023)
+* Test fixing ibllib (#4020)
+* Limit pytest < 8.4.0 for now (#3966)
+
+
+deprecations:
+
+* Deprecated `spikeinterface.compraison.hybrid` module (#4093)
+* More return_scaled > return_in_uV (#4090)
+* Remove `setup.py` (#4053)
+* `Templates.is_scaled` > `Templates.is_in_uV` (#4036)
+* More deprecation updates for version 0.103.0 (#4033)
+* First pass of deprecation removals for 0.103.0 (#3993)
+* `return_scaled` to `return_in_uV`  (#3794)
+
+
+Contributors:
+
+* @DradeAW
+* @MarinManuel
+* @RobertoDF
+* @alejoe91
+* @bendichter
+* @chrishalcrow
+* @emmanuel-ferdman
+* @fededagos
+* @h-mayorquin
+* @huizizhang949
+* @jakeswann1
+* @kushaangupta
+* @max-c-lim
+* @oliche
+* @pas-calc
+* @philipp-mxw
+* @rat-h
+* @samuelgarcia
+* @theodchrn
+* @ttngu207
+* @yger
+* @zm711

@@ -1,7 +1,8 @@
-from __future__ import annotations
+import warnings
 
 import numpy as np
 
+from probeinterface import ProbeGroup
 from .baserecording import BaseRecording, BaseRecordingSegment
 
 
@@ -9,13 +10,39 @@ class ChannelsAggregationRecording(BaseRecording):
     """
     Class that handles aggregating channels from different recordings, e.g. from different channel groups.
 
+    Annotations shared by all the recordings, meaning present in every recording and with the same value
+    everywhere, are propagated to the aggregated recording. All other annotations are dropped.
+
     Do not use this class directly but use `si.aggregate_channels(...)`
+
+    Parameters
+    ----------
+    recording_list_or_dict : list or dict
+        The list or dictionary of recordings to aggregate.
+    renamed_channel_ids : list, optional
+        The new channel ids for the aggregated recording. If None, default unique consecutive ids are used.
 
     """
 
-    def __init__(self, recording_list, renamed_channel_ids=None):
+    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None):
+        if isinstance(recording_list_or_dict, dict):
+            recording_list = list(recording_list_or_dict.values())
+            recording_ids = list(recording_list_or_dict.keys())
+        elif isinstance(recording_list_or_dict, list):
+            recording_list = recording_list_or_dict
+            recording_ids = range(len(recording_list))
+        else:
+            raise TypeError(
+                "`aggregate_channels` only accepts a list of recordings or a dict whose values are all recordings."
+            )
 
         self._recordings = recording_list
+        aggregation_key = np.concatenate(
+            [
+                np.asarray([recording_id] * recording.get_num_channels())
+                for recording_id, recording in zip(recording_ids, recording_list)
+            ]
+        )
 
         self._perform_consistency_checks()
         sampling_frequency = recording_list[0].get_sampling_frequency()
@@ -30,14 +57,17 @@ class ChannelsAggregationRecording(BaseRecording):
             ), "'renamed_channel_ids' doesn't have the right size or has duplicates!"
             channel_ids = list(renamed_channel_ids)
         else:
-            # Collect channel IDs from all recordings
-            all_channels_have_same_type = np.unique([rec.channel_ids.dtype for rec in recording_list]).size == 1
-            all_channel_ids_are_unique = False
-            if all_channels_have_same_type:
+
+            # Explicitly check if all channel_ids arrays are either all integers or all strings.
+            all_ids_are_int_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.integer) for rec in recording_list)
+            all_ids_are_str_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.str_) for rec in recording_list)
+
+            all_ids_have_same_dtype = all_ids_are_int_dtype or all_ids_are_str_dtype
+            if all_ids_have_same_dtype:
                 combined_ids = np.concatenate([rec.channel_ids for rec in recording_list])
                 all_channel_ids_are_unique = np.unique(combined_ids).size == num_all_channels
 
-            if all_channels_have_same_type and all_channel_ids_are_unique:
+            if all_ids_have_same_dtype and all_channel_ids_are_unique:
                 channel_ids = combined_ids
             else:
                 # If IDs are not unique or not of the same type, use default as stringify IDs
@@ -64,17 +94,42 @@ class ChannelsAggregationRecording(BaseRecording):
                             del property_dict[prop_name]
                             break
 
+        property_dict["aggregation_key"] = aggregation_key
         for prop_name, prop_values in property_dict.items():
-            if prop_name == "contact_vector":
-                # remap device channel indices correctly
-                prop_values["device_channel_indices"] = np.arange(self.get_num_channels())
             self.set_property(key=prop_name, values=prop_values)
 
-        # if locations are present, check that they are all different!
-        if "location" in self.get_property_keys():
-            location_tuple = [tuple(loc) for loc in self.get_property("location")]
-            assert len(set(location_tuple)) == self.get_num_channels(), (
-                "Locations are not unique! " "Cannot aggregate recordings!"
+        # Propagate the annotations that are shared by the recordings. An annotation is shared when every
+        # recording carries it and all of them agree on its value. Anything else is dropped, which is the
+        # same rule used by `UnitsAggregationSorting` in unitsaggregationsorting.py.
+        for annotation_name in recording_list[0].get_annotation_keys():
+            if not all(annotation_name in rec.get_annotation_keys() for rec in recording_list):
+                continue
+            values = [rec.get_annotation(annotation_name, copy=False) for rec in recording_list]
+            try:
+                # `np.array_equal` gives a single bool for scalars, strings and arrays alike. Values it
+                # cannot compare (e.g. ragged object arrays) raise, and are then treated as not shared.
+                all_values_are_equal = all(np.array_equal(value, values[0]) for value in values[1:])
+            except Exception:
+                all_values_are_equal = False
+            if all_values_are_equal:
+                # take a copy so the aggregate does not share mutable state with its first child
+                self.set_annotation(annotation_name, recording_list[0].get_annotation(annotation_name), overwrite=True)
+
+        # Aggregate probe information
+        all_probegroups = [rec.get_probegroup() for rec in recording_list if rec.has_probe()]
+        if len(all_probegroups) == len(recording_list):
+            # Now make a new probegroup with all probes and set global device channel indices
+            probegroup_agg = ProbeGroup()
+            for probegroup in all_probegroups:
+                for probe in probegroup.probes:
+                    probegroup_agg.add_probe(probe.copy())
+            probegroup_agg.set_global_device_channel_indices(np.arange(num_all_channels))
+            # contact positions are already checked to be unique above; probe bounding
+            # boxes may overlap when aggregating channels split from a single probe
+            self.set_probegroup(probegroup_agg, check_overlap=False)
+        elif len(all_probegroups) > 0 and len(all_probegroups) < len(recording_list):
+            raise ValueError(
+                "Some recordings have probes while others do not. Cannot aggregate recordings with inconsistent probe information."
             )
 
         # finally add segments, we need a channel mapping
@@ -88,11 +143,24 @@ class ChannelsAggregationRecording(BaseRecording):
                 ch_id += 1
 
         for i_seg in range(num_segments):
-            parent_segments = [rec._recording_segments[i_seg] for rec in recording_list]
+            parent_segments = [rec.segments[i_seg] for rec in recording_list]
             sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)
             self.add_recording_segment(sub_segment)
 
-        self._kwargs = {"recording_list": recording_list, "renamed_channel_ids": renamed_channel_ids}
+        self._kwargs = {"recording_list_or_dict": recording_list, "renamed_channel_ids": renamed_channel_ids}
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `recording_list' argument,
+        which is renamed to `recording_list_or_dict'.
+        """
+        if "recording_list" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording_list_or_dict"] = new_kwargs.pop("recording_list")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
     @property
     def recordings(self):
@@ -198,14 +266,17 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         return np.concatenate(traces, axis=1)
 
 
-def aggregate_channels(recording_list, renamed_channel_ids=None):
+def aggregate_channels(
+    recording_list_or_dict=None,
+    renamed_channel_ids=None,
+):
     """
     Aggregates channels of multiple recording into a single recording object
 
     Parameters
     ----------
-    recording_list: list
-        List of BaseRecording objects to aggregate
+    recording_list_or_dict: list | dict
+        List or dict of BaseRecording objects to aggregate.
     renamed_channel_ids: array-like
         If given, channel ids are renamed as provided.
 
@@ -213,5 +284,12 @@ def aggregate_channels(recording_list, renamed_channel_ids=None):
     -------
     aggregate_recording: ChannelsAggregationRecording
         The aggregated recording object
+
+    Notes
+    -----
+    Annotations are propagated only when they are shared by all the recordings, meaning present in every
+    recording and with the same value everywhere. Annotations missing from one recording, or with differing
+    values, are dropped.
     """
-    return ChannelsAggregationRecording(recording_list, renamed_channel_ids)
+
+    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids)

@@ -11,9 +11,9 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
-import sys
 import shutil
-from pathlib import Path
+import datetime
+import importlib.util
 # sys.path.insert(0, os.path.abspath('.'))
 
 on_rtd = os.environ.get('READTHEDOCS') == 'True'
@@ -31,15 +31,14 @@ if not os.path.isdir('sources'):
 folders =  [
     '../examples/tutorials/core/my_recording',
     '../examples/tutorials/core/my_sorting',
-    '../examples/tutorials/core/waveform_folder',
-    '../examples/tutorials/core/waveform_folder_parallel',
-    '../examples/tutorials/core/waveform_folder_sparse',
-    '../examples/tutorials/core/waveform_folder_sparse_direct',
-    '../examples/tutorials/core/waveform_folder2',
-    '../examples/tutorials/core/waveform_folder',
-    '../examples/tutorials/qualitymetrics/waveforms_mearec',
-    '../examples/tutorials/qualitymetrics/wfs_mearec',
+    '../examples/tutorials/core/analyzer_folder',
+    '../examples/tutorials/core/analyzer_some_units',
+    '../examples/tutorials/core/analyzer.zarr',
+    '../examples/tutorials/curation/my_folder',
+    '../examples/tutorials/metrics/curated_sorting',
+    '../examples/tutorials/metrics/clean_analyzer.zarr',
     '../examples/tutorials/widgets/waveforms_mearec',
+    '../examples/forhowto/cached'
 
 ]
 
@@ -51,8 +50,8 @@ for folder in folders:
 # -- Project information -----------------------------------------------------
 
 project = 'SpikeInterface'
-copyright = '2022, Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
-author = 'Alessio Paolo Buccino, Samuel Garcia, Cole Hurwitz, Jeremy Magland, Matthias Hennig'
+copyright = f'2022-{datetime.date.today().year}, SpikeInterface Team'
+author = 'SpikeInterface Team'
 
 
 # -- General configuration ---------------------------------------------------
@@ -65,6 +64,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx_gallery.gen_gallery',
     'numpydoc',
+    'sphinxcontrib.autodoc_pydantic',
     'sphinx.ext.autosectionlabel',
     'sphinx_design',
     'sphinxcontrib.jquery',
@@ -78,6 +78,8 @@ autosectionlabel_prefix_document = True
 
 numpydoc_show_class_members = False
 
+autodoc_pydantic_model_show_json = True
+autodoc_pydantic_model_show_config_summary = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -97,21 +99,20 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-try:
-    import sphinx_rtd_theme
 
+if importlib.util.find_spec("sphinx_rtd_theme") is not None:
     html_theme = "sphinx_rtd_theme"
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-except ImportError:
-    print("RTD theme not installed, using default")
-    html_theme = 'alabaster'
+else:
+    html_theme = "alabaster"
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 # html_static_path = ['_static']
-
-html_favicon = "images/favicon-32x32.png"
+# html_css_files = ['custom.css']
+html_favicon = "images/logo.png"
+html_logo = "images/logo.png"
 
 
 from sphinx_gallery.sorting import ExplicitOrder
@@ -119,15 +120,19 @@ from sphinx_gallery.sorting import FileNameSortKey
 
 # for sphinx gallery plugin
 sphinx_gallery_conf = {
-    'only_warn_on_example_error': True,
-    'examples_dirs': ['../examples/tutorials'],
-    'gallery_dirs': ['tutorials' ],  # path where to save gallery generated examples
+    # This is the default but including here explicitly. Should build all docs and fail on gallery failures only.
+    # other option would be abort_on_example_error, but this fails on first failure. So we decided against this.
+    'only_warn_on_example_error': False,
+    'examples_dirs': ['../examples/tutorials', '../examples/forhowto'],
+    'gallery_dirs': ['tutorials', 'forhowto'],  # path where to save gallery generated examples
     'subsection_order': ExplicitOrder([
                                        '../examples/tutorials/core',
                                        '../examples/tutorials/extractors',
-                                       '../examples/tutorials/qualitymetrics',
+                                       '../examples/tutorials/curation',
+                                       '../examples/tutorials/metrics',
                                        '../examples/tutorials/comparison',
                                        '../examples/tutorials/widgets',
+                                       '../examples/forhowto',
                                        ]),
     'within_subsection_order': FileNameSortKey,
     'ignore_pattern': '/generate_*',

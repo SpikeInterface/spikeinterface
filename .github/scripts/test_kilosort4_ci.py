@@ -20,7 +20,7 @@ of the tests are:
 
 import pytest
 import copy
-from typing import Any
+from packaging.version import parse
 from inspect import signature
 
 import numpy as np
@@ -28,8 +28,10 @@ import torch
 
 import spikeinterface.full as si
 from spikeinterface.core.testing import check_sortings_equal
-from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter
+from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter, read_kilosort4_motion
+from spikeinterface.core.motion import Motion
 from probeinterface.io import write_prb
+from spikeinterface.extractors import read_kilosort_as_analyzer
 
 import kilosort
 from kilosort.parameters import DEFAULT_SETTINGS
@@ -70,21 +72,18 @@ PARAMS_TO_TEST_DICT = {
     "nearest_chans": 8,
     "nearest_templates": 35,
     "max_channel_distance": 5,
-    "templates_from_data": False,
     "n_templates": 10,
     "n_pcs": 3,
     "Th_single_ch": 4,
     "x_centers": 5,
     "binning_depth": 1,
     "drift_smoothing": [250, 250, 250],
-    "artifact_threshold": 200,
+    "artifact_threshold": 500,
     "ccg_threshold": 1e12,
     "acg_threshold": 1e12,
     "cluster_downsampling": 2,
     "duplicate_spike_ms": 0.3,
 }
-
-PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
 
 PARAMETERS_NOT_AFFECTING_RESULTS = [
     "artifact_threshold",
@@ -95,13 +94,39 @@ PARAMETERS_NOT_AFFECTING_RESULTS = [
     "duplicate_spike_ms",  # this is because ground-truth spikes don't have violations
 ]
 
-# THIS IS A PLACEHOLDER FOR FUTURE PARAMS TO TEST
-# if parse(version("kilosort")) >= parse("4.0.X"):
-#     PARAMS_TO_TEST_DICT.update(
-#         [
-#             {"new_param": new_value},
-#         ]
-#     )
+
+# Add/Remove version specific parameters
+if parse(kilosort.__version__) >= parse("4.0.22"):
+    PARAMS_TO_TEST_DICT.update(
+        {"position_limit": 50}
+    )
+    # Position limit only affects computing spike locations after sorting
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("position_limit")
+
+if parse(kilosort.__version__) >= parse("4.0.24"):
+    PARAMS_TO_TEST_DICT.update(
+        {"max_peels": 200},
+    )
+    # max_peels is not affecting the results in this short dataset
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("max_peels")
+
+if parse(kilosort.__version__) >= parse("4.0.33"):
+    PARAMS_TO_TEST_DICT.update({"cluster_neighbors": 11})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("cluster_neighbors")
+
+if parse(kilosort.__version__) >= parse("4.0.37"):
+    PARAMS_TO_TEST_DICT.update({"max_cluster_subset": 20})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("max_cluster_subset")
+
+if parse(kilosort.__version__) >= parse("4.1.2"):
+    PARAMS_TO_TEST_DICT.update({"batch_downsampling": 2})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("batch_downsampling")
+
+    PARAMS_TO_TEST_DICT.update({"cluster_init_seed": 2})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("cluster_init_seed")
+
+
+PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
 
 
 class TestKilosort4Long:
@@ -118,6 +143,7 @@ class TestKilosort4Long:
         recording = self._get_ground_truth_recording()
 
         paths = self._save_ground_truth_recording(recording, tmp_path)
+        recording = si.load(paths["recording_path"].parent)
 
         return (recording, paths)
 
@@ -169,11 +195,11 @@ class TestKilosort4Long:
         """
         paths = {
             "session_scope_tmp_path": tmp_path,
-            "recording_path": tmp_path / "my_test_recording",
+            "recording_path": tmp_path / "my_test_recording" / "traces_cached_seg0.raw",
             "probe_path": tmp_path / "my_test_probe.prb",
         }
 
-        recording.save(folder=paths["recording_path"], overwrite=True)
+        recording.save(folder=paths["recording_path"].parent, overwrite=True)
 
         probegroup = recording.get_probegroup()
         write_prb(paths["probe_path"].as_posix(), probegroup)
@@ -205,7 +231,7 @@ class TestKilosort4Long:
         tested_keys += additional_non_tested_keys
 
         for param_key in DEFAULT_SETTINGS:
-            if param_key not in ["n_chan_bin", "fs", "tmin", "tmax"]:
+            if param_key not in ["n_chan_bin", "fs", "tmin", "tmax", "templates_from_data"]:
                 assert param_key in tested_keys, f"param: {param_key} in DEFAULT SETTINGS but not tested."
 
     def test_spikeinterface_defaults_against_kilsort(self):
@@ -225,8 +251,11 @@ class TestKilosort4Long:
 
     # Testing Arguments ###
     def test_set_files_arguments(self):
+        expected_arguments = ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir", "bad_channels"]
+        if parse(kilosort.__version__) >= parse("4.0.34"):
+            expected_arguments += ["shank_idx"]
         self._check_arguments(
-            set_files, ["settings", "filename", "probe", "probe_name", "data_dir", "results_dir", "bad_channels"]
+            set_files, expected_arguments
         )
 
     def test_initialize_ops_arguments(self):
@@ -239,6 +268,8 @@ class TestKilosort4Long:
             "device",
             "save_preprocessed_copy",
         ]
+        if parse(kilosort.__version__) >= parse("4.0.37"):
+            expected_arguments += ["gui_mode"]
 
         self._check_arguments(
             initialize_ops,
@@ -249,22 +280,29 @@ class TestKilosort4Long:
         self._check_arguments(compute_preprocessing, ["ops", "device", "tic0", "file_object"])
 
     def test_compute_drift_location_arguments(self):
-        self._check_arguments(
-            compute_drift_correction, ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"]
-        )
+        expected_arguments = ["ops", "device", "tic0", "progress_bar", "file_object", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(compute_drift_correction, expected_arguments)
 
     def test_detect_spikes_arguments(self):
-        self._check_arguments(detect_spikes, ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"])
+        expected_arguments = ["ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(detect_spikes, expected_arguments)
 
     def test_cluster_spikes_arguments(self):
-        self._check_arguments(
-            cluster_spikes, ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
-        )
+        expected_arguments = ["st", "tF", "ops", "device", "bfile", "tic0", "progress_bar", "clear_cache"]
+        if parse(kilosort.__version__) >= parse("4.0.28"):
+            expected_arguments += ["verbose"]
+        self._check_arguments(cluster_spikes, expected_arguments)
 
     def test_save_sorting_arguments(self):
-        expected_arguments = ["ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars"]
-
-        expected_arguments.append("save_preprocessed_copy")
+        expected_arguments = [
+            "ops", "results_dir", "st", "clu", "tF", "Wall", "imin", "tic0", "save_extra_vars", "save_preprocessed_copy"
+        ]
+        if parse(kilosort.__version__) >= parse("4.0.39"):
+            expected_arguments.append("skip_dat_path")
 
         self._check_arguments(save_sorting, expected_arguments)
 
@@ -300,6 +338,8 @@ class TestKilosort4Long:
             "scale",
             "file_object",
         ]
+        if parse(kilosort.__version__) >= parse("4.1.2"):
+            expected_arguments += ["batch_downsampling"]
 
         self._check_arguments(BinaryFiltered, expected_arguments)
 
@@ -323,6 +363,12 @@ class TestKilosort4Long:
         """
         recording, paths = recording_and_paths
         param_key = parameter
+
+        # Non-default batch_downsampling fails for short recordings, as there aren't
+        # enough batches. Since we test on a 5s recording, we skip it.
+        if param_key == "batch_downsampling":
+            return
+
         param_value = PARAMS_TO_TEST_DICT[param_key]
 
         # Setup parameters for KS4 and run it natively
@@ -362,11 +408,14 @@ class TestKilosort4Long:
         ops = ops.tolist()  # strangely this makes a dict
         assert ops[param_key] == param_value
 
-        # Finally, check out test parameters actually change the output of
-        # KS4, ensuring our tests are actually doing something (exxcept for some params).
+        # Check our test parameters actually change the output of
+        # KS4, ensuring our tests are actually doing something (except for some params).
         if param_key not in PARAMETERS_NOT_AFFECTING_RESULTS:
             with pytest.raises(AssertionError):
                 check_sortings_equal(default_kilosort_sorting, sorting_si)
+
+        # Check that the kilosort -> analyzer tool doesn't error
+        analyzer = read_kilosort_as_analyzer(kilosort_output_dir)
 
     def test_clear_cache(self,recording_and_paths, tmp_path):
         """
@@ -433,12 +482,15 @@ class TestKilosort4Long:
         from the recording.
         """
         recording = self._get_ground_truth_recording()
-        recording_bin = recording.save()
+        # Non-binary wrapper
+        recording_zarr = recording.save(folder=tmp_path / "recording_for_ks4.zarr", format="zarr")
+        # Binary wrapper
+        recording_bin = recording.save(folder=tmp_path / "recording_for_ks4", format="binary")
 
         # run with SI wrapper
         sorting_ks4 = si.run_sorter(
             "kilosort4",
-            recording,
+            recording_zarr,
             folder=tmp_path / "ks4_output_si_wrapper_default",
             use_binary_file=None,
             remove_existing_folder=True,
@@ -452,7 +504,7 @@ class TestKilosort4Long:
         )
         sorting_ks4_force_binary = si.run_sorter(
             "kilosort4",
-            recording,
+            recording_zarr,
             folder=tmp_path / "ks4_output_force_bin",
             use_binary_file=True,
             remove_existing_folder=True,
@@ -468,7 +520,7 @@ class TestKilosort4Long:
         # test deleting recording.dat
         sorting_ks4_force_binary_keep = si.run_sorter(
             "kilosort4",
-            recording,
+            recording_zarr,
             folder=tmp_path / "ks4_output_force_bin_keep",
             use_binary_file=True,
             delete_recording_dat=False,
@@ -479,6 +531,7 @@ class TestKilosort4Long:
         check_sortings_equal(sorting_ks4, sorting_ks4_bin)
         check_sortings_equal(sorting_ks4, sorting_ks4_force_binary)
         check_sortings_equal(sorting_ks4, sorting_ks4_force_non_binary)
+        check_sortings_equal(sorting_ks4, sorting_ks4_force_binary_keep)
 
     @pytest.mark.parametrize(
         "param_to_test",
@@ -515,37 +568,65 @@ class TestKilosort4Long:
         recording = si.whiten(recording, mode="local", apply_mean=False)
 
         paths = self._save_ground_truth_recording(recording, tmp_path)
+        recording = si.load(paths["recording_path"].parent)
 
         kilosort_output_dir = tmp_path / "kilosort_output_dir"
         spikeinterface_output_dir = tmp_path / "spikeinterface_output_dir"
 
-        def monkeypatch_filter_function(self, X, ops=None, ibatch=None):
-            """
-            This is a direct copy of the kilosort io.BinaryFiltered.filter
-            function, with hp_filter and whitening matrix code sections, and
-            comments removed. This is the easiest way to monkeypatch (tried a few approaches)
-            """
-            if self.chan_map is not None:
-                X = X[self.chan_map]
+        if parse(kilosort.__version__) >= parse("4.0.33"):
+            def monkeypatch_filter_function(self, X, ops=None, ibatch=None, skip_preproc=False):
+                """
+                This is a direct copy of the kilosort io.BinaryFiltered.filter
+                function, with hp_filter and whitening matrix code sections, and
+                comments removed. This is the easiest way to monkeypatch (tried a few approaches)
+                """
+                if self.chan_map is not None:
+                    X = X[self.chan_map]
 
-            if self.invert_sign:
-                X = X * -1
+                if self.invert_sign:
+                    X = X * -1
 
-            X = X - X.mean(1).unsqueeze(1)
-            if self.do_CAR:
-                X = X - torch.median(X, 0)[0]
+                X = X - X.mean(1).unsqueeze(1)
+                if self.do_CAR:
+                    X = X - torch.median(X, 0)[0]
 
-            if self.hp_filter is not None:
-                pass
+                if self.hp_filter is not None:
+                    pass
 
-            if self.artifact_threshold < np.inf:
-                if torch.any(torch.abs(X) >= self.artifact_threshold):
-                    return torch.zeros_like(X)
+                if self.artifact_threshold < np.inf:
+                    if torch.any(torch.abs(X) >= self.artifact_threshold):
+                        return torch.zeros_like(X)
 
-            if self.whiten_mat is not None:
-                pass
-            return X
+                if self.whiten_mat is not None:
+                    pass
+                return X
+        else:
+            def monkeypatch_filter_function(self, X, ops=None, ibatch=None):
+                """
+                This is a direct copy of the kilosort io.BinaryFiltered.filter
+                function, with hp_filter and whitening matrix code sections, and
+                comments removed. This is the easiest way to monkeypatch (tried a few approaches)
+                """
+                if self.chan_map is not None:
+                    X = X[self.chan_map]
 
+                if self.invert_sign:
+                    X = X * -1
+
+                X = X - X.mean(1).unsqueeze(1)
+                if self.do_CAR:
+                    X = X - torch.median(X, 0)[0]
+
+                if self.hp_filter is not None:
+                    pass
+
+                if self.artifact_threshold < np.inf:
+                    if torch.any(torch.abs(X) >= self.artifact_threshold):
+                        return torch.zeros_like(X)
+
+                if self.whiten_mat is not None:
+                    pass
+                return X
         monkeypatch.setattr("kilosort.io.BinaryFiltered.filter", monkeypatch_filter_function)
 
         ks_settings, _, ks_format_probe = self._get_kilosort_native_settings(recording, paths, param_key, param_value)
@@ -595,6 +676,43 @@ class TestKilosort4Long:
         assert np.allclose(results["ks"]["st"], results["si"]["st"], rtol=0, atol=1)
         assert np.array_equal(results["ks"]["clus"], results["si"]["clus"])
 
+    def test_read_kilosort4_motion(self, recording_and_paths, tmp_path):
+        """
+        Test that read_kilosort4_motion returns a Motion object whose displacement
+        equals dshift (not dshift + yblk), and that temporal/spatial bins are correct.
+        """
+        recording, _ = recording_and_paths
+        sorter_output_dir = tmp_path / "ks4_motion_output" / "sorter_output"
+
+        si.run_sorter(
+            "kilosort4",
+            recording,
+            folder=tmp_path / "ks4_motion_output",
+            remove_existing_folder=True,
+        )
+
+        ops = np.load(sorter_output_dir / "ops.npy", allow_pickle=True).item()
+        yblk = ops["yblk"]
+        dshift = ops["dshift"]
+
+        # without recording: temporal bins estimated from batch count
+        motion = read_kilosort4_motion(sorter_output_dir)
+        assert isinstance(motion, Motion)
+        assert motion.displacement[0].shape == dshift.shape
+        np.testing.assert_array_equal(motion.displacement[0], dshift)
+        np.testing.assert_array_equal(motion.spatial_bins_um, yblk)
+        assert motion.temporal_bins_s[0].shape[0] == dshift.shape[0]
+        # displacement must be relative (not offset by spatial bin position)
+        assert not np.allclose(motion.displacement[0], dshift + yblk)
+
+        # with recording: temporal bins bounded by recording times
+        motion_rec = read_kilosort4_motion(sorter_output_dir, recording=recording)
+        assert isinstance(motion_rec, Motion)
+        np.testing.assert_array_equal(motion_rec.displacement[0], dshift)
+        assert motion_rec.temporal_bins_s[0].shape[0] == dshift.shape[0]
+        assert motion_rec.temporal_bins_s[0][0] >= recording.get_start_time()
+        assert motion_rec.temporal_bins_s[0][-1] <= recording.get_end_time()
+
     ##### Helpers ######
     def _get_kilosort_native_settings(self, recording, paths, param_key, param_value):
         """
@@ -606,7 +724,7 @@ class TestKilosort4Long:
         are through the function, these are split here.
         """
         settings = {
-            "data_dir": paths["recording_path"],
+            "filename": paths["recording_path"],
             "n_chan_bin": recording.get_num_channels(),
             "fs": recording.get_sampling_frequency(),
         }

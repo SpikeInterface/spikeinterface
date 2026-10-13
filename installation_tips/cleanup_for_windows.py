@@ -5,15 +5,17 @@ import shutil
 def _clean():
     # clean
     folders = [
-        'toy_example_recording',
-        "tridesclous_output", "tridesclous_waveforms",
-        "spykingcircus_output", "spykingcircus_waveforms",
-        "phy_example"
+        "./toy_example_recording",
+        "./sorter_with_tridesclous2",
+        "./analyzer_with_tridesclous2",
+        "./sorter_with_kilosort4",
+        "./analyzer_with_kilosort4",
     ]
     for folder in folders:
         if Path(folder).exists():
             shutil.rmtree(folder)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
 
     _clean()

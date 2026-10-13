@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from pathlib import Path
 
@@ -36,7 +34,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
     rec_name : str, default: None
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
-    install_maxwell_plugin : bool, default: False
+    install_maxwell_plugin : bool, default: True
         If True, install the maxwell plugin for neo.
     block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load
@@ -52,7 +50,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         block_index=None,
         all_annotations=False,
         rec_name=None,
-        install_maxwell_plugin=False,
+        install_maxwell_plugin=True,
         use_names_as_ids: bool = False,
     ):
         if install_maxwell_plugin:
@@ -76,8 +74,9 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         # rec_name auto set by neo
         rec_name = self.neo_reader.rec_name
         probe = probeinterface.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
-        self.set_probe(probe, in_place=True)
-        self.set_property("electrode", self.get_property("contact_vector")["electrode"])
+        electrodes = probe.contact_annotations["electrode"]
+        self.set_probe(probe)
+        self.set_property("electrode", electrodes)
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), rec_name=rec_name))
 
     @classmethod

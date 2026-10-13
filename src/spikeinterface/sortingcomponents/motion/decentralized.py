@@ -2,8 +2,8 @@ import numpy as np
 
 from tqdm.auto import tqdm, trange
 
-
-from .motion_utils import Motion, get_spatial_windows, get_spatial_bin_edges, make_2d_motion_histogram, scipy_conv1d
+from spikeinterface.core.motion import Motion
+from .motion_utils import get_spatial_windows, get_spatial_bin_edges, make_2d_motion_histogram, scipy_conv1d
 
 from .dredge import normxcorr1d
 
@@ -53,7 +53,7 @@ class DecentralizedRegistration:
     max_displacement_um: float
         Maximum possible displacement in micrometers.
     weight_scale: "linear" or "exp"
-        For parwaise displacement, how to to rescale the associated weight matrix.
+        For pairwise displacement, how to rescale the associated weight matrix.
     error_sigma: float, default: 0.2
         In case weight_scale="exp" this controls the sigma of the exponential.
     conv_engine: "numpy" or "torch" or None, default: None
@@ -66,10 +66,10 @@ class DecentralizedRegistration:
         on GPUs and sometimes on CPU as well.
     corr_threshold: float
         Minimum correlation between pair of time bins in order for these to be
-        considered when optimizing a global displacment vector to align with
+        considered when optimizing a global displacement vector to align with
         the pairwise displacements.
     time_horizon_s: None or float
-        When not None the parwise discplament matrix is computed in a small time horizon.
+        When not None the pairwise displacement matrix is computed in a small time horizon.
         In short only pair of bins close in time.
         So the pariwaise matrix is super sparse and have values only the diagonal.
     convergence_method: "lsmr" | "lsqr_robust" | "gradient_descent", default: "lsmr"

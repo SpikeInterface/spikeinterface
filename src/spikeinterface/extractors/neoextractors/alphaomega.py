@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from spikeinterface.core.core_tools import define_function_from_class
@@ -77,7 +75,6 @@ class AlphaOmegaEventExtractor(NeoBaseEventExtractor):
         The folder path to the AlphaOmega events.
     """
 
-    mode = "folder"
     NeoRawIOClass = "AlphaOmegaRawIO"
     handle_event_frame_directly = True
 

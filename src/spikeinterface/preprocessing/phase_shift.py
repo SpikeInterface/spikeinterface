@@ -1,20 +1,15 @@
-from __future__ import annotations
-
 import numpy as np
 
-from spikeinterface.core.core_tools import define_function_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
-from ..core import get_chunk_with_margin
+from spikeinterface.core import get_chunk_with_margin
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
 class PhaseShiftRecording(BasePreprocessor):
     """
-    This apply a phase shift to a recording to cancel the small sampling
-    delay across for some recording system.
-
-    This is particularly relevant for neuropixel recording.
+    Apply phase shifts to compensate for the staggered ADC sampling times in Neuropixels recordings.
 
     This code is inspired from from  IBL lib.
     https://github.com/int-brain-lab/ibllib/blob/master/ibllib/dsp/fourier.py
@@ -63,7 +58,7 @@ class PhaseShiftRecording(BasePreprocessor):
             tmp_dtype = None
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = PhaseShiftRecordingSegment(parent_segment, sample_shifts, margin, dtype, tmp_dtype)
             self.add_recording_segment(rec_segment)
 
@@ -108,7 +103,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
 
 # function for API
-phase_shift = define_function_from_class(source_class=PhaseShiftRecording, name="phase_shift")
+phase_shift = define_function_handling_dict_from_class(source_class=PhaseShiftRecording, name="phase_shift")
 
 
 def apply_frequency_shift(signal, shift_samples, axis=0):
@@ -144,29 +139,26 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     This method leverages the properties of the Fourier transform, where a phase shift in the frequency domain
     corresponds to a time shift in the time domain.
     """
-    import scipy.fft
+    from scipy.fft import rfft, irfft
 
     signal_length = signal.shape[axis]
-    num_channels = shift_samples.size
-    fourier_signal_size = signal_length // 2 + 1
-
-    frequency_domain_signal = scipy.fft.rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
-    fourier_signal_size = frequency_domain_signal.shape[0]
+    frequency_domain_signal = rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
 
     if axis == 0:
-        frequency_grid = np.empty(shape=(fourier_signal_size, num_channels))
-        # Note that np.fft.rfttfreq handles both even and odd signal lengths
-        frequency_grid[:, :] = 2 * np.pi * np.fft.rfftfreq(signal_length)[:, np.newaxis]
-        shifts = np.multiply(frequency_grid, shift_samples[np.newaxis, :], out=frequency_grid)
+        angular_frequencies = 2 * np.pi * np.fft.rfftfreq(signal_length)
+        # Neuropixels channels reuse a small set of ADC sampling delays, so compute each rotation once.
+        unique_shifts, shift_indices = np.unique(shift_samples, return_inverse=True)
+        unique_angles = (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]).astype(
+            np.float64, copy=False
+        )
+        unique_rotations = np.exp(-1j * unique_angles)
+        rotations = unique_rotations[:, shift_indices]
+        phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
     else:
         raise NotImplementedError("Axis != 0 is not implemented yet")
 
-    # Rotate the signal in the frequency domain
-    rotations = np.exp(-1j * shifts)
-    phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
-
     # Inverse FFT to get the translated signal
-    shifted_signal = scipy.fft.irfft(phase_shifted_signal, n=signal_length, axis=axis, overwrite_x=True)
+    shifted_signal = irfft(phase_shifted_signal, n=signal_length, axis=axis, overwrite_x=True)
     return shifted_signal
 
 

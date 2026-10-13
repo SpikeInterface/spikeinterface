@@ -79,7 +79,6 @@ def query_templates_from_database(template_df: "pandas.DataFrame", verbose: bool
     Templates
         The templates object.
     """
-    import pandas as pd
 
     templates_array = []
     requested_datasets = np.unique(template_df["dataset"]).tolist()
@@ -95,7 +94,7 @@ def query_templates_from_database(template_df: "pandas.DataFrame", verbose: bool
     for dataset in requested_datasets:
         templates = fetch_template_object_from_database(dataset)
 
-        # check consisency across datasets
+        # check consistency across datasets
         if nbefore is None:
             nbefore = templates.nbefore
         if channel_locations is None:

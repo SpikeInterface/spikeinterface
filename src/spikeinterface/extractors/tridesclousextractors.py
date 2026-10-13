@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
@@ -30,7 +28,6 @@ class TridesclousSortingExtractor(BaseSorting):
         except ImportError:
             raise ImportError(self.installation_mesg)
 
-        assert self.installed, self.installation_mesg
         tdc_folder = Path(folder_path)
 
         dataio = tdc.DataIO(str(tdc_folder))

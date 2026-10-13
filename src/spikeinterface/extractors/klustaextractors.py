@@ -8,14 +8,11 @@ https://github.com/kwikteam/phy-doc/blob/master/docs/kwik-model.md
 04/08/20
 """
 
-from __future__ import annotations
-
-
 from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment, read_python
+from spikeinterface.core import BaseSorting, BaseSortingSegment, read_python
 from spikeinterface.core.core_tools import define_function_from_class
 
 

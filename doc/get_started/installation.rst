@@ -65,6 +65,32 @@ as :code:`spikeinterface` strongly relies on these packages to interface with va
 It is also sometimes useful to have local copies of :code:`neo` and :code:`probeinterface` to make changes to the code. To achieve this, repeat the first set of commands,
 replacing :code:`https://github.com/SpikeInterface/spikeinterface.git` with the appropriate repository in the first code block of this section.
 
+Testing a PR
+------------
+
+If you have submitted an issue and another contributor has attempted to fix your issue by creating a pull request (PR), you
+might want to test the PR. To do this, first install spikeinterface "from source" in editable mode by following the
+instructions in the above Section.
+
+Now enter the :code:`spikeinterface` folder in your terminal
+
+.. code-block:: bash
+
+   cd path/to/spikeinterface
+
+
+There are a few ways to checkout a PR. The simplest is to first install the GitHub command line interface (https://cli.github.com/).
+After installing this, you can run :code:`gh pr checkout PR_NUMBER`. Every pull request has an ID, which can be found on the
+github Pull Request page (https://github.com/SpikeInterface/spikeinterface/pulls). So if you're interested in PR 4200 you should run:
+
+.. code-block:: bash
+
+   gh pr checkout 4200
+
+
+If successful, the returned message should end "Switched to branch 'blah blah blah'". You're now using :code:`spikeinterface`
+including the changes made in PR 4200.
+
 For beginners
 -------------
 
@@ -81,14 +107,16 @@ Requirements
 
   * numpy
   * probeinterface
-  * neo>=0.9.0
-  * joblib
+  * neo
   * threadpoolctl
   * tqdm
+  * zarr
+  * pydantic
+  * numcodecs
+  * packaging
 
 Sub-modules have more dependencies, so you should also install:
 
-  * zarr
   * h5py
   * scipy
   * pandas
@@ -98,8 +126,13 @@ Sub-modules have more dependencies, so you should also install:
   * matplotlib
   * numba
   * distinctipy
+  * skops
+  * huggingface_hub
   * cuda-python (for non-macOS users)
 
+
+For developers we offer a :code:`[dev]` option which installs testing, documentation, and linting packages necessary
+for testing and building the docs.
 
 All external spike sorters can be either run inside containers (Docker or Singularity - see :ref:`containerizedsorters`)
 or must be installed independently (see :ref:`get_started/install_sorters:Installing Spike Sorters`).

@@ -23,21 +23,25 @@
 # Spikeinterface offers a very flexible framework to handle drift as a preprocessing step.
 # If you want to know more, please read the `motion_correction` section of the documentation.
 #
-# Here is a short demo on how to handle drift using the high-level function `spikeinterface.preprocessing.correct_motion()`.
+# Here is a short demo on how to handle drift using the high-level function `spikeinterface.preprocessing.compute_motion()`.
 #
-# This function takes a preprocessed recording as input and then internally runs several steps (it can be slow!) and returns a lazy
-# recording that interpolates the traces on-the-fly to compensate for the motion.
+# This function takes a preprocessed recording as input and returns a `motion` object, which contains the
+# information required to interpolate your recording. You can additionally return a `motion_info` object
+# which contains the peaks, peak_locations and parameters used to compute the `motion` object by passing
+# `output_motion_info = True` to the `compute_motion` function. Note that you can alternatively compute
+# the motion correction and interpolate at the same time using the `spikeinterface.preprocessing.correct_motion()`
+# function.
 #
-# Internally this function runs the following steps:
+# Internally the function `compute_motion` runs the following steps (which can be slow!):
 #
-#      1. localize_peaks()
-#      2. select_peaks() (optional)
-#      3. estimate_motion()
-#      4. interpolate_motion()
+#      1. detect_peaks()
+#      2. localize_peaks()
+#      3. select_peaks() (optional)
+#      4. estimate_motion()
 #
 # All these sub-steps can be run with different methods and have many parameters.
 #
-# The high-level function suggests 3 predifined "presets" and we will explore them using a very well known public dataset recorded by Nick Steinmetz:
+# The high-level function suggests several predefined "presets" and we will explore them using a very well known public dataset recorded by Nick Steinmetz:
 # [Imposed motion datasets](https://figshare.com/articles/dataset/_Imposed_motion_datasets_from_Steinmetz_et_al_Science_2021/14024495)
 #
 # This dataset contains 3 recordings and each recording contains a Neuropixels 1 and a Neuropixels 2 probe.
@@ -59,7 +63,7 @@ from spikeinterface.preprocessing import get_motion_parameters_preset, get_motio
 
 # -
 
-base_folder = Path("/mnt/data/sam/DataSpikeSorting/imposed_motion_nick")
+base_folder = Path("/home/nolanlab/Work/Data")
 dataset_folder = base_folder / "dataset1/NP1"
 
 # read the file
@@ -91,9 +95,9 @@ job_kwargs = dict(n_jobs=40, chunk_duration="1s", progress_bar=True)
 #
 # Here we also save the motion correction results into a folder to be able to load them later.
 
-# ### preset and parameters
+# ### Preset and parameters
 #
-# Motion correction has some steps and eevry step can be controlled by a method and related parameters.
+# Motion correction has some steps and every step can be controlled by a method and related parameters.
 #
 # A preset is a nested dict that contains theses methods/parameters.
 
@@ -104,9 +108,6 @@ one_preset_params = get_motion_parameters_preset("kilosort_like")
 one_preset_params
 
 # ### Run motion correction with one function!
-#
-# Correcting for drift is easy! You just need to run a single function.
-# We will try this function with some presets.
 #
 # Here we also save the motion correction results into a folder to be able to load them later.
 
@@ -120,8 +121,8 @@ for preset in some_presets:
     folder = base_folder / "motion_folder_dataset1" / preset
     if folder.exists():
         shutil.rmtree(folder)
-    recording_corrected, motion, motion_info = si.correct_motion(
-        rec, preset=preset, folder=folder, output_motion=True, output_motion_info=True, **job_kwargs
+    motion, motion_info = si.compute_motion(
+        rec, preset=preset, folder=folder, output_motion_info=True, **job_kwargs
     )
 
 # ### Plot the results
@@ -129,32 +130,33 @@ for preset in some_presets:
 # We load back the results and use the widgets module to explore the estimated drift motion.
 #
 # For all methods we have 4 plots:
+#
 #   * top left: time vs estimated peak depth
 #   * top right: time vs peak depth after motion correction
 #   * bottom left: the average motion vector across depths and all motion across spatial depths (for non-rigid estimation)
 #   * bottom right: if motion correction is non rigid, the motion vector across depths is plotted as a map, with the color code representing the motion in micrometers.
 #
 # A few comments on the figures:
-# * the preset **'rigid_fast'** has only one motion vector for the entire probe because it is a "rigid" case.
-#   The motion amplitude is globally underestimated because it averages across depths.
-#   However, the corrected peaks are flatter than the non-corrected ones, so the job is partially done.
-#   The big jump at=600s when the probe start moving is recovered quite well.
-# * The preset **kilosort_like** gives better results because it is a non-rigid case.
-#   The motion vector is computed for different depths.
-#   The corrected peak locations are flatter than the rigid case.
-#   The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
-# * The preset **dredge** is offcial DREDge re-implementation in spikeinterface.
-#   It give the best result : very fast and smooth motion estimation. Very few noise.
-#   This method also capture very well the non rigid motion gradient along the probe.
-#   The best method on the market at the moement.
-#   An enormous thanks to the dream team :  Charlie Windolf, Julien Boussard, Erdem Varol, Liam Paninski.
-#   Note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
-#   the upper part of the probe (2000-3000um) experience some drifts, but the lower part (0-1000um) is relatively stable.
-#   The method defined by this preset is able to capture this.
-# * The preset **nonrigid_accurate** this is the ancestor of "dredge" before it was published.
-#   It seems to give the good results on this recording but with bit more noise.
-# * The preset **dredge_fast** similar than dredge but faster (using grid_convolution).
-# * The preset **nonrigid_fast_and_accurate** a variant of nonrigid_accurate but faster (using grid_convolution).
+#   * the preset **'rigid_fast'** has only one motion vector for the entire probe because it is a "rigid" case.
+#     The motion amplitude is globally underestimated because it averages across depths.
+#     However, the corrected peaks are flatter than the non-corrected ones, so the job is partially done.
+#     The big jump at=600s when the probe start moving is recovered quite well.
+#   * The preset **kilosort_like** gives better results because it is a non-rigid case.
+#     The motion vector is computed for different depths.
+#     The corrected peak locations are flatter than the rigid case.
+#     The motion vector map is still be a bit noisy at some depths (e.g around 1000um).
+#   * The preset **dredge** is offcial DREDge re-implementation in spikeinterface.
+#     It give the best result : very fast and smooth motion estimation. Very few noise.
+#     This method also capture very well the non rigid motion gradient along the probe.
+#     The best method on the market at the moement.
+#     An enormous thanks to the dream team :  Charlie Windolf, Julien Boussard, Erdem Varol, Liam Paninski.
+#     Note that in the first part of the recording before the imposed motion (0-600s) we clearly have a non-rigid motion:
+#     the upper part of the probe (2000-3000um) experience some drifts, but the lower part (0-1000um) is relatively stable.
+#     The method defined by this preset is able to capture this.
+#   * The preset **nonrigid_accurate** this is the ancestor of "dredge" before it was published.
+#     It seems to give the good results on this recording but with bit more noise.
+#   * The preset **dredge_fast** similar than dredge but faster (using grid_convolution).
+#   * The preset **nonrigid_fast_and_accurate** a variant of nonrigid_accurate but faster (using grid_convolution).
 #
 #
 
@@ -176,6 +178,21 @@ for preset in some_presets:
 
     fig.suptitle(f"{preset=}")
 
+# ### Make an interpolated recording
+#
+# Once you have analyzed your results you can choose the motion correction method that works best on your dataset, and
+# create an interpolated recording using `interpolate_motion`. The motion object itself is contained in the `motion_info` dict.
+# Suppose we decide to use the `nonrigid_accurate` preset to make the interpolated recording. We do this as follows
+
+from spikeinterface.sortingcomponents.motion import interpolate_motion
+preset = "nonrigid_accurate"
+folder = base_folder / "motion_folder_dataset1" / preset
+motion_info = si.load_motion_info(folder)
+motion = motion_info['motion']
+interpolated_recording = interpolate_motion(recording=rec, motion=motion)
+
+# You can then use the interpolated recording for e.g. spike sorting.
+
 # ### Plot peak localization
 #
 # We can also use the internal extra results (peaks and peaks location) to check if putative clusters have a lower spatial spread after the motion correction.
@@ -186,6 +203,7 @@ for preset in some_presets:
 # We can see here that some clusters seem to be more compact on the 'y' axis, especially for the preset "nonrigid_accurate".
 #
 # Be aware that there are two ways to correct for the motion:
+#
 #   1. Interpolate traces and detect/localize peaks again  (`interpolate_recording()`)
 #   2. Compensate for drifts directly on peak locations (`correct_motion_on_peaks()`)
 #
@@ -235,7 +253,7 @@ for preset in some_presets:
 
 # ## run times
 #
-# Presets and related methods have differents accuracies but also computation speeds.
+# Presets and related methods have different accuracies but also computation speeds.
 # It is good to have this in mind!
 
 # +

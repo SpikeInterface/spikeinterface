@@ -1,0 +1,155 @@
+.. _release0.102.0:
+
+SpikeInterface 0.102.0 release notes
+------------------------------------
+
+7th February 2025
+
+Main changes:
+
+* Added auto-label functions in curation module (#2918)
+* Refactored and improved auto-merge functions in curation module (#3435, #3601)
+* Added `spikeinterface.load()` function to load any SpikeInterface object (#3613, #3651)
+* Improved handling of time in base recording (#3509, #3623)
+* Multi-segment handling of motion interpolation (#3659)
+* Support for Numpy 2.0 and Zarr<3.0 (#3481,#3598)
+
+
+core:
+
+* Extend si.load capabilities (#3651)
+* Use process as default in global job kwargs (#3648)
+* Fix node pipeline when multiple retrievers (#3642)
+* Add `get_start_time`/`get_end_time` functions and use them in `get_duration` (#3623)
+* Fix dataframe index dtype due to csv in  quality metrics  (#3622)
+* Replace `load_extractor` with `load_function` from `loading.py` (#3613)
+* Adding SharedMemoryTemplates (#3580)
+* Implement engine="thread" in ChunkRecordingExecutor (#3526)
+* Add `shift start time` function. (#3509)
+* recording_slices in run_node_pipeline() (#3506)
+* Template loading average or median (#3495)
+* Refactor matching with nodepiepeline (#3447)
+* Improve noise level machinery (#3359)
+* nodepipeline : skip chunks when no peaks inside and skip_after_n_peaks (#3356)
+
+extractors:
+
+* Pin `pyedflib` version after breaking change in annotations (#3644)
+* Add experiment_name annotation to open ephys (#3624)
+* Add `NwbTimeSeriesExtractor` to load non-electrical series data from NWB (#3587)
+* Add `stream_mode` as extra_requirements for NWB when streaming (#3548)
+* Fix cbin_file_path (#3524)
+* Expose reading attempts in Plexon2 (#3401)
+* Add neuronexus allego recording Extractor (#3235)
+
+preprocessing:
+
+* Check for channel_indices is None (#3636)
+* Fix silence periods (#3557)
+* Extend whitening tests (#3531)
+* Don't let decimate mess with times and skim tests (#3519)
+* Whitening fix - compute covariance matrix in float (#3505)
+
+sorters:
+
+* Change to default value `use_binary_file=True` for KS4 (#3614)
+* Remove Non-Serializable writing of json (#3482)
+* Sc2 fixes (#3250, #3518)
+
+postprocessing:
+
+* Add a fast correlogram merge (#3607)
+* Unify template and quality metrics (#3537)
+* Only load `template_metrics` extension on compute if keeping some metrics (#3478)
+* Unit localization (#3476)
+* Optimizations for template_similarity (numba and dependencies) (#3405)
+
+qualitymetrics:
+
+* Hard code `synchony_sizes` (#3559)
+* Unify template and quality metrics (#3537)
+* Fix dtype of quality metrics before and after merging (#3497)
+
+curation:
+
+* Small fixes in curation format and `apply_curation()` (#3601)
+* Refactoring auto_merge (#3435)
+* Automatic curation with metrics  (#2918)
+
+widgets:
+
+* Make `time_range` conversion to array dtype `float64`  (#3638)
+* Fix `plot_sorting_summary` widget  (#3627)
+* Changes for spikeinterface-gui (#3616)
+* Patch to allow ipywidget plot_unit_templates to work with sparse templates (instead of analyzer) (#3575)
+* Allow `export_report` to run without waveforms (#3493)
+* Add vspacing_factor as a param for TracesWidget (#3461)
+
+generators:
+
+* Use strings as ids in generators (#3588)
+
+
+sortingcomponents:
+
+* Split PCA (#3610)
+* Adding Hanning filtering (#3604)
+* Fix use of keep during run_sorter benchmark (#3556)
+* Clustering components api (#3533)
+* Kilosort-matching in SpikeInterface (#3488)
+* Matched filtering with both peak signs simultaneously (#2914)
+
+motion correction:
+
+* Multi-segment handling in motion interpolation (#3659)
+* MotionEstimationStudy : plot drift with the scatter plot (#3553)
+* Fix a cross-band interpolation bug, and allow time_vector in interpolate_motion (#3517)
+
+documentation:
+
+* Fix plot_1_automated_curation.py (#3674)
+* Extend templates extension docs (#3663)
+* Use SpikeInterface-ported pre-trained models in doc (#3652)
+* Dev Doc touchup (#3641)
+* Fix precision/recall in hybrid example (#3635)
+* Improve docstring of `get_neuropixels_sample_shifts`  (#3620)
+* Switch RTD build to fail on gallery example failure (#3619)
+* Fix sphinx doc build (#3612)
+* Convert generated unit_ids in docs to strings (#3600)
+* Correct method default in docstring (#3570)
+* Add custom tutorials index page. (#3504)
+* Add error messaging around use of get data in templates (#3501)
+* Fix a few typos in the curation docs (#3496)
+* Improve error message for `set_probegroup`/`set_probe` (#3479)
+
+continuous integration:
+
+* Fix codecov tests (#3569)
+* Add python 313 to CI test (#3481)
+
+packaging:
+
+* Support numpy 2.0 (#3640)
+* Force latest hdmf-zarr version (#3639)
+* Update zarr version (#3598)
+
+testing:
+
+* Add python Numpy2.0 to CI test (#3481)
+
+Contributors:
+
+* @522848942
+* @JoeZiminski
+* @OlivierPeron
+* @alejoe91
+* @anoushkajain
+* @chrishalcrow
+* @cwindolf
+* @guptadivyansh
+* @h-mayorquin
+* @jakeswann1
+* @RobertoDF
+* @samuelgarcia
+* @yger
+* @zm711

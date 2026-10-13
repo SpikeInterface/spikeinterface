@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import warnings
 
 from .base import backend_kwargs_desc
@@ -9,7 +7,9 @@ from .all_amplitudes_distributions import AllAmplitudesDistributionsWidget
 from .amplitudes import AmplitudesWidget
 from .autocorrelograms import AutoCorrelogramsWidget
 from .crosscorrelograms import CrossCorrelogramsWidget
+from .drift_templates import DriftingTemplatesWidget
 from .isi_distribution import ISIDistributionWidget
+from .metrics import MetricsHistogramsWidget
 from .motion import DriftRasterMapWidget, MotionWidget, MotionInfoWidget
 from .multicomparison import MultiCompGraphWidget, MultiCompGlobalAgreementWidget, MultiCompAgreementBySorterWidget
 from .peak_activity import PeakActivityMapWidget
@@ -20,6 +20,7 @@ from .quality_metrics import QualityMetricsWidget
 from .rasters import RasterWidget
 from .sorting_summary import SortingSummaryWidget
 from .spike_locations import SpikeLocationsWidget
+from .spike_locations_by_time import LocationsWidget
 from .spikes_on_traces import SpikesOnTracesWidget
 from .template_metrics import TemplateMetricsWidget
 from .template_similarity import TemplateSimilarityWidget
@@ -35,17 +36,24 @@ from .unit_waveforms import UnitWaveformsWidget
 from .comparison import AgreementMatrixWidget, ConfusionMatrixWidget
 from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformances, StudyAgreementMatrix, StudySummary
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
+from .unit_labels import WaveformOverlayByLabelWidget
+from .unit_valid_periods import ValidUnitPeriodsWidget
+from .bombcell_curation import BombcellUpsetPlotWidget, plot_bombcell_unit_labeling_all
 
 widget_list = [
     AgreementMatrixWidget,
     AllAmplitudesDistributionsWidget,
     AmplitudesWidget,
     AutoCorrelogramsWidget,
+    BombcellUpsetPlotWidget,
     ConfusionMatrixWidget,
     ComparisonCollisionBySimilarityWidget,
     CrossCorrelogramsWidget,
+    DriftingTemplatesWidget,
     DriftRasterMapWidget,
     ISIDistributionWidget,
+    MetricsHistogramsWidget,
+    LocationsWidget,
     MotionWidget,
     MotionInfoWidget,
     MultiCompGlobalAgreementWidget,
@@ -71,6 +79,8 @@ widget_list = [
     UnitTemplatesWidget,
     UnitWaveformDensityMapWidget,
     UnitWaveformsWidget,
+    ValidUnitPeriodsWidget,
+    WaveformOverlayByLabelWidget,
     StudyRunTimesWidget,
     StudyUnitCountsWidget,
     StudyPerformances,
@@ -84,30 +94,33 @@ widget_list = [
 for wcls in widget_list:
     wcls_doc = wcls.__doc__
 
-    wcls_doc += """
-
-    backend: str
+    wcls_doc += """backend: str
     {backends}
-    **backend_kwargs: kwargs
+**backend_kwargs: kwargs
     {backend_kwargs}
 
+Returns
+-------
+w : BaseWidget
+    The output widget object.
 
-    Returns
-    -------
-    w : BaseWidget
-        The output widget object.
+Notes
+-----
+When using the matplotlib backend, the returned `BaseWidget` contains the matplotlib fig and axis objects. This allows
+customization of plots using matplotlib machinery e.g. `returned_widget.ax.set_xlim((0,100))`.
     """
-    # backend_str = f"    {list(wcls.possible_backends.keys())}"
-    backend_str = f"    {wcls.get_possible_backends()}"
+    backend_str = ""
     backend_kwargs_str = ""
     # for backend, backend_plotter in wcls.possible_backends.items():
     for backend in wcls.get_possible_backends():
+        backend_str += f"\n    * {backend}"
         # backend_kwargs_desc = backend_plotter.backend_kwargs_desc
         kwargs_desc = backend_kwargs_desc[backend]
         if len(kwargs_desc) > 0:
-            backend_kwargs_str += f"\n        {backend}:\n\n"
+            backend_kwargs_str += f"\n    * {backend}:\n\n"
             for bk, bk_dsc in kwargs_desc.items():
                 backend_kwargs_str += f"        * {bk}: {bk_dsc}\n"
+    backend_str += "\n"
     wcls.__doc__ = wcls_doc.format(backends=backend_str, backend_kwargs=backend_kwargs_str)
 
 
@@ -116,11 +129,15 @@ plot_agreement_matrix = AgreementMatrixWidget
 plot_all_amplitudes_distributions = AllAmplitudesDistributionsWidget
 plot_amplitudes = AmplitudesWidget
 plot_autocorrelograms = AutoCorrelogramsWidget
+plot_bombcell_labels_upset = BombcellUpsetPlotWidget
 plot_confusion_matrix = ConfusionMatrixWidget
 plot_comparison_collision_by_similarity = ComparisonCollisionBySimilarityWidget
 plot_crosscorrelograms = CrossCorrelogramsWidget
+plot_drifting_templates = DriftingTemplatesWidget
 plot_drift_raster_map = DriftRasterMapWidget
+plot_valid_unit_periods = ValidUnitPeriodsWidget
 plot_isi_distribution = ISIDistributionWidget
+plot_locations = LocationsWidget
 plot_motion = MotionWidget
 plot_motion_info = MotionInfoWidget
 plot_multicomparison_agreement = MultiCompGlobalAgreementWidget
@@ -139,6 +156,8 @@ plot_template_metrics = TemplateMetricsWidget
 plot_template_similarity = TemplateSimilarityWidget
 plot_traces = TracesWidget
 plot_unit_depths = UnitDepthsWidget
+plot_unit_labels = WaveformOverlayByLabelWidget
+plot_metric_histograms = MetricsHistogramsWidget
 plot_unit_locations = UnitLocationsWidget
 plot_unit_presence = UnitPresenceWidget
 plot_unit_probe_map = UnitProbeMapWidget
