@@ -363,6 +363,7 @@ def _amplitude_scale_templates_in_place(
     also want to be considered when ordering the units to downscale.
     """
     method = recording_amplitude_scalings["method"]
+    scalings = np.asarray(recording_amplitude_scalings["scalings"][rec_idx])
 
     if method in ["by_amplitude_and_firing_rate", "by_firing_rate"]:
 
@@ -371,21 +372,19 @@ def _amplitude_scale_templates_in_place(
         if method == "by_amplitude_and_firing_rate":
             neg_ampl = np.min(np.min(first_rec_templates, axis=2), axis=1)
             assert np.all(neg_ampl < 0), "assumes all amplitudes are negative here."
-            score = firing_rates_hz * neg_ampl
+            score = firing_rates_hz * (-neg_ampl)
         else:
             score = firing_rates_hz
 
-        order_idx = np.argsort(score)
-        ordered_rec_scalings = recording_amplitude_scalings["scalings"][rec_idx][order_idx, np.newaxis, np.newaxis]
+        order_idx = np.argsort(-score)
+        moved_templates[order_idx] *= scalings[:, np.newaxis, np.newaxis]
 
     elif method == "by_passed_order":
 
-        ordered_rec_scalings = recording_amplitude_scalings["scalings"][rec_idx][:, np.newaxis, np.newaxis]
+        moved_templates *= scalings[:, np.newaxis, np.newaxis]
 
     else:
         raise ValueError("`recording_amplitude_scalings['method']` not recognised.")
-
-    moved_templates *= ordered_rec_scalings
 
 
 def _check_generate_session_displacement_arguments(

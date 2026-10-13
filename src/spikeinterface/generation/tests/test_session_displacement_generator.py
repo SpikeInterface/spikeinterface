@@ -326,7 +326,7 @@ class TestSessionDisplacementGenerator:
         # where the templates are to be scaled with `true_scalings`
         options["kwargs"]["recording_durations"] = (10, 10)
         options["kwargs"]["recording_shifts"] = ((0, 0), (0, 0))
-        options["kwargs"]["num_units"] == 5,
+        options["kwargs"]["num_units"] = 5
 
         true_scalings = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
 
@@ -347,7 +347,7 @@ class TestSessionDisplacementGenerator:
 
         # Now run, again applying the scalings in the order of
         # unit firing rates (highest to lowest).
-        firing_rates = np.array([5, 4, 3, 2, 1])
+        firing_rates = np.array([2, 5, 1, 4, 3])
         generate_sorting_kwargs = dict(firing_rates=firing_rates, refractory_period_ms=4.0)
         recording_amplitude_scalings["method"] = "by_firing_rate"
         _, output_sortings, extra_outputs = generate_session_displacement_recordings(
@@ -357,13 +357,13 @@ class TestSessionDisplacementGenerator:
         )
 
         test_scalings = self._calculate_scalings_from_output(extra_outputs)
-        assert np.allclose(test_scalings, true_scalings[np.argsort(firing_rates)])
+        assert np.allclose(test_scalings, [0.4, 0.1, 0.5, 0.2, 0.3])
 
         # Finally, run again applying the scalings in the order of
         # unit amplitude * firing_rate
         recording_amplitude_scalings["method"] = "by_amplitude_and_firing_rate"  # TODO: method -> order
         amplitudes = np.min(np.min(extra_outputs["templates_array_moved"][0], axis=2), axis=1)
-        firing_rate_by_amplitude = np.argsort(amplitudes * firing_rates)
+        scores = -amplitudes * firing_rates
 
         _, output_sortings, extra_outputs = generate_session_displacement_recordings(
             **options["kwargs"],
@@ -372,7 +372,9 @@ class TestSessionDisplacementGenerator:
         )
 
         test_scalings = self._calculate_scalings_from_output(extra_outputs)
-        assert np.allclose(test_scalings, true_scalings[firing_rate_by_amplitude])
+        for unit_idx, score in enumerate(scores):
+            rank = np.count_nonzero(scores > score)
+            assert np.isclose(test_scalings[unit_idx], true_scalings[rank])
 
     def _calculate_scalings_from_output(self, extra_outputs):
         first, second = extra_outputs["templates_array_moved"]
