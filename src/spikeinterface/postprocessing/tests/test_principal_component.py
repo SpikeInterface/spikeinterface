@@ -14,6 +14,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         [
             dict(mode="by_channel_local"),
             dict(mode="by_channel_global"),
+            dict(mode="by_channel_global", max_fit_batch_memory="32Ki"),
             # mode concatenated cannot be tested here because it do not work with sparse=True
         ],
     )
@@ -246,3 +247,113 @@ def test_select_channels_sparse_pca():
 if __name__ == "__main__":
     test = TestPrincipalComponentsExtension()
     test.test_get_projections(sparse=True)
+
+
+def _make_global_pca_batch_analyzer(sparse):
+    from spikeinterface.core import ChannelSparsity, NumpyRecording, NumpySorting
+
+    rng = np.random.default_rng(42)
+    recording = NumpyRecording(
+        [rng.normal(size=(400, 4)).astype("float32"), rng.normal(size=(200, 4)).astype("float32")], 1000.0
+    )
+    recording.set_dummy_probe_from_locations([[0, 0], [20, 0], [40, 0], [60, 0]])
+    sorting = NumpySorting.from_unit_dict(
+        [
+            {10: np.arange(20, 200, 10), 30: np.array([250]), 90: np.arange(210, 350, 20)},
+            {10: np.arange(20, 100, 10), 30: np.array([], dtype="int64"), 90: np.array([], dtype="int64")},
+        ],
+        1000.0,
+    )
+    sparsity = (
+        ChannelSparsity(
+            np.array([[1, 1, 0, 1], [0, 1, 0, 0], [0, 0, 1, 0]], dtype=bool), sorting.unit_ids, recording.channel_ids
+        )
+        if sparse
+        else None
+    )
+    analyzer = create_sorting_analyzer(
+        sorting, recording, sparse=False, sparsity=sparsity, main_channel_indices=np.array([0, 1, 2])
+    )
+    analyzer.compute(
+        {"random_spikes": {"method": "all"}, "waveforms": {"ms_before": 3, "ms_after": 4}}, n_jobs=1, progress_bar=False
+    )
+    return analyzer
+
+
+@pytest.mark.parametrize("sparse", [False, True])
+@pytest.mark.parametrize("storage", ["numpy", "zarr"])
+def test_global_pca_fit_batches(tmp_path, monkeypatch, sparse, storage):
+    from sklearn.decomposition import IncrementalPCA
+    import spikeinterface.postprocessing.principal_component as pc_module
+
+    analyzer = _make_global_pca_batch_analyzer(sparse)
+    waveforms_ext = analyzer.get_extension("waveforms")
+    waveforms = waveforms_ext.data["waveforms"]
+    if storage == "zarr":
+        import zarr
+
+        stored = zarr.open_array(
+            str(tmp_path / "waveforms.zarr"),
+            mode="w",
+            shape=waveforms.shape,
+            dtype=waveforms.dtype,
+            chunks=(4, *waveforms.shape[1:]),
+        )
+        stored[:] = waveforms
+        waveforms_ext.data["waveforms"] = stored
+    ext = ComputePrincipalComponents(analyzer)
+    ext.set_params(n_components=3, mode="by_channel_global")
+    expected_inputs = []
+    original = IncrementalPCA(n_components=3, whiten=True)
+    for uid in analyzer.unit_ids:
+        wfs, _, _ = ext._get_sparse_waveforms(uid)
+        flat = wfs.transpose(0, 2, 1).reshape(-1, wfs.shape[1])
+        if len(flat) >= 3:
+            expected_inputs.append(flat)
+            original.partial_fit(flat)
+    # Units below the default budget keep exactly the previous fitting updates.
+    unchanged = ext._fit_by_channel_global(progress_bar=False)
+    np.testing.assert_array_equal(unchanged.components_, original.components_)
+    np.testing.assert_array_equal(unchanged.singular_values_, original.singular_values_)
+
+    batch_inputs, read_sizes = [], []
+    real_fit, real_slice = IncrementalPCA.partial_fit, pc_module.slice_rows
+
+    def partial_fit(self, data, **kwargs):
+        batch_inputs.append(data.copy())
+        assert data.nbytes <= 512
+        assert len(data) >= 3
+        return real_fit(self, data, **kwargs)
+
+    def slice_rows(array, indices):
+        selected = real_slice(array, indices)
+        read_sizes.append(selected.nbytes)
+        assert selected.nbytes <= 512, "A whole unit was read before batching"
+        return selected
+
+    monkeypatch.setattr(IncrementalPCA, "partial_fit", partial_fit)
+    monkeypatch.setattr(pc_module, "slice_rows", slice_rows)
+    ext.params["max_fit_batch_memory"] = "0.5Ki"
+    fitted = ext._fit_by_channel_global(progress_bar=False)
+    expected = np.concatenate(expected_inputs)
+    np.testing.assert_array_equal(np.concatenate(batch_inputs), expected)
+    assert len(batch_inputs) > len(expected_inputs)
+    assert fitted.n_samples_seen_ == len(expected)
+    np.testing.assert_allclose(fitted.mean_, np.mean(expected, axis=0), atol=1e-6)
+    assert read_sizes
+
+
+def test_global_pca_fit_batch_memory_validation():
+    analyzer = _make_global_pca_batch_analyzer(sparse=True)
+    ext = ComputePrincipalComponents(analyzer)
+    for value in ("0Ki", "-1Ki"):
+        with pytest.raises(ValueError, match="max_fit_batch_memory must be positive"):
+            ext.set_params(mode="by_channel_global", max_fit_batch_memory=value)
+    ext.set_params(n_components=3, mode="by_channel_global", max_fit_batch_memory="0.001Ki")
+    with pytest.raises(ValueError, match="too small"):
+        ext._fit_by_channel_global(progress_bar=False)
+    # Seven one-channel waveforms cannot be partitioned into batches of at most
+    # three waveforms with at least three rows each; report an actionable error.
+    ext.set_params(n_components=3, mode="by_channel_global", max_fit_batch_memory="0.25Ki")
+    with pytest.raises(ValueError, match="Increase max_fit_batch_memory"):
+        ext._fit_by_channel_global(progress_bar=False)

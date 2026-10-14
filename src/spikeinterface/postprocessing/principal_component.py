@@ -10,7 +10,7 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from spikeinterface.core.core_tools import slice_rows, materialize_array
+from spikeinterface.core.core_tools import slice_rows, materialize_array, convert_string_to_bytes
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms, _select_channels_sparse_data
 
@@ -38,6 +38,13 @@ class ComputePrincipalComponents(AnalyzerExtension):
         If True, waveforms are pre-whitened
     dtype : dtype, default: "float32"
         Dtype of the pc scores
+    max_fit_batch_memory : str, default: "64Mi"
+        Maximum size of each waveform input buffer when fitting in "by_channel_global" mode.
+        Uses memory strings such as "64Mi" or "100M". This is not a limit on total process memory:
+        reshaping, PCA and the storage backend can require additional buffers and workspace.
+        No additional waveform subsampling is performed; unit, spike and channel order are retained.
+        Units exceeding this limit are fitted in multiple incremental updates, which can change
+        the approximate PCA basis compared with a single update. Other modes ignore this limit.
     {}
 
     Examples
@@ -72,8 +79,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
         mode="by_channel_local",
         whiten=True,
         dtype="float32",
+        max_fit_batch_memory="64Mi",
     ):
         assert mode in _possible_modes, "Invalid mode!"
+        if convert_string_to_bytes(max_fit_batch_memory) <= 0:
+            raise ValueError("max_fit_batch_memory must be positive")
 
         # the sparsity in params is ONLY the injected sparsity and not the sorting_analyzer one
         params = dict(
@@ -81,6 +91,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             mode=mode,
             whiten=whiten,
             dtype=np.dtype(dtype),
+            max_fit_batch_memory=max_fit_batch_memory,
         )
         return params
 
@@ -505,15 +516,39 @@ class ComputePrincipalComponents(AnalyzerExtension):
         if progress_bar:
             units_loop = tqdm(units_loop, desc="Fitting PCA", total=len(unit_ids))
 
+        waveforms = self.sorting_analyzer.get_extension("waveforms").data["waveforms"]
+        spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
+        sparsity = self.sorting_analyzer.sparsity
+        num_samples, max_num_channels = waveforms.shape[1:]
+        if max_num_channels == 0:
+            return pca_model
+        batch_memory = convert_string_to_bytes(p.get("max_fit_batch_memory", "64Mi"))
+        # slice_rows reads all packed channels, including any padding for sparse units.
+        waveforms_per_batch = batch_memory // (num_samples * max_num_channels * waveforms.dtype.itemsize)
+        # IPCA stacks the previous components and a mean-correction row before its SVD.
+        max_svd_rows = np.iinfo(np.int32).max // num_samples - p["n_components"] - 1
+
         # with 'by_channel_global' we can't parallelize over channels
         for unit_ind, unit_id in units_loop:
-            wfs, _, _ = self._get_sparse_waveforms(unit_id)
-            shape = wfs.shape
-            if shape[0] * shape[2] < p["n_components"]:
+            spike_indices = np.flatnonzero(spikes["unit_index"] == unit_ind)
+            num_channels = max_num_channels if sparsity is None else sparsity.unit_id_to_channel_indices[unit_id].size
+            if spike_indices.size * num_channels < p["n_components"]:
                 continue
-            # avoid loop with reshape
-            wfs_concat = wfs.transpose(0, 2, 1).reshape(shape[0] * shape[2], shape[1])
-            pca_model.partial_fit(wfs_concat)
+            batch_size = min(waveforms_per_batch, max_svd_rows // num_channels)
+            min_batch_size = (p["n_components"] + num_channels - 1) // num_channels
+            if batch_size < min_batch_size:
+                raise ValueError("max_fit_batch_memory is too small to fit n_components waveform rows")
+            num_batches = (spike_indices.size + batch_size - 1) // batch_size
+            if spike_indices.size // num_batches < min_batch_size:
+                raise ValueError("Increase max_fit_batch_memory to avoid batches with fewer than n_components rows")
+            # Balance sizes so a short final batch is retained, with enough rows for PCA.
+            for batch_ind in range(num_batches):
+                start = batch_ind * spike_indices.size // num_batches
+                stop = (batch_ind + 1) * spike_indices.size // num_batches
+                wfs = slice_rows(waveforms, spike_indices[start:stop])[:, :, :num_channels]
+                wfs_concat = wfs.transpose(0, 2, 1).reshape(-1, num_samples)
+                pca_model.partial_fit(wfs_concat)
+                del wfs, wfs_concat
 
         return pca_model
 
