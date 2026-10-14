@@ -1,4 +1,6 @@
+import builtins
 import json
+import sys
 import unittest
 from unittest.mock import patch
 
@@ -8,6 +10,36 @@ import pytest
 from spikeinterface.core import BaseSorting, NumpyRecording
 from spikeinterface.sorters import VanillaSortSorter, available_sorters, run_sorter
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
+
+
+def test_vanillasort_discovery_without_heavy_imports(monkeypatch):
+    from spikeinterface.sorters.external import vanillasort
+
+    original_import = builtins.__import__
+
+    def guarded_import(name, *args, **kwargs):
+        assert name.split(".")[0] not in {"vanillasort", "torch"}, f"Discovery imported {name}"
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    monkeypatch.setattr(vanillasort.importlib.util, "find_spec", lambda name: None)
+    assert not VanillaSortSorter.is_installed()
+
+    monkeypatch.setattr(vanillasort.importlib.util, "find_spec", lambda name: object())
+    monkeypatch.setattr(vanillasort, "version", lambda name: "0.0.9")
+    assert not VanillaSortSorter.is_installed()
+    monkeypatch.setattr(vanillasort, "version", lambda name: "0.1.0")
+    assert VanillaSortSorter.is_installed()
+    assert VanillaSortSorter.get_sorter_version() == "0.1.0"
+    assert VanillaSortSorter.gpu_capability == "nvidia-optional"
+    for params, expected in [
+        ({}, True),
+        ({"device": "auto"}, True),
+        ({"device": "cpu"}, False),
+        ({"device": "cuda"}, True),
+        ({"device": "cuda:1"}, True),
+    ]:
+        assert VanillaSortSorter.use_gpu(params) is expected
 
 
 @pytest.fixture
@@ -88,7 +120,9 @@ def test_vanillasort_direct_and_wrapper(tmp_path, tiny_model):
     params = dict(components=4, device="cpu", seed=0, model_path=str(tiny_model))
     direct = vanillasort.sort(recording, verbose=False, **params)
     folder = tmp_path / "wrapped"
+    stdout = sys.stdout
     wrapped = run_sorter("vanillasort", recording, folder=folder, verbose=True, **params)
+    assert sys.stdout is stdout
     assert isinstance(wrapped, BaseSorting)
     assert wrapped.get_num_segments() == 2
     assert wrapped.to_spike_vector().size > 0
@@ -111,6 +145,7 @@ def test_vanillasort_direct_and_wrapper(tmp_path, tiny_model):
     bad = bad.save(folder=tmp_path / "bad_rec", verbose=False)
     failed_folder = tmp_path / "failed"
     failed = run_sorter("vanillasort", bad, folder=failed_folder, raise_error=False, with_output=False, **params)
+    assert sys.stdout is stdout
     assert failed is None
     failed_log = json.loads((failed_folder / "spikeinterface_log.json").read_text())
     assert failed_log["error"] is True

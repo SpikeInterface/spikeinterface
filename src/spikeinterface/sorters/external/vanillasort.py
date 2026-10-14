@@ -1,5 +1,9 @@
+import importlib.util
 from contextlib import redirect_stdout
+from importlib.metadata import version
 from pathlib import Path
+
+from packaging.version import parse
 
 from ..basesorter import BaseSorter
 from ...core import load
@@ -11,7 +15,7 @@ class VanillaSortSorter(BaseSorter):
     sorter_name = "vanillasort"
     requires_locations = True
     handle_multi_segment = True
-    gpu_capability = "optional"
+    gpu_capability = "nvidia-optional"
     compatible_with_parallel = {"loky": False, "multiprocessing": False, "threading": False}
 
     _default_params = {
@@ -53,28 +57,21 @@ class VanillaSortSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import vanillasort
-            from packaging.version import parse
-
-            return callable(getattr(vanillasort, "sort", None)) and parse(vanillasort.__version__) >= parse("0.1.0")
-        except (ImportError, AttributeError):
+        if importlib.util.find_spec("vanillasort") is None:
             return False
+        return parse(cls.get_sorter_version()) >= parse("0.1.0")
 
     @staticmethod
     def get_sorter_version():
-        import vanillasort
-
-        return vanillasort.__version__
+        return version("vanillasort")
 
     @classmethod
     def use_gpu(cls, params):
+        # Express GPU intent without importing torch on the host. The container
+        # runner checks NVIDIA availability for nvidia-optional sorters, and
+        # VanillaSort resolves "auto" in the environment that runs inference.
         device = params.get("device", "auto")
-        if device == "auto":
-            import torch
-
-            return torch.cuda.is_available()
-        return str(device).startswith("cuda")
+        return device == "auto" or str(device).startswith("cuda")
 
     @classmethod
     def _check_params(cls, recording, output_folder, params):
@@ -98,7 +95,10 @@ class VanillaSortSorter(BaseSorter):
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
         if recording is None:
             raise RuntimeError("Unable to load the recording for VanillaSort")
-        # BaseSorter includes this trace in spikeinterface_log.json, including on failure.
+        # Capture the package's print-based progress in vanillasort.log, which
+        # BaseSorter copies into spikeinterface_log.json's runtime_trace.
+        # redirect_stdout restores sys.stdout on exit, including exceptions.
+        # Its process-wide effect is why this wrapper disables threaded runs.
         with (sorter_output_folder / "vanillasort.log").open("w", encoding="utf-8") as log, redirect_stdout(log):
             print(f"VanillaSort {vanillasort.__version__}", flush=True)
             sorting = vanillasort.sort(
