@@ -343,6 +343,11 @@ class AmplitudeScalingNode(PipelineNode):
 
         if self._gains is None:
             gains = offsets = np.zeros(0, dtype=np.float32)
+            # numba reads neither float16 nor non-native byte order; both convert exactly
+            if traces.dtype == np.float16:
+                traces = traces.astype(np.float32)
+            elif not traces.dtype.isnative:
+                traces = traces.astype(traces.dtype.newbyteorder("="))
         else:
             # the numpy path scales float32 traces, so the product keeps float32 or the gains' wider dtype
             dtype = np.result_type(np.float32, self._gains.dtype)
@@ -655,7 +660,8 @@ def fit_collision(
     X = np.zeros((len(y), len(collision)))
     for i, spike in enumerate(collision):
 
-        full_template = np.zeros_like(local_waveform)
+        # float64 like X, so templates are not truncated to the dtype of unscaled integer or float16 traces
+        full_template = np.zeros(local_waveform.shape)
 
         # For the collision spike, take its unit template and insert
         # it into `full_template` at the time the collision spike occurred.

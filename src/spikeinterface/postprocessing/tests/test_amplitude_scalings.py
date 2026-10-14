@@ -375,3 +375,23 @@ def test_numba_scalings_raise_on_nan_in_collision_like_numpy():
     for scalings_function in (_scalings_numpy, _scalings_numba):
         with pytest.raises(ValueError):
             scalings_function(traces, *rest)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="the numba kernel needs numba")
+@pytest.mark.parametrize("dtype", [np.float16, np.dtype(">i2"), np.dtype(">f4")])
+def test_numba_scalings_match_numpy_for_dtypes_numba_cannot_read(dtype):
+    traces, peaks, templates, sparsity_mask, nbefore = _make_chunk(0)
+    args = (traces.astype(dtype), peaks, templates, sparsity_mask, nbefore, 20, 30, 10, None)
+    expected, expected_collisions = _scalings_numpy(*args)
+    scalings, collisions = _scalings_numba(*args)
+    np.testing.assert_array_equal(collisions, expected_collisions)
+    np.testing.assert_allclose(scalings, expected, rtol=1e-9, atol=1e-12)
+
+
+@pytest.mark.parametrize("dtype", [np.int16, np.float16])
+def test_fit_collision_keeps_template_precision_for_unscaled_traces(dtype):
+    traces, peaks, templates, sparsity_mask, nbefore, cut_out_before, cut_out_after, _, _ = _two_unit_collision(10.0)
+    traces = traces.astype(dtype)
+    args = (peaks, nbefore, templates, sparsity_mask, cut_out_before, cut_out_after)
+    fit = fit_collision(peaks, traces, *args[1:])
+    np.testing.assert_allclose(fit, fit_collision(peaks, traces.astype(np.float32), *args[1:]), rtol=1e-9)
