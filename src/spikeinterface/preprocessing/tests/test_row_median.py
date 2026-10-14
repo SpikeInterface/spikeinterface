@@ -27,6 +27,12 @@ def test_row_median_int(dtype, num_channels):
         np.testing.assert_array_equal(_get_int_kernel()(x, _INT_WINDOW), np.median(x, axis=1))
 
 
+@pytest.mark.parametrize("dtype", [">i2", ">u2", ">f4", "float16"])
+def test_row_median_other_dtypes(dtype):
+    x = np.random.default_rng(0).integers(0, 200, (300, 384)).astype(dtype)
+    assert_matches_np_median(x)
+
+
 @pytest.mark.skipif(not HAVE_NUMBA, reason="integer rows fall back to np.median without numba")
 def test_row_median_int_outside_window():
     rng = np.random.default_rng(0)

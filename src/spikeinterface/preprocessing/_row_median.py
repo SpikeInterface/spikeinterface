@@ -25,8 +25,8 @@ _MIN_FLOAT_CHANNELS = 3
 def row_median(traces: np.ndarray) -> np.ndarray:
     """Median of each row of a 2D array, as ``(T, 1)`` in ``np.median``'s output dtype.
 
-    float32 and float64 input of at least 3 channels is sorted. Integer input of at most 16 bits and at least
-    4 channels uses a numba kernel when numba is installed. Other input uses ``np.median``.
+    float32 and float64 input of at least 3 channels is sorted. Native-endian integer input of at most 16 bits
+    and at least 4 channels uses a numba kernel when numba is installed. Other input uses ``np.median``.
     """
     if traces.ndim == 2 and traces.shape[0] > 0:
         num_channels = traces.shape[1]
@@ -36,6 +36,7 @@ def row_median(traces: np.ndarray) -> np.ndarray:
             HAVE_NUMBA
             and traces.dtype.kind in "iu"
             and traces.dtype.itemsize <= 2
+            and traces.dtype.isnative  # numba rejects byte-swapped arrays
             and num_channels >= _MIN_INT_CHANNELS
         ):
             # The kernel reads column-major traces in place, which beats copying them.
