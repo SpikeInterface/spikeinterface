@@ -10,9 +10,6 @@ from spikeinterface.core import BaseRecording, load
 from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecutor
 
 from spikeinterface.preprocessing import common_reference, highpass_filter
-import spikeinterface.full as si
-
-si.set_global_job_kwargs(n_jobs=8)
 
 SAVE_PLOTS = False  # False opens the figures instead of saving them.
 PLOT_FOLDER = Path(__file__).resolve().parent / "plots" / "raw_data_quality"
@@ -197,7 +194,7 @@ def _plot_quality_metrics(
     figures = {}
     plot_files = {}
     depths = preprocessed_recording.get_channel_locations()[:, 1]
-    num_plot_channels = min(10, len(depths))
+    num_plot_channels = min(8, len(depths))
     # Select distinct channels near equally spaced target depths, top to bottom.
     selected_channels = []
     for target in np.linspace(depths.max(), depths.min(), num_plot_channels):
@@ -361,7 +358,7 @@ def _plot_quality_metrics(
 
         # Random chunk examples have their own figure, without channel labels or ticks.
         selected_chunks = np.sort(np.random.default_rng(0).choice(
-            len(xcorr_view["matrices"]), size=min(10, len(xcorr_view["matrices"])), replace=False
+            len(xcorr_view["matrices"]), size=min(8, len(xcorr_view["matrices"])), replace=False
         ))
         matrix_rows = (len(selected_chunks) + 1) // 2
         fig = plt.figure(figsize=(12, 3.7 * matrix_rows), layout="constrained")
@@ -410,6 +407,9 @@ def _plot_quality_metrics(
     ax.grid(alpha=0.2)
     figures["12_ap_mean_rms_linear_fit"] = fig
 
+    for name, figure in figures.items():
+        figure.canvas.manager.set_window_title(name.replace("_", " "))
+
     # One save/show switch controls every figure.
     if SAVE_PLOTS:
         PLOT_FOLDER.mkdir(parents=True, exist_ok=True)
@@ -434,7 +434,13 @@ def raw_data_quality_metrics(
     verbose: bool = False,
     **job_kwargs,
 ):
-    """Compute sparse AP RMS, PSD, and histograms for debugger inspection."""
+    """Compute experimental AP metrics.
+
+    Sparse stability summaries and channel examples use segment 0. Continuous RMS
+    and correlation sampling include all segments. Channel slopes are per sampled
+    chunk; the population-mean slope is per second. Correlations compare a fixed
+    300 Hz high-pass with/without CMR, independently of custom preprocessing.
+    """
     # Explicit slices control sparse processing; configure a matching executor duration.
     sparse_job_kwargs, rolling_job_kwargs = _get_job_kwargs(job_kwargs, chunk_size_s, rolling_rms_window_size_s)
 
@@ -482,7 +488,10 @@ def raw_data_quality_metrics(
     ap_median_rms = np.median(ap_rms_per_channel)
 
     # RMS CV per channel
-    ap_rms_cv_per_channel = np.std(ap_rms_array, axis=0) / ap_rms_per_channel
+    ap_rms_cv_per_channel = np.divide(
+        np.std(ap_rms_array, axis=0), ap_rms_per_channel,
+        out=np.full_like(ap_rms_per_channel, np.nan), where=ap_rms_per_channel > 0,
+    )
 
     ap_median_rms_cv = np.median(ap_rms_cv_per_channel)
 
@@ -491,12 +500,12 @@ def raw_data_quality_metrics(
 
     x = np.arange(num_chunks)
 
-    result = linregress(x[:, None], ap_rms_array, axis=0)
+    channel_fits = [linregress(x, channel_rms) for channel_rms in ap_rms_array.T]
 
     ap_rms_linear_stability = {
-        "slopes": result.slope,
-        "r_squared": result.rvalue ** 2,
-        "p_values": result.pvalue
+        "slopes": np.array([fit.slope for fit in channel_fits]),
+        "r_squared": np.array([fit.rvalue ** 2 for fit in channel_fits]),
+        "p_values": np.array([fit.pvalue for fit in channel_fits])
     }
 
     # Fit the mean of channel RMS values against actual sampled chunk times.
@@ -731,6 +740,11 @@ def raw_data_quality_metrics(
         xcorr_results_after_cmr["per_channel_results"].add_prefix("after_cmr_"), how="outer", sort=False
     )
 
+    # Preserve recording order even if a pandas outer join sorted channel IDs.
+    channel_order = list(preprocessed_ap_recording.channel_ids)
+    channel_order.extend(channel_id for channel_id in raw_ap_recording.channel_ids if channel_id not in channel_order)
+    per_channel_results = per_channel_results.reindex(channel_order)
+
     # Show / Save Plots
     # ------------------------------------------------------------------------------------------------------------------
     plot_files = _plot_quality_metrics(
@@ -743,6 +757,9 @@ def raw_data_quality_metrics(
     # Inspect scalar_results, per_channel_results, and rolling_results here.
 
     return {
+        "chunk_times": chunk_times,
+        "channel_ids": {"raw": raw_ap_recording.channel_ids, "prepro": preprocessed_ap_recording.channel_ids},
+        "num_chunks_for_baseline": num_chunks_for_baseline,
         "chunk_results": chunk_results,
         "summaries": summaries,
         "scalar_results": scalar_results,
@@ -964,7 +981,7 @@ def _compute_rms_psd_histogram(segment_index, start_frame, end_frame, worker_con
         hist_counts[0] += underflow_counts[chan_idx]
         hist_counts[-1] += overflow_counts[chan_idx]
         hist[chan_idx, :] = hist_counts
-    traces -= np.mean(traces, axis=0)
+    traces = traces - np.mean(traces, axis=0)
     rms = _compute_rms(traces)
 
     frequencies, psd = periodogram(
@@ -992,7 +1009,7 @@ def _compute_rms_with_times(segment_index, start_frame, end_frame, worker_contex
         return_in_uV=True,
     ).astype(np.float64, copy=False)
 
-    traces -= np.mean(traces, axis=0)
+    traces = traces - np.mean(traces, axis=0)
     rms = _compute_rms(traces)
 
     rms_time_center_bin = (
@@ -1077,6 +1094,7 @@ def main():
         num_chunks=num_chunks,
         chunk_size_s=chunk_size_s,
         verbose=True,
+        n_jobs=8,
     )
     print("Raw RMS p10/p90 (uV):", results["summaries"]["raw"]["rms_quantile"][0], flush=True)
     print("Preprocessed RMS p10/p90 (uV):", results["summaries"]["prepro"]["rms_quantile"][0], flush=True)
