@@ -71,7 +71,8 @@ print("Time vector:", recording.get_times())
 # There are a number of helper functions we can use to get information about the times
 # of a recording including:
 
-print("Full time array (s):", recording.get_times())
+print("Full time array (s):", recording.get_times())  # note: this will load the entire time array in memory
+print("Sliced time array (s):" recording.get_times(start_frame=50, end_frame=100))
 print("Start time (s):", recording.get_start_time())
 print("End time (s):", recording.get_end_time())
 print("Duration (s):", recording.get_duration())
