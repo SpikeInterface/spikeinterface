@@ -1,0 +1,24 @@
+.. _release0.105.2:
+
+SpikeInterface 0.105.2 release notes
+------------------------------------
+
+October 14th 2026
+
+Minor release with bug fixes
+
+
+core:
+
+* Fix: channel_slice should not check overlapping probes (#4862)
+* Reintroduce ``set_times(..., with_warning)``, with deprecation (#4864)
+
+postprocessing:
+
+* Fix: grid convolution select_peaks (#4863)
+* Fix: PCA computation in lazy mode (#4861)
+
+
+Contributors:
+
+* @alejoe91
