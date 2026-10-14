@@ -29,8 +29,10 @@ class BaseRasterWidget(BaseWidget):
     segment_indices : list | None, default: None
         For multi-segment data, specifies which segment(s) to plot. If None, uses all available segments.
         For single-segment data, this parameter is ignored.
-    durations : list | None, default: None
+    segment_start_stop_times : dict | None, default: None
         List of durations per segment of spike_train_data in seconds.
+    sampling_frequency : float | None, default: None
+        Sampling frequency in Hz, required to space multiple segments.
     plot_histograms : bool, default: False
         Plot histogram of y-axis data in another subplot
     bins : int | None, default: None
@@ -86,6 +88,7 @@ class BaseRasterWidget(BaseWidget):
         hide_unit_selector: bool = True,
         segment_boundary_kwargs: dict | None = None,
         backend: str | None = None,
+        sampling_frequency: float | None = None,
         **backend_kwargs,
     ):
         # Set default segment boundary kwargs if not provided
@@ -122,13 +125,16 @@ class BaseRasterWidget(BaseWidget):
             segment_start_stop_times = {seg: segment_start_stop_times[seg] for seg in segments_to_use}
 
             if len(segment_start_stop_times) > 1:
+                if sampling_frequency is None:
+                    raise ValueError("sampling_frequency is required when plotting multiple segments")
                 # When plotting, the segments are aligned such that consecutive segments
                 # appear directly next to eachother, rather than at their true times. If
                 # their true times are used, large inter-segment gaps can appear on the plot.
-                # Compute the segment offsets here, and use them to adjust the spike times
-                # and for generating new xticklabels later.
+                # 1 ts padding is used to ensure the end of one segment is not the same as the
+                # start time of the next segment.
                 starts, stops = np.array(list(segment_start_stop_times.values())).T
-                segment_time_offsets = np.r_[0, np.cumsum(starts[1:] - stops[:-1])]
+                ts = 1 / sampling_frequency
+                segment_time_offsets = np.r_[0, np.cumsum(starts[1:] - (stops[:-1] + ts))]
 
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
@@ -182,7 +188,7 @@ class BaseRasterWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from matplotlib.colors import Normalize
-        from matplotlib.ticker import Locator, MaxNLocator, ScalarFormatter
+        from matplotlib.ticker import MaxNLocator, ScalarFormatter
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -276,24 +282,22 @@ class BaseRasterWidget(BaseWidget):
                     segment = np.searchsorted(segment_times[1:, 0], x, side="right")
                     return time_formatter.format_data_short(x + dp.segment_time_offsets[segment])
 
-                class SegmentTimeLocator(Locator):
-                    def __call__(self):
-                        return self.tick_values(*self.axis.get_view_interval())
-
+                class SegmentTimeLocator(MaxNLocator):
                     def tick_values(self, vmin, vmax):
                         vmin, vmax = sorted((vmin, vmax))
+                        self.set_params(nbins=max(1, self.axis.get_tick_space()))
+                        step = np.diff(super().tick_values(0, vmax - vmin))[0]
                         ticks = []
-                        for (start, stop), offset in zip(segment_times, dp.segment_time_offsets):
+                        for start, stop in segment_times:
                             left, right = max(start, vmin), min(stop, vmax)
-                            if left >= right:
+                            if left > right:
                                 continue
-                            nbins = max(1, round(self.axis.get_tick_space() * (right - left) / (vmax - vmin)))
-                            local_ticks = MaxNLocator(nbins=nbins).tick_values(left + offset, right + offset)
-                            local_ticks = local_ticks[(local_ticks >= left + offset) & (local_ticks < right + offset)]
-                            ticks.extend(local_ticks - offset)
-                        return self.raise_if_exceeds(np.asarray(ticks))
+                            first = max(0, int(np.ceil((left - start) / step)))
+                            last = int(np.floor((right - start) / step))
+                            ticks.extend(start + np.arange(first, last + 1) * step)
+                        return self.raise_if_exceeds(np.unique(ticks))
 
-                scatter_ax.xaxis.set_major_locator(SegmentTimeLocator())
+                scatter_ax.xaxis.set_major_locator(SegmentTimeLocator(steps=[1, 2, 2.5, 5, 10]))
                 scatter_ax.xaxis.set_major_formatter(format_original_time)
 
                 for boundary in segment_times[1:, 0]:
@@ -530,6 +534,7 @@ class RasterWidget(BaseRasterWidget):
             plot_histograms=None,
             y_ticks=y_ticks,
             segment_start_stop_times=segment_start_stop_times,
+            sampling_frequency=sorting.get_sampling_frequency(),
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)

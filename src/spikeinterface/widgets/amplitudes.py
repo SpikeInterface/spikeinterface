@@ -129,6 +129,7 @@ class AmplitudesWidget(BaseRasterWidget):
             plot_histograms=plot_histograms,
             bins=bins,
             segment_start_stop_times=segment_start_stop_times,
+            sampling_frequency=sorting.get_sampling_frequency(),
             unit_ids=unit_ids,
             hide_unit_selector=hide_unit_selector,
             plot_legend=plot_legend,

@@ -279,6 +279,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
             title="Peak depth",
             y_label="Depth [um]",
             segment_start_stop_times=segment_start_stop_times,
+            sampling_frequency=sampling_frequency,
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)
