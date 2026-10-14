@@ -239,7 +239,6 @@ Waveclus
 ^^^^^^^^
 
 * Matlab
-* Also supports Snippets (waveform cutouts) objects (:py:class:`~spikeinterface.core.BaseSnippets`)
 * Url: https://github.com/csn-le/wave_clus/wiki
 * Authors: Fernando Chaure, Hernan Rey and Rodrigo Quian Quiroga
 * Installation requires Matlab::
