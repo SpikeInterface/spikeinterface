@@ -65,7 +65,7 @@ class ChannelSliceRecording(BaseRecording):
             parent_probegroup = self._parent.get_probegroup()
             sliced_probegroup = parent_probegroup.get_slice(self._parent_channel_indices)
             sliced_probegroup.set_global_device_channel_indices(np.arange(len(self._channel_ids)))
-            self.set_probegroup(sliced_probegroup)
+            self.set_probegroup(sliced_probegroup, check_overlap=False)
             # Reset channel groups to original ones to avoid remapping
             self.set_channel_groups(recording.get_channel_groups()[self._parent_channel_indices])
 
