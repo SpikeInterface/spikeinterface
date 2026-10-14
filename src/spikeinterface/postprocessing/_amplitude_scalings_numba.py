@@ -12,32 +12,16 @@ from numba import njit
 
 
 @njit(cache=True)
-def _solve_spd(G, b, idx, n):
+def _solve_spd(G, b, idx):
     """Solve ``G[idx, idx] z = b[idx]`` by Cholesky; returns False if the subsystem is singular."""
-    L = np.zeros((n, n))
-    for i in range(n):
-        for j in range(i + 1):
-            s = G[idx[i], idx[j]]
-            for k in range(j):
-                s -= L[i, k] * L[j, k]
-            if i == j:
-                if s <= 1e-12 * abs(G[idx[i], idx[i]]) or s <= 0.0:
-                    return False, L[0]
-                L[i, i] = np.sqrt(s)
-            else:
-                L[i, j] = s / L[j, j]
-    z = np.zeros(n)
-    for i in range(n):
-        s = b[idx[i]]
-        for k in range(i):
-            s -= L[i, k] * z[k]
-        z[i] = s / L[i, i]
-    for i in range(n - 1, -1, -1):
-        s = z[i]
-        for k in range(i + 1, n):
-            s -= L[k, i] * z[k]
-        z[i] = s / L[i, i]
-    return True, z
+    sub = G[idx][:, idx]
+    try:
+        L = np.linalg.cholesky(sub)
+    except Exception:
+        return False, b[idx]
+    if np.any(np.diag(L) ** 2 <= 1e-12 * np.abs(np.diag(sub))):
+        return False, b[idx]
+    return True, np.linalg.solve(L.T, np.linalg.solve(L, b[idx]))
 
 
 @njit(cache=True)
@@ -72,7 +56,7 @@ def _nnls_gram(G, b):
                 if passive[j]:
                     idx[n] = j
                     n += 1
-            ok, z = _solve_spd(G, b, idx, n)
+            ok, z = _solve_spd(G, b, idx[:n])
             if not ok:
                 # a dependent column: drop the one just added and stop, as no direction improves the fit
                 passive[best] = False
