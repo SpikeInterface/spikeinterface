@@ -61,8 +61,12 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
         self._kwargs.update(
-            dict(folder_path=str(Path(folder_path).absolute()), exclude_filename=exclude_filename),
-            strict_gap_mode=strict_gap_mode,
+            dict(
+                folder_path=str(Path(folder_path).absolute()),
+                exclude_filename=exclude_filename,
+                gap_tolerance_ms=gap_tolerance_ms,
+                strict_gap_mode=strict_gap_mode,
+            )
         )
 
     @classmethod
@@ -129,6 +133,8 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
             "stream_id": stream_id,
             "stream_name": stream_name,
             "exclude_filename": exclude_filename,
+            "gap_tolerance_ms": gap_tolerance_ms,
+            "strict_gap_mode": strict_gap_mode,
         }
 
     @classmethod
