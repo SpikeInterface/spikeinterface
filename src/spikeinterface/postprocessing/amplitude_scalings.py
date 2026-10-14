@@ -218,7 +218,8 @@ class AmplitudeScalingNode(PipelineNode):
         self._handle_collisions = handle_collisions
         self._delta_collision_samples = delta_collision_samples
         self._template_is_zero = template_is_zero
-        # the kernel's collision sums need templates that are zero outside their unit's channels
+        # the kernel sums over sparse channels only, so it needs templates that are zero outside them; otherwise,
+        # as with a sparsity sparser than the templates, the numpy path runs
         self._use_numba = HAVE_NUMBA and not np.any((all_templates != 0) & ~sparsity_mask[:, np.newaxis, :])
         if self._use_numba:
             self._cut_templates = np.ascontiguousarray(
