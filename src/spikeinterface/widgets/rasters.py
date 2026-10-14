@@ -116,9 +116,22 @@ class BaseRasterWidget(BaseWidget):
                 all_units.update(spike_train_data[seg_idx].keys())
             unit_ids = list(all_units)
 
+        time_offsets = None
         # Drop segment times we don't want to use
         if segment_start_stop_times is not None:
             segment_start_stop_times = {seg: segment_start_stop_times[seg] for seg in segments_to_use}
+            if len(segment_start_stop_times) > 1:
+                starts, stops = np.array(list(segment_start_stop_times.values())).T
+                display_starts = starts[0] + np.r_[0, np.cumsum(stops - starts)[:-1]]
+                time_offsets = starts - display_starts
+                spike_train_data = {
+                    seg: {unit: times - offset for unit, times in spike_train_data[seg].items()}
+                    for seg, offset in zip(segments_to_use, time_offsets)
+                }
+                segment_start_stop_times = {
+                    seg: (start, start + stop - original)
+                    for seg, start, original, stop in zip(segments_to_use, display_starts, starts, stops)
+                }
 
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
@@ -155,6 +168,7 @@ class BaseRasterWidget(BaseWidget):
             y_label=y_label,
             title=title,
             segment_start_stop_times=segment_start_stop_times,
+            time_offsets=time_offsets,
             plot_legend=plot_legend,
             bins=bins,
             y_ticks=y_ticks,
@@ -167,6 +181,7 @@ class BaseRasterWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from matplotlib.colors import Normalize
+        from matplotlib.ticker import ScalarFormatter
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -248,16 +263,24 @@ class BaseRasterWidget(BaseWidget):
         # Add segment boundary lines if provided and handle x limits
         if dp.segment_start_stop_times is not None:
 
-            # We only plot boundaries for sequential segments.
-            segment_boundaries = np.array(list(dp.segment_start_stop_times.values())).ravel()
+            segment_times = np.array(list(dp.segment_start_stop_times.values()))
+            if len(segment_times) > 1:
+                time_formatter = ScalarFormatter()
+                time_formatter.set_axis(scatter_ax.xaxis)
 
-            if np.all(np.diff(segment_boundaries) > 0):
-                for boundary in segment_boundaries:
+                def format_original_time(x, pos):
+                    segment = np.searchsorted(segment_times[1:, 0], x, side="right")
+                    return time_formatter.format_data_short(x + dp.time_offsets[segment])
+
+                scatter_ax.locator_params(axis="x", nbins=12)
+                scatter_ax.xaxis.set_major_formatter(format_original_time)
+                for boundary in segment_times[1:, 0]:
                     scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
 
             if x_lim is None:
-                x_lim = (segment_boundaries.min(), segment_boundaries.max())
-                scatter_ax.set_xlim(x_lim)
+                x_lim = (segment_times[0, 0], segment_times[-1, 1])
+        if x_lim is not None:
+            scatter_ax.set_xlim(x_lim)
 
         if dp.sort_by_depth and dp.depth_dict is not None:
             scatter_ax.set_yticks(ticks=list(range(len(dp.depth_dict))), labels=list(dp.depth_dict.keys()))
