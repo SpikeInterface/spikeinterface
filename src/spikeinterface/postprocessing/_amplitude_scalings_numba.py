@@ -40,8 +40,8 @@ def _solve_spd(G, b, idx):
 @njit(cache=True)
 def _nnls_gram(G, b):
     """The ``x >= 0`` minimising ``|Xx - y|^2``, given ``G = X'X`` and ``b = X'y``: what ``nnls(X, y)`` returns."""
-    # Written out rather than calling scipy.optimize.nnls: compiled code reaches scipy only through numba.objmode,
-    # a call back into Python for every collision, and most spikes on a dense probe collide.
+    # Written out rather than calling scipy.optimize.nnls through numba.objmode: on systems this small, most of
+    # nnls's time is per-call overhead, paid once per collision.
     #
     # Lawson-Hanson: coefficients start held at zero and are freed one at a time. Each pass solves the normal
     # equations for the free ones, and any that would go negative are returned to zero.
