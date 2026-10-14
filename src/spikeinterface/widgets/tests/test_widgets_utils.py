@@ -111,7 +111,6 @@ def test_get_segment_durations_estimate():
     assert 7.0 - single_duration < 0.7  # Within 10%
 
 
-
 def test_get_segment_durations_with_recording():
     """Test a sortings get_segment_durations when a recording is
     registered, meaning times should be exact and not estimated from spike times"""

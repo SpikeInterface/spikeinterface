@@ -427,8 +427,7 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
         # Include the final sample interval to return exclusive stop times.
         sample_period = 1 / sorting.get_sampling_frequency()
         segment_start_stop_times = {
-            seg: (sorting.get_start_time(seg), sorting.get_end_time(seg) + sample_period)
-            for seg in segment_indices
+            seg: (sorting.get_start_time(seg), sorting.get_end_time(seg) + sample_period) for seg in segment_indices
         }
         durations = np.array([stop - start for start, stop in segment_start_stop_times.values()])
         return durations, segment_start_stop_times
