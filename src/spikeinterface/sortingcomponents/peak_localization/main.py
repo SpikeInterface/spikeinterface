@@ -60,7 +60,7 @@ def get_localization_pipeline_nodes(
         # How do you get peaks
 
         method_kwargs = method_kwargs.copy()
-        n_peaks = method_kwargs.pop("n_peaks")
+        n_peaks = method_kwargs.pop("n_peaks", None)
         if n_peaks is not None:
             prototype_extra_kwargs = {"n_peaks": n_peaks}
         else:
