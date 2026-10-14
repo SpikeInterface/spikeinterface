@@ -292,9 +292,14 @@ class BaseRasterWidget(BaseWidget):
                             left, right = max(start, vmin), min(stop, vmax)
                             if left > right:
                                 continue
-                            first = max(0, int(np.ceil((left - start) / step)))
-                            last = int(np.floor((right - start) / step))
-                            ticks.extend(start + np.arange(first, last + 1) * step)
+                            # Allow at least two ticks per segment, even on narrow axes.
+                            segment_step = min(
+                                step,
+                                np.diff(MaxNLocator(nbins=2, steps=[1, 2, 2.5, 5, 10]).tick_values(0, stop - start))[0],
+                            )
+                            first = max(0, int(np.ceil((left - start) / segment_step)))
+                            last = int(np.floor((right - start) / segment_step))
+                            ticks.extend(start + np.arange(first, last + 1) * segment_step)
                         return self.raise_if_exceeds(np.unique(ticks))
 
                 scatter_ax.xaxis.set_major_locator(SegmentTimeLocator(steps=[1, 2, 2.5, 5, 10]))
