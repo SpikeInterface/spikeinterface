@@ -112,7 +112,9 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         gap_tolerance_ms: float | None = None,
         strict_gap_mode: bool | None = None,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path, exclude_filename)
+        neo_kwargs = self.map_to_neo_kwargs(
+            folder_path, exclude_filename, strict_gap_mode=strict_gap_mode, gap_tolerance_ms=gap_tolerance_ms
+        )
         NeoBaseSortingExtractor.__init__(
             self,
             sampling_frequency=sampling_frequency,
