@@ -116,28 +116,26 @@ class BaseRasterWidget(BaseWidget):
                 all_units.update(spike_train_data[seg_idx].keys())
             unit_ids = list(all_units)
 
-        time_offsets = None
+        segment_time_offsets = None
         # Drop segment times we don't want to use
         if segment_start_stop_times is not None:
             segment_start_stop_times = {seg: segment_start_stop_times[seg] for seg in segments_to_use}
+
             if len(segment_start_stop_times) > 1:
+                # When plotting, the segments are aligned such that consecutive segments
+                # appear directly next to eachother, rather than at their true times. If
+                # their true times are used, large inter-segment gaps can appear on the plot.
+                # Compute the segment offsets here, and use them to adjust the spike times
+                # and for generating new xticklabels later.
                 starts, stops = np.array(list(segment_start_stop_times.values())).T
-                display_starts = starts[0] + np.r_[0, np.cumsum(stops - starts)[:-1]]
-                time_offsets = starts - display_starts
-                spike_train_data = {
-                    seg: {unit: times - offset for unit, times in spike_train_data[seg].items()}
-                    for seg, offset in zip(segments_to_use, time_offsets)
-                }
-                segment_start_stop_times = {
-                    seg: (start, start + stop - original)
-                    for seg, start, original, stop in zip(segments_to_use, display_starts, starts, stops)
-                }
+                segment_time_offsets = np.r_[0, np.cumsum(starts[1:] - stops[:-1])]
 
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
         concatenated_y_axis = {unit_id: np.array([]) for unit_id in unit_ids}
 
-        for spike_train_segment, y_axis_segment in zip(
+        for segment_index, spike_train_segment, y_axis_segment in zip(
+            range(len(segments_to_use)),
             [spike_train_data[idx] for idx in segments_to_use],
             [y_axis_data[idx] for idx in segments_to_use],
         ):
@@ -148,6 +146,9 @@ class BaseRasterWidget(BaseWidget):
 
                 # Get y-axis values for this unit
                 y_values = y_axis_segment[unit_id]
+
+                if segment_time_offsets is not None:
+                    spike_times = spike_times - segment_time_offsets[segment_index]
 
                 # Add to concatenated data
                 concatenated_spike_trains[unit_id] = np.concatenate([concatenated_spike_trains[unit_id], spike_times])
@@ -168,7 +169,7 @@ class BaseRasterWidget(BaseWidget):
             y_label=y_label,
             title=title,
             segment_start_stop_times=segment_start_stop_times,
-            time_offsets=time_offsets,
+            segment_time_offsets=segment_time_offsets,
             plot_legend=plot_legend,
             bins=bins,
             y_ticks=y_ticks,
@@ -265,15 +266,19 @@ class BaseRasterWidget(BaseWidget):
 
             segment_times = np.array(list(dp.segment_start_stop_times.values()))
             if len(segment_times) > 1:
+
+                # Update xticklabels for multi-segment times.
+                segment_times = segment_times - dp.segment_time_offsets[:, None]
                 time_formatter = ScalarFormatter()
                 time_formatter.set_axis(scatter_ax.xaxis)
 
                 def format_original_time(x, pos):
                     segment = np.searchsorted(segment_times[1:, 0], x, side="right")
-                    return time_formatter.format_data_short(x + dp.time_offsets[segment])
+                    return time_formatter.format_data_short(x + dp.segment_time_offsets[segment])
 
                 scatter_ax.locator_params(axis="x", nbins=12)
                 scatter_ax.xaxis.set_major_formatter(format_original_time)
+
                 for boundary in segment_times[1:, 0]:
                     scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
 
@@ -472,34 +477,15 @@ class RasterWidget(BaseRasterWidget):
         spike_train_data = {seg_idx: {} for seg_idx in segment_indices}
         y_axis_data = {seg_idx: {} for seg_idx in segment_indices}
 
-        segment_start_stop_times = {}
+        _, segment_start_stop_times = get_segment_durations(sorting, segment_indices)
 
-        # Get the spikes for this segment. Also, if the sorting does not have a recording,
-        # build the segment start / stop times from the spike times. This is not done
-        # with get_segment_durations to avoid the conversion to spike_vector.
         for seg_idx in segment_indices:
-
-            min_spiketime = np.inf
-            max_spiketime = -np.inf
-
             for unit_id in unit_ids:
                 # Get spikes for this segment and unit
                 spike_times = sorting.get_unit_spike_train_in_seconds(unit_id=unit_id, segment_index=seg_idx)
                 # Store data
                 spike_train_data[seg_idx][unit_id] = spike_times
                 y_axis_data[seg_idx][unit_id] = unit_indices_map[unit_id] * np.ones(len(spike_times))
-
-                if not sorting.has_recording() and len(spike_times) > 0:
-                    min_spiketime = min(min_spiketime, spike_times[0])
-                    max_spiketime = max(max_spiketime, spike_times[-1])
-
-            if sorting.has_recording():
-                segment_start_stop_times[seg_idx] = (
-                    sorting.get_start_time(seg_idx),
-                    sorting.get_end_time(seg_idx),
-                )
-            else:
-                segment_start_stop_times[seg_idx] = (min_spiketime, max_spiketime)
 
         # Apply time range filtering if specified
         if time_range is not None:

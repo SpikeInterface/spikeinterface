@@ -402,7 +402,9 @@ def validate_segment_indices(segment_indices: list[int] | None, sorting: BaseSor
 
 def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = None):
     """
-    Calculate the duration of each segment in a sorting object.
+    Calculate segment durations and exclusive start/stop bounds.
+
+    Use recording-backed bounds when available; otherwise estimate from spikes.
 
     Parameters
     ----------
@@ -420,6 +422,16 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
     """
     if segment_indices is None:
         segment_indices = range(sorting.get_num_segments())
+
+    if sorting.has_recording():
+        # Include the final sample interval to return exclusive stop times.
+        sample_period = 1 / sorting.get_sampling_frequency()
+        segment_start_stop_times = {
+            seg: (sorting.get_start_time(seg), sorting.get_end_time(seg) + sample_period)
+            for seg in segment_indices
+        }
+        durations = np.array([stop - start for start, stop in segment_start_stop_times.values()])
+        return durations, segment_start_stop_times
 
     spikes = sorting.to_spike_vector()
 

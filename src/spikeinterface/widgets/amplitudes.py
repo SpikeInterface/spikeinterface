@@ -121,7 +121,6 @@ class AmplitudesWidget(BaseRasterWidget):
         if plot_histograms and bins is None:
             bins = 100
 
-        # Calculate durations for all segments for x-axis limits
         _, segment_start_stop_times = get_segment_durations(sorting, segment_indices)
 
         # Build the plot data with the full dict of dicts structure

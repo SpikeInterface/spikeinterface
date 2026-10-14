@@ -1,6 +1,6 @@
 import pytest
 
-from spikeinterface import generate_sorting
+from spikeinterface import NumpyRecording, generate_sorting
 from spikeinterface.widgets.utils import (
     get_some_colors,
     validate_segment_indices,
@@ -56,7 +56,8 @@ def test_validate_segment_indices():
         validate_segment_indices([5], sorting_multiple)
 
 
-def test_get_segment_durations():
+def test_get_segment_durations_estimate():
+    """Test a sortings get_segment_durations when estimated from the spike time"""
     from spikeinterface import generate_sorting
 
     # Test with a normal multi-segment sorting
@@ -110,7 +111,30 @@ def test_get_segment_durations():
     assert 7.0 - single_duration < 0.7  # Within 10%
 
 
+
+def test_get_segment_durations_with_recording():
+    """Test a sortings get_segment_durations when a recording is
+    registered, meaning times should be exact and not estimated from spike times"""
+    durations = [5.0, 10.0, 15.0]
+    t_starts = [10, 20, 30]
+    sampling_frequency = 1024
+
+    sorting = generate_sorting(durations=durations, sampling_frequency=sampling_frequency, seed=42)
+
+    recording = NumpyRecording(
+        [np.zeros((int(duration * sampling_frequency), 1), dtype="float32") for duration in durations],
+        sampling_frequency=sampling_frequency,
+        t_starts=t_starts,
+    )
+    sorting.register_recording(recording)
+
+    actual_durations, bounds = get_segment_durations(sorting)
+    np.testing.assert_array_equal(actual_durations, durations)
+    assert bounds == {0: (10, 15), 1: (20, 30), 2: (30, 45)}
+
+
 if __name__ == "__main__":
     test_get_some_colors()
     test_validate_segment_indices()
     test_get_segment_durations()
+    test_get_segment_durations_with_recording()
