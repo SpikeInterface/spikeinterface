@@ -400,11 +400,24 @@ def validate_segment_indices(segment_indices: list[int] | None, sorting: BaseSor
     return segment_indices
 
 
+def get_segment_start_stop_times(recording_or_sorting, segment_indices):
+    """Return first and last sample timestamps, without extending the stop times.
+
+    The input must be a recording or a sorting with a recording attached.
+    """
+    return {
+        seg: (recording_or_sorting.get_start_time(seg), recording_or_sorting.get_end_time(seg))
+        for seg in segment_indices
+    }
+
+
 def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = None):
     """
-    Calculate segment durations and exclusive start/stop bounds.
+    Calculate segment durations and start/stop bounds.
 
-    Use recording-backed bounds when available; otherwise estimate from spikes.
+    Use first/last sample timestamps when a recording is available; otherwise
+    estimate an exclusive stop from spikes. Recording-backed durations include
+    the final sample interval.
 
     Parameters
     ----------
@@ -424,12 +437,9 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
         segment_indices = range(sorting.get_num_segments())
 
     if sorting.has_recording():
-        # Include the final sample interval to return exclusive stop times.
-        sample_period = 1 / sorting.get_sampling_frequency()
-        segment_start_stop_times = {
-            seg: (sorting.get_start_time(seg), sorting.get_end_time(seg) + sample_period) for seg in segment_indices
-        }
-        durations = np.array([stop - start for start, stop in segment_start_stop_times.values()])
+        segment_start_stop_times = get_segment_start_stop_times(sorting, segment_indices)
+        ts = 1 / sorting.get_sampling_frequency()
+        durations = np.array([stop - start + ts for start, stop in segment_start_stop_times.values()])
         return durations, segment_start_stop_times
 
     spikes = sorting.to_spike_vector()
@@ -450,18 +460,21 @@ def compute_segment_durations_from_spike_vector(
     """
     If segment_t_starts is `None` then assume 0
     """
-    if segment_t_starts is None:
-        segment_t_starts = [0] * len(segment_indices)
-
-    segment_boundaries = [
-        np.searchsorted(spike_vector["segment_index"], [seg_idx, seg_idx + 1]) for seg_idx in segment_indices
-    ]
-
     segment_start_stop_times = {}
-    for seg_idx, segment_t_start, (start, end) in zip(segment_indices, segment_t_starts, segment_boundaries):
+    for i, seg_idx in enumerate(segment_indices):
 
-        segment_start = spike_vector["sample_index"][start] / sampling_frequency + segment_t_start
-        segment_end = (spike_vector["sample_index"][end - 1] + 1) / sampling_frequency + segment_t_start
+        if segment_t_starts is None:
+            segment_start = 0.0
+        else:
+            segment_start = segment_t_starts[i]
+
+        seg_end_idx = np.searchsorted(spike_vector["segment_index"], seg_idx + 1)
+
+        assert (
+            seg_end_idx > 0 and spike_vector["segment_index"][seg_end_idx - 1] == seg_idx
+        ), f"Cannot estimate duration for segment {seg_idx}: it contains no spikes."
+
+        segment_end = (spike_vector["sample_index"][seg_end_idx - 1] + 1) / sampling_frequency + segment_start
 
         segment_start_stop_times[seg_idx] = (segment_start, segment_end)
 

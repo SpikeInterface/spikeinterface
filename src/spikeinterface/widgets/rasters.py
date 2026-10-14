@@ -182,7 +182,7 @@ class BaseRasterWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from matplotlib.colors import Normalize
-        from matplotlib.ticker import ScalarFormatter
+        from matplotlib.ticker import Locator, MaxNLocator, ScalarFormatter
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -276,7 +276,24 @@ class BaseRasterWidget(BaseWidget):
                     segment = np.searchsorted(segment_times[1:, 0], x, side="right")
                     return time_formatter.format_data_short(x + dp.segment_time_offsets[segment])
 
-                scatter_ax.locator_params(axis="x", nbins=12)
+                class SegmentTimeLocator(Locator):
+                    def __call__(self):
+                        return self.tick_values(*self.axis.get_view_interval())
+
+                    def tick_values(self, vmin, vmax):
+                        vmin, vmax = sorted((vmin, vmax))
+                        ticks = []
+                        for (start, stop), offset in zip(segment_times, dp.segment_time_offsets):
+                            left, right = max(start, vmin), min(stop, vmax)
+                            if left >= right:
+                                continue
+                            nbins = max(1, round(self.axis.get_tick_space() * (right - left) / (vmax - vmin)))
+                            local_ticks = MaxNLocator(nbins=nbins).tick_values(left + offset, right + offset)
+                            local_ticks = local_ticks[(local_ticks >= left + offset) & (local_ticks < right + offset)]
+                            ticks.extend(local_ticks - offset)
+                        return self.raise_if_exceeds(np.asarray(ticks))
+
+                scatter_ax.xaxis.set_major_locator(SegmentTimeLocator())
                 scatter_ax.xaxis.set_major_formatter(format_original_time)
 
                 for boundary in segment_times[1:, 0]:

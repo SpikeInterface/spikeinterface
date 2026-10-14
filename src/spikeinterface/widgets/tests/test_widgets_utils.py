@@ -129,7 +129,10 @@ def test_get_segment_durations_with_recording():
 
     actual_durations, bounds = get_segment_durations(sorting)
     np.testing.assert_array_equal(actual_durations, durations)
-    assert bounds == {0: (10, 15), 1: (20, 30), 2: (30, 45)}
+    assert bounds == {
+        seg: (start, start + duration - 1 / sampling_frequency)
+        for seg, (start, duration) in enumerate(zip(t_starts, durations))
+    }
 
 
 if __name__ == "__main__":
