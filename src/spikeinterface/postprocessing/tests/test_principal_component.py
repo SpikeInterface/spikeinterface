@@ -15,6 +15,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
             dict(mode="by_channel_local"),
             dict(mode="by_channel_global"),
             dict(mode="by_channel_global", max_fit_batch_memory="32Ki"),
+            dict(mode="by_channel_local", max_fit_batch_memory="32Ki"),
             # mode concatenated cannot be tested here because it do not work with sparse=True
         ],
     )
@@ -249,7 +250,7 @@ if __name__ == "__main__":
     test.test_get_projections(sparse=True)
 
 
-def _make_global_pca_batch_analyzer(sparse):
+def _make_pca_batch_analyzer(sparse):
     from spikeinterface.core import ChannelSparsity, NumpyRecording, NumpySorting
 
     rng = np.random.default_rng(42)
@@ -280,13 +281,22 @@ def _make_global_pca_batch_analyzer(sparse):
     return analyzer
 
 
-@pytest.mark.parametrize("sparse", [False, True])
+@pytest.mark.parametrize(
+    "mode, sparse",
+    [
+        ("by_channel_global", False),
+        ("by_channel_global", True),
+        ("by_channel_local", False),
+        ("by_channel_local", True),
+        ("concatenated", False),
+    ],
+)
 @pytest.mark.parametrize("storage", ["numpy", "zarr"])
-def test_global_pca_fit_batches(tmp_path, monkeypatch, sparse, storage):
+def test_pca_fit_batches(tmp_path, monkeypatch, mode, sparse, storage):
     from sklearn.decomposition import IncrementalPCA
     import spikeinterface.postprocessing.principal_component as pc_module
 
-    analyzer = _make_global_pca_batch_analyzer(sparse)
+    analyzer = _make_pca_batch_analyzer(sparse)
     waveforms_ext = analyzer.get_extension("waveforms")
     waveforms = waveforms_ext.data["waveforms"]
     if storage == "zarr":
@@ -302,25 +312,41 @@ def test_global_pca_fit_batches(tmp_path, monkeypatch, sparse, storage):
         stored[:] = waveforms
         waveforms_ext.data["waveforms"] = stored
     ext = ComputePrincipalComponents(analyzer)
-    ext.set_params(n_components=3, mode="by_channel_global")
-    expected_inputs = []
-    original = IncrementalPCA(n_components=3, whiten=True)
+    ext.set_params(n_components=3, mode=mode)
+    keys = range(len(analyzer.channel_ids)) if mode == "by_channel_local" else [0]
+    original = {key: IncrementalPCA(n_components=3, whiten=True) for key in keys}
+    expected_inputs = {key: [] for key in keys}
     for uid in analyzer.unit_ids:
-        wfs, _, _ = ext._get_sparse_waveforms(uid)
-        flat = wfs.transpose(0, 2, 1).reshape(-1, wfs.shape[1])
-        if len(flat) >= 3:
-            expected_inputs.append(flat)
-            original.partial_fit(flat)
-    # Units below the default budget keep exactly the previous fitting updates.
-    unchanged = ext._fit_by_channel_global(progress_bar=False)
-    np.testing.assert_array_equal(unchanged.components_, original.components_)
-    np.testing.assert_array_equal(unchanged.singular_values_, original.singular_values_)
+        wfs, channel_inds, _ = ext._get_sparse_waveforms(uid)
+        if mode == "by_channel_global":
+            inputs = {0: wfs.transpose(0, 2, 1).reshape(-1, wfs.shape[1])}
+        elif mode == "concatenated":
+            inputs = {0: wfs.reshape(len(wfs), -1)}
+        else:
+            inputs = {channel: wfs[:, :, position] for position, channel in enumerate(channel_inds)}
+        for key, data in inputs.items():
+            if len(data) >= 3:
+                expected_inputs[key].append(data)
+                original[key].partial_fit(data)
 
-    batch_inputs, read_sizes = [], []
+    def fit():
+        if mode == "by_channel_local":
+            models = ext._fit_by_channel_local(n_jobs=1, progress_bar=False, max_threads_per_worker=1, mp_context=None)
+            return dict(enumerate(models))
+        if mode == "by_channel_global":
+            return {0: ext._fit_by_channel_global(progress_bar=False)}
+        return {0: ext._fit_concatenated(progress_bar=False)}
+
+    # Units below the default budget keep exactly the previous fitting updates.
+    for key, model in fit().items():
+        np.testing.assert_array_equal(model.components_, original[key].components_)
+        np.testing.assert_array_equal(model.singular_values_, original[key].singular_values_)
+
+    batch_inputs, read_sizes = {}, []
     real_fit, real_slice = IncrementalPCA.partial_fit, pc_module.slice_rows
 
     def partial_fit(self, data, **kwargs):
-        batch_inputs.append(data.copy())
+        batch_inputs.setdefault(id(self), []).append(data.copy())
         assert data.nbytes <= 512
         assert len(data) >= 3
         return real_fit(self, data, **kwargs)
@@ -334,17 +360,32 @@ def test_global_pca_fit_batches(tmp_path, monkeypatch, sparse, storage):
     monkeypatch.setattr(IncrementalPCA, "partial_fit", partial_fit)
     monkeypatch.setattr(pc_module, "slice_rows", slice_rows)
     ext.params["max_fit_batch_memory"] = "0.5Ki"
-    fitted = ext._fit_by_channel_global(progress_bar=False)
-    expected = np.concatenate(expected_inputs)
-    np.testing.assert_array_equal(np.concatenate(batch_inputs), expected)
-    assert len(batch_inputs) > len(expected_inputs)
-    assert fitted.n_samples_seen_ == len(expected)
-    np.testing.assert_allclose(fitted.mean_, np.mean(expected, axis=0), atol=1e-6)
+    fitted = fit()
+    assert any(len(batch_inputs[id(model)]) > len(expected_inputs[key]) for key, model in fitted.items())
+    for key, model in fitted.items():
+        expected = np.concatenate(expected_inputs[key])
+        np.testing.assert_array_equal(np.concatenate(batch_inputs[id(model)]), expected)
+        assert model.n_samples_seen_ == len(expected)
+        np.testing.assert_allclose(model.mean_, np.mean(expected, axis=0), atol=1e-6)
     assert read_sizes
 
 
-def test_global_pca_fit_batch_memory_validation():
-    analyzer = _make_global_pca_batch_analyzer(sparse=True)
+def test_local_pca_fit_batches_match_between_serial_and_spawn():
+    analyzer = _make_pca_batch_analyzer(sparse=True)
+    params = dict(n_components=3, mode="by_channel_local", max_fit_batch_memory="0.5Ki")
+    serial = analyzer.compute("principal_components", **params, n_jobs=1, progress_bar=False)
+    expected = serial.get_data().copy()
+    expected_models = [model.components_.copy() for model in serial.get_pca_model()]
+    parallel = analyzer.compute(
+        "principal_components", **params, n_jobs=2, mp_context="spawn", max_threads_per_worker=1, progress_bar=False
+    )
+    np.testing.assert_allclose(parallel.get_data(), expected, atol=1e-6)
+    for model, components in zip(parallel.get_pca_model(), expected_models):
+        np.testing.assert_allclose(model.components_, components, atol=1e-6)
+
+
+def test_pca_fit_batch_memory_validation():
+    analyzer = _make_pca_batch_analyzer(sparse=True)
     ext = ComputePrincipalComponents(analyzer)
     for value in ("0Ki", "-1Ki"):
         with pytest.raises(ValueError, match="max_fit_batch_memory must be positive"):
