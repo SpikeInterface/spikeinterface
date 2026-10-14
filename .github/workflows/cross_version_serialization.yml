@@ -6,9 +6,8 @@ name: Cross-version serialization
 #
 # Delivery model: Live generation. Fixtures are regenerated from a real old install each
 # run in an isolated uv environment (nothing committed). The version list is computed
-# from PyPI (latest patch of each minor at or above MIN_VERSION_TO_TEST): on a pull
-# request only the latest released minor is tested; the full matrix runs weekly and on
-# manual dispatch.
+# from PyPI (latest patch of each minor at or above MIN_VERSION_TO_TEST), and the full
+# matrix is tested on every pull request and on manual dispatch.
 
 on:
   pull_request:
@@ -20,11 +19,9 @@ on:
     # watches core only; a break introduced in generation/ or preprocessing/ would not
     # trigger it.
     paths:
-      - "src/spikeinterface/core/**"
-      - ".github/scripts/serialization/**"
-      - ".github/workflows/cross_version_serialization.yml"
-  schedule:
-    - cron: "0 4 * * 0" # weekly, Sunday 04:00 UTC
+      - 'src/spikeinterface/core/**'
+      - '.github/scripts/serialization/**'
+      - '.github/workflows/cross_version_serialization.yml'
   workflow_dispatch:
 
 concurrency:
@@ -33,8 +30,8 @@ concurrency:
 
 jobs:
   # Compute which released versions the matrix below tests loading from, exposed as the
-  # job output `list`. Latest patch of each minor at or above the floor on schedule /
-  # dispatch; only the latest minor on a pull request (keeps per-PR runs cheap).
+  # job output `list`: the latest patch of each minor at or above the floor, tested on
+  # every trigger.
   versions:
     name: Select versions
     runs-on: ubuntu-latest
@@ -46,7 +43,6 @@ jobs:
           python-version: "3.10"
       - id: set
         env:
-          GITHUB_EVENT_NAME: ${{ github.event_name }}
           # Support floor: oldest minor to test. Below this, installs fail on the CI
           # Python (numcodecs dependency rot in 0.100/0.101). Raise when 0.102 rots.
           MIN_VERSION_TO_TEST: "0.102" # We will change this when making breaking changes (hopefully not too often)
@@ -66,10 +62,6 @@ jobs:
           # patch of each minor
           candidates = [v for v in available if not v.is_prerelease and (v.major, v.minor) >= (floor.major, floor.minor)]
           minor_releases = [max(group) for _, group in groupby(candidates, key=lambda v: (v.major, v.minor))]
-
-          # on a pull request, test only the latest minor
-          if os.environ.get('GITHUB_EVENT_NAME') == 'pull_request':
-              minor_releases = minor_releases[-1:]
 
           print(json.dumps([str(v) for v in minor_releases]))
           ")

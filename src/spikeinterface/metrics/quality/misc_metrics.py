@@ -16,6 +16,7 @@ import numpy as np
 
 from spikeinterface.core.analyzer_extension_core import BaseMetric
 from spikeinterface.core import SortingAnalyzer, NumpySorting
+from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.template_tools import (
     get_template_amplitude_on_main_channel,
     get_dense_templates_array,
@@ -576,9 +577,7 @@ def compute_sliding_rp_violations(
 
     contamination = {}
 
-    spikes, slices = sorting.to_reordered_spike_vector(
-        ["sample_index", "segment_index", "unit_index"], return_order=False
-    )
+    spikes, slices = sorting.to_reordered_spike_vector(LEXSORT_UNIT_COMPACT, return_order=False)
 
     for unit_id in unit_ids:
         unit_index = sorting.id_to_index(unit_id)
@@ -958,7 +957,9 @@ def compute_amplitude_cutoffs(
     Notes
     -----
     This approach assumes the amplitude histogram is symmetric (not valid in the presence of drift).
-    If available, amplitudes are extracted from the "spike_amplitude" or "amplitude_scalings" extensions.
+    Amplitudes are extracted from the "amplitude_scalings" extension. If that is not available,
+    the amplitude cutoff is computed from the "spike_amplitudes" extension for backward compatibility,
+    but this will be removed in 0.106.0 since it's less reliable.
 
     References
     ----------
@@ -974,10 +975,17 @@ def compute_amplitude_cutoffs(
 
     all_fraction_missing = {}
 
-    available_extension = (
-        "spike_amplitudes" if sorting_analyzer.has_extension("spike_amplitudes") else "amplitude_scalings"
-    )
-    extension = sorting_analyzer.get_extension(available_extension)
+    if not sorting_analyzer.has_extension("amplitude_scalings"):
+        warnings.warn(
+            "Amplitude scalings extension not found. Falling back to spike amplitudes which is less reliable."
+            "This fallback will be removed in 0.106.0, when amplitude_scalings will be required to compute this metric",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        extension = sorting_analyzer.get_extension("spike_amplitudes")
+    else:
+        extension = sorting_analyzer.get_extension("amplitude_scalings")
+
     amplitudes_by_units = extension.get_data(outputs="by_unit", concatenated=True, periods=periods)
 
     for unit_id in unit_ids:
@@ -1015,7 +1023,7 @@ class AmplitudeCutoff(BaseMetric):
         "amplitude_cutoff": "Estimated fraction of missing spikes, based on the amplitude distribution."
     }
     supports_periods = True
-    depend_on = ["spike_amplitudes|amplitude_scalings"]
+    depend_on = ["amplitude_scalings|spike_amplitudes"]
 
 
 def compute_amplitude_medians(sorting_analyzer, unit_ids=None, periods=None):
@@ -1677,12 +1685,13 @@ def slidingRP_violations(
 
     Parameters
     ----------
-    spike_samples : ndarray_like or list (for multi-segment)
-        The spike times in samples.
-    bin_size_ms : float
+    sorting : Sorting
+        A SpikeInterface Sorting object containing the spike times.
+    bin_size_ms : float, default: 0.25
         The size (in ms) of binning for the autocorrelogram.
     window_size_s : float, default: 1
-        Window in seconds to compute correlogram.
+        Window in seconds to compute correlogram. Note that as opposed to the syntax in compute_correlogram(),
+        the window_size here is half the duration of the total window computed
     exclude_ref_period_below_ms : float, default: 0.5
         Refractory periods below this value are excluded
     max_ref_period_ms : float, default: 10
@@ -1704,9 +1713,6 @@ def slidingRP_violations(
         # 0.5, 1, ..., 35 % (upper bound inclusive), matching the reference
         # slidingRefractory implementation (previously stopped at 34.5 %).
         contamination_values = np.arange(0.5, 35.5, 0.5) / 100  # vector of contamination values to test
-    rp_bin_size = bin_size_ms / 1000
-    rp_edges = np.arange(0, max_ref_period_ms / 1000, rp_bin_size)  # in s
-    rp_centers = rp_edges + ((rp_edges[1] - rp_edges[0]) / 2)  # vector of refractory period durations to test
 
     # compute firing rate and spike count (concatenate for multi-segments)
     n_spikes = len(sorting.to_spike_vector())
@@ -1714,34 +1720,32 @@ def slidingRP_violations(
 
     method = "numba" if HAVE_NUMBA else "numpy"
 
-    bin_size = max(int(bin_size_ms / 1000 * sorting.sampling_frequency), 1)
-    window_size = int(window_size_s * sorting.sampling_frequency)
+    from spikeinterface.postprocessing.correlograms import compute_correlograms
 
-    if method == "numpy":
-        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numpy
+    correlograms, bins = compute_correlograms(sorting, 2 * window_size_s * 1000, bin_size_ms, method=method)
+    correlogram = correlograms[0, 0]
+    num_half_bins = len(correlogram) // 2
+    correlogram_positive = correlogram[num_half_bins:]
 
-        correlogram = _compute_correlograms_numpy(sorting, window_size, bin_size)[0, 0]
-    if method == "numba":
-        from spikeinterface.postprocessing.correlograms import _compute_correlograms_numba
-
-        correlogram = _compute_correlograms_numba(sorting, window_size, bin_size, fast_mode="auto")[0, 0]
-
-    ## I dont get why this line is not giving exactly the same result as the correlogram function. I would question
-    # the choice of the bin_size above, but I am not the author of the code...
-    # correlogram = compute_correlograms(sorting, 2*window_size_s*1000, bin_size_ms, method=method)[0][0, 0]
-    correlogram_positive = correlogram[len(correlogram) // 2 :]
+    # Derive RP bin edges from the actual correlogram bins (ms → s) to avoid
+    # float-to-sample rounding mismatch between bin_size_ms and the real bin width.
+    positive_bin_edges_s = bins[num_half_bins:] / 1000
+    actual_bin_size_s = positive_bin_edges_s[1] - positive_bin_edges_s[0]
+    n_rp_bins = int(max_ref_period_ms / 1000 / actual_bin_size_s)
+    rp_bin_edges = positive_bin_edges_s[: n_rp_bins + 1]
+    rp_centers = (rp_bin_edges[:-1] + rp_bin_edges[1:]) / 2
 
     conf_matrix = _compute_violations(
         np.cumsum(correlogram_positive[0 : rp_centers.size])[np.newaxis, :],
         firing_rate,
         n_spikes,
-        rp_centers[np.newaxis, :] + rp_bin_size / 2,
+        rp_bin_edges[1:][np.newaxis, :],
         contamination_values[:, np.newaxis],
     )
     test_rp_centers_mask = rp_centers > exclude_ref_period_below_ms / 1000.0  # (in seconds)
 
     # only test for refractory period durations greater than 'exclude_ref_period_below_ms'
-    inds_confidence90 = np.row_stack(np.where(conf_matrix[:, test_rp_centers_mask] > 0.9))
+    inds_confidence90 = np.vstack(np.where(conf_matrix[:, test_rp_centers_mask] > 0.9))
 
     if len(inds_confidence90[0]) > 0:
         minI = np.min(inds_confidence90[0][0])
@@ -1905,6 +1909,9 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     ----------
     spikes : np.array
         Structured numpy array with fields ("sample_index", "unit_index", "segment_index").
+        Must be ordered by segment_index and then by sample_index within each segment, as
+        returned by `BaseSorting.to_spike_vector()`; a spike sharing (segment_index,
+        sample_index) with a matching-event neighbor it is not adjacent to will not be counted as synchronous.
     all_unit_ids : list or None, default: None
         List of unit ids to compute the synchrony metrics. Expecting all units.
     synchrony_sizes : None or np.array, default: None
@@ -1922,35 +1929,46 @@ def _get_synchrony_counts(spikes, synchrony_sizes, all_unit_ids):
     """
 
     synchrony_counts = np.zeros((np.size(synchrony_sizes), len(all_unit_ids)), dtype=np.int64)
+    if spikes.size == 0:
+        return synchrony_counts
 
-    # compute the occurrence of each sample_index. Count >2 means there's synchrony
-    _, unique_spike_index, counts = np.unique(spikes["sample_index"], return_index=True, return_counts=True)
+    sample_indices = spikes["sample_index"]
+    segment_indices = spikes["segment_index"]
+    same_segment_and_sample = (sample_indices[1:] == sample_indices[:-1]) & (
+        segment_indices[1:] == segment_indices[:-1]
+    )
+    synchronous_spike_mask = np.zeros(spikes.size, dtype=np.bool_)
+    synchronous_spike_mask[:-1] |= same_segment_and_sample
+    synchronous_spike_mask[1:] |= same_segment_and_sample
+    if not np.any(synchronous_spike_mask):
+        return synchrony_counts
 
-    min_synchrony = 2
-    mask = counts >= min_synchrony
-    sync_indices = unique_spike_index[mask]
-    sync_counts = counts[mask]
+    synchronous_sample_indices = sample_indices[synchronous_spike_mask]
+    synchronous_segment_indices = segment_indices[synchronous_spike_mask]
+    synchronous_units = spikes["unit_index"][synchronous_spike_mask]
+    synchronous_group_starts = np.empty(synchronous_units.size, dtype=np.bool_)
+    synchronous_group_starts[0] = True
+    synchronous_group_starts[1:] = (synchronous_sample_indices[1:] != synchronous_sample_indices[:-1]) | (
+        synchronous_segment_indices[1:] != synchronous_segment_indices[:-1]
+    )
+    synchronous_group_indices = np.cumsum(synchronous_group_starts) - 1
+    synchronous_group_counts = np.bincount(synchronous_group_indices)
 
-    all_syncs = np.unique(sync_counts)
-    num_bins = [np.size(synchrony_sizes[synchrony_sizes <= i]) for i in all_syncs]
-
-    indices = {}
-    for num_of_syncs in all_syncs:
-        indices[num_of_syncs] = np.flatnonzero(all_syncs == num_of_syncs)[0]
-
-    for i, sync_index in enumerate(sync_indices):
-
-        num_of_syncs = sync_counts[i]
-        # Counts inclusively. E.g. if there are 3 simultaneous spikes, these are also added
-        # to the 2 simultaneous spike bins.
-        units_with_sync = spikes[sync_index : sync_index + num_of_syncs]["unit_index"]
-        synchrony_counts[: num_bins[indices[num_of_syncs]], units_with_sync] += 1
+    group_unit_keys = synchronous_group_indices * len(all_unit_ids) + synchronous_units
+    unique_group_unit_keys = np.unique(group_unit_keys)
+    unique_group_indices, unique_unit_indices = np.divmod(unique_group_unit_keys, len(all_unit_ids))
+    num_bins = np.searchsorted(synchrony_sizes, synchronous_group_counts[unique_group_indices], side="right")
+    for synchrony_index in range(synchrony_sizes.size):
+        units = unique_unit_indices[num_bins > synchrony_index]
+        synchrony_counts[synchrony_index] = np.bincount(units, minlength=len(all_unit_ids))
 
     return synchrony_counts
 
 
 if HAVE_NUMBA:
     import numba
+
+    _get_synchrony_counts = numba.jit(nopython=True, nogil=True, cache=False)(_get_synchrony_counts)
 
     @numba.jit(nopython=True, nogil=True, cache=False)
     def _compute_nb_violations_numba(spike_train, t_r):

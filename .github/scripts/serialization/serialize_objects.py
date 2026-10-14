@@ -33,10 +33,14 @@ for entry in OBJECTS:
             obj.dump_to_pickle(dest)
         elif fmt == "binary":
             obj.save(folder=dest, format="binary", overwrite=True)
+        elif fmt == "binary_parallel":
+            obj.save(folder=dest, format="binary", overwrite=True, n_jobs=2)
         elif fmt == "numpy_folder":
             obj.save(folder=dest, format="numpy_folder", overwrite=True)
         elif fmt == "zarr":
             obj.save(folder=dest, format="zarr", overwrite=True)
+        elif fmt == "zarr_parallel":
+            obj.save(folder=dest, format="zarr", overwrite=True, n_jobs=2)
         print(f"  wrote {dest.name} ({fmt})")
 
 print(f"Fixtures written to: {out_dir.resolve()}")

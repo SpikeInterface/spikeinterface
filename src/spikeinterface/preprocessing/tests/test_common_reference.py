@@ -20,7 +20,7 @@ def recording():
     return _generate_test_recording()
 
 
-def test_common_reference(recording):
+def test_common_reference(recording, create_cache_folder):
     # Test simple case
     rec_cmr = common_reference(recording, reference="global", operator="median")
     rec_cmr_ref = common_reference(recording, reference="global", operator="median", ref_channel_ids=["a", "b", "c"])
@@ -47,11 +47,11 @@ def test_common_reference(recording):
     assert np.allclose(traces[:, 1], rec_local_car.get_traces()[:, 1] + np.mean(traces[:, [3]], axis=1), atol=0.01)
 
     # Saving tests
-    rec_cmr.save(verbose=False)
-    rec_car.save(verbose=False)
-    rec_sin.save(verbose=False)
-    rec_local_cmr.save(verbose=False)
-    rec_local_car.save(verbose=False)
+    rec_cmr.save(folder=create_cache_folder / "rec_cmr", verbose=False)
+    rec_car.save(folder=create_cache_folder / "rec_car", verbose=False)
+    rec_sin.save(folder=create_cache_folder / "rec_sin", verbose=False)
+    rec_local_cmr.save(folder=create_cache_folder / "rec_local_cmr", verbose=False)
+    rec_local_car.save(folder=create_cache_folder / "rec_local_car", verbose=False)
 
 
 def test_common_reference_channel_slicing(recording):
@@ -247,6 +247,54 @@ def test_min_local_radius():
         recording_local_car = common_reference(
             recording, reference="local", local_radius=(60, 150), operator="average", min_local_neighbors=5
         )
+
+
+@pytest.mark.parametrize("operator", ["median", "average"])
+def test_local_reference_no_channel_beyond_exclude_radius(operator):
+    # When no channel at all lies beyond the exclude (inner) radius, there is nothing to build a
+    # local reference from. This used to raise a ZeroDivisionError at init. The channels should now
+    # be left unreferenced and a warning should be raised instead.
+    recording = generate_recording(durations=[1.0], num_channels=4, set_probe=False)
+    recording = recording.rename_channels(np.array(["a", "b", "c", "d"]))
+    # Tetrode-like geometry: every channel is within 30 um of every other one
+    recording.set_dummy_probe_from_locations(np.array([[0.0, 0.0], [0.0, 20.0], [20.0, 0.0], [20.0, 20.0]]))
+
+    with pytest.warns(UserWarning, match="left unreferenced"):
+        rec_local = common_reference(recording, reference="local", local_radius=(30.0, 55.0), operator=operator)
+
+    traces = recording.get_traces()
+    assert np.array_equal(rec_local.get_traces(), traces)
+
+
+@pytest.mark.parametrize("operator", ["median", "average"])
+def test_local_reference_partially_empty_annulus(operator):
+    # Only some channels have no channel beyond the exclude radius. Those are left unreferenced while
+    # the others are referenced normally.
+    recording = generate_recording(durations=[1.0], num_channels=5, set_probe=False)
+    recording = recording.rename_channels(np.array(["a", "b", "c", "d", "e"]))
+    # "a" sits at the center of a cross, so the farthest channel from it is 100 um away. Every other
+    # channel has the opposite arm of the cross 200 um away.
+    locations = np.array([[0.0, 0.0], [-100.0, 0.0], [100.0, 0.0], [0.0, -100.0], [0.0, 100.0]])
+    recording.set_dummy_probe_from_locations(locations)
+
+    with pytest.warns(UserWarning, match="left unreferenced"):
+        rec_local = common_reference(
+            recording,
+            reference="local",
+            local_radius=(150.0, 400.0),
+            operator=operator,
+            min_local_neighbors=1,
+        )
+
+    traces = recording.get_traces()
+    referenced_traces = rec_local.get_traces()
+
+    # "a" has no channel beyond 150 um, so it is passed through unchanged
+    assert np.array_equal(referenced_traces[:, 0], traces[:, 0])
+    # the four arms are each referenced to the single opposite arm, which is 200 um away
+    for channel_index, opposite_index in ((1, 2), (2, 1), (3, 4), (4, 3)):
+        expected = traces[:, channel_index] - traces[:, opposite_index]
+        assert np.allclose(referenced_traces[:, channel_index], expected, atol=1e-5)
 
 
 @pytest.mark.skip(reason="This test can be used to check local CAR vs local CMR performance")

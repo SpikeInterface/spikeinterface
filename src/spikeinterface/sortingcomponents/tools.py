@@ -41,7 +41,9 @@ def make_multi_method_doc(methods, indent="    "):
     return doc
 
 
-def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job_name=None, job_kwargs=None):
+def extract_waveform_at_max_channel(
+    rec, peaks, ms_before=0.5, ms_after=1.5, channel_index_array=None, job_name=None, job_kwargs=None
+):
     """
     Helper function to extract waveforms at the max channel from a peak list
 
@@ -50,15 +52,20 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     n = rec.get_num_channels()
-    unit_ids = np.arange(n, dtype="int64")
     sparsity_mask = np.eye(n, dtype="bool")
 
     spikes = np.zeros(
         peaks.size, dtype=[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]
     )
     spikes["sample_index"] = peaks["sample_index"]
-    spikes["unit_index"] = peaks["channel_index"]
     spikes["segment_index"] = peaks["segment_index"]
+    if channel_index_array is not None:
+        assert len(channel_index_array) == peaks.size, "Length of channel_index_array must match number of peaks."
+        spikes["unit_index"] = channel_index_array
+    else:
+        if "channel_index" not in peaks.dtype.names:
+            raise ValueError("The peaks array must have a 'channel_index' field.")
+        spikes["unit_index"] = peaks["channel_index"]
 
     nbefore = ms_to_samples(ms_before, rec.sampling_frequency)
     nafter = ms_to_samples(ms_after, rec.sampling_frequency)
@@ -66,7 +73,6 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
     all_wfs = extract_waveforms_to_single_buffer(
         rec,
         spikes,
-        unit_ids,
         nbefore,
         nafter,
         mode="shared_memory",
@@ -83,7 +89,7 @@ def extract_waveform_at_max_channel(rec, peaks, ms_before=0.5, ms_after=1.5, job
 
 
 def get_prototype_and_waveforms_from_peaks(
-    recording, peaks, n_peaks=5000, ms_before=0.5, ms_after=0.5, seed=None, job_kwargs=None
+    recording, peaks, n_peaks=5000, ms_before=0.5, ms_after=0.5, channel_index_array=None, seed=None, job_kwargs=None
 ):
     """
     Function to extract a prototype waveform from peaks.
@@ -93,13 +99,16 @@ def get_prototype_and_waveforms_from_peaks(
     recording : Recording
         The recording object containing the data.
     peaks : numpy.array, optional
-        Array of peaks, if None, peaks will be detected, by default None.
+        Array of peaks or spikes, if None, peaks will be detected, by default None.
+        If spikes, the channel_index_array must be provided to indicate the channel of each spike.
     n_peaks : int, optional
         Number of peaks to consider, by default 5000.
     ms_before : float, optional
         Time in milliseconds before the peak to extract the waveform, by default 0.5.
     ms_after : float, optional
         Time in milliseconds after the peak to extract the waveform, by default 0.5.
+    channel_index_array : numpy.array | None, optional
+        Array of channel indices corresponding to each peak, by default None.
     seed : int or None, optional
         Seed for random number generator, by default None.
     job_kwargs : dict
@@ -121,9 +130,20 @@ def get_prototype_and_waveforms_from_peaks(
     nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
     nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
-    few_peaks = select_peaks(
-        peaks, recording=recording, method="uniform", n_peaks=n_peaks, margin=(nbefore, nafter), seed=seed
+    few_peaks, few_indices = select_peaks(
+        peaks,
+        recording=recording,
+        method="uniform",
+        n_peaks=n_peaks,
+        margin=(nbefore, nafter),
+        channel_index_array=channel_index_array,
+        return_indices=True,
+        seed=seed,
     )
+    if channel_index_array is not None:
+        few_channel_index_array = channel_index_array[few_indices]
+    else:
+        few_channel_index_array = None
     waveforms = extract_waveform_at_max_channel(
         recording,
         few_peaks,
@@ -131,6 +151,7 @@ def get_prototype_and_waveforms_from_peaks(
         ms_after=ms_after,
         job_kwargs=job_kwargs,
         job_name="waveform prototype",
+        channel_index_array=few_channel_index_array,
     )
 
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -412,7 +433,7 @@ def cache_preprocessing(
         if total_memory is None:
             mem_ok = _check_cache_memory(recording, memory_limit, total_memory)
             if mem_ok:
-                recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+                recording = recording.save(format="memory", sharedmem=True, **job_kwargs)
             else:
                 import warnings
 
@@ -421,11 +442,11 @@ def cache_preprocessing(
 
     elif mode == "folder":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_folder(folder=folder, **job_kwargs)
+        recording = recording.save(folder=folder, format="binary", **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "zarr":
         assert folder is not None, "cache_preprocessing(): folder must be given"
-        recording = recording.save_to_zarr(folder=folder, **job_kwargs)
+        recording = recording.save(folder=folder, format="zarr", **job_kwargs)
         cache_info["folder"] = folder
     elif mode == "no-cache":
         recording = recording
@@ -433,11 +454,11 @@ def cache_preprocessing(
         mem_ok = _check_cache_memory(recording, memory_limit, total_memory)
         if mem_ok:
             # first try memory first
-            recording = recording.save_to_memory(format="memory", shared=True, **job_kwargs)
+            recording = recording.save(format="memory", sharedmem=True, **job_kwargs)
             cache_info["mode"] = "memory"
         elif folder is not None:
             # then try folder
-            recording = recording.save_to_folder(folder=folder, **job_kwargs)
+            recording = recording.save(folder=folder, format="binary", **job_kwargs)
             cache_info["mode"] = "folder"
             cache_info["folder"] = folder
         else:
@@ -483,6 +504,8 @@ def create_sorting_analyzer_with_existing_templates(
     sparsity = templates.sparsity
     templates_array = templates.get_dense_templates().copy()
 
+    all_main_channel_indices = templates.get_main_channels()
+
     if remove_empty:
         non_empty_unit_ids = sorting.get_non_empty_unit_ids()
         non_empty_sorting = sorting.remove_empty_units()
@@ -490,12 +513,16 @@ def create_sorting_analyzer_with_existing_templates(
         templates_array = templates_array[non_empty_unit_indices]
         sparsity_mask = sparsity.mask[non_empty_unit_indices, :]
         sparsity = ChannelSparsity(sparsity_mask, non_empty_unit_ids, sparsity.channel_ids)
+        main_channel_indices = all_main_channel_indices[non_empty_unit_indices]
     else:
         non_empty_sorting = sorting
+        main_channel_indices = all_main_channel_indices
 
     from spikeinterface.core.analyzer_extension_core import ComputeTemplates
 
-    sa = create_sorting_analyzer(non_empty_sorting, recording, format="memory", sparsity=sparsity)
+    sa = create_sorting_analyzer(
+        non_empty_sorting, recording, format="memory", sparsity=sparsity, main_channel_indices=main_channel_indices
+    )
     sa.compute("random_spikes")
     sa.extensions["templates"] = ComputeTemplates(sa)
     sa.extensions["templates"].params = {

@@ -1,9 +1,12 @@
-from .base import BaseSegment
-from .baserecordingsnippets import BaseRecordingSnippets
 import numpy as np
 from warnings import warn
 
-# snippets segments?
+from copy import deepcopy
+
+from pathlib import Path
+
+from .base import BaseSegment
+from .baserecordingsnippets import BaseRecordingSnippets
 
 
 class BaseSnippets(BaseRecordingSnippets):
@@ -15,6 +18,12 @@ class BaseSnippets(BaseRecordingSnippets):
     _main_features = []
 
     def __init__(self, sampling_frequency: float, nbefore: int | None, snippet_len: int, channel_ids: list, dtype):
+        warn(
+            "`BaseSnippets` is deprecated and will be removed in version 0.106.0."
+            "Only continuous recordings with `BaseRecording` will be supported.",
+            FutureWarning,
+            stacklevel=2,
+        )
         BaseRecordingSnippets.__init__(
             self, channel_ids=channel_ids, sampling_frequency=sampling_frequency, dtype=dtype
         )
@@ -84,7 +93,6 @@ class BaseSnippets(BaseRecordingSnippets):
         indices=None,
         segment_index: int | None = None,
         channel_ids: list | None = None,
-        return_scaled: bool | None = None,
         return_in_uV: bool = False,
     ):
         """
@@ -98,10 +106,6 @@ class BaseSnippets(BaseRecordingSnippets):
             The segment index to get snippets from. If snippets is multi-segment, it is required.
         channel_ids : list | None, default: None
             The channel ids. If None, all channels are used.
-        return_scaled : bool | None, default: None
-            DEPRECATED. Use return_in_uV instead.
-            If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
-            snippets are scaled to uV
         return_in_uV : bool, default: False
             If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
             snippets are scaled to uV
@@ -115,15 +119,6 @@ class BaseSnippets(BaseRecordingSnippets):
         spts = self._snippets_segments[segment_index]
         channel_indices = self.ids_to_indices(channel_ids, prefer_slice=True)
         wfs = spts.get_snippets(indices, channel_indices=channel_indices)
-
-        # Handle deprecated return_scaled parameter
-        if return_scaled is not None:
-            warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled
 
         if return_in_uV:
             if not self.has_scaleable_traces():
@@ -144,7 +139,6 @@ class BaseSnippets(BaseRecordingSnippets):
         start_frame: int | None = None,
         end_frame: int | None = None,
         channel_ids: list | None = None,
-        return_scaled: bool | None = None,
         return_in_uV: bool = False,
     ):
         """
@@ -160,10 +154,6 @@ class BaseSnippets(BaseRecordingSnippets):
             The end frame. If None, the number of samples in the segment is used.
         channel_ids : list | None, default: None
             The channel ids. If None, all channels are used.
-        return_scaled : bool | None, default: None
-            DEPRECATED. Use return_in_uV instead.
-            If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
-            snippets are scaled to uV
         return_in_uV : bool, default: False
             If True and the snippets has scaling (gain_to_uV and offset_to_uV properties),
             snippets are scaled to uV
@@ -177,19 +167,7 @@ class BaseSnippets(BaseRecordingSnippets):
         spts = self._snippets_segments[segment_index]
         indices = spts.frames_to_indices(start_frame, end_frame)
 
-        # Handle deprecated return_scaled parameter
-        if return_scaled is not None:
-            warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled
-
         return self.get_snippets(indices, channel_ids=channel_ids, return_in_uV=return_in_uV)
-
-    def _save(self, format="binary", **save_kwargs):
-        raise NotImplementedError
 
     def select_channels(self, channel_ids: list | np.ndarray | tuple) -> "BaseSnippets":
         from .channelslice import ChannelSliceSnippets
@@ -208,36 +186,20 @@ class BaseSnippets(BaseRecordingSnippets):
 
         return SelectSegmentSnippets(self, segment_indices=segment_indices)
 
-    def _save(self, format="npy", **save_kwargs):
+    def save(self, format="npy", **save_kwargs):
         """
-        At the moment only "npy" and "memory" avaiable:
-        """
+        Save a `BaseSnippets` object to a specified format:
 
+        * "npy"
+        * "memory"
+        """
         if format == "npy":
-            from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
-
-            folder = save_kwargs["folder"]
-            file_paths = [folder / f"traces_cached_seg{i}.npy" for i in range(self.get_num_segments())]
-            dtype = save_kwargs.get("dtype", None)
-            if dtype is None:
-                dtype = self.get_dtype()
-
-            from spikeinterface.core.npysnippetsextractor import NpySnippetsExtractor
-
-            NpySnippetsExtractor.write_snippets(snippets=self, file_paths=file_paths, dtype=dtype)
-            cached = NpySnippetsExtractor(
-                file_paths=file_paths,
-                sampling_frequency=self.get_sampling_frequency(),
-                channel_ids=self.get_channel_ids(),
-                nbefore=self.nbefore,
-                gain_to_uV=self.get_channel_gains(),
-                offset_to_uV=self.get_channel_offsets(),
-            )
-            cached.dump(folder / "npy.json", relative_to=folder)
-
             from spikeinterface.core.npyfoldersnippets import NpyFolderSnippets
 
-            cached = NpyFolderSnippets(folder_path=folder)
+            folder = save_kwargs["folder"]
+            folder = Path(folder)
+
+            cached = NpyFolderSnippets.write_snippets(self, folder, dtype=save_kwargs.get("dtype", None))
 
         elif format == "memory":
             snippets_list = []
@@ -255,13 +217,11 @@ class BaseSnippets(BaseRecordingSnippets):
                 nbefore=self.nbefore,
                 channel_ids=self.channel_ids,
             )
-
+            if self.has_probe():
+                probegroup = self.get_probegroup()
+                cached.set_probegroup(probegroup)
         else:
             raise ValueError(f"format {format} not supported")
-
-        if self.has_probe():
-            probegroup = self.get_probegroup()
-            cached.set_probegroup(probegroup)
 
         return cached
 

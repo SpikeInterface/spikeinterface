@@ -2,6 +2,7 @@ import pytest
 
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core import create_sorting_analyzer
+from spikeinterface.core.core_tools import _is_zarr_write_supported
 from spikeinterface.generation import generate_recording, generate_ground_truth_recording
 from spikeinterface.preprocessing import (
     apply_preprocessing_pipeline,
@@ -15,8 +16,8 @@ from spikeinterface.preprocessing import (
 )
 from spikeinterface.preprocessing.pipeline import (
     pp_names_to_functions,
-    get_preprocessing_dict_from_file,
-    get_preprocessing_dict_from_analyzer,
+    get_preprocessing_list_from_file,
+    get_preprocessing_list_from_analyzer,
 )
 
 
@@ -129,11 +130,11 @@ def test_three_preprocessing_steps():
     rec_groups.set_property(key="group", values=[0, 1])
     dict_of_recs = rec_groups.split_by("group")
 
-    pp_dict_of_recs_from_pipeline = apply_preprocessing_pipeline(dict_of_recs, pipeline_dict)
-    pp_dict_of_recs_from_functions = whiten(bandpass_filter(common_reference(dict_of_recs)), seed=1205)
+    pp_list_of_recs_from_pipeline = apply_preprocessing_pipeline(dict_of_recs, pipeline_dict)
+    pp_list_of_recs_from_functions = whiten(bandpass_filter(common_reference(dict_of_recs)), seed=1205)
 
-    check_recordings_equal(pp_dict_of_recs_from_pipeline[0], pp_dict_of_recs_from_functions[0])
-    check_recordings_equal(pp_dict_of_recs_from_pipeline[1], pp_dict_of_recs_from_functions[1])
+    check_recordings_equal(pp_list_of_recs_from_pipeline[0], pp_list_of_recs_from_functions[0])
+    check_recordings_equal(pp_list_of_recs_from_pipeline[1], pp_list_of_recs_from_functions[1])
 
 
 def test_kwargs_are_propagated():
@@ -161,7 +162,7 @@ def test_kwargs_are_propagated():
 def test_loading_provenance(create_cache_folder):
     """
     Makes a preprocessed recording using a Pipeline and saves it. Then reloads the preprocessed
-    recording using `get_preprocessing_dict_from_file`, either ignoring or applying the
+    recording using `get_preprocessing_list_from_file`, either ignoring or applying the
     precomputed kwargs. These reloaded recordings should be the same as the original preprocessed
     recording.
     """
@@ -169,6 +170,7 @@ def test_loading_provenance(create_cache_folder):
     cache_folder = create_cache_folder / "preprocessed_rec_for_pipeline"
 
     rec, _ = generate_ground_truth_recording(seed=0, num_channels=6)
+    rec = rec.save(folder=cache_folder / "recording_provenance")
     pp_rec = detect_and_remove_bad_channels(
         bandpass_filter(common_reference(rec, operator="average")),
         noisy_channel_threshold=0.3,
@@ -176,17 +178,17 @@ def test_loading_provenance(create_cache_folder):
         # when several run
         seed=2205,
     )
-    pp_rec.save_to_folder(folder=cache_folder)
+    pp_rec.save(folder=cache_folder / "preprocessed_recording")
 
-    loaded_pp_dict = get_preprocessing_dict_from_file(cache_folder / "provenance.pkl")
+    loaded_pp_list = get_preprocessing_list_from_file(cache_folder / "preprocessed_recording" / "provenance.json")
 
     pipeline_rec_applying_precomputed_kwargs = apply_preprocessing_pipeline(
         rec,
-        loaded_pp_dict,
+        loaded_pp_list,
         apply_precomputed_kwargs=True,
     )
     pipeline_rec_ignoring_precomputed_kwargs = apply_preprocessing_pipeline(
-        rec, loaded_pp_dict, apply_precomputed_kwargs=False
+        rec, loaded_pp_list, apply_precomputed_kwargs=False
     )
 
     check_recordings_equal(pipeline_rec_applying_precomputed_kwargs, pp_rec)
@@ -195,8 +197,8 @@ def test_loading_provenance(create_cache_folder):
 
 def test_loading_from_analyzer(create_cache_folder):
     """
-    Tests the `get_preprocessing_dict_from_analyzer` function, which constructs a preprocessing pipeline
-    dict from a saved sorting analyzer (either binary folder or zarr). This test creates a preprocessed recording,
+    Tests the `get_preprocessing_list_from_analyzer` function, which constructs a preprocessing pipeline
+    list from a saved sorting analyzer (either binary folder or zarr). This test creates a preprocessed recording,
     uses this to create a sorting analyzer and saves binary and zarr versions of the analyzer. Then we generate
     the preprocessing dict from the analyzer, and apply it to the original recording to check that it's the same
     as the preprocessed recording made earlier.
@@ -204,6 +206,7 @@ def test_loading_from_analyzer(create_cache_folder):
 
     cache_folder = create_cache_folder
     recording, sorting = generate_ground_truth_recording()
+    recording = recording.save(folder=cache_folder / "recording")
 
     preprocessing_dict = {"common_reference": {}, "highpass_filter": {"freq_min": 301.0}}
     pp_recording = apply_preprocessing_pipeline(recording, preprocessing_dict)
@@ -212,15 +215,17 @@ def test_loading_from_analyzer(create_cache_folder):
     _ = create_sorting_analyzer(
         sorting=sorting, recording=pp_recording, format="binary_folder", folder=analyzer_binary_folder
     )
-    pp_dict_from_binary = get_preprocessing_dict_from_analyzer(analyzer_binary_folder)
-    pp_recording_from_binary = apply_preprocessing_pipeline(recording, pp_dict_from_binary)
+    pp_list_from_binary = get_preprocessing_list_from_analyzer(analyzer_binary_folder)
+    pp_recording_from_binary = apply_preprocessing_pipeline(recording, pp_list_from_binary)
     check_recordings_equal(pp_recording, pp_recording_from_binary)
 
-    analyzer_zarr_folder = cache_folder / "zarr_format.zarr"
-    _ = create_sorting_analyzer(sorting=sorting, recording=pp_recording, format="zarr", folder=analyzer_zarr_folder)
-    pp_dict_from_zarr = get_preprocessing_dict_from_analyzer(analyzer_zarr_folder)
-    pp_recording_from_zarr = apply_preprocessing_pipeline(recording, pp_dict_from_zarr)
-    check_recordings_equal(pp_recording, pp_recording_from_zarr)
+    # TODO: remove once writing to zarr is supported with zarr>=3
+    if _is_zarr_write_supported():
+        analyzer_zarr_folder = cache_folder / "zarr_format.zarr"
+        _ = create_sorting_analyzer(sorting=sorting, recording=pp_recording, format="zarr", folder=analyzer_zarr_folder)
+        pp_list_from_zarr = get_preprocessing_list_from_analyzer(analyzer_zarr_folder)
+        pp_recording_from_zarr = apply_preprocessing_pipeline(recording, pp_list_from_zarr)
+        check_recordings_equal(pp_recording, pp_recording_from_zarr)
 
 
 def test_pipeline_recording_arg_substitution(create_cache_folder):
@@ -269,7 +274,7 @@ def test_pipeline_recording_arg_substitution(create_cache_folder):
 
     # Test dumping the pipeline to pickle and loading it back with the correct substitution still works
     pp_rec_from_pipeline.dump_to_pickle(create_cache_folder / "pipeline_substitution_test.pkl")
-    pp_rec_from_pkl = get_preprocessing_dict_from_file(create_cache_folder / "pipeline_substitution_test.pkl")
+    pp_rec_from_pkl = get_preprocessing_list_from_file(create_cache_folder / "pipeline_substitution_test.pkl")
     pp_rec_from_pipeline_substitution = apply_preprocessing_pipeline(
         rec, pp_rec_from_pkl, apply_precomputed_kwargs=True
     )
