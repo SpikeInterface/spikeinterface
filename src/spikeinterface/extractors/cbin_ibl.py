@@ -194,9 +194,9 @@ class CompressedBinaryIblExtractor(BaseRecording):
             self.set_property("inter_sample_shift", sample_shifts)
 
         self._kwargs = {
-            "folder_path": str(Path(folder_path).resolve()),
+            "folder_path": str(Path(folder_path).absolute()),
             "load_sync_channel": load_sync_channel,
-            "cbin_file_path": str(Path(cbin_file_path).resolve()),
+            "cbin_file_path": str(Path(cbin_file_path).absolute()),
         }
 
 

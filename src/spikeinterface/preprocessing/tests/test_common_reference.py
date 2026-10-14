@@ -20,7 +20,7 @@ def recording():
     return _generate_test_recording()
 
 
-def test_common_reference(recording):
+def test_common_reference(recording, create_cache_folder):
     # Test simple case
     rec_cmr = common_reference(recording, reference="global", operator="median")
     rec_cmr_ref = common_reference(recording, reference="global", operator="median", ref_channel_ids=["a", "b", "c"])
@@ -47,11 +47,11 @@ def test_common_reference(recording):
     assert np.allclose(traces[:, 1], rec_local_car.get_traces()[:, 1] + np.mean(traces[:, [3]], axis=1), atol=0.01)
 
     # Saving tests
-    rec_cmr.save(verbose=False)
-    rec_car.save(verbose=False)
-    rec_sin.save(verbose=False)
-    rec_local_cmr.save(verbose=False)
-    rec_local_car.save(verbose=False)
+    rec_cmr.save(folder=create_cache_folder / "rec_cmr", verbose=False)
+    rec_car.save(folder=create_cache_folder / "rec_car", verbose=False)
+    rec_sin.save(folder=create_cache_folder / "rec_sin", verbose=False)
+    rec_local_cmr.save(folder=create_cache_folder / "rec_local_cmr", verbose=False)
+    rec_local_car.save(folder=create_cache_folder / "rec_local_car", verbose=False)
 
 
 def test_common_reference_channel_slicing(recording):

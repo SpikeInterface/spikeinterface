@@ -13,10 +13,12 @@ NUM_RECORDINGS = 2
 SORTERS = ["tridesclous2"]
 
 
-def create_recordings(NUM_RECORDINGS=2, base_seed=42):
+def create_recordings(folder, NUM_RECORDINGS=2, base_seed=42):
     recordings = []
     for i in range(NUM_RECORDINGS):
+
         recording, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=base_seed + i)
+        recording = recording.save(folder=folder / f"rec_for_generate_recording_{i}", format="binary", overwrite=True)
 
         if i % 2 == 0:
             recording.set_channel_groups(["0"] * 4 + ["1"] * 4)
@@ -28,7 +30,7 @@ def create_recordings(NUM_RECORDINGS=2, base_seed=42):
 
 def get_job_list(base_folder):
     jobs = []
-    recordings = create_recordings(NUM_RECORDINGS)
+    recordings = create_recordings(base_folder, NUM_RECORDINGS)
     for i, recording in enumerate(recordings):
         for sorter_name in SORTERS:
             kwargs = dict(
@@ -50,6 +52,7 @@ def job_list(create_cache_folder):
     return get_job_list(folder)
 
 
+@pytest.mark.requires_zarr_write
 def test_run_sorter_jobs_loop(job_list):
     sortings = run_sorter_jobs(job_list, engine="loop", return_output=True)
     print(sortings)
@@ -199,6 +202,7 @@ def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
     assert str(tmp_script_folder) in mock_subprocess_run.call_args_list[-1].args[0][5]
 
 
+@pytest.mark.requires_zarr_write
 def test_run_sorter_by_property(create_cache_folder):
     cache_folder = create_cache_folder
     working_folder1 = cache_folder / "test_run_sorter_by_property_1"
@@ -209,7 +213,7 @@ def test_run_sorter_by_property(create_cache_folder):
     if working_folder2.is_dir():
         shutil.rmtree(working_folder2)
 
-    recordings = create_recordings(NUM_RECORDINGS)
+    recordings = create_recordings(create_cache_folder, NUM_RECORDINGS)
 
     rec0 = recordings[0]
     rec0_by = rec0.split_by("group")

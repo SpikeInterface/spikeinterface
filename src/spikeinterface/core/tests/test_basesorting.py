@@ -25,6 +25,7 @@ from spikeinterface.core import (
 from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
 from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
+from spikeinterface.core.core_tools import _is_zarr_write_supported
 
 
 def test_BaseSorting(create_cache_folder):
@@ -58,14 +59,14 @@ def test_BaseSorting(create_cache_folder):
 
     # dump/load json
     sorting.dump_to_json(cache_folder / "test_BaseSorting.json")
-    sorting2 = BaseExtractor.load(cache_folder / "test_BaseSorting.json")
+    sorting2 = load(cache_folder / "test_BaseSorting.json")
     sorting3 = load(cache_folder / "test_BaseSorting.json")
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=False)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=False)
 
     # dump/load pickle
     sorting.dump_to_pickle(cache_folder / "test_BaseSorting.pkl")
-    sorting2 = BaseExtractor.load(cache_folder / "test_BaseSorting.pkl")
+    sorting2 = load(cache_folder / "test_BaseSorting.pkl")
     sorting3 = load(cache_folder / "test_BaseSorting.pkl")
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
@@ -74,18 +75,18 @@ def test_BaseSorting(create_cache_folder):
     folder = cache_folder / "simple_sorting_npz_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder, format="npz_folder")
-    sorting2 = BaseExtractor.load(folder)
+    sorting2 = load(folder)
     assert isinstance(sorting2, NpzFolderSorting)
 
-    # cache new format : numpy_folder
-    folder = cache_folder / "simple_sorting_numpy_folder"
+    # cache new format : binary
+    folder = cache_folder / "simple_sorting_binary"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder, format="numpy_folder")
-    sorting2 = BaseExtractor.load(folder)
+    sorting2 = load(folder)
     assert isinstance(sorting2, NumpyFolderSorting)
 
     # but also possible
-    sorting3 = BaseExtractor.load(folder)
+    sorting3 = load(folder)
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
@@ -143,16 +144,18 @@ def test_BaseSorting(create_cache_folder):
     del sorting6
     del sorting5
 
-    # test save to zarr
-    # compressor = get_default_zarr_compressor()
-    sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting")
-    sorting_zarr_loaded = load(cache_folder / "sorting.zarr")
-    # annotations is False because Zarr adds compression ratios
-    check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
-    check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
-    for annotation_name in sorting.get_annotation_keys():
-        assert sorting.get_annotation(annotation_name) == sorting_zarr.get_annotation(annotation_name)
-        assert sorting.get_annotation(annotation_name) == sorting_zarr_loaded.get_annotation(annotation_name)
+    # TODO: remove once writing to zarr is supported with zarr>=3
+    if _is_zarr_write_supported():
+        # test save to zarr
+        # compressor = get_default_zarr_compressor()
+        sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting.zarr")
+        sorting_zarr_loaded = load(cache_folder / "sorting.zarr")
+        # annotations is False because Zarr adds compression ratios
+        check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
+        check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
+        for annotation_name in sorting.get_annotation_keys():
+            assert sorting.get_annotation(annotation_name) == sorting_zarr.get_annotation(annotation_name)
+            assert sorting.get_annotation(annotation_name) == sorting_zarr_loaded.get_annotation(annotation_name)
 
 
 def _make_sorting_with_shuffled_ties(num_units, num_segments, seed=42):
@@ -412,6 +415,7 @@ def test_select_periods():
 
 if __name__ == "__main__":
     import tempfile
+    from pathlib import Path
 
     with tempfile.TemporaryDirectory() as tmpdirname:
         cache_folder = Path(tmpdirname)

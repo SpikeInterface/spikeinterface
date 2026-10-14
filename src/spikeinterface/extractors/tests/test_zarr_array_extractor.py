@@ -53,7 +53,7 @@ def test_zarr_array_extractor(make_dummy_zarr_data):
     assert np.all(rec.get_channel_offsets() == offset)
 
     # 3. Verify exact trace reading
-    traces_raw = rec.get_traces(return_scaled=False)
+    traces_raw = rec.get_traces(return_in_uV=False)
     np.testing.assert_array_equal(traces_raw, original_data)
 
     # 4. Verify channel and time slicing
