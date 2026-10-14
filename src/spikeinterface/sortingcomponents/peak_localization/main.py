@@ -60,6 +60,11 @@ def get_localization_pipeline_nodes(
         # How do you get peaks
 
         method_kwargs = method_kwargs.copy()
+        n_peaks = method_kwargs.pop("n_peaks")
+        if n_peaks is not None:
+            prototype_extra_kwargs = {"n_peaks": n_peaks}
+        else:
+            prototype_extra_kwargs = {}
         method_kwargs["prototype"], _, _ = get_prototype_and_waveforms_from_peaks(
             recording,
             peaks=peaks_or_spikes,
@@ -68,6 +73,7 @@ def get_localization_pipeline_nodes(
             channel_index_array=channel_index_array,
             job_kwargs=job_kwargs,
             seed=seed,
+            **prototype_extra_kwargs,
         )
 
     localization_nodes = method_class(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs)
