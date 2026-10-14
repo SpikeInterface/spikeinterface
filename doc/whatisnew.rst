@@ -64,8 +64,8 @@ Release notes
   releases/0.9.1.rst
 
 
-Versions 0.105.1
-================
+Versions 0.105.1/2
+==================
 
 * Minor releases with bug fixes and performance improvements
 
