@@ -22,24 +22,37 @@ from numba import njit
 
 
 @njit(cache=True)
-def _solve_spd(G, b, idx):
-    """Solve ``G[idx, idx] z = b[idx]``, returning ``(True, z)``, or ``(False, _)`` if that subsystem is singular."""
-    sub = G[idx][:, idx]
-    # a Gram matrix is symmetric and positive semi-definite, so Cholesky applies
+def _is_well_conditioned(G):
+    """Whether every coefficient of the fit on ``G`` can be solved from the normal equations to float32 precision."""
+    # Solving the normal equations loses precision with the square of X's condition number, so nearly identical
+    # templates, or two spikes of one unit at one time, need the fit from X itself. Column i's squared distance from
+    # the span of the other columns is 1 / (G^-1)_ii; where it is at least 1e-8 of G_ii for every column, every
+    # subsystem nnls solves is at least as well-conditioned, since fewer columns leave each one farther from the rest.
     try:
-        L = np.linalg.cholesky(sub)
+        L = np.linalg.cholesky(G)
     except Exception:
-        return False, b[idx]
-    # a pivot below 1e-12 of its diagonal entry means that column is, to rounding, a combination of the others,
-    # as for two spikes of one unit at one time
-    if np.any(np.diag(L) ** 2 <= 1e-12 * np.abs(np.diag(sub))):
-        return False, b[idx]
-    return True, np.linalg.solve(L.T, np.linalg.solve(L, b[idx]))
+        return False
+    inverse_L = np.linalg.solve(L, np.eye(G.shape[0]))
+    for i in range(G.shape[0]):
+        if 1.0 <= 1e-8 * G[i, i] * np.sum(inverse_L[:, i] ** 2):
+            return False
+    return True
+
+
+@njit(cache=True)
+def _solve_spd(G, b, idx):
+    """Solve ``G[idx, idx] z = b[idx]`` for a well-conditioned ``G``."""
+    # a Gram matrix is symmetric and positive definite once it is well-conditioned, so Cholesky applies
+    L = np.linalg.cholesky(G[idx][:, idx])
+    return np.linalg.solve(L.T, np.linalg.solve(L, b[idx]))
 
 
 @njit(cache=True)
 def _nnls_gram(G, b):
-    """The ``x >= 0`` minimising ``|Xx - y|^2``, given ``G = X'X`` and ``b = X'y``: what ``nnls(X, y)`` returns."""
+    """The ``x >= 0`` minimising ``|Xx - y|^2``, given a well-conditioned ``G = X'X`` and ``b = X'y``.
+
+    This is the ``x`` that ``nnls(X, y)`` returns.
+    """
     # Written out rather than calling scipy.optimize.nnls through numba.objmode: on systems this small, most of
     # nnls's time is per-call overhead, paid once per collision.
     #
@@ -76,11 +89,7 @@ def _nnls_gram(G, b):
                 if passive[j]:
                     idx[n] = j
                     n += 1
-            ok, z = _solve_spd(G, b, idx[:n])
-            if not ok:
-                # a dependent column: drop the one just added and stop, as no direction improves the fit
-                passive[best] = False
-                return x
+            z = _solve_spd(G, b, idx[:n])
             if np.all(z > 0.0):
                 for i in range(n):
                     x[idx[i]] = z[i]
@@ -171,7 +180,8 @@ def _collision_scaling(
 ):
     """Scaling of the first spike in a non-negative fit of all the spikes' templates, plus an intercept.
 
-    ``spike_terms`` holds each spike's ``_template_terms``.
+    ``spike_terms`` holds each spike's ``_template_terms``. Returns NaN where the fit should be done from ``X``: for
+    traces that are not finite, so the numpy path raises on them, and for an ill-conditioned fit.
     """
     num_samples, num_channels = traces.shape
     template_length = templates.shape[1]
@@ -188,6 +198,8 @@ def _collision_scaling(
     for t in range(window_start, window_end):
         for c in union_channels:
             y_sum += _waveform(traces, t, c, gains, offsets)
+    if not np.isfinite(y_sum):
+        return np.nan
 
     # the normal equations of fit_collision's X, built without X
     col_sums = spike_terms[:, 0].copy()
@@ -226,6 +238,8 @@ def _collision_scaling(
         for j in range(i, k):
             G[i, j] -= col_sums[i] * col_sums[j] / num_rows
             G[j, i] = G[i, j]
+    if not _is_well_conditioned(G):
+        return np.nan
     return _nnls_gram(G, Xy)[0]
 
 
@@ -246,7 +260,7 @@ def compute_scalings(
     template_is_zero,
     cut_out_before,
 ):
-    """Scaling of each spike in ``local_spike_indices``, whether it collides, and whether it needs ``linregress``.
+    """Scaling of each spike in ``local_spike_indices``, whether it collides, and whether the numpy path must fit it.
 
     ``templates`` are ``(units, samples, channels)``, cut to the fitted window, and zero outside ``sparsity_mask``,
     whose channels are listed per unit in ``sparse_lists[sparse_starts[u] : sparse_starts[u + 1]]``.
@@ -269,7 +283,7 @@ def compute_scalings(
     num_spikes = local_spike_indices.size
     scalings = np.zeros(num_spikes)
     is_collision = np.zeros(num_spikes, dtype=np.bool_)
-    needs_linregress = np.zeros(num_spikes, dtype=np.bool_)
+    needs_numpy_fit = np.zeros(num_spikes, dtype=np.bool_)
     for spike in range(num_spikes):
         center = local_spike_indices[spike]
         sample = sample_indices[center]
@@ -289,7 +303,7 @@ def compute_scalings(
         if k > 1:
             members = members[:k]
             is_collision[spike] = True
-            scalings[spike] = _collision_scaling(
+            scaling = _collision_scaling(
                 traces,
                 gains,
                 offsets,
@@ -302,11 +316,15 @@ def compute_scalings(
                 spike_terms[members],
                 cut_out_before,
             )
+            if np.isnan(scaling):
+                needs_numpy_fit[spike] = True
+            else:
+                scalings[spike] = scaling
         elif not template_is_zero[unit]:  # a zero template keeps a scaling of 0, as in the numpy path
             channels = sparse_lists[sparse_starts[unit] : sparse_starts[unit + 1]]
             slope = _ordinary_slope(traces, gains, offsets, sample, templates[unit], channels, cut_out_before)
             if np.isnan(slope):
-                needs_linregress[spike] = True
+                needs_numpy_fit[spike] = True
             else:
                 scalings[spike] = slope
-    return scalings, is_collision, needs_linregress
+    return scalings, is_collision, needs_numpy_fit

@@ -353,7 +353,7 @@ class AmplitudeScalingNode(PipelineNode):
         else:
             overlap_matrix, delta_collision_samples = np.zeros((1, 1), dtype=bool), -1
         local_spike_indices = np.flatnonzero(~peaks["in_margin"])
-        scalings, spike_collision_mask, needs_linregress = compute_scalings(
+        scalings, spike_collision_mask, needs_numpy_fit = compute_scalings(
             traces,
             gains,
             offsets,
@@ -368,8 +368,31 @@ class AmplitudeScalingNode(PipelineNode):
             np.asarray(self._template_is_zero),
             self._cut_out_before,
         )
-        # a constant, non-zero template: linregress decides what its slope is
-        for spike_index in np.flatnonzero(needs_linregress):
+        # the kernel leaves two kinds of spike to the numpy path: collisions whose traces are not finite or whose fit
+        # is ill-conditioned, and spikes with a constant, non-zero template, whose slope linregress decides
+        refit = np.flatnonzero(needs_numpy_fit)
+        refit_collisions = refit[spike_collision_mask[refit]]
+        if refit_collisions.size > 0:
+            collisions = find_collisions(
+                peaks[local_spike_indices[refit_collisions]],
+                peaks,
+                self._delta_collision_samples,
+                self._overlap_matrix,
+                local_spike_indices[refit_collisions],
+            )
+            for i, collision in collisions.items():
+                scalings[refit_collisions[i]] = fit_collision(
+                    collision,
+                    traces,
+                    self._nbefore,
+                    self._all_templates,
+                    self._sparsity_mask,
+                    self._cut_out_before,
+                    self._cut_out_after,
+                    self._gains,
+                    self._offsets,
+                )[0]
+        for spike_index in refit[~spike_collision_mask[refit]]:
             spike = peaks[local_spike_indices[spike_index]]
             (sparse_indices,) = np.nonzero(self._sparsity_mask[spike["unit_index"]])
             start = max(0, spike["sample_index"] - self._cut_out_before)

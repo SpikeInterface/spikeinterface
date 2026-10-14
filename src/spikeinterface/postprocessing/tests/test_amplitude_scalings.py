@@ -7,6 +7,7 @@ from spikeinterface.postprocessing import ComputeAmplitudeScalings
 from spikeinterface.core.base import spike_peak_dtype
 from spikeinterface.postprocessing.amplitude_scalings import (
     HAVE_NUMBA,
+    AmplitudeScalingNode,
     _channel_lists,
     _ordinary_scaling_slope,
     _unit_pair_overlap_matrix,
@@ -203,31 +204,23 @@ def _scalings_numpy(traces, peaks, templates, sparsity_mask, nbefore, cut_out_be
 
 
 def _scalings_numba(traces, peaks, templates, sparsity_mask, nbefore, cut_out_before, cut_out_after, delta, gains):
-    from spikeinterface.postprocessing._amplitude_scalings_numba import compute_scalings
-
-    cut = np.ascontiguousarray(templates[:, nbefore - cut_out_before : nbefore + cut_out_after])
-    if gains is None:
-        gains = offsets = np.zeros(0, dtype=np.float32)
-    else:
-        offsets = np.zeros_like(gains)
-        traces = traces.astype(np.float32)
-    scalings, collision_mask, needs_linregress = compute_scalings(
-        traces,
-        gains,
-        offsets,
-        peaks["sample_index"],
-        peaks["unit_index"],
-        np.flatnonzero(~peaks["in_margin"]),
-        _unit_pair_overlap_matrix(sparsity_mask),
-        delta,
-        cut,
-        sparsity_mask,
-        *_channel_lists(sparsity_mask),
-        np.all(templates == 0, axis=(1, 2)),
-        cut_out_before,
-    )
-    assert not needs_linregress.any()
-    return scalings, collision_mask
+    """The node's numba path, including the spikes it hands back to the numpy path."""
+    node = object.__new__(AmplitudeScalingNode)
+    node._gains = gains
+    node._offsets = None if gains is None else np.zeros_like(gains)
+    node._dtype = np.float64  # keep full precision for the comparison
+    node._all_templates = templates
+    node._sparsity_mask = sparsity_mask
+    node._overlap_matrix = _unit_pair_overlap_matrix(sparsity_mask)
+    node._nbefore = nbefore
+    node._cut_out_before = cut_out_before
+    node._cut_out_after = cut_out_after
+    node._handle_collisions = delta >= 0
+    node._delta_collision_samples = delta
+    node._template_is_zero = np.all(templates == 0, axis=(1, 2))
+    node._cut_templates = np.ascontiguousarray(templates[:, nbefore - cut_out_before : nbefore + cut_out_after])
+    node._sparse_channels = _channel_lists(sparsity_mask)
+    return node._compute_numba(traces, peaks)
 
 
 def _make_chunk(seed, num_units=12, num_channels=32, num_samples=6000, num_spikes=600):
@@ -323,7 +316,7 @@ def test_amplitude_scalings_numba_matches_numpy_extension(monkeypatch, return_in
 def test_numba_scalings_match_numpy_for_duplicates(lag):
     """
     Two spikes of one unit `lag` samples apart give nearly or exactly equal columns. At lag 0 the fit is singular,
-    and both paths give the whole amplitude to the spike being scaled.
+    so the kernel hands it to `fit_collision`, which gives the whole amplitude to the spike being scaled.
     """
     nbefore, nafter, num_channels = 20, 30, 8
     rng = np.random.default_rng(0)
@@ -344,3 +337,41 @@ def test_numba_scalings_match_numpy_for_duplicates(lag):
     np.testing.assert_allclose(scalings, expected, rtol=1e-9)
     if lag == 0:
         np.testing.assert_allclose(scalings, 1.6, rtol=0.01)
+
+
+def _two_unit_collision(second_template_noise, lag=3, trace_noise=3.0, num_channels=8, dtype=np.float32):
+    """Two units colliding `lag` samples apart, the second's template the first's plus noise of the given scale."""
+    nbefore, nafter = 20, 30
+    rng = np.random.default_rng(1)
+    times = np.arange(nbefore + nafter)
+    first = -100 * np.exp(-0.5 * ((times - nbefore) / 2.0) ** 2)[:, None] * rng.uniform(0.3, 1, num_channels)
+    second = first + second_template_noise * rng.normal(size=first.shape)
+    templates = np.stack([first, second]).astype(np.float32)
+    sparsity_mask = np.ones((2, num_channels), dtype=bool)
+    peaks = np.zeros(2, dtype=spike_peak_dtype + [("in_margin", "bool")])
+    peaks["sample_index"] = [80, 80 + lag]
+    peaks["unit_index"] = [0, 1]
+    traces = trace_noise * rng.normal(size=(200, num_channels))
+    for sample, unit_index, amplitude in zip(peaks["sample_index"], [0, 1], [1.3, 0.7]):
+        traces[sample - nbefore : sample + nafter] += amplitude * templates[unit_index]
+    return (traces.astype(dtype), peaks, templates, sparsity_mask, nbefore, nbefore, nafter, 10, None)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="the numba kernel needs numba")
+@pytest.mark.parametrize("second_template_noise", [1e-5, 1e-3])
+def test_numba_scalings_match_numpy_for_nearly_identical_templates(second_template_noise):
+    """An ill-conditioned fit goes to `fit_collision`, so it equals the numpy path rather than a truncated fit."""
+    args = _two_unit_collision(second_template_noise, lag=0, trace_noise=0.0)
+    expected, _ = _scalings_numpy(*args)
+    scalings, _ = _scalings_numba(*args)
+    assert 0 < expected[0] < 2
+    np.testing.assert_allclose(scalings, expected, rtol=1e-9)
+
+
+@pytest.mark.skipif(not HAVE_NUMBA, reason="the numba kernel needs numba")
+def test_numba_scalings_raise_on_nan_in_collision_like_numpy():
+    traces, *rest = _two_unit_collision(second_template_noise=10.0)
+    traces[82, 0] = np.nan
+    for scalings_function in (_scalings_numpy, _scalings_numba):
+        with pytest.raises(ValueError):
+            scalings_function(traces, *rest)
