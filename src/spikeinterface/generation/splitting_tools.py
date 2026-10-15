@@ -7,7 +7,7 @@ def split_sorting_by_times(
     sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, unit_ids=None, min_snr=None, seed=None
 ):
     """
-    Fonction used to split a sorting based on the times of the units. This
+    Function used to split a sorting based on the times of the units. This
     might be used for benchmarking meta merging step (see components)
 
     Parameters
@@ -31,7 +31,7 @@ def split_sorting_by_times(
     """
 
     sorting = sorting_analyzer.sorting
-    rng = np.random.RandomState(seed)
+    rng = np.random.default_rng(seed)
     fs = sorting_analyzer.sampling_frequency
 
     nb_splits = int(splitting_probability * len(sorting.unit_ids))
@@ -60,12 +60,15 @@ def split_sorting_by_times(
         ind_mask = spike_indices[0][unit_id]
         m = np.median(spikes[0][ind_mask]["sample_index"])
         time_mask = spikes[0][ind_mask]["sample_index"] > m
-        mask = time_mask & (rng.rand(len(ind_mask)) <= partial_split_prob).astype(bool)
+        mask = time_mask & (rng.uniform(size=len(ind_mask)) <= partial_split_prob).astype(bool)
         new_index = int(unit_id) * np.ones(len(mask), dtype=bool)
         new_index[mask] = max_index + 1
         new_spikes["unit_index"][ind_mask] = new_index
-        new_unit_ids += [max_index + 1]
-        splitted_pairs += [(unit_id, new_unit_ids[-1])]
+        new_unit_id = max_index + 1
+        if sorting_analyzer.unit_ids.dtype.kind in "US":
+            new_unit_id = str(new_unit_id)
+        new_unit_ids += [new_unit_id]
+        splitted_pairs += [(unit_id, new_unit_id)]
         max_index += 1
 
     new_sorting = NumpySorting(new_spikes, sampling_frequency=fs, unit_ids=new_unit_ids)
@@ -76,7 +79,7 @@ def split_sorting_by_amplitudes(
     sorting_analyzer, splitting_probability=0.5, partial_split_prob=0.95, unit_ids=None, min_snr=None, seed=None
 ):
     """
-    Fonction used to split a sorting based on the amplitudes of the units. This
+    Function used to split a sorting based on the amplitudes of the units. This
     might be used for benchmarking meta merging step (see components)
 
     Parameters
@@ -102,12 +105,12 @@ def split_sorting_by_amplitudes(
     if sorting_analyzer.get_extension("spike_amplitudes") is None:
         sorting_analyzer.compute("spike_amplitudes")
 
-    rng = np.random.RandomState(seed)
+    rng = np.random.default_rng(seed)
     fs = sorting_analyzer.sampling_frequency
-    from spikeinterface.core.template_tools import get_template_extremum_channel
 
-    extremum_channel_inds = get_template_extremum_channel(sorting_analyzer, outputs="index")
-    spikes = sorting_analyzer.sorting.to_spike_vector(extremum_channel_inds=extremum_channel_inds, concatenated=False)
+    main_channel_indices = sorting_analyzer.get_main_channels(outputs="index", with_dict=False)
+
+    spikes = sorting_analyzer.sorting.to_spike_vector(main_channel_indices=main_channel_indices, concatenated=False)
     new_spikes = spikes[0].copy()
     amplitudes = sorting_analyzer.get_extension("spike_amplitudes").get_data()
     nb_splits = int(splitting_probability * len(sorting_analyzer.sorting.unit_ids))
@@ -135,7 +138,7 @@ def split_sorting_by_amplitudes(
         ind_mask = spike_indices[0][unit_id]
         thresh = np.median(amplitudes[ind_mask])
         amplitude_mask = amplitudes[ind_mask] > thresh
-        mask = amplitude_mask & (rng.rand(len(ind_mask)) <= partial_split_prob).astype(bool)
+        mask = amplitude_mask & (rng.uniform(size=len(ind_mask)) <= partial_split_prob).astype(bool)
         new_index = int(unit_id) * np.ones(len(mask))
         new_index[mask] = max_index + 1
         new_spikes["unit_index"][ind_mask] = new_index

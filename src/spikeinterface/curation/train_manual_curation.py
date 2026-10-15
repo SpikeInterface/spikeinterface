@@ -1,43 +1,47 @@
-import os
 import warnings
-import numpy as np
 import json
-import spikeinterface
+from pathlib import Path
+import importlib.metadata
+import importlib.util
+
+import numpy as np
+
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.qualitymetrics import (
+
+# TODO fix with new metrics
+from spikeinterface.metrics import (
+    ComputeQualityMetrics,
+    ComputeTemplateMetrics,
     get_quality_metric_list,
     get_quality_pca_metric_list,
-    qm_compute_name_to_column_names,
+    get_template_metric_list,
 )
-from spikeinterface.postprocessing import get_template_metric_names
-from spikeinterface.postprocessing.template_metrics import tm_compute_name_to_column_names
-from pathlib import Path
-from copy import deepcopy
 
 
 def get_default_classifier_search_spaces():
 
     from scipy.stats import uniform, randint
 
+    # note: the top value of randint is exclusive
     default_classifier_search_spaces = {
         "RandomForestClassifier": {
-            "n_estimators": [100, 150],
+            "n_estimators": randint(low=100, high=150),
             "criterion": ["gini", "entropy"],
-            "min_samples_split": [2, 4],
-            "min_samples_leaf": [2, 4],
+            "min_samples_split": randint(low=2, high=5),
+            "min_samples_leaf": randint(low=2, high=5),
             "class_weight": ["balanced", "balanced_subsample"],
         },
         "AdaBoostClassifier": {
-            "learning_rate": [1, 2],
-            "n_estimators": [50, 100],
+            "learning_rate": randint(low=1, high=3),
+            "n_estimators": randint(low=50, high=100),
             "algorithm": ["SAMME", "SAMME.R"],
         },
         "GradientBoostingClassifier": {
             "learning_rate": uniform(0.05, 0.1),
             "n_estimators": randint(100, 150),
-            "max_depth": [2, 4],
-            "min_samples_split": [2, 4],
-            "min_samples_leaf": [2, 4],
+            "max_depth": randint(low=2, high=5),
+            "min_samples_split": randint(low=2, high=5),
+            "min_samples_leaf": randint(low=2, high=5),
         },
         "SVC": {
             "C": uniform(0.001, 10.0),
@@ -51,13 +55,20 @@ def get_default_classifier_search_spaces():
             "max_iter": [100],
         },
         "XGBClassifier": {
-            "max_depth": [2, 4],
+            "max_depth": randint(low=2, high=5),
             "eta": uniform(0.2, 0.5),
             "sampling_method": ["uniform"],
             "grow_policy": ["depthwise", "lossguide"],
         },
-        "CatBoostClassifier": {"depth": [2, 4], "learning_rate": uniform(0.05, 0.15), "n_estimators": [100, 150]},
-        "LGBMClassifier": {"learning_rate": uniform(0.05, 0.15), "n_estimators": randint(100, 150)},
+        "CatBoostClassifier": {
+            "depth": randint(low=2, high=5),
+            "learning_rate": uniform(0.05, 0.15),
+            "n_estimators": randint(low=100, high=150),
+        },
+        "LGBMClassifier": {
+            "learning_rate": uniform(0.05, 0.15),
+            "n_estimators": randint(100, 150),
+        },
         "MLPClassifier": {
             "activation": ["tanh", "relu"],
             "solver": ["adam"],
@@ -70,7 +81,7 @@ def get_default_classifier_search_spaces():
     return default_classifier_search_spaces
 
 
-class CurationModelTrainer:
+class CurationTrainer:
     """
     Used to train and evaluate machine learning models for spike sorting curation.
 
@@ -213,7 +224,7 @@ class CurationModelTrainer:
         self.X = None
         self.testing_metrics = None
 
-        self.requirements = {"spikeinterface": spikeinterface.__version__}
+        self.requirements = {"spikeinterface": importlib.metadata.version("spikeinterface")}
 
         self.y = pd.concat([pd.DataFrame(one_labels)[0] for one_labels in labels])
 
@@ -228,7 +239,7 @@ class CurationModelTrainer:
 
     def get_default_metrics_list(self):
         """Returns the default list of metrics."""
-        return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_names()
+        return get_quality_metric_list() + get_quality_pca_metric_list() + get_template_metric_list()
 
     def load_and_preprocess_analyzers(self, analyzers, enforce_metric_params):
         """
@@ -236,7 +247,7 @@ class CurationModelTrainer:
         """
         import pandas as pd
 
-        metrics_for_each_analyzer = [_get_computed_metrics(an) for an in analyzers]
+        metrics_for_each_analyzer = [analyzer.get_metrics_extension_data() for analyzer in analyzers]
         check_metric_names_are_the_same(metrics_for_each_analyzer)
 
         self.testing_metrics = pd.concat(metrics_for_each_analyzer, axis=0)
@@ -317,10 +328,8 @@ class CurationModelTrainer:
 
     def get_metric_params_csv(self):
 
-        from itertools import chain
-
-        qm_metric_names = list(chain.from_iterable(qm_compute_name_to_column_names.values()))
-        tm_metric_names = list(chain.from_iterable(tm_compute_name_to_column_names.values()))
+        qm_metric_names = ComputeQualityMetrics.get_metric_columns()
+        tm_metric_names = ComputeTemplateMetrics.get_metric_columns()
 
         quality_metric_names = []
         template_metric_names = []
@@ -441,32 +450,32 @@ class CurationModelTrainer:
 
         # Check lightgbm package install
         if classifier_name == "LGBMClassifier":
-            try:
+            if importlib.util.find_spec("lightgmb") is not None:
                 import lightgbm
 
                 self.requirements["lightgbm"] = lightgbm.__version__
                 classifier_mapping["LGBMClassifier"] = lightgbm.LGBMClassifier(random_state=self.seed, verbose=-1)
-            except ImportError:
+            else:
                 raise ImportError("Please install lightgbm package to use LGBMClassifier")
         elif classifier_name == "CatBoostClassifier":
-            try:
+            if importlib.util.find_spec("catboost") is not None:
                 import catboost
 
                 self.requirements["catboost"] = catboost.__version__
                 classifier_mapping["CatBoostClassifier"] = catboost.CatBoostClassifier(
                     silent=True, random_state=self.seed
                 )
-            except ImportError:
+            else:
                 raise ImportError("Please install catboost package to use CatBoostClassifier")
         elif classifier_name == "XGBClassifier":
-            try:
+            if importlib.util.find_spec("xgboost") is not None:
                 import xgboost
 
                 self.requirements["xgboost"] = xgboost.__version__
                 classifier_mapping["XGBClassifier"] = xgboost.XGBClassifier(
                     use_label_encoder=False, random_state=self.seed
                 )
-            except ImportError:
+            else:
                 raise ImportError("Please install xgboost package to use XGBClassifier")
 
         if classifier_name not in classifier_mapping:
@@ -665,7 +674,7 @@ def train_model(
     """
     Trains and evaluates machine learning models for spike sorting curation.
 
-    This function initializes a ``CurationModelTrainer`` object, loads and preprocesses the data,
+    This function initializes a ``CurationTrainer`` object, loads and preprocesses the data,
     and evaluates the specified combinations of imputation strategies, scaling techniques, and classifiers.
     The evaluation results, including the best model and its parameters, are saved to the output folder.
 
@@ -712,8 +721,8 @@ def train_model(
 
     Returns
     -------
-    CurationModelTrainer
-        The ``CurationModelTrainer`` object used for training and evaluation.
+    CurationTrainer
+        The ``CurationTrainer`` object used for training and evaluation.
 
     Notes
     -----
@@ -736,7 +745,7 @@ def train_model(
     if (test_size > 1.0) or (0.0 > test_size):
         raise Exception("`test_size` must be between 0.0 and 1.0")
 
-    trainer = CurationModelTrainer(
+    trainer = CurationTrainer(
         labels=labels,
         folder=folder,
         metric_names=metric_names,
@@ -761,22 +770,6 @@ def train_model(
 
     trainer.evaluate_model_config()
     return trainer
-
-
-def _get_computed_metrics(sorting_analyzer):
-    """Loads and organises the computed metrics from a sorting_analyzer into a single dataframe"""
-
-    import pandas as pd
-
-    quality_metrics, template_metrics = try_to_get_metrics_from_analyzer(sorting_analyzer)
-    calculated_metrics = pd.concat([quality_metrics, template_metrics], axis=1)
-
-    # Remove any metrics for non-existent units, raise error if no units are present
-    calculated_metrics = calculated_metrics.loc[calculated_metrics.index.isin(sorting_analyzer.sorting.get_unit_ids())]
-    if calculated_metrics.shape[0] == 0:
-        raise ValueError("No units present in sorting data")
-
-    return calculated_metrics
 
 
 def try_to_get_metrics_from_analyzer(sorting_analyzer):
@@ -839,7 +832,9 @@ def check_metric_names_are_the_same(metrics_for_each_analyzer):
 
 def _format_metric_dataframe(input_data):
 
-    input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
-    input_data = input_data.astype("float32")
+    # cast before replacing infs: finite float64 values beyond float32 range overflow to inf
+    with np.errstate(over="ignore"):
+        input_data = input_data.astype("float32")
+    input_data = input_data.replace([np.inf, -np.inf], np.nan)
 
     return input_data

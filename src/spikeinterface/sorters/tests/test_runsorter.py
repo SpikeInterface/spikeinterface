@@ -13,16 +13,18 @@ from spikeinterface.sorters import run_sorter
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 
 
-def _generate_recording():
+def _generate_recording(folder):
     recording, _ = generate_ground_truth_recording(num_channels=8, durations=[10.0], seed=2205)
+    recording = recording.save(folder=folder / "rec_for_generate_recording", format="binary")
     return recording
 
 
 @pytest.fixture(scope="module")
-def generate_recording():
-    return _generate_recording()
+def generate_recording(create_cache_folder):
+    return _generate_recording(create_cache_folder)
 
 
+@pytest.mark.requires_zarr_write
 @pytest.mark.xfail(
     platform.system() == "Windows" and parse(platform.python_version()) > parse("3.12"),
     reason="3rd parth threadpoolctl issue: OSError('GetModuleFileNameEx failed')",
@@ -31,7 +33,7 @@ def test_run_sorter_local(generate_recording, create_cache_folder):
     recording = generate_recording
     cache_folder = create_cache_folder
 
-    sorter_params = {"detection": {"detect_threshold": 4.9}}
+    sorter_params = {"detect_threshold": 4.9}
 
     sorting = run_sorter(
         "tridesclous2",
@@ -56,7 +58,7 @@ def test_run_sorter_dict(generate_recording, create_cache_folder):
     recording.set_property(key="split_property", values=[4, 4, "g", "g", 4, 4, 4, "g"])
     dict_of_recordings = recording.split_by("split_property")
 
-    sorter_params = {"detection": {"detect_threshold": 4.9}}
+    sorter_params = {"detect_threshold": 4.9}
 
     folder = cache_folder / "sorting_tdc_local_dict"
 
@@ -163,8 +165,8 @@ def test_run_sorter_singularity(generate_recording, create_cache_folder):
 
 
 if __name__ == "__main__":
-    rec = _generate_recording
+    rec = _generate_recording()
     cache_folder = Path("tmp")
-    # test_run_sorter_local(rec, cache_folder)
+    test_run_sorter_local(rec, cache_folder)
     # test_run_sorter_docker(rec, cache_folder)
-    test_run_sorter_singularity(rec, cache_folder)
+    # test_run_sorter_singularity(rec, cache_folder)

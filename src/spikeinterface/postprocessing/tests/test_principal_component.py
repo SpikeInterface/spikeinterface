@@ -3,6 +3,8 @@ import numpy as np
 
 from spikeinterface.postprocessing import ComputePrincipalComponents
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
+from spikeinterface.core.tests.test_sortinganalyzer import get_dataset
+from spikeinterface.core import create_sorting_analyzer
 
 
 class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
@@ -99,9 +101,9 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         some_unit_ids = sorting_analyzer.unit_ids[::2]
         some_channel_ids = sorting_analyzer.channel_ids[::2]
 
-        random_spikes_indices = sorting_analyzer.get_extension("random_spikes").get_data()
-        all_num_spikes = sorting_analyzer.sorting.count_num_spikes_per_unit()
-        unit_ids_num_spikes = np.sum(all_num_spikes[unit_id] for unit_id in some_unit_ids)
+        random_spikes_ext = sorting_analyzer.get_extension("random_spikes")
+        random_spikes_indices = random_spikes_ext.get_data()
+        unit_ids_num_random_spikes = sum(random_spikes_ext.params["max_spikes_per_unit"] for _ in some_unit_ids)
 
         # this should be all spikes all channels
         some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=None)
@@ -113,7 +115,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         # this should be some spikes all channels
         some_projections, spike_unit_index = ext.get_some_projections(channel_ids=None, unit_ids=some_unit_ids)
         assert some_projections.shape[0] == spike_unit_index.shape[0]
-        assert spike_unit_index.shape[0] == unit_ids_num_spikes
+        assert spike_unit_index.shape[0] == unit_ids_num_random_spikes
         assert some_projections.shape[1] == n_components
         assert some_projections.shape[2] == num_chans
         assert 1 not in spike_unit_index
@@ -123,7 +125,7 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
             channel_ids=some_channel_ids, unit_ids=some_unit_ids
         )
         assert some_projections.shape[0] == spike_unit_index.shape[0]
-        assert spike_unit_index.shape[0] == unit_ids_num_spikes
+        assert spike_unit_index.shape[0] == unit_ids_num_random_spikes
         assert some_projections.shape[1] == n_components
         assert some_projections.shape[2] == some_channel_ids.size
         assert 1 not in spike_unit_index
@@ -194,6 +196,51 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         assert new_proj.shape[0] == num_spike
         assert new_proj.shape[1] == n_components
         assert new_proj.shape[2] == ext_pca.data["pca_projection"].shape[2]
+
+
+def test_select_channels_sparse_pca():
+    """
+    Test that `_select_channels` selects the correct principal components when the analyzer
+    is sparse.
+
+    The actual code uses fancy indexing etc, so this test is designed to _not_ do this, and instead
+    just loop over all units and channels to check consistency.
+    """
+
+    recording, sorting = get_dataset()
+    # Make a sparse analyzer
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="memory", sparse=True, sparsity_kwargs={"method": "radius", "radius_um": 30}
+    )
+    sorting_analyzer.compute(["random_spikes", "waveforms", "principal_components"])
+
+    # Select channels, in a non-monotonic way
+    select_channel_ids = np.array(["3", "8", "7"])
+    analyzer_selected = sorting_analyzer._select_channels(channel_ids=select_channel_ids)
+
+    # Prepare the data
+    original_pca = sorting_analyzer.get_extension("principal_components")
+    selected_pca = analyzer_selected.get_extension("principal_components")
+
+    for unit_id in sorting_analyzer.unit_ids:
+
+        original_units_to_channels = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
+        selected_units_to_channels = analyzer_selected.sparsity.unit_id_to_channel_ids[unit_id]
+
+        original_pca_one_unit, _ = original_pca.get_projections_one_unit(unit_id, sparse=True)
+        selected_pca_one_unit, _ = selected_pca.get_projections_one_unit(unit_id, sparse=True)
+
+        for channel_id in select_channel_ids:
+            if channel_id in original_units_to_channels:
+
+                # Now check waveforms and PCs, which are sparse
+                channel_index_in_original = np.where(original_units_to_channels == channel_id)[0][0]
+                original_unit_pca = original_pca_one_unit[:, :, channel_index_in_original]
+
+                channel_index_in_selected = np.where(selected_units_to_channels == channel_id)[0][0]
+                selected_unit_pca = selected_pca_one_unit[:, :, channel_index_in_selected]
+
+                assert np.all(original_unit_pca == selected_unit_pca)
 
 
 if __name__ == "__main__":

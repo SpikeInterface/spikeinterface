@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-from typing import Optional
 from pathlib import Path
 
 from importlib.metadata import version
@@ -32,15 +29,13 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
     use_names_as_ids : bool, default: False
         Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
         names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
-    strict_gap_mode : bool, default: False
-        See neo documentation.
-        Detect gaps using strict mode or not.
-        * strict_gap_mode = True then a gap is consider when timstamp difference between
-        two consecutive data packets is more than one sample interval.
-        * strict_gap_mode = False then a gap has an increased tolerance. Some new systems
-        with different clocks need this option otherwise, too many gaps are detected
-
-        Note that here the default is False contrary to neo.
+    gap_tolerance_ms : float | None, default: None
+        Controls how timestamp gaps in NCS files are handled.
+        If None (default), a ValueError is raised when gaps are detected, with a
+        detailed gap report. If a float value is provided, gaps smaller than this
+        threshold (in milliseconds) are ignored, and gaps larger create new segments.
+    strict_gap_mode : bool | None, default: None
+        Deprecated and will be removed in version 0.106.0. Use gap_tolerance_ms instead.
     """
 
     NeoRawIOClass = "NeuralynxRawIO"
@@ -52,10 +47,11 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
         stream_name=None,
         all_annotations=False,
         exclude_filename=None,
-        strict_gap_mode=False,
+        gap_tolerance_ms=None,
+        strict_gap_mode: bool | None = None,
         use_names_as_ids: bool = False,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path, exclude_filename, strict_gap_mode)
+        neo_kwargs = self.map_to_neo_kwargs(folder_path, exclude_filename, strict_gap_mode, gap_tolerance_ms)
         NeoBaseRecordingExtractor.__init__(
             self,
             stream_id=stream_id,
@@ -65,15 +61,21 @@ class NeuralynxRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
         self._kwargs.update(
-            dict(folder_path=str(Path(folder_path).absolute()), exclude_filename=exclude_filename),
-            strict_gap_mode=strict_gap_mode,
+            dict(
+                folder_path=str(Path(folder_path).absolute()),
+                exclude_filename=exclude_filename,
+                gap_tolerance_ms=gap_tolerance_ms,
+                strict_gap_mode=strict_gap_mode,
+            )
         )
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path, exclude_filename, strict_gap_mode):
+    def map_to_neo_kwargs(cls, folder_path, exclude_filename=None, strict_gap_mode=False, gap_tolerance_ms=None):
         neo_kwargs = {"dirname": str(folder_path), "exclude_filename": exclude_filename}
         if version("neo") >= "0.13.1":
             neo_kwargs["strict_gap_mode"] = strict_gap_mode
+        if version("neo") >= "0.14.6":
+            neo_kwargs["gap_tolerance_ms"] = gap_tolerance_ms
 
         return neo_kwargs
 
@@ -95,6 +97,9 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
     stream_name : str, default: None
         Used to extract information about the sampling frequency and t_start from the analog signal if provided.
+    exclude_filename : list[str], default: None
+        List of filename to exclude from the loading.
+        For example, use `exclude_filename=["events.nev"]` to skip loading the event file.
     """
 
     NeoRawIOClass = "NeuralynxRawIO"
@@ -104,11 +109,16 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
     def __init__(
         self,
         folder_path: str,
-        sampling_frequency: Optional[float] = None,
-        stream_id: Optional[str] = None,
-        stream_name: Optional[str] = None,
+        sampling_frequency: float | None = None,
+        stream_id: str | None = None,
+        stream_name: str | None = None,
+        exclude_filename: list[str] | None = None,
+        gap_tolerance_ms: float | None = None,
+        strict_gap_mode: bool | None = None,
     ):
-        neo_kwargs = self.map_to_neo_kwargs(folder_path)
+        neo_kwargs = self.map_to_neo_kwargs(
+            folder_path, exclude_filename, strict_gap_mode=strict_gap_mode, gap_tolerance_ms=gap_tolerance_ms
+        )
         NeoBaseSortingExtractor.__init__(
             self,
             sampling_frequency=sampling_frequency,
@@ -122,11 +132,18 @@ class NeuralynxSortingExtractor(NeoBaseSortingExtractor):
             "sampling_frequency": sampling_frequency,
             "stream_id": stream_id,
             "stream_name": stream_name,
+            "exclude_filename": exclude_filename,
+            "gap_tolerance_ms": gap_tolerance_ms,
+            "strict_gap_mode": strict_gap_mode,
         }
 
     @classmethod
-    def map_to_neo_kwargs(cls, folder_path):
-        neo_kwargs = {"dirname": str(folder_path)}
+    def map_to_neo_kwargs(cls, folder_path, exclude_filename=None, strict_gap_mode=False, gap_tolerance_ms=None):
+        neo_kwargs = {"dirname": str(folder_path), "exclude_filename": exclude_filename}
+        if version("neo") >= "0.13.1":
+            neo_kwargs["strict_gap_mode"] = strict_gap_mode
+        if version("neo") >= "0.14.6":
+            neo_kwargs["gap_tolerance_ms"] = gap_tolerance_ms
         return neo_kwargs
 
 

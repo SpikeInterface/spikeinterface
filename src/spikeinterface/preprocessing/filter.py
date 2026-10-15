@@ -1,11 +1,19 @@
-from __future__ import annotations
+import warnings
 
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core import (
+    get_chunk_with_margin,
+    ensure_chunk_size,
+    get_global_job_kwargs,
+    is_set_global_job_kwargs_set,
+)
+
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-from spikeinterface.core import get_chunk_with_margin
+HIGHPASS_ERROR_THRESHOLD_HZ = 100
+MARGIN_TO_CHUNK_PERCENT_WARNING = 0.2  # 20%
 
 
 _common_filter_docs = """**filter_kwargs : dict
@@ -42,8 +50,9 @@ class FilterRecording(BasePreprocessor):
         If list. band (low, high) in Hz for "bandpass" filter type
     btype : "bandpass" | "highpass", default: "bandpass"
         Type of the filter
-    margin_ms : float, default: 5.0
-        Margin in ms on border to avoid border effect
+    margin_ms : float, default: None
+        Margin in ms on border to avoid border effect.
+        Must be provided by sub-class.
     coeff : array | None, default: None
         Filter coefficients in the filter_mode form.
     dtype : dtype or None, default: None
@@ -73,18 +82,18 @@ class FilterRecording(BasePreprocessor):
     def __init__(
         self,
         recording,
-        band=[300.0, 6000.0],
+        band=(300.0, 6000.0),
         btype="bandpass",
         filter_order=5,
         ftype="butter",
         filter_mode="sos",
-        margin_ms=5.0,
+        margin_ms=None,
         add_reflect_padding=False,
         coeff=None,
         dtype=None,
         direction="forward-backward",
     ):
-        import scipy.signal
+        from scipy.signal import iirfilter
 
         assert filter_mode in ("sos", "ba"), "'filter' mode must be 'sos' or 'ba'"
         fs = recording.get_sampling_frequency()
@@ -92,7 +101,7 @@ class FilterRecording(BasePreprocessor):
             assert btype in ("bandpass", "highpass"), "'bytpe' must be 'bandpass' or 'highpass'"
             # coefficient
             # self.coeff is 'sos' or 'ab' style
-            filter_coeff = scipy.signal.iirfilter(
+            filter_coeff = iirfilter(
                 filter_order, band, fs=fs, analog=False, btype=btype, ftype=ftype, output=filter_mode
             )
         else:
@@ -110,8 +119,18 @@ class FilterRecording(BasePreprocessor):
         if "offset_to_uV" in self.get_property_keys():
             self.set_channel_offsets(0)
 
+        assert margin_ms is not None, "margin_ms must be provided!"
         margin = int(margin_ms * fs / 1000.0)
-        for parent_segment in recording._recording_segments:
+
+        global_job_kwargs_chunk_size = ensure_chunk_size(recording, **get_global_job_kwargs())
+        if is_set_global_job_kwargs_set() and margin > MARGIN_TO_CHUNK_PERCENT_WARNING * global_job_kwargs_chunk_size:
+            warnings.warn(
+                f"The margin size ({margin} samples) is more than {int(MARGIN_TO_CHUNK_PERCENT_WARNING * 100)}% "
+                f"of the global chunk size {global_job_kwargs_chunk_size} samples. This may lead to performance bottlenecks when "
+                f"chunking. Consider increasing the chunk_size or chunk_duration to minimize margin overhead."
+            )
+        self.margin_samples = margin
+        for parent_segment in recording.segments:
             self.add_recording_segment(
                 FilterRecordingSegment(
                     parent_segment,
@@ -173,23 +192,23 @@ class FilterRecordingSegment(BasePreprocessorSegment):
         if traces_dtype.kind == "u":
             traces_chunk = traces_chunk.astype("float32")
 
-        import scipy.signal
+        from scipy.signal import sosfiltfilt, filtfilt, sosfilt, lfilter
 
         if self.direction == "forward-backward":
             if self.filter_mode == "sos":
-                filtered_traces = scipy.signal.sosfiltfilt(self.coeff, traces_chunk, axis=0)
+                filtered_traces = sosfiltfilt(self.coeff, traces_chunk, axis=0)
             elif self.filter_mode == "ba":
                 b, a = self.coeff
-                filtered_traces = scipy.signal.filtfilt(b, a, traces_chunk, axis=0)
+                filtered_traces = filtfilt(b, a, traces_chunk, axis=0)
         else:
             if self.direction == "backward":
                 traces_chunk = np.flip(traces_chunk, axis=0)
 
             if self.filter_mode == "sos":
-                filtered_traces = scipy.signal.sosfilt(self.coeff, traces_chunk, axis=0)
+                filtered_traces = sosfilt(self.coeff, traces_chunk, axis=0)
             elif self.filter_mode == "ba":
                 b, a = self.coeff
-                filtered_traces = scipy.signal.lfilter(b, a, traces_chunk, axis=0)
+                filtered_traces = lfilter(b, a, traces_chunk, axis=0)
 
             if self.direction == "backward":
                 filtered_traces = np.flip(filtered_traces, axis=0)
@@ -217,10 +236,13 @@ class BandpassFilterRecording(FilterRecording):
         The highpass cutoff frequency in Hz
     freq_max : float
         The lowpass cutoff frequency in Hz
-    margin_ms : float
-        Margin in ms on border to avoid border effect
+    margin_ms : float | str, default: "auto"
+        Margin in ms on border to avoid border effect.
+        If "auto", margin is computed as 3 times the filter highpass cutoff period.
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
+    ignore_low_freq_error : bool, default: False
+        If True, does not raise an error if freq_min is too low for the sampling frequency.
     {}
 
     Returns
@@ -229,15 +251,50 @@ class BandpassFilterRecording(FilterRecording):
         The bandpass-filtered recording extractor object
     """
 
-    def __init__(self, recording, freq_min=300.0, freq_max=6000.0, margin_ms=5.0, dtype=None, **filter_kwargs):
+    def __init__(
+        self,
+        recording,
+        freq_min=300.0,
+        freq_max=6000.0,
+        margin_ms="auto",
+        dtype=None,
+        ignore_low_freq_error=False,
+        _skip_margin_warning_for_old_version=False,
+        **filter_kwargs,
+    ):
+        if margin_ms == "auto":
+            margin_ms = adjust_margin_ms_for_highpass(freq_min)
+        highpass_check(
+            freq_min,
+            margin_ms,
+            ignore_low_freq_error=ignore_low_freq_error,
+            skip_warning=_skip_margin_warning_for_old_version,
+        )
         FilterRecording.__init__(
             self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype, **filter_kwargs
         )
         dtype = fix_dtype(recording, dtype)
         self._kwargs = dict(
-            recording=recording, freq_min=freq_min, freq_max=freq_max, margin_ms=margin_ms, dtype=dtype.str
+            recording=recording,
+            freq_min=freq_min,
+            freq_max=freq_max,
+            margin_ms=margin_ms,
+            dtype=dtype.str,
+            ignore_low_freq_error=ignore_low_freq_error,
         )
         self._kwargs.update(filter_kwargs)
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        new_kwargs = old_kwargs.copy()
+        is_lfp_case = old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
+        if "ignore_low_freq_error" not in new_kwargs:
+            new_kwargs["ignore_low_freq_error"] = True
+            if is_lfp_case:
+                new_kwargs["_skip_margin_warning_for_old_version"] = False
+            else:
+                new_kwargs["_skip_margin_warning_for_old_version"] = True
+        return new_kwargs
 
 
 class HighpassFilterRecording(FilterRecording):
@@ -250,10 +307,13 @@ class HighpassFilterRecording(FilterRecording):
         The recording extractor to be re-referenced
     freq_min : float
         The highpass cutoff frequency in Hz
-    margin_ms : float
-        Margin in ms on border to avoid border effect
+    margin_ms : float | str, default: "auto"
+        Margin in ms on border to avoid border effect.
+        If "auto", margin is computed as 3 times the filter highpass cutoff period.
     dtype : dtype or None
         The dtype of the returned traces. If None, the dtype of the parent recording is used
+    ignore_low_freq_error : bool, default: False
+        If True, does not raise an error if freq_min is too low for the sampling frequency.
     {}
 
     Returns
@@ -262,16 +322,51 @@ class HighpassFilterRecording(FilterRecording):
         The highpass-filtered recording extractor object
     """
 
-    def __init__(self, recording, freq_min=300.0, margin_ms=5.0, dtype=None, **filter_kwargs):
+    def __init__(
+        self,
+        recording,
+        freq_min=300.0,
+        margin_ms="auto",
+        dtype=None,
+        ignore_low_freq_error=False,
+        _skip_margin_warning_for_old_version=False,
+        **filter_kwargs,
+    ):
+        if margin_ms == "auto":
+            margin_ms = adjust_margin_ms_for_highpass(freq_min)
+        highpass_check(
+            freq_min,
+            margin_ms,
+            ignore_low_freq_error=ignore_low_freq_error,
+            skip_warning=_skip_margin_warning_for_old_version,
+        )
         FilterRecording.__init__(
             self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
         )
         dtype = fix_dtype(recording, dtype)
-        self._kwargs = dict(recording=recording, freq_min=freq_min, margin_ms=margin_ms, dtype=dtype.str)
+        self._kwargs = dict(
+            recording=recording,
+            freq_min=freq_min,
+            margin_ms=margin_ms,
+            dtype=dtype.str,
+            ignore_low_freq_error=ignore_low_freq_error,
+        )
         self._kwargs.update(filter_kwargs)
 
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        new_kwargs = old_kwargs.copy()
+        is_lfp_case = old_kwargs["freq_min"] < HIGHPASS_ERROR_THRESHOLD_HZ
+        if "ignore_low_freq_error" not in new_kwargs:
+            new_kwargs["ignore_low_freq_error"] = True
+            if is_lfp_case:
+                new_kwargs["_skip_margin_warning_for_old_version"] = False
+            else:
+                new_kwargs["_skip_margin_warning_for_old_version"] = True
+        return new_kwargs
 
-class NotchFilterRecording(BasePreprocessor):
+
+class NotchFilterRecording(FilterRecording):
     """
     Parameters
     ----------
@@ -283,7 +378,7 @@ class NotchFilterRecording(BasePreprocessor):
         The quality factor of the notch filter
     dtype : None | dtype, default: None
         dtype of recording. If None, will take from `recording`
-    margin_ms : float, default: 5.0
+    margin_ms : float | str, default: "auto"
         Margin in ms on border to avoid border effect
 
     Returns
@@ -292,16 +387,16 @@ class NotchFilterRecording(BasePreprocessor):
         The notch-filtered recording extractor object
     """
 
-    def __init__(self, recording, freq=3000, q=30, margin_ms=5.0, dtype=None):
-        # coeef is 'ba' type
+    def __init__(self, recording, freq=3000, q=30, margin_ms="auto", dtype=None, **filter_kwargs):
+        from scipy.signal import iirnotch
+
+        if margin_ms == "auto":
+            margin_ms = adjust_margin_ms_for_notch(q, freq)
+
         fn = 0.5 * float(recording.get_sampling_frequency())
-        import scipy.signal
+        coeff = iirnotch(freq / fn, q)
 
-        coeff = scipy.signal.iirnotch(freq / fn, q)
-
-        if dtype is None:
-            dtype = recording.get_dtype()
-        dtype = np.dtype(dtype)
+        dtype = fix_dtype(recording, dtype)
 
         # if uint --> unsupported
         if dtype.kind == "u":
@@ -310,15 +405,12 @@ class NotchFilterRecording(BasePreprocessor):
                 "to specify a signed type (e.g. 'int16', 'float32')"
             )
 
-        BasePreprocessor.__init__(self, recording, dtype=dtype)
+        FilterRecording.__init__(
+            self, recording, coeff=coeff, filter_mode="ba", margin_ms=margin_ms, dtype=dtype, **filter_kwargs
+        )
         self.annotate(is_filtered=True)
-
-        sf = recording.get_sampling_frequency()
-        margin = int(margin_ms * sf / 1000.0)
-        for parent_segment in recording._recording_segments:
-            self.add_recording_segment(FilterRecordingSegment(parent_segment, coeff, "ba", margin, dtype))
-
         self._kwargs = dict(recording=recording, freq=freq, q=q, margin_ms=margin_ms, dtype=dtype.str)
+        self._kwargs.update(filter_kwargs)
 
 
 # functions for API
@@ -331,7 +423,7 @@ highpass_filter = define_function_handling_dict_from_class(source_class=Highpass
 def causal_filter(
     recording,
     direction="forward",
-    band=[300.0, 6000.0],
+    band=(300.0, 6000.0),
     btype="bandpass",
     filter_order=5,
     ftype="butter",
@@ -396,6 +488,38 @@ def causal_filter(
 
 bandpass_filter.__doc__ = bandpass_filter.__doc__.format(_common_filter_docs)
 highpass_filter.__doc__ = highpass_filter.__doc__.format(_common_filter_docs)
+
+
+def adjust_margin_ms_for_highpass(freq_min, multiplier=5):
+    margin_ms = multiplier * (1000.0 / freq_min)
+    return margin_ms
+
+
+def adjust_margin_ms_for_notch(q, f0, multiplier=5):
+    margin_ms = (multiplier / np.pi) * (q / f0) * 1000.0
+    return margin_ms
+
+
+def highpass_check(freq_min, margin_ms, ignore_low_freq_error=False, skip_warning=False):
+    if freq_min < HIGHPASS_ERROR_THRESHOLD_HZ:
+        if not ignore_low_freq_error:
+            raise ValueError(
+                f"The freq_min ({freq_min} Hz) is too low and may cause artifacts during chunk processing. "
+                f"You can set 'ignore_low_freq_error=True' to bypass this error, but make sure you understand the implications. "
+                f"It is recommended to use large chunks when processing/saving your filtered recording to minimize IO overhead."
+                f"Refer to this documentation on LFP filtering and chunking artifacts for more details: "
+                f"https://spikeinterface.readthedocs.io/en/latest/forhowto/plot_extract_lfps.html. "
+            )
+    if margin_ms == "auto":
+        margin_ms = adjust_margin_ms_for_highpass(freq_min)
+    else:
+        auto_margin_ms = adjust_margin_ms_for_highpass(freq_min)
+        if margin_ms < auto_margin_ms and not skip_warning:
+            warnings.warn(
+                f"The provided margin_ms ({margin_ms} ms) is smaller than the recommended margin for the given freq_min ({freq_min} Hz). "
+                f"This may lead to artifacts at the edges of chunks during processing. "
+                f"Consider increasing the margin_ms to at least {auto_margin_ms} ms."
+            )
 
 
 def fix_dtype(recording, dtype):

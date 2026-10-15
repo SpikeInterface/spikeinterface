@@ -1,14 +1,7 @@
 """Sorting components: template matching."""
 
-from __future__ import annotations
-
-
 import numpy as np
-
-from spikeinterface.core import get_noise_levels
-from spikeinterface.sortingcomponents.peak_detection import DetectPeakByChannel
-from spikeinterface.core.template import Templates
-
+import importlib.util
 
 spike_dtype = [
     ("sample_index", "int64"),
@@ -18,13 +11,16 @@ spike_dtype = [
     ("segment_index", "int64"),
 ]
 
-try:
-    import torch
-    import torch.nn.functional as F
-
-    HAVE_TORCH = True
-    from torch.nn.functional import conv1d
-except ImportError:
+torch_spec = importlib.util.find_spec("torch")
+if torch_spec is not None:
+    torch_nn_functional_spec = importlib.util.find_spec("torch.nn")
+    if torch_nn_functional_spec is not None:
+        HAVE_TORCH = True
+        import torch
+        from torch.nn.functional import conv1d
+    else:
+        HAVE_TORCH = False
+else:
     HAVE_TORCH = False
 
 from .base import BaseTemplateMatching
@@ -70,8 +66,7 @@ def compress_templates(
 
 
 def compute_overlaps(templates, num_samples, num_channels, sparsities):
-    import scipy.spatial
-    import scipy
+    from scipy.sparse import hstack, csr_matrix
 
     num_templates = len(templates)
 
@@ -89,7 +84,7 @@ def compute_overlaps(templates, num_samples, num_channels, sparsities):
         source = dense_templates[:, :delay, :].reshape(num_templates, -1)
         target = dense_templates[:, num_samples - delay :, :].reshape(num_templates, -1)
 
-        overlaps[delay] = scipy.sparse.csr_matrix(source.dot(target.T))
+        overlaps[delay] = csr_matrix(source.dot(target.T))
 
         if delay < num_samples:
             overlaps[size - delay + 1] = overlaps[delay].T.tocsr()
@@ -98,13 +93,13 @@ def compute_overlaps(templates, num_samples, num_channels, sparsities):
 
     for i in range(num_templates):
         data = [overlaps[j][i, :].T for j in range(size)]
-        data = scipy.sparse.hstack(data)
+        data = hstack(data)
         new_overlaps += [data]
 
     return new_overlaps
 
 
-class CircusOMPSVDPeeler(BaseTemplateMatching):
+class CircusOMPPeeler(BaseTemplateMatching):
     """
     Orthogonal Matching Pursuit inspired from Spyking Circus sorter
 
@@ -118,30 +113,35 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
 
     IMPORTANT NOTE: small chunks are more efficient for such Peeler,
     consider using 100ms chunk
-
-    Parameters
-    ----------
-    amplitude : tuple
-        (Minimal, Maximal) amplitudes allowed for every template
-    max_failures : int
-        Stopping criteria of the OMP algorithm, as number of retry while updating amplitudes
-    sparse_kwargs : dict
-        Parameters to extract a sparsity mask from the waveform_extractor, if not
-        already sparse.
-    rank : int, default: 5
-        Number of components used internally by the SVD
-    vicinity : int
-        Size of the area surrounding a spike to perform modification (expressed in terms
-        of template temporal width)
-    engine : string in ["numpy", "torch", "auto"]. Default "auto"
-        The engine to use for the convolutions
-    torch_device : string in ["cpu", "cuda", None]. Default "cpu"
-        Controls torch device if the torch engine is selected
-    shared_memory : bool, default True
-        If True, the overlaps are stored in shared memory, which is more efficient when
-        using numerous cores
-    -----
     """
+
+    name = "circus-omp"
+    need_noise_levels = False
+    params_doc = """
+        amplitude : tuple
+            (Minimal, Maximal) amplitudes allowed for every template
+        max_failures : int
+            Stopping criteria of the OMP algorithm, as number of retry while updating amplitudes
+        rank : int, default: 5
+            Number of components used internally by the SVD
+        vicinity : int
+            Size of the area surrounding a spike to perform modification (expressed in terms
+            of template temporal width)
+        ignore_inds : list
+            List of template indices to ignore during the matching
+        vicinity: int
+            Size of the area surrounding a spike to perform modification (expressed in terms
+            of template temporal width)
+        precomputed : dict | None
+            If not None, a dict with precomputed values for the templates
+        engine : string in ["numpy", "torch", "auto"]. Default "auto"
+            The engine to use for the convolutions
+        torch_device : string in ["cpu", "cuda", None]. Default "cpu"
+            Controls torch device if the torch engine is selected
+        shared_memory : bool, default True
+            If True, the overlaps are stored in shared memory, which is more efficient when
+            using numerous cores
+        """
 
     _more_output_keys = [
         "norms",
@@ -157,9 +157,8 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
     def __init__(
         self,
         recording,
+        templates,
         return_output=True,
-        parents=None,
-        templates=None,
         amplitudes=[0.6, np.inf],
         stop_criteria="max_failures",
         max_failures=5,
@@ -174,7 +173,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         torch_device="cpu",
     ):
 
-        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
 
         self.num_channels = recording.get_num_channels()
         self.num_samples = templates.num_samples
@@ -244,10 +243,11 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
         else:
             sparsity = self.templates.sparsity.mask
 
-        units_overlaps = np.sum(np.logical_and(sparsity[:, np.newaxis, :], sparsity[np.newaxis, :, :]), axis=2)
-        self.units_overlaps = units_overlaps > 0
+        # units_overlaps = np.sum(np.logical_and(sparsity[:, np.newaxis, :], sparsity[np.newaxis, :, :]), axis=2)
         self.unit_overlaps_indices = {}
+        self.units_overlaps = {}
         for i in range(self.num_templates):
+            self.units_overlaps[i] = np.sum(np.logical_and(sparsity[i, :], sparsity), axis=1) > 0
             self.unit_overlaps_indices[i] = np.flatnonzero(self.units_overlaps[i])
 
         templates_array = self.templates.get_dense_templates().copy()
@@ -322,19 +322,18 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                 output[key] = getattr(self, key)
         return output
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
-        import scipy.spatial
-        import scipy
+        from scipy.linalg import get_lapack_funcs, get_blas_funcs, solve_triangular
         from scipy import ndimage
 
         if not self.is_pushed:
             self._push_to_torch()
 
-        (potrs,) = scipy.linalg.get_lapack_funcs(("potrs",), dtype=np.float32)
-        (nrm2,) = scipy.linalg.get_blas_funcs(("nrm2",), dtype=np.float32)
+        (potrs,) = get_lapack_funcs(("potrs",), dtype=np.float32)
+        (nrm2,) = get_blas_funcs(("nrm2",), dtype=np.float32)
 
         omp_tol = np.finfo(np.float32).eps
         neighbor_window = self.num_samples - 1
@@ -365,9 +364,9 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
             # Filter using overlap-and-add convolution
             spatially_filtered_data = np.matmul(self.spatial, traces.T[np.newaxis, :, :])
             scaled_filtered_data = spatially_filtered_data * self.singular
-            from scipy import signal
+            from scipy.signal import oaconvolve
 
-            objective_by_rank = signal.oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="valid")
+            objective_by_rank = oaconvolve(scaled_filtered_data, self.temporal, axes=2, mode="valid")
             scalar_products += np.sum(objective_by_rank, axis=0)
 
         num_peaks = scalar_products.shape[1]
@@ -448,7 +447,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                     M[num_selection, idx[mask]] = local_overlaps[table[a], b]
 
                     if self.vicinity == 0:
-                        scipy.linalg.solve_triangular(
+                        solve_triangular(
                             M[:num_selection, :num_selection],
                             M[num_selection, :num_selection],
                             trans=0,
@@ -468,7 +467,7 @@ class CircusOMPSVDPeeler(BaseTemplateMatching):
                         if len(is_in_vicinity) > 0:
                             L = M[is_in_vicinity, :][:, is_in_vicinity]
 
-                            M[num_selection, is_in_vicinity] = scipy.linalg.solve_triangular(
+                            M[num_selection, is_in_vicinity] = solve_triangular(
                                 L,
                                 M[num_selection, is_in_vicinity],
                                 trans=0,
@@ -602,10 +601,6 @@ class CircusPeeler(BaseTemplateMatching):
         matches
     detect_threshold : int
         The detection threshold
-    noise_levels : array
-        The noise levels, for every channels
-    random_chunk_kwargs : dict
-        Parameters for computing noise levels, if not provided (sub optimal)
     max_amplitude : float
         Maximal amplitude allowed for every template
     min_amplitude : float
@@ -625,26 +620,22 @@ class CircusPeeler(BaseTemplateMatching):
         self,
         recording,
         return_output=True,
-        parents=None,
         templates=None,
         peak_sign="neg",
-        exclude_sweep_ms=0.1,
+        exclude_sweep_ms=0.8,
         jitter_ms=0.1,
         detect_threshold=5,
         noise_levels=None,
-        random_chunk_kwargs={},
         max_amplitude=1.5,
         min_amplitude=0.5,
         use_sparse_matrix_threshold=0.25,
     ):
 
-        BaseTemplateMatching.__init__(self, recording, templates, return_output=True, parents=None)
-
-        try:
-            from sklearn.feature_extraction.image import extract_patches_2d
-
+        BaseTemplateMatching.__init__(self, recording, templates, return_output=return_output)
+        sklearn_spec = importlib.util.find_spec("sklearn") is not None
+        if sklearn_spec is not None:
             HAVE_SKLEARN = True
-        except ImportError:
+        else:
             HAVE_SKLEARN = False
 
         assert HAVE_SKLEARN, "CircusPeeler needs sklearn to work"
@@ -656,10 +647,6 @@ class CircusPeeler(BaseTemplateMatching):
         self.num_channels = recording.get_num_channels()
         self.num_samples = templates.num_samples
         self.num_templates = len(templates.unit_ids)
-
-        if noise_levels is None:
-            print("CircusPeeler : noise should be computed outside")
-            noise_levels = get_noise_levels(recording, **d["random_chunk_kwargs"], return_in_uV=False)
 
         self.abs_threholds = noise_levels * detect_threshold
 
@@ -688,8 +675,8 @@ class CircusPeeler(BaseTemplateMatching):
         self.peak_sign = peak_sign
 
     def _prepare_templates(self):
-        import scipy.spatial
-        import scipy
+
+        from scipy.sparse import csr_matrix
 
         self.norms = np.zeros(self.num_templates, dtype=np.float32)
 
@@ -711,7 +698,7 @@ class CircusPeeler(BaseTemplateMatching):
 
         nnz = np.sum(templates_array != 0) / (self.num_templates * self.num_samples * self.num_channels)
         if nnz <= self.use_sparse_matrix_threshold:
-            templates_array = scipy.sparse.csr_matrix(templates_array)
+            templates_array = csr_matrix(templates_array)
             print(f"Templates are automatically sparsified (sparsity level is {nnz})")
             self.is_dense = False
         else:
@@ -719,7 +706,7 @@ class CircusPeeler(BaseTemplateMatching):
 
         self.circus_templates = templates_array
 
-    def get_trace_margin(self):
+    def get_margin(self):
         return self.margin
 
     def compute_matching(self, traces, start_frame, end_frame, segment_index):

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import json
 from pathlib import Path
 import pickle
@@ -35,11 +33,11 @@ def get_gt_motion_from_unit_displacement(
     spatial_bins_um,
     direction_dim=1,
 ):
-    import scipy.interpolate
+    from scipy.interpolate import interp1d
 
     unit_displacements = unit_displacements[:, :, direction_dim]
     times = np.arange(unit_displacements.shape[0]) / displacement_sampling_frequency
-    f = scipy.interpolate.interp1d(times, unit_displacements, axis=0)
+    f = interp1d(times, unit_displacements, axis=0)
     unit_displacements = f(temporal_bins_s.clip(times[0], times[-1]))
 
     # spatial interpolataion of units discplacement
@@ -50,9 +48,7 @@ def get_gt_motion_from_unit_displacement(
         # non rigid
         gt_displacement = np.zeros((temporal_bins_s.size, spatial_bins_um.size))
         for t in range(temporal_bins_s.shape[0]):
-            f = scipy.interpolate.interp1d(
-                unit_locations[:, direction_dim], unit_displacements[t, :], fill_value="extrapolate"
-            )
+            f = interp1d(unit_locations[:, direction_dim], unit_displacements[t, :], fill_value="extrapolate")
             gt_displacement[t, :] = f(spatial_bins_um)
 
     gt_motion = Motion(
@@ -89,7 +85,9 @@ class MotionEstimationBenchmark(Benchmark):
         noise_levels = get_noise_levels(self.recording, return_in_uV=False, **job_kwargs)
 
         t0 = time.perf_counter()
-        peaks = detect_peaks(self.recording, noise_levels=noise_levels, **p["detect_kwargs"], **job_kwargs)
+        detect_kwargs = p["detect_kwargs"].copy()
+        detect_kwargs["noise_levels"] = noise_levels
+        peaks = detect_peaks(self.recording, method_kwargs=detect_kwargs, job_kwargs=job_kwargs)
         t1 = time.perf_counter()
         if p["select_kwargs"] is not None:
             selected_peaks = select_peaks(self.peaks, **p["select_kwargs"], **job_kwargs)
@@ -97,7 +95,9 @@ class MotionEstimationBenchmark(Benchmark):
             selected_peaks = peaks
 
         t2 = time.perf_counter()
-        peak_locations = localize_peaks(self.recording, selected_peaks, **p["localize_kwargs"], **job_kwargs)
+        peak_locations = localize_peaks(
+            self.recording, selected_peaks, method_kwargs=p["localize_kwargs"], job_kwargs=job_kwargs
+        )
         t3 = time.perf_counter()
         motion = estimate_motion(self.recording, selected_peaks, peak_locations, **p["estimate_motion_kwargs"])
         t4 = time.perf_counter()
@@ -151,6 +151,15 @@ class MotionEstimationBenchmark(Benchmark):
 
 
 class MotionEstimationStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare motion estimation methods.
+
+    The ground truth displacements of all units must be known and method outputs
+    will be compared to them.
+
+    See also :py:func:`~spikeinterface.generation.generate_drifting_recording`,
+    for generation drifting recording.
+    """
 
     benchmark_class = MotionEstimationBenchmark
 
@@ -240,6 +249,8 @@ class MotionEstimationStudy(BenchmarkStudy):
 
             # ax0.set_ylim()
 
+        return fig
+
     def plot_errors(self, case_keys=None, figsize=None, lim=None):
         import matplotlib.pyplot as plt
 
@@ -305,6 +316,8 @@ class MotionEstimationStudy(BenchmarkStudy):
             if lim is not None:
                 ax.set_ylim(0, lim)
 
+        return fig
+
     def plot_summary_errors(self, case_keys=None, show_legend=True, figsize=(15, 5)):
         import matplotlib.pyplot as plt
 
@@ -367,6 +380,8 @@ class MotionEstimationStudy(BenchmarkStudy):
         ax2.axvline(probe_y_max, color="k", ls="--", alpha=0.5)
 
         despine(ax2)
+
+        return fig
 
         # ax1.sharey(ax0)
         # ax2.sharey(ax0)

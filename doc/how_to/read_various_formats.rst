@@ -108,7 +108,7 @@ stream information can be retrieved by using the
 
 
 The
-:py:func::literal:`~spikeinterface.extractors.read_spike2`\` function is equivalent to instantiating a :py:class:`\ ~spikeinterface.extractors.Spike2RecordingExtractor\`
+:py:func:`~spikeinterface.extractors.read_spike2` function is equivalent to instantiating a :py:class:`~spikeinterface.extractors.Spike2RecordingExtractor`
 object:
 
 .. code:: ipython3

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .paircomparisons import GroundTruthComparison
 
 # this import was previously used. Leave for now.

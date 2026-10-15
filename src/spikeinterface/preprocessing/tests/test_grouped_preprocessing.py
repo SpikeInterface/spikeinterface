@@ -40,7 +40,9 @@ def test_grouped_preprocessing():
     sp_recording_1 = silence_periods(recording_1, list_periods=list_periods, mode=mode, seed=seed)
     sp_recording_2 = silence_periods(recording_2, list_periods=list_periods, mode=mode, seed=seed)
 
-    dict_of_silence_period_recordings = silence_periods(dict_of_recordings, list_periods, mode=mode, seed=seed)
+    dict_of_silence_period_recordings = silence_periods(
+        dict_of_recordings, list_periods=list_periods, mode=mode, seed=seed
+    )
     check_recordings_equal(dict_of_silence_period_recordings["one"], sp_recording_1)
     check_recordings_equal(dict_of_silence_period_recordings["two"], sp_recording_2)
 

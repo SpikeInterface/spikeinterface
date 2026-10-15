@@ -28,8 +28,10 @@ import torch
 
 import spikeinterface.full as si
 from spikeinterface.core.testing import check_sortings_equal
-from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter
+from spikeinterface.sorters.external.kilosort4 import Kilosort4Sorter, read_kilosort4_motion
+from spikeinterface.core.motion import Motion
 from probeinterface.io import write_prb
+from spikeinterface.extractors import read_kilosort_as_analyzer
 
 import kilosort
 from kilosort.parameters import DEFAULT_SETTINGS
@@ -76,7 +78,7 @@ PARAMS_TO_TEST_DICT = {
     "x_centers": 5,
     "binning_depth": 1,
     "drift_smoothing": [250, 250, 250],
-    "artifact_threshold": 200,
+    "artifact_threshold": 500,
     "ccg_threshold": 1e12,
     "acg_threshold": 1e12,
     "cluster_downsampling": 2,
@@ -116,6 +118,13 @@ if parse(kilosort.__version__) >= parse("4.0.37"):
     PARAMS_TO_TEST_DICT.update({"max_cluster_subset": 20})
     PARAMETERS_NOT_AFFECTING_RESULTS.append("max_cluster_subset")
 
+if parse(kilosort.__version__) >= parse("4.1.2"):
+    PARAMS_TO_TEST_DICT.update({"batch_downsampling": 2})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("batch_downsampling")
+
+    PARAMS_TO_TEST_DICT.update({"cluster_init_seed": 2})
+    PARAMETERS_NOT_AFFECTING_RESULTS.append("cluster_init_seed")
+
 
 PARAMS_TO_TEST = list(PARAMS_TO_TEST_DICT.keys())
 
@@ -134,6 +143,7 @@ class TestKilosort4Long:
         recording = self._get_ground_truth_recording()
 
         paths = self._save_ground_truth_recording(recording, tmp_path)
+        recording = si.load(paths["recording_path"].parent)
 
         return (recording, paths)
 
@@ -328,6 +338,8 @@ class TestKilosort4Long:
             "scale",
             "file_object",
         ]
+        if parse(kilosort.__version__) >= parse("4.1.2"):
+            expected_arguments += ["batch_downsampling"]
 
         self._check_arguments(BinaryFiltered, expected_arguments)
 
@@ -351,6 +363,12 @@ class TestKilosort4Long:
         """
         recording, paths = recording_and_paths
         param_key = parameter
+
+        # Non-default batch_downsampling fails for short recordings, as there aren't
+        # enough batches. Since we test on a 5s recording, we skip it.
+        if param_key == "batch_downsampling":
+            return
+
         param_value = PARAMS_TO_TEST_DICT[param_key]
 
         # Setup parameters for KS4 and run it natively
@@ -390,11 +408,14 @@ class TestKilosort4Long:
         ops = ops.tolist()  # strangely this makes a dict
         assert ops[param_key] == param_value
 
-        # Finally, check out test parameters actually change the output of
-        # KS4, ensuring our tests are actually doing something (exxcept for some params).
+        # Check our test parameters actually change the output of
+        # KS4, ensuring our tests are actually doing something (except for some params).
         if param_key not in PARAMETERS_NOT_AFFECTING_RESULTS:
             with pytest.raises(AssertionError):
                 check_sortings_equal(default_kilosort_sorting, sorting_si)
+
+        # Check that the kilosort -> analyzer tool doesn't error
+        analyzer = read_kilosort_as_analyzer(kilosort_output_dir)
 
     def test_clear_cache(self,recording_and_paths, tmp_path):
         """
@@ -461,12 +482,15 @@ class TestKilosort4Long:
         from the recording.
         """
         recording = self._get_ground_truth_recording()
-        recording_bin = recording.save()
+        # Non-binary wrapper
+        recording_zarr = recording.save(folder=tmp_path / "recording_for_ks4.zarr", format="zarr")
+        # Binary wrapper
+        recording_bin = recording.save(folder=tmp_path / "recording_for_ks4", format="binary")
 
         # run with SI wrapper
         sorting_ks4 = si.run_sorter(
             "kilosort4",
-            recording,
+            recording_zarr,
             folder=tmp_path / "ks4_output_si_wrapper_default",
             use_binary_file=None,
             remove_existing_folder=True,
@@ -480,7 +504,7 @@ class TestKilosort4Long:
         )
         sorting_ks4_force_binary = si.run_sorter(
             "kilosort4",
-            recording,
+            recording_zarr,
             folder=tmp_path / "ks4_output_force_bin",
             use_binary_file=True,
             remove_existing_folder=True,
@@ -496,7 +520,7 @@ class TestKilosort4Long:
         # test deleting recording.dat
         sorting_ks4_force_binary_keep = si.run_sorter(
             "kilosort4",
-            recording,
+            recording_zarr,
             folder=tmp_path / "ks4_output_force_bin_keep",
             use_binary_file=True,
             delete_recording_dat=False,
@@ -507,6 +531,7 @@ class TestKilosort4Long:
         check_sortings_equal(sorting_ks4, sorting_ks4_bin)
         check_sortings_equal(sorting_ks4, sorting_ks4_force_binary)
         check_sortings_equal(sorting_ks4, sorting_ks4_force_non_binary)
+        check_sortings_equal(sorting_ks4, sorting_ks4_force_binary_keep)
 
     @pytest.mark.parametrize(
         "param_to_test",
@@ -543,6 +568,7 @@ class TestKilosort4Long:
         recording = si.whiten(recording, mode="local", apply_mean=False)
 
         paths = self._save_ground_truth_recording(recording, tmp_path)
+        recording = si.load(paths["recording_path"].parent)
 
         kilosort_output_dir = tmp_path / "kilosort_output_dir"
         spikeinterface_output_dir = tmp_path / "spikeinterface_output_dir"
@@ -649,6 +675,43 @@ class TestKilosort4Long:
         results["si"]["clus"] = np.load(spikeinterface_output_dir / "sorter_output" / "spike_clusters.npy")
         assert np.allclose(results["ks"]["st"], results["si"]["st"], rtol=0, atol=1)
         assert np.array_equal(results["ks"]["clus"], results["si"]["clus"])
+
+    def test_read_kilosort4_motion(self, recording_and_paths, tmp_path):
+        """
+        Test that read_kilosort4_motion returns a Motion object whose displacement
+        equals dshift (not dshift + yblk), and that temporal/spatial bins are correct.
+        """
+        recording, _ = recording_and_paths
+        sorter_output_dir = tmp_path / "ks4_motion_output" / "sorter_output"
+
+        si.run_sorter(
+            "kilosort4",
+            recording,
+            folder=tmp_path / "ks4_motion_output",
+            remove_existing_folder=True,
+        )
+
+        ops = np.load(sorter_output_dir / "ops.npy", allow_pickle=True).item()
+        yblk = ops["yblk"]
+        dshift = ops["dshift"]
+
+        # without recording: temporal bins estimated from batch count
+        motion = read_kilosort4_motion(sorter_output_dir)
+        assert isinstance(motion, Motion)
+        assert motion.displacement[0].shape == dshift.shape
+        np.testing.assert_array_equal(motion.displacement[0], dshift)
+        np.testing.assert_array_equal(motion.spatial_bins_um, yblk)
+        assert motion.temporal_bins_s[0].shape[0] == dshift.shape[0]
+        # displacement must be relative (not offset by spatial bin position)
+        assert not np.allclose(motion.displacement[0], dshift + yblk)
+
+        # with recording: temporal bins bounded by recording times
+        motion_rec = read_kilosort4_motion(sorter_output_dir, recording=recording)
+        assert isinstance(motion_rec, Motion)
+        np.testing.assert_array_equal(motion_rec.displacement[0], dshift)
+        assert motion_rec.temporal_bins_s[0].shape[0] == dshift.shape[0]
+        assert motion_rec.temporal_bins_s[0][0] >= recording.get_start_time()
+        assert motion_rec.temporal_bins_s[0][-1] <= recording.get_end_time()
 
     ##### Helpers ######
     def _get_kilosort_native_settings(self, recording, paths, param_key, param_value):

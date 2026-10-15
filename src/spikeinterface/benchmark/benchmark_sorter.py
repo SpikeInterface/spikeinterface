@@ -3,11 +3,10 @@ This replace the previous `GroundTruthStudy`
 """
 
 import numpy as np
-from spikeinterface.core import NumpySorting
+from spikeinterface.core import NumpySorting, create_sorting_analyzer
 from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.sorters import run_sorter
 from spikeinterface.comparison import compare_sorter_to_ground_truth
-
 
 # TODO later integrate CollisionGTComparison optionally in this class.
 
@@ -26,26 +25,40 @@ class SorterBenchmark(Benchmark):
         sorting = NumpySorting.from_sorting(raw_sorting)
         self.result = {"sorting": sorting}
 
-    def compute_result(self, match_score=0.5, exhaustive_gt=True):
-        # run becnhmark result
+    def compute_result(self, match_score=0.5, exhaustive_gt=True, with_analyzer=False, **job_kwargs):
+        # run benchmark result
         sorting = self.result["sorting"]
         comp = compare_sorter_to_ground_truth(
             self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score
         )
         self.result["gt_comparison"] = comp
 
+        if with_analyzer:
+            # optionally computes analyzer to have templates for oversplited/overmerged
+            analyzer = create_sorting_analyzer(sorting, self.recording, format="memory", sparse=True, **job_kwargs)
+            analyzer.compute("random_spikes")
+            analyzer.compute("templates", **job_kwargs)
+            self.result["sorter_analyzer"] = analyzer
+
     _run_key_saved = [
         ("sorting", "sorting"),
     ]
     _result_key_saved = [
         ("gt_comparison", "pickle"),
+        ("sorter_analyzer", "sorting_analyzer"),
     ]
 
 
 class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
     """
-    This class is used to tests several sorter in several situtation.
-    This replace the previous GroundTruthStudy with more flexibility.
+    Benchmark study to compare Spike Sorters in various situtation.
+
+    This is the most most top level benchmark to compare sorter between then
+    but also to compare one sorter in challenging situation (drift, noise, ...).
+    This can also be used to compare sorters with differents paramerters.
+
+    The ground truth sorting must be given and sorting output from sorter will be
+    compared to then.
     """
 
     benchmark_class = SorterBenchmark
@@ -83,6 +96,11 @@ class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
 
         return plot_performances_vs_snr(self, **kwargs)
 
+    def plot_performances_vs_firing_rate(self, **kwargs):
+        from .benchmark_plot_tools import plot_performances_vs_firing_rate
+
+        return plot_performances_vs_firing_rate(self, **kwargs)
+
     def plot_performances_ordered(self, **kwargs):
         from .benchmark_plot_tools import plot_performances_ordered
 
@@ -102,3 +120,13 @@ class SorterStudy(BenchmarkStudy, MixinStudyUnitCount):
         from .benchmark_plot_tools import plot_performance_losses
 
         return plot_performance_losses(self, *args, **kwargs)
+
+    def plot_some_over_merged(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_merged
+
+        return plot_some_over_merged(self, *args, **kwargs)
+
+    def plot_some_over_splited(self, *args, **kwargs):
+        from .benchmark_plot_tools import plot_some_over_splited
+
+        return plot_some_over_splited(self, *args, **kwargs)

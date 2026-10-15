@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 
@@ -11,6 +9,9 @@ class DummyClustering:
     """
 
     _default_params = {}
+    name = "dummy"
+    params_doc = """
+    """
 
     @classmethod
     def main_function(cls, recording, peaks, params, job_kwargs=dict()):

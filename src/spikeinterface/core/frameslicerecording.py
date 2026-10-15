@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from .baserecording import BaseRecording, BaseRecordingSegment
 
 
@@ -12,7 +10,7 @@ class FrameSliceRecording(BaseRecording):
 
     Parameters
     ----------
-    parent_recording: BaseRecording
+    recording: BaseRecording
     start_frame: None or int, default: None
         Earliest included frame in the parent recording.
         Times are re-referenced to start_frame in the
@@ -24,13 +22,13 @@ class FrameSliceRecording(BaseRecording):
         default
     """
 
-    def __init__(self, parent_recording, start_frame=None, end_frame=None):
-        channel_ids = parent_recording.get_channel_ids()
+    def __init__(self, recording, start_frame=None, end_frame=None):
+        channel_ids = recording.get_channel_ids()
 
-        num_segments = parent_recording.get_num_segments()
+        num_segments = recording.get_num_segments()
         assert num_segments == 1, f"FrameSliceRecording only works with one segment but found {num_segments}"
 
-        samples_in_recording = parent_recording.get_num_samples(segment_index=0)
+        samples_in_recording = recording.get_num_samples(segment_index=0)
         start_frame = start_frame or 0
         end_frame = end_frame or samples_in_recording
 
@@ -42,26 +40,39 @@ class FrameSliceRecording(BaseRecording):
 
         BaseRecording.__init__(
             self,
-            sampling_frequency=parent_recording.get_sampling_frequency(),
+            sampling_frequency=recording.get_sampling_frequency(),
             channel_ids=channel_ids,
-            dtype=parent_recording.get_dtype(),
+            dtype=recording.get_dtype(),
         )
 
         # link recording segment
-        parent_segment = parent_recording._recording_segments[0]
+        parent_segment = recording.segments[0]
         sub_segment = FrameSliceRecordingSegment(parent_segment, start_frame=int(start_frame), end_frame=int(end_frame))
         self.add_recording_segment(sub_segment)
 
         # copy properties and annotations
-        parent_recording.copy_metadata(self)
-        self._parent = parent_recording
+        recording.copy_metadata(self)
+        self._parent = recording
 
         # update dump dict
         self._kwargs = {
-            "parent_recording": parent_recording,
+            "recording": recording,
             "start_frame": int(start_frame),
             "end_frame": int(end_frame),
         }
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `parent_recording' argument,
+        which is renamed to `recording'.
+        """
+        if "parent_recording" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording"] = new_kwargs.pop("parent_recording")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 class FrameSliceRecordingSegment(BaseRecordingSegment):
@@ -70,10 +81,13 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
         d = d.copy()
         if d["time_vector"] is None:
             d["t_start"] = parent_recording_segment.sample_index_to_time(start_frame)
+            parent_has_time_vector = False
         else:
-            d["time_vector"] = d["time_vector"][start_frame:end_frame]
+            d["time_vector"] = None
+            parent_has_time_vector = True
         BaseRecordingSegment.__init__(self, **d)
         self._parent_recording_segment = parent_recording_segment
+        self._parent_has_time_vector = parent_has_time_vector
         self.start_frame = start_frame
         self.end_frame = end_frame
 
@@ -87,3 +101,45 @@ class FrameSliceRecordingSegment(BaseRecordingSegment):
             start_frame=parent_start, end_frame=parent_end, channel_indices=channel_indices
         )
         return traces
+
+    # Times methods below mirror get_traces(): defer to the parent segment with an offset
+    # instead of slicing self._time_vector directly. Slicing here would force reading the
+    # whole window right away (e.g. a zarr.Array fetch+decompress), and since this segment
+    # is rebuilt from scratch once per worker process in a multiprocessing job, that cost
+    # would be paid again in every worker instead of being read lazily per chunk.
+    def get_times(self, start_frame=None, end_frame=None):
+        if self._parent_has_time_vector:
+            start_frame = int(start_frame) if start_frame is not None else 0
+            end_frame = int(end_frame) if end_frame is not None else self.get_num_samples()
+            return self._parent_recording_segment.get_times(
+                start_frame=self.start_frame + start_frame, end_frame=self.start_frame + end_frame
+            )
+        else:
+            return super().get_times(start_frame=start_frame, end_frame=end_frame)
+
+    def get_start_time(self) -> float:
+        if self._parent_has_time_vector:
+            return self._parent_recording_segment.sample_index_to_time(self.start_frame)
+        else:
+            return super().get_start_time()
+
+    def get_end_time(self) -> float:
+        if self._parent_has_time_vector:
+            return self._parent_recording_segment.sample_index_to_time(self.end_frame - 1)
+        else:
+            return super().get_end_time()
+
+    def sample_index_to_time(self, sample_ind):
+        if self._parent_has_time_vector:
+            return self._parent_recording_segment.sample_index_to_time(self.start_frame + sample_ind)
+        else:
+            return super().sample_index_to_time(sample_ind)
+
+    def time_to_sample_index(self, time_s):
+        if self._parent_has_time_vector:
+            return self._parent_recording_segment.time_to_sample_index(time_s) - self.start_frame
+        else:
+            return super().time_to_sample_index(time_s)
+
+    def has_time_vector(self) -> bool:
+        return self._parent_has_time_vector

@@ -1,27 +1,22 @@
-from __future__ import annotations
 import numpy as np
-from spikeinterface import BaseSorting
 
-from spikeinterface import SortingAnalyzer
-
-from spikeinterface.core.template_tools import get_template_extremum_channel_peak_shift, get_template_amplitudes
+from spikeinterface import BaseSorting, SortingAnalyzer
+from spikeinterface.core.template_tools import get_template_peak_shift_on_main_channel, get_template_amplitudes
 from spikeinterface.postprocessing import align_sorting
-
 
 _remove_strategies = ("minimum_shift", "highest_amplitude", "max_spikes")
 
 
 def remove_redundant_units(
-    sorting_or_sorting_analyzer,
-    align=True,
-    unit_peak_shifts=None,
-    delta_time=0.4,
-    agreement_threshold=0.2,
-    duplicate_threshold=0.8,
-    remove_strategy="minimum_shift",
-    peak_sign="neg",
-    extra_outputs=False,
-) -> BaseSorting:
+    sorting_or_sorting_analyzer: BaseSorting | SortingAnalyzer,
+    align: bool = True,
+    unit_peak_shifts: dict[int, float] | None = None,
+    delta_time: float = 0.4,
+    agreement_threshold: float = 0.2,
+    duplicate_threshold: float = 0.8,
+    remove_strategy: str = "minimum_shift",
+    extra_outputs: bool = False,
+) -> BaseSorting | tuple[BaseSorting, list[tuple[int, int]]]:
     """
     Removes redundant or duplicate units by comparing the sorting output with itself.
 
@@ -54,9 +49,6 @@ def remove_redundant_units(
                              If shifts are equal then the "highest_amplitude" is used
             * "highest_amplitude" : keep the unit with the best amplitude on unshifted max.
             * "max_spikes" : keep the unit with more spikes
-
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        Used when remove_strategy="highest_amplitude"
     extra_outputs : bool, default: False
         If True, will return the redundant pairs.
     unit_peak_shifts : dict
@@ -74,7 +66,6 @@ def remove_redundant_units(
         sorting = sorting_or_sorting_analyzer.sorting
         sorting_analyzer = sorting_or_sorting_analyzer
     else:
-        assert not align, "The 'align' option is only available when a SortingAnalyzer is used as input"
         # other remove strategies rely on sorting analyzer looking at templates
         assert remove_strategy == "max_spikes", "For a Sorting input the remove_strategy must be 'max_spikes'"
         sorting = sorting_or_sorting_analyzer
@@ -82,7 +73,8 @@ def remove_redundant_units(
 
     if align and unit_peak_shifts is None:
         assert sorting_analyzer is not None, "For align=True must give a SortingAnalyzer or explicit unit_peak_shifts"
-        unit_peak_shifts = get_template_extremum_channel_peak_shift(sorting_analyzer)
+
+        unit_peak_shifts = get_template_peak_shift_on_main_channel(sorting_analyzer, with_dict=True)
 
     if align:
         sorting_aligned = align_sorting(sorting, unit_peak_shifts)
@@ -100,7 +92,7 @@ def remove_redundant_units(
 
     if remove_strategy in ("minimum_shift", "highest_amplitude"):
         # this is the values at spike index !
-        peak_values = get_template_amplitudes(sorting_analyzer, peak_sign=peak_sign, mode="at_index")
+        peak_values = get_template_amplitudes(sorting_analyzer, peak_mode="at_index")
         peak_values = {unit_id: np.max(np.abs(values)) for unit_id, values in peak_values.items()}
 
     if remove_strategy == "minimum_shift":
@@ -110,25 +102,15 @@ def remove_redundant_units(
                 remove_unit_ids.append(u1)
             elif np.abs(unit_peak_shifts[u1]) < np.abs(unit_peak_shifts[u2]):
                 remove_unit_ids.append(u2)
-            else:
-                # equal shift use peak values
-                if np.abs(peak_values[u1]) < np.abs(peak_values[u2]):
-                    remove_unit_ids.append(u1)
-                else:
-                    remove_unit_ids.append(u2)
+            else:  # equal shift use peak values
+                remove_unit_ids.append(u1 if peak_values[u1] < peak_values[u2] else u2)
     elif remove_strategy == "highest_amplitude":
         for u1, u2 in redundant_unit_pairs:
-            if np.abs(peak_values[u1]) < np.abs(peak_values[u2]):
-                remove_unit_ids.append(u1)
-            else:
-                remove_unit_ids.append(u2)
+            remove_unit_ids.append(u1 if peak_values[u1] < peak_values[u2] else u2)
     elif remove_strategy == "max_spikes":
         num_spikes = sorting.count_num_spikes_per_unit(outputs="dict")
         for u1, u2 in redundant_unit_pairs:
-            if num_spikes[u1] < num_spikes[u2]:
-                remove_unit_ids.append(u1)
-            else:
-                remove_unit_ids.append(u2)
+            remove_unit_ids.append(u1 if num_spikes[u1] < num_spikes[u2] else u2)
     elif remove_strategy == "with_metrics":
         # TODO
         # @aurelien @alessio
@@ -146,7 +128,9 @@ def remove_redundant_units(
         return sorting_clean
 
 
-def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold=0.2, duplicate_threshold=0.8):
+def find_redundant_units(
+    sorting: BaseSorting, delta_time: float = 0.4, agreement_threshold: float = 0.2, duplicate_threshold: float = 0.8
+) -> list[tuple[int, int]]:
     """
     Finds redundant or duplicate units by comparing the sorting output with itself.
 
@@ -164,9 +148,7 @@ def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold=0
 
     Returns
     -------
-    list
-        The list of duplicate units
-    list of 2-element lists
+    list of 2-element tuples
         The list of duplicate pairs
     """
     from spikeinterface.comparison import compare_two_sorters
@@ -188,6 +170,6 @@ def find_redundant_units(sorting, delta_time: float = 0.4, agreement_threshold=0
         event_counts = comparison.event_counts1
         shared = max(n_coincidents / event_counts[unit_i], n_coincidents / event_counts[unit_j])
         if shared > duplicate_threshold:
-            redundant_unit_pairs.append([unit_i, unit_j])
+            redundant_unit_pairs.append((unit_i, unit_j))
 
     return redundant_unit_pairs

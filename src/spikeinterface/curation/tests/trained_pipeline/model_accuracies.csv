@@ -1,2 +1,0 @@
-,classifier name,imputation_strategy,scaling_strategy,accuracy,precision,recall,model_id,best_params
-0,LogisticRegression,median,StandardScaler(),1.0000,1.0000,1.0000,0,"OrderedDict([('C', 4.811707275233983), ('max_iter', 384), ('solver', 'saga')])"

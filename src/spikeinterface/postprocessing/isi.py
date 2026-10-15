@@ -1,11 +1,10 @@
-from __future__ import annotations
-
 import importlib.util
 
 import numpy as np
 from itertools import chain
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.core_tools import slice_rows, materialize_array
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -19,8 +18,6 @@ class ComputeISIHistograms(AnalyzerExtension):
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
-        A SortingAnalyzer object
     window_ms : float, default: 50
         The window in ms
     bin_ms : float, default: 1
@@ -42,26 +39,23 @@ class ComputeISIHistograms(AnalyzerExtension):
     use_nodepipeline = False
     need_job_kwargs = False
 
-    def __init__(self, sorting_analyzer):
-        AnalyzerExtension.__init__(self, sorting_analyzer)
-
     def _set_params(self, window_ms: float = 50.0, bin_ms: float = 1.0, method: str = "auto"):
         params = dict(window_ms=window_ms, bin_ms=bin_ms, method=method)
 
         return params
 
-    def _select_extension_data(self, unit_ids):
+    def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-        new_isi_hists = self.data["isi_histograms"][unit_indices, :]
-        new_bins = self.data["bins"]
+        new_isi_hists = slice_rows(self.data["isi_histograms"], unit_indices)
+        new_bins = materialize_array(self.data["bins"])
         new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
         return new_extension_data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
     ):
-        new_bins = self.data["bins"]
+        new_bins = materialize_array(self.data["bins"])
         arr = self.data["isi_histograms"]
         num_dims = arr.shape[1]
         all_new_units = new_sorting_analyzer.unit_ids
@@ -83,7 +77,7 @@ class ComputeISIHistograms(AnalyzerExtension):
         return new_extension_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        new_bins = self.data["bins"]
+        new_bins = materialize_array(self.data["bins"])
         arr = self.data["isi_histograms"]
         num_dims = arr.shape[1]
         all_new_units = new_sorting_analyzer.unit_ids
@@ -127,7 +121,7 @@ def _compute_isi_histograms(sorting, window_ms: float = 50.0, bin_ms: float = 1.
     assert method in ("auto", "numba", "numpy")
 
     if method == "auto":
-        method = "numba" if HAVE_NUMBA else "numpy"
+        method = "numpy"  # numpy is faster for ISI computationc currently
 
     if method == "numpy":
         return compute_isi_histograms_numpy(sorting, window_ms, bin_ms)
@@ -155,10 +149,9 @@ def compute_isi_histograms_numpy(sorting, window_ms: float = 50.0, bin_ms: float
     bins = np.arange(0, window_size + bin_size, bin_size)  # * 1e3 / fs
     ISIs = np.zeros((num_units, len(bins) - 1), dtype=np.int64)
 
-    # TODO: There might be a better way than a double for loop?
     for i, unit_id in enumerate(sorting.unit_ids):
         for seg_index in range(sorting.get_num_segments()):
-            spike_train = sorting.get_unit_spike_train(unit_id, segment_index=seg_index)
+            spike_train = sorting.get_unit_spike_train(unit_id, seg_index)
             ISI = np.histogram(np.diff(spike_train), bins=bins)[0]
             ISIs[i] += ISI
 
@@ -206,9 +199,9 @@ def compute_isi_histograms_numba(sorting, window_ms: float = 50.0, bin_ms: float
 
 
 if HAVE_NUMBA:
-    import numba
+    from numba import jit, prange
 
-    @numba.jit(
+    @jit(
         nopython=True,
         nogil=True,
         cache=False,
@@ -216,7 +209,7 @@ if HAVE_NUMBA:
     def _compute_isi_histograms_numba(ISIs, spike_trains, spike_clusters, bins):
         n_units = ISIs.shape[0]
 
-        units_loop = numba.prange(n_units) if n_units > 300 else range(n_units)
+        units_loop = prange(n_units) if n_units > 300 else range(n_units)
         for i in units_loop:
             spike_train = spike_trains[spike_clusters == i]
             ISIs[i] += np.histogram(np.diff(spike_train), bins=bins)[0]

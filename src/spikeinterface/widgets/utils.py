@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 from warnings import warn
+
 import numpy as np
 
 from spikeinterface.core import BaseSorting
@@ -102,7 +101,7 @@ def get_some_colors(
         colors = [colorsys.hsv_to_rgb(x * 1.0 / N, 0.5, 0.5) + (1.0,) for x in range(N)]
 
     if shuffle:
-        rng = np.random.RandomState(seed=seed)
+        rng = np.random.default_rng(seed=seed)
         inds = np.arange(N)
         rng.shuffle(inds)
         colors = [colors[i] for i in inds]
@@ -235,7 +234,7 @@ def array_to_image(
             image = Image.fromarray(output_image)
             image_editable = ImageDraw.Draw(image)
 
-            # bar should be around 1/5 of row and ultiple of 5ms
+            # bar should be around 1/5 of row and multiple of 5ms
             if row_ms / 5 > 5:
                 bar_ms = int(np.ceil((row_ms / 5) // 5 * 5))
                 text_offset = 0.3
@@ -293,6 +292,9 @@ def make_units_table_from_sorting(sorting, units_table=None):
 def make_units_table_from_analyzer(
     analyzer,
     extra_properties=None,
+    with_unit_locations=True,
+    with_quality_metrics=True,
+    with_template_metrics=True,
 ):
     """
     Make a DataFrame by aggregating :
@@ -320,16 +322,16 @@ def make_units_table_from_analyzer(
 
     all_df = []
 
-    if analyzer.get_extension("unit_locations") is not None:
+    if with_unit_locations and analyzer.get_extension("unit_locations") is not None:
         locs = analyzer.get_extension("unit_locations").get_data()
         df = pd.DataFrame(locs[:, :2], columns=["x", "y"], index=analyzer.unit_ids)
         all_df.append(df)
 
-    if analyzer.get_extension("quality_metrics") is not None:
+    if with_quality_metrics and analyzer.get_extension("quality_metrics") is not None:
         df = analyzer.get_extension("quality_metrics").get_data()
         all_df.append(df)
 
-    if analyzer.get_extension("template_metrics") is not None:
+    if with_template_metrics and analyzer.get_extension("template_metrics") is not None:
         df = analyzer.get_extension("template_metrics").get_data()
         all_df.append(df)
 
@@ -398,7 +400,7 @@ def validate_segment_indices(segment_indices: list[int] | None, sorting: BaseSor
     return segment_indices
 
 
-def get_segment_durations(sorting: BaseSorting, segment_indices: list[int]) -> list[float]:
+def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = None) -> list[float]:
     """
     Calculate the duration of each segment in a sorting object.
 
@@ -406,12 +408,17 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int]) -> l
     ----------
     sorting : BaseSorting
         The sorting object containing spike data
+    segment_indices : list[int] | None
+        List of the segment indices to process. Default to None.
 
     Returns
     -------
     list[float]
         List of segment durations in seconds
     """
+    if segment_indices is None:
+        segment_indices = range(sorting.get_num_segments())
+
     spikes = sorting.to_spike_vector()
 
     segment_boundaries = [

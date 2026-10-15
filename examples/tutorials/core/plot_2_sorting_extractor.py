@@ -57,14 +57,15 @@ print("Num. events for first second of unit 1 seg1 = {}".format(len(st1)))
 # Some extractors also implement a :code:`write` function. We can for example
 # save our newly created sorting object to NPZ format (a simple format based
 # on numpy used in :code:`spikeinterface`):
+from spikeinterface.core.npzsortingextractor import NpzSortingExtractor
 
 file_path = "my_sorting.npz"
-se.NpzSortingExtractor.write_sorting(sorting, file_path)
+NpzSortingExtractor.write_sorting(sorting, file_path)
 
 ##############################################################################
 # We can now read it back with the proper extractor:
 
-sorting2 = se.NpzSortingExtractor(file_path)
+sorting2 = NpzSortingExtractor(file_path)
 print(sorting2)
 
 ##############################################################################
@@ -103,13 +104,13 @@ sorting3 = UnitsSelectionSorting(sorting2, unit_ids=[1, 4])
 # The "dump" operation is lazy, i.e., the spike trains are not exported.
 # Only the information about how to reconstruct the sorting are dumped:
 
-from spikeinterface import load_extractor
+from spikeinterface import load
 from pprint import pprint
 
 d = sorting2.to_dict()
 pprint(d)
 
-sorting2_loaded = load_extractor(d)
+sorting2_loaded = load(d)
 print(sorting2_loaded)
 
 ###############################################################################
@@ -117,7 +118,7 @@ print(sorting2_loaded)
 
 sorting2.dump("my_sorting.json")
 
-sorting2_loaded = load_extractor("my_sorting.json")
+sorting2_loaded = load("my_sorting.json")
 print(sorting2_loaded)
 
 ###############################################################################
@@ -133,5 +134,5 @@ import os
 
 pprint(os.listdir("./my_sorting"))
 
-sorting2_cached = load_extractor("./my_sorting")
+sorting2_cached = load("./my_sorting")
 print(sorting2_cached)

@@ -19,7 +19,7 @@ of the algorithm is create an "image" via the activity profile of the cells duri
 activity profile should be kept constant over time, the motion can be estimated, by blocks, along the probe's insertion axis
 (i.e. depth) so that we can interpolate the traces to compensate for this estimated motion.
 
-There are now several algorithms which try to correct for drift as a preprocessing step: the Paninski
+There are now several algorithms that try to correct for drift as a preprocessing step: the Paninski
 group from Columbia University introduced DREDGE (see [Varol2021]_
 and [Windolf2023]_), and the Jazayeri lab introduced MEDiCINe ([Watters]_).
 
@@ -175,8 +175,9 @@ The high-level :py:func:`~spikeinterface.preprocessing.correct_motion()` is inte
     peaks = detect_peaks(recording=rec, method="locally_exclusive", detect_threshold=8.0, **job_kwargs)
     # (optional) sub-select some peaks to speed up the localization
     peaks = select_peaks(peaks=peaks, ...)
-    peak_locations = localize_peaks(recording=rec, peaks=peaks, method="monopolar_triangulation",radius_um=75.0,
-                                    max_distance_um=150.0, **job_kwargs)
+    peak_locations = localize_peaks(recording=rec, peaks=peaks, method="monopolar_triangulation",
+                                    method_kwargs(radius_um=75.0,max_distance_um=150.0),
+                                    job_kwargs=job_kwargs)
 
     # Step 2: motion inference
     motion = estimate_motion(

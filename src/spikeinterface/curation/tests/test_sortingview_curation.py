@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 import os
-import json
+import importlib.util
 import numpy as np
 
 import spikeinterface as si
@@ -19,6 +19,15 @@ from spikeinterface.curation import apply_sortingview_curation
 parent_folder = Path(__file__).parent
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_API_KEY"))
+
+kachery_spec = importlib.util.find_spec("kachery")
+if kachery_spec is not None:
+    HAVE_KACHERY = True
+else:
+    HAVE_KACHERY = False
+
+
+SKIP_KACHERY_REMOTE = not HAVE_KACHERY or (ON_GITHUB and not KACHERY_CLOUD_SET)
 
 
 # this needs to be run only once: if we want to regenerate we need to start with sorting result
@@ -43,7 +52,7 @@ KACHERY_CLOUD_SET = bool(os.getenv("KACHERY_API_KEY"))
 #     # https://figurl.org/f?v=npm://@fi-sci/figurl-sortingview@12/dist&d=sha1://058ab901610aa9d29df565595a3cc2a81a1b08e5
 
 
-@pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
+@pytest.mark.skipif(SKIP_KACHERY_REMOTE, reason="Kachery cloud secrets not available")
 def test_gh_curation():
     """
     Test curation using GitHub URI.
@@ -73,7 +82,7 @@ def test_gh_curation():
     assert len(sorting_curated_gh_art_mua.unit_ids) == 5
 
 
-@pytest.mark.skipif(ON_GITHUB and not KACHERY_CLOUD_SET, reason="Kachery cloud secrets not available")
+@pytest.mark.skipif(SKIP_KACHERY_REMOTE, reason="Kachery cloud secrets not available")
 def test_sha1_curation():
     """
     Test curation using SHA1 URI.
@@ -184,22 +193,19 @@ def test_label_inheritance_int():
     # print(f"Merge only: {sorting_merge.get_unit_ids()}")
     assert sorting_merge.get_unit_property(unit_id=8, key="mua")  # 8 = merged unit of 1 and 2
     assert not sorting_merge.get_unit_property(unit_id=8, key="reject")
-    assert not sorting_merge.get_unit_property(unit_id=8, key="noise")
     assert not sorting_merge.get_unit_property(unit_id=8, key="accept")
 
     assert not sorting_merge.get_unit_property(unit_id=9, key="mua")  # 9 = merged unit of 3 and 4
     assert sorting_merge.get_unit_property(unit_id=9, key="reject")
-    assert sorting_merge.get_unit_property(unit_id=9, key="noise")
     assert not sorting_merge.get_unit_property(unit_id=9, key="accept")
 
     assert not sorting_merge.get_unit_property(unit_id=10, key="mua")  # 10 = merged unit of 5 and 6
     assert not sorting_merge.get_unit_property(unit_id=10, key="reject")
-    assert not sorting_merge.get_unit_property(unit_id=10, key="noise")
     assert sorting_merge.get_unit_property(unit_id=10, key="accept")
 
     # Assertions for exclude_labels should all be False
-    sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["noise"])
-    assert np.all(~sorting_exclude_noise.get_property("noise"))
+    sorting_exclude_reject = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["reject"])
+    assert np.all(~sorting_exclude_reject.get_property("reject"))
 
     # Assertions for include_labels
     sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_file, include_labels=["accept"])
@@ -215,7 +221,8 @@ def test_label_inheritance_str():
     num_timepoints = int(sampling_frequency * duration)
     num_spikes = 1000
     times = np.int_(np.sort(np.random.uniform(0, num_timepoints, num_spikes)))
-    labels = np.random.choice(["a", "b", "c", "d", "e", "f", "g"], size=num_spikes)
+    rng = np.random.default_rng(seed=None)
+    labels = rng.choice(["a", "b", "c", "d", "e", "f", "g"], size=num_spikes)
 
     sorting = se.NumpySorting.from_samples_and_labels(times, labels, sampling_frequency)
     # print(f"Sorting: {sorting.get_unit_ids()}")
@@ -228,22 +235,19 @@ def test_label_inheritance_str():
     # print(f"Merge only: {sorting_merge.get_unit_ids()}")
     assert sorting_merge.get_unit_property(unit_id="a-b", key="mua")
     assert not sorting_merge.get_unit_property(unit_id="a-b", key="reject")
-    assert not sorting_merge.get_unit_property(unit_id="a-b", key="noise")
     assert not sorting_merge.get_unit_property(unit_id="a-b", key="accept")
 
     assert not sorting_merge.get_unit_property(unit_id="c-d", key="mua")
     assert sorting_merge.get_unit_property(unit_id="c-d", key="reject")
-    assert sorting_merge.get_unit_property(unit_id="c-d", key="noise")
     assert not sorting_merge.get_unit_property(unit_id="c-d", key="accept")
 
     assert not sorting_merge.get_unit_property(unit_id="e-f", key="mua")
     assert not sorting_merge.get_unit_property(unit_id="e-f", key="reject")
-    assert not sorting_merge.get_unit_property(unit_id="e-f", key="noise")
     assert sorting_merge.get_unit_property(unit_id="e-f", key="accept")
 
     # Assertions for exclude_labels should all be False
-    sorting_exclude_noise = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["noise"])
-    assert np.all(~sorting_exclude_noise.get_property("noise"))
+    sorting_exclude_reject = apply_sortingview_curation(sorting, uri_or_json=json_file, exclude_labels=["reject"])
+    assert np.all(~sorting_exclude_reject.get_property("reject"))
 
     # Assertions for include_labels
     sorting_include_accept = apply_sortingview_curation(sorting, uri_or_json=json_file, include_labels=["accept"])

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from spikeinterface.core.core_tools import define_function_from_class
@@ -53,7 +51,7 @@ class NeuroNexusRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
 
-        self._kwargs.update(dict(file_path=str(Path(file_path).resolve())))
+        self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

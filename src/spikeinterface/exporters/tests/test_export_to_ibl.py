@@ -2,7 +2,6 @@ import pytest
 
 from spikeinterface.preprocessing import bandpass_filter, decimate
 from spikeinterface.exporters import export_to_ibl_gui
-
 from spikeinterface.exporters.tests.common import (
     make_sorting_analyzer,
     sorting_analyzer_sparse_for_export,
@@ -78,7 +77,7 @@ def test_export_lfp_to_ibl(sorting_analyzer_sparse_for_export, create_cache_fold
 
     sorting_analyzer = sorting_analyzer_sparse_for_export
     recording = sorting_analyzer.recording
-    recording_lfp = bandpass_filter(recording, freq_min=0.5, freq_max=300)
+    recording_lfp = bandpass_filter(recording, freq_min=0.5, freq_max=300, ignore_low_freq_error=True)
     recording_lfp = decimate(recording_lfp, 10)
     # LFP, but no AP
     export_to_ibl_gui(

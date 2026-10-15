@@ -1,0 +1,73 @@
+.. _release0.103.2:
+
+SpikeInterface 0.103.2 release notes
+------------------------------------
+
+December 3rd 2025
+
+Minor release with bug fixes
+
+core:
+
+* Fix probable sharedmem (#4239)
+* Fix probable shared mem no clean corretcly (#4234)
+* Implementing sparsity for ComputeTemplates (#4212)
+* Warn about non-mergeable units instead of raising an error (#4219)
+
+extractors:
+
+* Support for using event names as IDs in PL2 files (#4049)
+
+preprocessing:
+
+* Add channel_filter parameter for bad channel detection (#4228)
+
+sorters:
+
+* Warn about non-binary compatible recordings using KS4 (#4236)
+* Deal with batch_downsampling in kilosort4.1.2 (#4206)
+
+postprocessing:
+
+* Speedup template_similarity (#4211)
+
+qualitymetrics:
+
+
+curation:
+
+* Add `load_curation` function (#4220)
+* Add similarity_method param in automerge and fix multi-segment cross-contamination (#4201)
+
+widgets:
+
+* Protect unit summary and unit locations plots against NaNs (#4128)
+
+sortingcomponents:
+
+* patch for sc2: propagate real ms_before/after to template extension of final analyzer (#4215)
+* Speedup template_similarity (#4211)
+* Improvement of TDC2, SC2 and ISOSPLIT (#4182)
+
+documentation:
+
+* Add additional resources section to Analyze Neuropixels Datasets tuto (#4232)
+* Fix `apply_preprocessing_pipeline` name in docs (#4208)
+* Tiny doc fixes (#4203)
+* Add testing a PR section to docs (#4199)
+
+continuous integration:
+
+* Fix no disk space left ci (#4229)
+
+Contributors:
+
+* @MGAMZ
+* @OookTheLibrarian
+* @ShijiMi-Soup
+* @alejoe91
+* @chrishalcrow
+* @h-mayorquin
+* @samuelgarcia
+* @tayheau
+* @yger

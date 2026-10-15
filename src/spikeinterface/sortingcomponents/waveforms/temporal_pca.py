@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pickle
 import json
 from pathlib import Path
@@ -96,11 +94,11 @@ class TemporalPCBaseNode(WaveformsNode):
         model_folder_path: str,
         detect_peaks_params: dict,
         peak_selection_params: dict,
-        job_kwargs: dict = None,
+        job_kwargs: dict | None = None,
         ms_before: float = 1.0,
         ms_after: float = 1.0,
         whiten: bool = True,
-        radius_um: float = None,
+        radius_um: float | None = None,
     ) -> "IncrementalPCA":
         """
         Train a pca model using the data in the recording object and the parameters provided.
@@ -138,7 +136,8 @@ class TemporalPCBaseNode(WaveformsNode):
         """
 
         # Detect peaks and sub-sample them
-        peaks = detect_peaks(recording, **detect_peaks_params, **job_kwargs)
+        peaks = detect_peaks(recording, method_kwargs=detect_peaks_params, job_kwargs=job_kwargs)
+
         peaks = select_peaks(peaks, **peak_selection_params)  # How to select n_peaks
 
         # Creates a numpy sorting object where the spike times are the peak times and the unit ids are the peak channel

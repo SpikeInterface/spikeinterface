@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
@@ -20,7 +18,7 @@ class WhitenRecording(BasePreprocessor):
     dtype : None or dtype, default: None
         Datatype of the output recording (covariance matrix estimation
         and whitening are performed in float32).
-        If None the the parent dtype is kept.
+        If None the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     mode : "global" | "local", default: "global"
         "global" use the entire covariance matrix to compute the W matrix
@@ -28,7 +26,7 @@ class WhitenRecording(BasePreprocessor):
     radius_um : None or float, default: None
         Used for mode = "local" to get the neighborhood
     apply_mean : bool, default: False
-        Substract or not the mean matrix M before the dot product with W.
+        Subtract or not the mean matrix M before the dot product with W.
     int_scale : None or float, default: None
         Apply a scaling factor to fit the integer range.
         This is used when the dtype is an integer, so that the output is scaled.
@@ -103,7 +101,7 @@ class WhitenRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = WhitenRecordingSegment(parent_segment, W, M, dtype_, int_scale)
             self.add_recording_segment(rec_segment)
 
@@ -146,6 +144,9 @@ class WhitenRecordingSegment(BasePreprocessorSegment):
 
         if self.int_scale is not None:
             whiten_traces *= self.int_scale
+
+        if np.issubdtype(self.dtype, np.integer):
+            np.round(whiten_traces, out=whiten_traces)
 
         return whiten_traces.astype(self.dtype)
 

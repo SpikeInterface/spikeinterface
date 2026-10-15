@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
@@ -105,7 +103,7 @@ class NormalizeByQuantileRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
@@ -163,12 +161,11 @@ class ScaleRecording(BasePreprocessor):
             offset = np.asarray(offset)
         if offset.ndim == 1:
             offset = offset[None, :]
-        offset = offset.astype(dtype)
         assert offset.shape == (1, num_chans)
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, self._dtype)
             self.add_recording_segment(rec_segment)
 
@@ -213,7 +210,7 @@ class CenterRecording(BasePreprocessor):
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 
@@ -237,7 +234,7 @@ class ZScoreRecording(BasePreprocessor):
     mode : "median+mad" | "mean+std", default: "median+mad"
         The mode to compute the zscore
     dtype : None or dtype
-        If None the the parent dtype is kept.
+        If None the parent dtype is kept.
         For integer dtype a int_scale must be also given.
     gain : None or np.array
         Pre-computed gain.
@@ -315,7 +312,7 @@ class ZScoreRecording(BasePreprocessor):
         self.set_property(key="gain_to_uV", values=np.ones(num_chans, dtype="float32"))
         self.set_property(key="offset_to_uV", values=np.zeros(num_chans, dtype="float32"))
 
-        for parent_segment in recording._recording_segments:
+        for parent_segment in recording.segments:
             rec_segment = ScaleRecordingSegment(parent_segment, gain, offset, dtype=self._dtype)
             self.add_recording_segment(rec_segment)
 

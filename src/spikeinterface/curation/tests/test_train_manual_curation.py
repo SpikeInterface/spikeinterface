@@ -4,12 +4,12 @@ import tempfile, csv
 from pathlib import Path
 
 from spikeinterface.curation.tests.common import make_sorting_analyzer
-from spikeinterface.curation.train_manual_curation import CurationModelTrainer, train_model
+from spikeinterface.curation.train_manual_curation import CurationTrainer, train_model
 
 
 @pytest.fixture
 def trainer():
-    """A simple CurationModelTrainer object is created, which can later by used to
+    """A simple CurationTrainer object is created, which can later by used to
     train models using data from `sorting_analyzer`s."""
 
     folder = tempfile.mkdtemp()  # Create a temporary output folder
@@ -18,7 +18,7 @@ def trainer():
     classifiers = ["LogisticRegression"]
     metric_names = ["metric1", "metric2", "metric3"]
     search_kwargs = {"cv": 3}
-    return CurationModelTrainer(
+    return CurationTrainer(
         labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]],
         folder=folder,
         metric_names=metric_names,
@@ -121,7 +121,7 @@ def test_get_custom_classifier_search_space():
             "max_iter": [100, 400],
         }
     }
-    trainer = CurationModelTrainer(classifiers=classifier, labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]])
+    trainer = CurationTrainer(classifiers=classifier, labels=[[0, 1, 0, 1, 0, 1, 0, 1, 0, 1]])
 
     model, param_space = trainer.get_classifier_search_space(list(classifier.keys())[0])
     assert param_space == classifier["LogisticRegression"]
@@ -191,7 +191,7 @@ def test_train_model():
         overwrite=True,
         search_kwargs={"cv": 3, "scoring": "balanced_accuracy", "n_iter": 1},
     )
-    assert isinstance(trainer, CurationModelTrainer)
+    assert isinstance(trainer, CurationTrainer)
 
 
 def test_train_model_using_two_csvs():
@@ -215,7 +215,7 @@ def test_train_model_using_two_csvs():
         classifiers=["LogisticRegression"],
         overwrite=True,
     )
-    assert isinstance(trainer, CurationModelTrainer)
+    assert isinstance(trainer, CurationTrainer)
 
 
 def test_train_using_two_sorting_analyzers():
@@ -243,7 +243,7 @@ def test_train_using_two_sorting_analyzers():
         overwrite=True,
     )
 
-    assert isinstance(trainer, CurationModelTrainer)
+    assert isinstance(trainer, CurationTrainer)
 
     # Check that there is an error raised if the metric names are different
     sorting_analyzer_2 = make_sorting_analyzer()

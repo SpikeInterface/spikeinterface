@@ -1,11 +1,11 @@
-from __future__ import annotations
-
+import warnings
+import numpy as np
 from probeinterface import ProbeGroup
+
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
 from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
-import numpy as np
 
 
 class UnitLocationsWidget(BaseWidget):
@@ -60,13 +60,13 @@ class UnitLocationsWidget(BaseWidget):
         all_unit_locations = ulc.get_data()
 
         x_locations = all_unit_locations[:, 0]
-        x_min = np.min(x_locations)
-        x_max = np.max(x_locations)
+        x_min = np.nanmin(x_locations)
+        x_max = np.nanmax(x_locations)
         x_lim = (x_min - margin, x_max + margin)
 
         y_locations = all_unit_locations[:, 1]
-        y_min = np.min(y_locations)
-        y_max = np.max(y_locations)
+        y_min = np.nanmin(y_locations)
+        y_max = np.nanmax(y_locations)
         y_lim = (y_min - margin, y_max + margin)
 
         sorting = sorting_analyzer.sorting
@@ -80,6 +80,13 @@ class UnitLocationsWidget(BaseWidget):
 
         if unit_ids is None:
             unit_ids = sorting.unit_ids
+
+        if np.any(np.isnan(all_unit_locations[sorting.ids_to_indices(unit_ids)])):
+            warnings.warn("Some unit locations contain NaN values. Replacing with extremum channel location.")
+            main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+            for unit_id in unit_ids:
+                if np.any(np.isnan(unit_locations[unit_id])):
+                    unit_locations[unit_id] = channel_locations[main_channels[unit_id]]
 
         data_plot = dict(
             all_unit_ids=sorting.unit_ids,
@@ -110,9 +117,7 @@ class UnitLocationsWidget(BaseWidget):
         from matplotlib.lines import Line2D
 
         dp = to_attr(data_plot)
-        # backend_kwargs = self.update_backend_kwargs(**backend_kwargs)
 
-        # self.make_mpl_figure(**backend_kwargs)
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
         unit_locations = dp.unit_locations
@@ -245,8 +250,18 @@ class UnitLocationsWidget(BaseWidget):
         fig.canvas.flush_events()
 
     def plot_sortingview(self, data_plot, **backend_kwargs):
-        import sortingview.views as vv
-        from .utils_sortingview import generate_unit_table_view, make_serializable, handle_display_and_url
+        self.plot_figpack(data_plot, use_sortingview=True, **backend_kwargs)
+
+    def plot_figpack(self, data_plot, **backend_kwargs):
+        from .utils_figpack import (
+            make_serializable,
+            handle_display_and_url,
+            import_figpack_or_sortingview,
+            generate_unit_table_view,
+        )
+
+        use_sortingview = backend_kwargs.get("use_sortingview", False)
+        vv_base, vv_views = import_figpack_or_sortingview(use_sortingview)
 
         dp = to_attr(data_plot)
 
@@ -258,19 +273,21 @@ class UnitLocationsWidget(BaseWidget):
         unit_items = []
         for unit_id in unit_ids:
             unit_items.append(
-                vv.UnitLocationsItem(
+                vv_views.UnitLocationsItem(
                     unit_id=unit_id, x=float(dp.unit_locations[unit_id][0]), y=float(dp.unit_locations[unit_id][1])
                 )
             )
 
-        v_unit_locations = vv.UnitLocations(units=unit_items, channel_locations=locations, disable_auto_rotate=True)
+        v_unit_locations = vv_views.UnitLocations(
+            units=unit_items, channel_locations=locations, disable_auto_rotate=True
+        )
 
         if not dp.hide_unit_selector:
-            v_units_table = generate_unit_table_view(dp.sorting)
+            v_units_table = generate_unit_table_view(dp.sorting, use_sortingview=use_sortingview)
 
-            self.view = vv.Box(
+            self.view = vv_base.Box(
                 direction="horizontal",
-                items=[vv.LayoutItem(v_units_table, max_size=150), vv.LayoutItem(v_unit_locations)],
+                items=[vv_base.LayoutItem(v_units_table, max_size=150), vv_base.LayoutItem(v_unit_locations)],
             )
         else:
             self.view = v_unit_locations

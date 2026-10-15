@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 from pathlib import Path
 import os
-from typing import Union
 from warnings import warn
 import numpy as np
 
@@ -11,7 +8,7 @@ from .kilosortbase import KilosortBase
 from spikeinterface.sorters.utils import get_git_commit
 
 
-def check_if_installed(kilosort_path: Union[str, None]):
+def check_if_installed(kilosort_path: str | None):
     if kilosort_path is None:
         return False
     assert isinstance(kilosort_path, str)
@@ -31,7 +28,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
 
     sorter_name: str = "kilosort"
     compiled_name: str = "ks_compiled"
-    kilosort_path: Union[str, None] = os.getenv("KILOSORT_PATH", None)
+    kilosort_path: str | None = os.getenv("KILOSORT_PATH", None)
     requires_locations = False
     requires_gpu = "nvidia-optional"
 
@@ -216,7 +213,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
             # Kilosort's default behavior if nNeighPC is None in params (from _default_params)
             ops["nNeighPC"] = min(
                 12.0, ops["Nchan"]
-            )  # visualization only (Phy): number of channnels to mask the PCs, leave empty to skip (12)
+            )  # visualization only (Phy): number of channels to mask the PCs, leave empty to skip (12)
 
         ops["nNeigh"] = params[
             "nNeigh"
@@ -273,7 +270,7 @@ class KilosortSorter(KilosortBase, BaseSorter):
         ops["loc_range"] = params["loc_range"]  # ranges to detect peaks; plus/minus in time and channel ([3 1])
         ops["long_range"] = params["long_range"]  # ranges to detect isolated peaks ([30 6])
         ops["maskMaxChannels"] = params["maskMaxChannels"]  # how many channels to mask up/down ([5])
-        ops["crit"] = params["crit"]  # upper criterion for discarding spike repeates (0.65)
+        ops["crit"] = params["crit"]  # upper criterion for discarding spike repeats (0.65)
         ops["nFiltMax"] = params["nFiltMax"]  # maximum "unique" spikes to consider (10000)
 
         # options for posthoc merges (under construction)

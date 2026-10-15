@@ -95,6 +95,23 @@ def test_generate_drifting_recording():
         seed=2205,
     )
 
+    static_recording, drifting_recording, sorting = generate_drifting_recording(
+        num_units=10,
+        probe_name="cambridgeneurotech/ASSY-1-E-1",
+        seed=2205,
+    )
+    static_recording, drifting_recording, sorting = generate_drifting_recording(
+        num_units=10,
+        probe_name="cambridgeneurotech#ASSY-1-E-1",
+        seed=2205,
+    )
+
+    static_recording, drifting_recording, sorting = generate_drifting_recording(
+        num_units=10,
+        probe_name="Neuropixels2-128",
+        seed=2205,
+    )
+
     # print(static_recording)
     # print(drifting_recording)
     # print(sorting)
@@ -104,6 +121,6 @@ def test_generate_drifting_recording():
 
 if __name__ == "__main__":
     # test_make_one_displacement_vector()
-    test_generate_displacement_vector()
+    # test_generate_displacement_vector()
     # test_generate_noise()
-    # test_generate_drifting_recording()
+    test_generate_drifting_recording()

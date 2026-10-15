@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-
 from typing import List, Optional
 import numpy as np
 from spikeinterface.core import BaseRecording

@@ -18,11 +18,16 @@ def check_import_si_full():
     import spikeinterface.full as si
 
 
-def _create_recording():
+def _create_recording(short=False):
     import spikeinterface.full as si
 
+    if short:
+        durations = [30.0]
+    else:
+        durations = [200.0]
+
     rec, _ = si.generate_ground_truth_recording(
-        durations=[200.0], sampling_frequency=30_000.0, num_channels=16, num_units=10, seed=2205
+        durations=durations, sampling_frequency=30_000.0, num_channels=16, num_units=10, seed=2205
     )
     rec.save(folder="./toy_example_recording", verbose=False, **job_kwargs)
 
@@ -85,20 +90,24 @@ parser = argparse.ArgumentParser()
 # add ci flag so that gui will not be used in ci
 # end user can ignore
 parser.add_argument("--ci", action="store_false")
+parser.add_argument("--short", action="store_false")
+parser.add_argument("--skip-kilosort4", action="store_true")
+
 
 if __name__ == "__main__":
 
     args = parser.parse_args()
 
     _clean()
-    _create_recording()
+    _create_recording(short=args.short)
 
     steps = [
         ("Import spikeinterface", check_import_si),
         ("Import spikeinterface.full", check_import_si_full),
         ("Run tridesclous2", run_tridesclous2),
-        ("Run kilosort4", run_kilosort4),
     ]
+    if not args.skip_kilosort4:
+        steps.append(("Run kilosort4", run_kilosort4))
 
     # backwards logic because default is True for end-user
     if args.ci:

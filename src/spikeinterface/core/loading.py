@@ -6,7 +6,6 @@ import json
 from .base import BaseExtractor
 from .core_tools import is_path_remote
 
-
 _error_msg = (
     "{file_path} is not a file or a folder. It should point to either a json, pickle file or a "
     "folder that is the result of extractor.save(...) or sortinganalyzer.save_as(...)"
@@ -128,15 +127,6 @@ def load(
         return loaded_object
 
 
-def load_extractor(file_or_folder_or_dict, base_folder=None) -> "BaseExtractor":
-    warnings.warn(
-        "load_extractor() is deprecated and will be removed in version 0.104.0. Please use load() instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return load(file_or_folder_or_dict, base_folder=base_folder)
-
-
 def _guess_object_from_dict(d):
     """
     When an object is read from json or pickle or zarr attr we can guess which object it is
@@ -206,7 +196,7 @@ def _guess_object_from_local_folder(folder):
         # before the SortingAnlazer, it was WaveformExtractor (v<0.101)
         return "WaveformExtractor"
     elif (folder / f"si_folder.json").is_file():
-        # In later versions (0.94<v<0.102) we use the si_folder.json file
+        # In later versions (0.94<v<=0.105) we use the si_folder.json file
         # This should be Recording | Sorting
         return "Recording|Sorting"
     else:
@@ -255,7 +245,7 @@ def _load_object_from_folder(folder, object_type: str, **kwargs):
                 f = folder / f"cached.{dump_ext}"
                 if f.is_file():
                     si_file = f
-        return BaseExtractor.load(si_file, base_folder=folder)
+        return load(si_file, base_folder=folder)
 
     elif object_type.startswith("Group"):
 
@@ -292,11 +282,7 @@ def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
     if object_type == "SortingAnalyzer":
         from .sortinganalyzer import load_sorting_analyzer
 
-        backend_options = kwargs.get("backend_options", None)
-        load_extensions = kwargs.get("load_extensions", True)
-        analyzer = load_sorting_analyzer(
-            folder_or_url, backend_options=backend_options, load_extensions=load_extensions
-        )
+        analyzer = load_sorting_analyzer(folder_or_url, **kwargs)
         return analyzer
     elif object_type == "Templates":
         from .template import Templates
@@ -306,23 +292,17 @@ def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
     elif object_type == "Recording":
         from .zarrextractors import read_zarr_recording
 
-        storage_options = kwargs.get("storage_options", None)
-        load_compression_ratio = kwargs.get("load_compression_ratio", False)
-        recording = read_zarr_recording(
-            folder_or_url, storage_options=storage_options, load_compression_ratio=load_compression_ratio
-        )
+        recording = read_zarr_recording(folder_or_url, **kwargs)
         return recording
     elif object_type == "Sorting":
         from .zarrextractors import read_zarr_sorting
 
-        storage_options = kwargs.get("storage_options", None)
-        sorting = read_zarr_sorting(folder_or_url, storage_options=storage_options)
+        sorting = read_zarr_sorting(folder_or_url, **kwargs)
         return sorting
     elif object_type == "Recording|Sorting":
         # This case shoudl deprecated soon because the read_zarr is ultra ambiguous
         # just testing if the zarr contains unit_ids or channel_ids but many object also contains it (see template)!!!!
         from .zarrextractors import read_zarr
 
-        storage_options = kwargs.get("storage_options", None)
-        rec_or_sorting = read_zarr(folder_or_url, storage_options=storage_options)
+        rec_or_sorting = read_zarr(folder_or_url, **kwargs)
         return rec_or_sorting

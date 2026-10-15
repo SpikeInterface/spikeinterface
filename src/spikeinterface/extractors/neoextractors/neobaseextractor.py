@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from typing import Optional, Union, Dict, Any, List
+from typing import Any
 import warnings
 from math import isclose
 
@@ -77,7 +75,7 @@ class _NeoBaseExtractor:
         stream_ids = stream_channels["id"].tolist()
         return stream_names, stream_ids
 
-    def build_stream_id_to_sampling_frequency_dict(self) -> Dict[str, float]:
+    def build_stream_id_to_sampling_frequency_dict(self) -> dict[str, float]:
         """
         Build a mapping from stream_id to sampling frequencies.
 
@@ -110,7 +108,7 @@ class _NeoBaseExtractor:
 
         return stream_to_sampling_frequencies
 
-    def build_stream_id_to_t_start_dict(self, segment_index: int) -> Dict[str, float]:
+    def build_stream_id_to_t_start_dict(self, segment_index: int) -> dict[str, float]:
         """
         Builds a dictionary mapping stream IDs to their respective t_start values for a given segment.
 
@@ -141,7 +139,7 @@ class _NeoBaseExtractor:
 
         return stream_id_to_t_start
 
-    def build_stream_name_to_stream_id_dict(self) -> Dict[str, str]:
+    def build_stream_name_to_stream_id_dict(self) -> dict[str, str]:
         neo_header = self.neo_reader.header
         signal_streams = neo_header["signal_streams"]
         stream_ids = signal_streams["id"]
@@ -157,12 +155,12 @@ class _NeoBaseExtractor:
 class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
     def __init__(
         self,
-        stream_id: Optional[str] = None,
-        stream_name: Optional[str] = None,
-        block_index: Optional[int] = None,
+        stream_id: str | None = None,
+        stream_name: str | None = None,
+        block_index: int | None = None,
         all_annotations: bool = False,
-        use_names_as_ids: Optional[bool] = None,
-        **neo_kwargs: Dict[str, Any],
+        use_names_as_ids: bool | None = None,
+        **neo_kwargs: dict[str, Any],
     ) -> None:
         """
         Initialize a NeoBaseRecordingExtractor instance.
@@ -306,7 +304,7 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
             scalar_annotations = {name: value for name, value in sig_ann.items() if not name.startswith("__")}
 
             # name in neo corresponds to stream name
-            # We don't propagate the name as an annotation because that has a differnt meaning on spikeinterface
+            # We don't propagate the name as an annotation because that has a different meaning on spikeinterface
             stream_name = scalar_annotations.pop("name", None)
             if stream_name:
                 self.set_annotation(annotation_key="stream_name", value=stream_name)
@@ -360,9 +358,9 @@ class NeoRecordingSegment(BaseRecordingSegment):
 
     def get_traces(
         self,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         raw_traces = self.neo_reader.get_analogsignal_chunk(
             block_index=self.block_index,
@@ -381,7 +379,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
     neo_returns_frames = True
     # `neo_returns_frames` is a class attribute indicating whether
     # `neo_reader.get_spike_timestamps` returns frames instead of timestamps (!),
-    # If False, then the segments need to transform timestamps to to frames.
+    # If False, then the segments need to transform timestamps to frames.
     # For formats that return timestamps (e.g. Mearec, Blackrock, Neuralynx) this should be set to
     # False in the format class that inherits from this.
 
@@ -396,8 +394,8 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
         block_index=None,
         sampling_frequency=None,
         use_format_ids=False,
-        stream_id: Optional[str] = None,
-        stream_name: Optional[str] = None,
+        stream_id: str | None = None,
+        stream_name: str | None = None,
         **neo_kwargs,
     ):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
@@ -436,7 +434,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
             self.add_sorting_segment(sorting_segment)
 
-    def _infer_sampling_frequency_from_analog_signal(self, stream_id: Optional[str] = None) -> float:
+    def _infer_sampling_frequency_from_analog_signal(self, stream_id: str | None = None) -> float:
         """
         Infer the sampling frequency from available signal channels.
 
@@ -524,7 +522,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         return sampling_frequency
 
-    def _infer_t_start_from_signal_stream(self, segment_index: int, stream_id: Optional[str] = None) -> float | None:
+    def _infer_t_start_from_signal_stream(self, segment_index: int, stream_id: str | None = None) -> float | None:
         """
         Infers the t_start value from the signal stream, either using the provided stream ID or by finding
         streams with matching frequency to the sorter's sampling frequency.
@@ -601,7 +599,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
             t_start = None
             warning_message = (
                 "Multiple streams ids with corresponding sampling frequency found \n "
-                "Each stream has the correspoding t_start: \n"
+                "Each stream has the corresponding t_start: \n"
                 f"{stream_id_to_t_start} \n"
                 f"Setting t_start to None. \n"
             )
@@ -620,11 +618,10 @@ class NeoSortingSegment(BaseSortingSegment):
         sampling_frequency,
         neo_returns_frames,
     ):
-        BaseSortingSegment.__init__(self)
+        BaseSortingSegment.__init__(self, t_start=t_start)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.block_index = block_index
-        self._t_start = t_start
         self._sampling_frequency = sampling_frequency
         self.neo_returns_frames = neo_returns_frames
 
@@ -665,14 +662,20 @@ _neo_event_dtype = np.dtype([("time", "float64"), ("duration", "float64"), ("lab
 class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
     handle_event_frame_directly = False
 
-    def __init__(self, block_index=None, **neo_kwargs):
+    def __init__(self, block_index=None, use_names_as_ids: bool = False, **neo_kwargs):
         _NeoBaseExtractor.__init__(self, block_index, **neo_kwargs)
 
         # TODO load feature from neo array_annotations
 
         event_channels = self.neo_reader.header["event_channels"]
 
-        channel_ids = event_channels["id"]
+        if use_names_as_ids:
+            channel_ids = event_channels["name"]
+            assert (
+                event_channels.size == np.unique(channel_ids).size
+            ), "use_name_as_ids=True is not possible, channel names are not unique"
+        else:
+            channel_ids = event_channels["id"]
 
         BaseEvent.__init__(self, channel_ids, structured_dtype=_neo_event_dtype)
 
@@ -684,21 +687,23 @@ class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
             else:
                 t_start = self.neo_reader.get_signal_t_start(self.block_index, segment_index, stream_index=0)
 
-            event_segment = NeoEventSegment(self.neo_reader, self.block_index, segment_index, t_start)
+            event_segment = NeoEventSegment(self.neo_reader, self.block_index, segment_index, t_start, use_names_as_ids)
             self.add_event_segment(event_segment)
 
 
 class NeoEventSegment(BaseEventSegment):
-    def __init__(self, neo_reader, block_index, segment_index, t_start):
+    def __init__(self, neo_reader, block_index, segment_index, t_start, use_names_as_ids):
         BaseEventSegment.__init__(self)
         self.neo_reader = neo_reader
         self.segment_index = segment_index
         self.block_index = block_index
         self._t_start = t_start
         self._natural_ids = None
+        self.use_names_as_ids = use_names_as_ids
 
     def get_events(self, channel_id, start_time, end_time):
-        channel_index = list(self.neo_reader.header["event_channels"]["id"]).index(channel_id)
+        id_or_name = "name" if self.use_names_as_ids else "id"
+        channel_index = list(self.neo_reader.header["event_channels"][id_or_name]).index(channel_id)
 
         event_timestamps, event_duration, event_labels = self.neo_reader.get_event_timestamps(
             block_index=self.block_index, seg_index=self.segment_index, event_channel_index=channel_index

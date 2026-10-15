@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-
 import time
 from pprint import pprint
 import importlib.util

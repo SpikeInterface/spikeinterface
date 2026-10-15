@@ -1,20 +1,20 @@
-from __future__ import annotations
-
 import warnings
-
 from typing import Tuple
-import numpy as np
 import math
+import importlib.util
 
-try:
-    import numba
+import numpy as np
+
+if importlib.util.find_spec("numba") is not None:
+    from numba import jit
 
     HAVE_NUMBA = True
-except ImportError:
+else:
     HAVE_NUMBA = False
 
 from spikeinterface.core import SortingAnalyzer
-from spikeinterface.qualitymetrics import compute_refrac_period_violations, compute_firing_rates
+from spikeinterface.metrics.quality.misc_metrics import compute_refrac_period_violations
+from spikeinterface.metrics.spiketrain.metrics import compute_firing_rates
 
 from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
@@ -52,6 +52,10 @@ _compute_merge_presets = {
         "knn",
         "quality_score",
     ],
+    "slay": [
+        "template_similarity",
+        "slay_score",
+    ],
 }
 
 _required_extensions = {
@@ -60,22 +64,23 @@ _required_extensions = {
     "snr": ["templates", "noise_levels"],
     "template_similarity": ["templates", "template_similarity"],
     "knn": ["templates", "spike_locations", "spike_amplitudes"],
+    "slay_score": ["correlograms", "template_similarity"],
 }
 
 
 _default_step_params = {
     "num_spikes": {"min_spikes": 100},
-    "snr": {"min_snr": 2},
+    "snr": {"min_snr": 2.0},
     "remove_contaminated": {"contamination_thresh": 0.2, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
-    "unit_locations": {"max_distance_um": 150},
+    "unit_locations": {"max_distance_um": 150.0},
     "correlogram": {
         "corr_diff_thresh": 0.16,
         "censor_correlograms_ms": 0.15,
         "sigma_smooth_ms": 0.6,
         "adaptative_window_thresh": 0.5,
     },
-    "template_similarity": {"template_diff_thresh": 0.25},
-    "presence_distance": {"presence_distance_thresh": 100},
+    "template_similarity": {"similarity_method": "l1", "template_diff_thresh": 0.25},
+    "presence_distance": {"presence_distance_thresh": 100.0},
     "knn": {"k_nn": 10},
     "cross_contamination": {
         "cc_thresh": 0.1,
@@ -84,6 +89,7 @@ _default_step_params = {
         "censored_period_ms": 0.3,
     },
     "quality_score": {"firing_contamination_balance": 1.5, "refractory_period_ms": 1.0, "censored_period_ms": 0.3},
+    "slay_score": {"k1": 0.25, "k2": 1.0, "slay_threshold": 0.5},
 }
 
 
@@ -113,6 +119,8 @@ def compute_merge_unit_groups(
         * "cross_contamination": the cross-contamination is not significant (`cc_thresh` and `p_value`)
         * "knn": the two units are close in the feature space
         * "quality_score": the unit "quality score" is increased after the merge
+        * "slay_score":  a combined score, factoring in a template similarity measure, a cross-correlation significance measure
+          and a sliding refractory period violation measure, based on the SLAy algorithm.
 
     The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
     contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
@@ -144,6 +152,10 @@ def compute_merge_unit_groups(
         * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
           | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
           | "knn", "quality_score"
+        * | "slay": an approximate implementation of SLAy, original implementation at https://github.com/saikoukunt/SLAy.
+          | The spikeinterface version uses `template_similarity`, rather than an auto-encoder.
+          | It uses the following steps: "template_similarity", "slay_score"
+
         If `preset` is None, you can specify the steps manually with the `steps` parameter.
     resolve_graph : bool, default: True
         If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
@@ -180,7 +192,6 @@ def compute_merge_unit_groups(
 
     However, it has been greatly consolidated and refined depending on the presets.
     """
-    import scipy
 
     sorting = sorting_analyzer.sorting
     unit_ids = sorting.unit_ids
@@ -271,8 +282,9 @@ def compute_merge_unit_groups(
         elif step == "unit_locations":
             location_ext = sorting_analyzer.get_extension("unit_locations")
             unit_locations = location_ext.get_data()[:, :2]
+            from scipy.spatial import distance
 
-            unit_distances = scipy.spatial.distance.cdist(unit_locations, unit_locations, metric="euclidean")
+            unit_distances = distance.cdist(unit_locations, unit_locations, metric="euclidean")
             pair_mask = pair_mask & (unit_distances <= params["max_distance_um"])
             outs["unit_distances"] = unit_distances
 
@@ -309,7 +321,13 @@ def compute_merge_unit_groups(
         # STEP : check if potential merge with CC also have template similarity
         elif step == "template_similarity":
             template_similarity_ext = sorting_analyzer.get_extension("template_similarity")
-            templates_similarity = template_similarity_ext.get_data()
+            if template_similarity_ext.params["method"] == params["similarity_method"]:
+                templates_similarity = template_similarity_ext.get_data()
+            else:
+                template_similarity_ext = sorting_analyzer.compute(
+                    "template_similarity", method=params["similarity_method"], save=False
+                )
+                templates_similarity = template_similarity_ext.get_data()
             templates_diff = 1 - templates_similarity
             pair_mask = pair_mask & (templates_diff < params["template_diff_thresh"])
             outs["templates_diff"] = templates_diff
@@ -354,6 +372,14 @@ def compute_merge_unit_groups(
                 params["censored_period_ms"],
             )
             outs["pairs_decreased_score"] = pairs_decreased_score
+
+        elif step == "slay_score":
+
+            M_ij = compute_slay_matrix(
+                sorting_analyzer, params["k1"], params["k2"], templates_diff=outs["templates_diff"], pair_mask=pair_mask
+            )
+
+            pair_mask = pair_mask & (M_ij > params["slay_threshold"])
 
     # FINAL STEP : create the final list from pair_mask boolean matrix
     ind1, ind2 = np.nonzero(pair_mask)
@@ -497,195 +523,6 @@ def _auto_merge_units_single_iteration(
         return merged_analyzer, resolved_merges, merge_unit_groups, outs
     else:
         return merged_analyzer
-
-
-def get_potential_auto_merge(
-    sorting_analyzer: SortingAnalyzer,
-    preset: str | None = "similarity_correlograms",
-    resolve_graph: bool = False,
-    min_spikes: int = 100,
-    min_snr: float = 2,
-    max_distance_um: float = 150.0,
-    corr_diff_thresh: float = 0.16,
-    template_diff_thresh: float = 0.25,
-    contamination_thresh: float = 0.2,
-    presence_distance_thresh: float = 100,
-    p_value: float = 0.2,
-    cc_thresh: float = 0.1,
-    censored_period_ms: float = 0.3,
-    refractory_period_ms: float = 1.0,
-    sigma_smooth_ms: float = 0.6,
-    adaptative_window_thresh: float = 0.5,
-    censor_correlograms_ms: float = 0.15,
-    firing_contamination_balance: float = 1.5,
-    k_nn: int = 10,
-    knn_kwargs: dict | None = None,
-    presence_distance_kwargs: dict | None = None,
-    extra_outputs: bool = False,
-    steps: list[str] | None = None,
-) -> list[tuple[int | str, int | str]] | Tuple[tuple[int | str, int | str], dict]:
-    """
-    This function is deprecated. Use compute_merge_unit_groups() instead.
-    This will be removed in 0.103.0
-
-    Algorithm to find and check potential merges between units.
-
-    The merges are proposed based on a series of steps with different criteria:
-
-        * "num_spikes": enough spikes are found in each unit for computing the correlogram (`min_spikes`)
-        * "snr": the SNR of the units is above a threshold (`min_snr`)
-        * "remove_contaminated": each unit is not contaminated (by checking auto-correlogram - `contamination_thresh`)
-        * "unit_locations": estimated unit locations are close enough (`max_distance_um`)
-        * "correlogram": the cross-correlograms of the two units are similar to each auto-corrleogram (`corr_diff_thresh`)
-        * "template_similarity": the templates of the two units are similar (`template_diff_thresh`)
-        * "presence_distance": the presence of the units is complementary in time (`presence_distance_thresh`)
-        * "cross_contamination": the cross-contamination is not significant (`cc_thresh` and `p_value`)
-        * "knn": the two units are close in the feature space
-        * "quality_score": the unit "quality score" is increased after the merge
-
-    The "quality score" factors in the increase in firing rate (**f**) due to the merge and a possible increase in
-    contamination (**C**), wheighted by a factor **k** (`firing_contamination_balance`).
-
-    .. math::
-
-        Q = f(1 - (k + 1)C)
-
-    IMPORTANT: internally, all computations are relying on extensions of the analyzer, that are computed
-    with default parameters if not present (i.e. correlograms, template_similarity, ...) If you want to
-    have a finer control on these values, please precompute the extensions before applying the auto_merge
-
-    Parameters
-    ----------
-    sorting_analyzer : SortingAnalyzer
-        The SortingAnalyzer
-    preset : "similarity_correlograms" | "x_contaminations" | "temporal_splits" | "feature_neighbors" | None, default: "similarity_correlograms"
-        The preset to use for the auto-merge. Presets combine different steps into a recipe and focus on:
-
-        * | "similarity_correlograms": mainly focused on template similarity and correlograms.
-          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
-          | "template_similarity", "correlogram", "quality_score"
-        * | "x_contaminations": similar to "similarity_correlograms", but checks for cross-contamination instead of correlograms.
-          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
-          | "template_similarity", "cross_contamination", "quality_score"
-        * | "temporal_splits": focused on finding temporal splits using presence distance.
-          | It uses the following steps: "num_spikes", "remove_contaminated", "unit_locations",
-          | "template_similarity", "presence_distance", "quality_score"
-        * | "feature_neighbors": focused on finding unit pairs whose spikes are close in the feature space using kNN.
-          | It uses the following steps: "num_spikes", "snr", "remove_contaminated", "unit_locations",
-          | "knn", "quality_score"
-
-        If `preset` is None, you can specify the steps manually with the `steps` parameter.
-    resolve_graph : bool, default: False
-        If True, the function resolves the potential unit pairs to be merged into multiple-unit merges.
-    min_spikes : int, default: 100
-        Minimum number of spikes for each unit to consider a potential merge.
-        Enough spikes are needed to estimate the correlogram
-    min_snr : float, default 2
-        Minimum Signal to Noise ratio for templates to be considered while merging
-    max_distance_um : float, default: 150
-        Maximum distance between units for considering a merge
-    corr_diff_thresh : float, default: 0.16
-        The threshold on the "correlogram distance metric" for considering a merge.
-        It needs to be between 0 and 1
-    template_diff_thresh : float, default: 0.25
-        The threshold on the "template distance metric" for considering a merge.
-        It needs to be between 0 and 1
-    contamination_thresh : float, default: 0.2
-        Threshold for not taking in account a unit when it is too contaminated.
-    presence_distance_thresh : float, default: 100
-        Parameter to control how present two units should be simultaneously.
-    p_value : float, default: 0.2
-        The p-value threshold for the cross-contamination test.
-    cc_thresh : float, default: 0.1
-        The threshold on the cross-contamination for considering a merge.
-    censored_period_ms : float, default: 0.3
-        Used to compute the refractory period violations aka "contamination".
-    refractory_period_ms : float, default: 1
-        Used to compute the refractory period violations aka "contamination".
-    sigma_smooth_ms : float, default: 0.6
-        Parameters to smooth the correlogram estimation.
-    adaptative_window_thresh : float, default: 0.5
-        Parameter to detect the window size in correlogram estimation.
-    censor_correlograms_ms : float, default: 0.15
-        The period to censor on the auto and cross-correlograms.
-    firing_contamination_balance : float, default: 1.5
-        Parameter to control the balance between firing rate and contamination in computing unit "quality score".
-    k_nn : int, default 5
-        The number of neighbors to consider for every spike in the recording.
-    knn_kwargs : dict, default None
-        The dict of extra params to be passed to knn.
-    extra_outputs : bool, default: False
-        If True, an additional dictionary (`outs`) with processed data is returned.
-    steps : None or list of str, default: None
-        Which steps to run, if no preset is used.
-        Pontential steps : "num_spikes", "snr", "remove_contaminated", "unit_locations", "correlogram",
-        "template_similarity", "presence_distance", "cross_contamination", "knn", "quality_score"
-        Please check steps explanations above!
-    presence_distance_kwargs : None|dict, default: None
-        A dictionary of kwargs to be passed to compute_presence_distance().
-
-    Returns
-    -------
-    potential_merges:
-        A list of tuples of 2 elements (if `resolve_graph`if false) or 2+ elements (if `resolve_graph` is true).
-        List of pairs that could be merged.
-    outs:
-        Returned only when extra_outputs=True
-        A dictionary that contains data for debugging and plotting.
-
-    References
-    ----------
-    This function is inspired and built upon similar functions from Lussac [Llobet]_,
-    done by Aurelien Wyngaard and Victor Llobet.
-    https://github.com/BarbourLab/lussac/blob/v1.0.0/postprocessing/merge_units.py
-    """
-    # deprecation moved to 0.105.0 for @zm711
-    warnings.warn(
-        "get_potential_auto_merge() is deprecated and will be removed in version 0.105.0. Use compute_merge_unit_groups() instead",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-
-    presence_distance_kwargs = presence_distance_kwargs or dict()
-    knn_kwargs = knn_kwargs or dict()
-    return compute_merge_unit_groups(
-        sorting_analyzer,
-        preset,
-        resolve_graph,
-        steps_params={
-            "num_spikes": {"min_spikes": min_spikes},
-            "snr": {"min_snr": min_snr},
-            "remove_contaminated": {
-                "contamination_thresh": contamination_thresh,
-                "refractory_period_ms": refractory_period_ms,
-                "censored_period_ms": censored_period_ms,
-            },
-            "unit_locations": {"max_distance_um": max_distance_um},
-            "correlogram": {
-                "corr_diff_thresh": corr_diff_thresh,
-                "censor_correlograms_ms": censor_correlograms_ms,
-                "sigma_smooth_ms": sigma_smooth_ms,
-                "adaptative_window_thresh": adaptative_window_thresh,
-            },
-            "template_similarity": {"template_diff_thresh": template_diff_thresh},
-            "presence_distance": {"presence_distance_thresh": presence_distance_thresh, **presence_distance_kwargs},
-            "knn": {"k_nn": k_nn, **knn_kwargs},
-            "cross_contamination": {
-                "cc_thresh": cc_thresh,
-                "p_value": p_value,
-                "refractory_period_ms": refractory_period_ms,
-                "censored_period_ms": censored_period_ms,
-            },
-            "quality_score": {
-                "firing_contamination_balance": firing_contamination_balance,
-                "refractory_period_ms": refractory_period_ms,
-                "censored_period_ms": censored_period_ms,
-            },
-        },
-        compute_needed_extensions=True,
-        extra_outputs=extra_outputs,
-        steps=steps,
-    )
 
 
 def auto_merge_units(
@@ -965,11 +802,11 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     Smooths cross-correlogram with a Gaussian kernel.
     """
-    import scipy.signal
+    from scipy.signal import fftconvolve, butter, filtfilt
 
     # OLD implementation : smooth correlogram by low pass filter
-    # b, a = scipy.signal.butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
-    # correlograms_smoothed = scipy.signal.filtfilt(b, a, correlograms, axis=2)
+    # b, a = butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
+    # correlograms_smoothed = filtfilt(b, a, correlograms, axis=2)
 
     # new implementation smooth by convolution with a Gaussian kernel
     if len(correlograms) == 0:  # fftconvolve will not return the correct shape.
@@ -978,7 +815,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     smooth_kernel = np.exp(-(bins**2) / (2 * sigma_smooth_ms**2))
     smooth_kernel /= np.sum(smooth_kernel)
     smooth_kernel = smooth_kernel[None, None, :]
-    correlograms_smoothed = scipy.signal.fftconvolve(correlograms, smooth_kernel, mode="same", axes=2)
+    correlograms_smoothed = fftconvolve(correlograms, smooth_kernel, mode="same", axes=2)
 
     return correlograms_smoothed
 
@@ -1001,13 +838,13 @@ def get_unit_adaptive_window(auto_corr: np.ndarray, threshold: float) -> int:
     unit_window : int
         Index at which the adaptive window has been calculated.
     """
-    import scipy.signal
+    from scipy.signal import find_peaks
 
     if np.sum(np.abs(auto_corr)) == 0:
         return 20.0
 
     derivative_2 = -np.gradient(np.gradient(auto_corr))
-    peaks = scipy.signal.find_peaks(derivative_2)[0]
+    peaks = find_peaks(derivative_2)[0]
 
     keep = auto_corr[peaks] >= threshold
     peaks = peaks[keep]
@@ -1056,17 +893,29 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
     CC = np.zeros((n, n), dtype=np.float32)
     p_values = np.zeros((n, n), dtype=np.float32)
 
+    if sorting.get_num_segments() > 1:
+        # for multi-segment sortings, we need to concatenate segments,
+        from spikeinterface import concatenate_sortings, select_segment_sorting
+
+        sorting_list = []
+        total_samples_list = []
+        for segment_index in range(sorting.get_num_segments()):
+            sorting_list.append(select_segment_sorting(sorting, segment_index))
+            total_samples_list.append(analyzer.get_num_samples(segment_index))
+        # concatenate segments
+        sorting_concat = concatenate_sortings(sorting_list=sorting_list, total_samples_list=total_samples_list)
+    else:
+        sorting_concat = sorting
+
     for unit_ind1 in range(len(unit_ids)):
-
         unit_id1 = unit_ids[unit_ind1]
-        spike_train1 = np.array(sorting.get_unit_spike_train(unit_id1))
-
+        spike_train1 = np.array(sorting_concat.get_unit_spike_train(unit_id1))
         for unit_ind2 in range(unit_ind1 + 1, len(unit_ids)):
             if not pair_mask[unit_ind1, unit_ind2]:
                 continue
 
             unit_id2 = unit_ids[unit_ind2]
-            spike_train2 = np.array(sorting.get_unit_spike_train(unit_id2))
+            spike_train2 = np.array(sorting_concat.get_unit_spike_train(unit_id2))
             # Compuyting the cross-contamination difference
             if contaminations is not None:
                 C1 = contaminations[unit_ind1]
@@ -1171,7 +1020,7 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_sa
     d : float
         The presence distance between the two units.
     """
-    import scipy
+    from scipy.stats import wasserstein_distance
 
     distances = []
     if num_samples is not None:
@@ -1193,8 +1042,8 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_sa
                 ns = num_samples[segment_index]
             bins = np.arange(0, ns, bin_size)
 
-        st1 = sorting.get_unit_spike_train(unit_id=unit1)
-        st2 = sorting.get_unit_spike_train(unit_id=unit2)
+        st1 = sorting.get_unit_spike_train(unit_id=unit1, segment_index=segment_index)
+        st2 = sorting.get_unit_spike_train(unit_id=unit2, segment_index=segment_index)
 
         h1, _ = np.histogram(st1, bins)
         h1 = h1.astype(float)
@@ -1203,7 +1052,7 @@ def presence_distance(sorting, unit1, unit2, bin_duration_s=2, bins=None, num_sa
         h2 = h2.astype(float)
 
         xaxis = bins[1:] / sorting.sampling_frequency
-        d = scipy.stats.wasserstein_distance(xaxis, xaxis, h1, h2)
+        d = wasserstein_distance(xaxis, xaxis, h1, h2)
         distances.append(d)
 
     return np.mean(d)
@@ -1274,20 +1123,21 @@ def binom_sf(x: int, n: float, p: float) -> float:
         The survival function of the binomial distribution.
     """
 
-    import scipy
+    from scipy.stats import binom
+    from scipy.interpolate import interp1d
 
     n_array = np.arange(math.floor(n - 2), math.ceil(n + 3), 1)
     n_array = n_array[n_array >= 0]
 
-    res = [scipy.stats.binom.sf(x, n_, p) for n_ in n_array]
-    f = scipy.interpolate.interp1d(n_array, res, kind="quadratic")
+    res = [binom.sf(x, n_, p) for n_ in n_array]
+    f = interp1d(n_array, res, kind="quadratic")
 
     return f(n)
 
 
 if HAVE_NUMBA:
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def _get_border_probabilities(max_time) -> tuple[int, int, float, float]:
         """
         Computes the integer borders, and the probability of 2 spikes distant by this border to be closer than max_time.
@@ -1319,7 +1169,7 @@ if HAVE_NUMBA:
 
         return border_low, border_high, p_low, p_high
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def compute_nb_violations(spike_train, max_time) -> float:
         """
         Computes the number of refractory period violations in a spike train.
@@ -1360,7 +1210,7 @@ if HAVE_NUMBA:
 
         return n_violations + p_high * n_violations_high + p_low * n_violations_low
 
-    @numba.jit(nopython=True, nogil=True, cache=False)
+    @jit(nopython=True, nogil=True, cache=False)
     def compute_nb_coincidence(spike_train1, spike_train2, max_time) -> float:
         """
         Computes the number of coincident spikes between two spike trains.
@@ -1505,3 +1355,251 @@ def estimate_cross_contamination(
         )
 
     return estimation, p_value
+
+
+def compute_slay_matrix(
+    sorting_analyzer: SortingAnalyzer,
+    k1: float,
+    k2: float,
+    templates_diff: np.ndarray | None,
+    pair_mask: np.ndarray | None = None,
+):
+    """
+    Computes the "merge decision metric" from the SLAy method, made from combining
+    a template similarity measure, a cross-correlation significance measure and a
+    sliding refractory period violation measure. A large M suggests that two
+    units should be merged.
+
+    Paramters
+    ---------
+    sorting_analyzer : SortingAnalyzer
+        The sorting analyzer object containing the spike sorting data
+    k1 : float
+        Coefficient determining the importance of the cross-correlation significance
+    k2 : float
+        Coefficient determining the importance of the sliding rp violation
+    templates_diff : np.ndarray | None
+        Pre-computed template similarity difference matrix. If None, it will be retrieved from the sorting_analyzer.
+    pair_mask : None | np.ndarray, default: None
+        A bool matrix describing which pairs are possible merges based on previous steps
+
+
+    References
+    ----------
+    Based on computation originally implemented in SLAy [Koukuntla]_.
+
+    Implementation is based on one of the original implementations written by Sai Koukuntla,
+    found at https://github.com/saikoukunt/SLAy.
+    """
+
+    num_units = sorting_analyzer.get_num_units()
+
+    if pair_mask is None:
+        pair_mask = np.triu(np.arange(num_units), 1) > 0
+
+    if templates_diff is not None:
+        sigma_ij = 1 - templates_diff
+    else:
+        sigma_ij = sorting_analyzer.get_extension("template_similarity").get_data()
+    rho_ij, eta_ij = compute_xcorr_and_rp(sorting_analyzer, pair_mask)
+
+    M_ij = sigma_ij + k1 * rho_ij - k2 * eta_ij
+
+    return M_ij
+
+
+def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarray):
+    """
+    Computes a cross-correlation significance measure and a sliding refractory period violation
+    measure for all units in the `sorting_analyzer`.
+
+    Paramters
+    ---------
+    sorting_analyzer : SortingAnalyzer
+        The sorting analyzer object containing the spike sorting data
+    pair_mask : np.ndarray
+        A bool matrix describing which pairs are possible merges based on previous steps
+    """
+
+    correlograms_extension = sorting_analyzer.get_extension("correlograms")
+    ccgs, _ = correlograms_extension.get_data()
+
+    # convert to seconds for SLAy functions
+    bin_size_ms = correlograms_extension.params["bin_ms"]
+
+    rho_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
+    eta_ij = np.zeros([len(sorting_analyzer.unit_ids), len(sorting_analyzer.unit_ids)])
+
+    for unit_index_1, _ in enumerate(sorting_analyzer.unit_ids):
+        for unit_index_2, _ in enumerate(sorting_analyzer.unit_ids):
+
+            # Don't waste time computing the other metrics if units not candidates merges
+            if not pair_mask[unit_index_1, unit_index_2]:
+                continue
+
+            xgram = ccgs[unit_index_1, unit_index_2, :]
+
+            rho_ij[unit_index_1, unit_index_2] = _compute_xcorr_pair(
+                xgram, bin_size_s=bin_size_ms / 1000, min_xcorr_rate=0
+            )
+            eta_ij[unit_index_1, unit_index_2] = _sliding_RP_viol_pair(xgram, bin_size_ms=bin_size_ms)
+
+    return rho_ij, eta_ij
+
+
+def _compute_xcorr_pair(
+    xgram,
+    bin_size_s: float,
+    min_xcorr_rate: float,
+) -> float:
+    """
+    Calculates a cross-correlation significance metric for a cluster pair.
+
+    Uses the wasserstein distance between an observed cross-correlogram and a null
+    distribution as an estimate of how significant the dependence between
+    two neurons is. Low spike count cross-correlograms have large wasserstein
+    distances from null by chance, so we first try to expand the window size. If
+    that fails to yield enough spikes, we apply a penalty to the metric.
+
+    Ported from https://github.com/saikoukunt/SLAy.
+
+    Parameters
+    ----------
+    xgram : np.array
+        The raw cross-correlogram for the cluster pair.
+    bin_size_s : float
+        The width in seconds of the bin size of the input ccgs.
+    min_xcorr_rate : float
+        The minimum ccg firing rate in Hz.
+
+    Returns
+    -------
+    sig : float
+        The calculated cross-correlation significance metric.
+    """
+
+    from scipy.signal import butter, find_peaks_cwt, sosfiltfilt
+    from scipy.stats import wasserstein_distance
+
+    # calculate low-pass filtered second derivative of ccg
+    fs = 1 / bin_size_s
+    cutoff_freq = 100
+    nyqist = fs / 2
+    cutoff = cutoff_freq / nyqist
+    peak_width = 0.002 / bin_size_s
+
+    xgram_2d = np.diff(xgram, 2)
+    sos = butter(4, cutoff, output="sos")
+    xgram_2d = sosfiltfilt(sos, xgram_2d)
+
+    if xgram.sum() == 0:
+        return 0
+
+    # find negative peaks of second derivative of ccg, these are the edges of dips in ccg
+    peaks = find_peaks_cwt(-xgram_2d, peak_width, noise_perc=90) + 1
+    # if no peaks are found, return a very low significance
+    if peaks.shape[0] == 0:
+        return -4
+    peaks = np.abs(peaks - xgram.shape[0] / 2)
+    peaks = peaks[peaks > 0.5 * peak_width]
+    min_peaks = np.sort(peaks)
+
+    # start with peaks closest to 0 and move to the next set of peaks if the event count is too low
+    window_width = min_peaks * 1.5
+    starts = np.maximum(xgram.shape[0] / 2 - window_width, 0)
+    ends = np.minimum(xgram.shape[0] / 2 + window_width, xgram.shape[0] - 1)
+    ind = 0
+    xgram_window = xgram[int(starts[0]) : int(ends[0] + 1)]
+    xgram_sum = xgram_window.sum()
+    window_size = xgram_window.shape[0] * bin_size_s
+    while (xgram_sum < (min_xcorr_rate * window_size * 10)) and (ind < starts.shape[0]):
+        xgram_window = xgram[int(starts[ind]) : int(ends[ind] + 1)]
+        xgram_sum = xgram_window.sum()
+        window_size = xgram_window.shape[0] * bin_size_s
+        ind += 1
+    # use the whole ccg if peak finding fails
+    if ind == starts.shape[0]:
+        xgram_window = xgram
+
+    # TODO: was getting error messges when xgram_window was all zero. Why was this happening?
+    if np.abs(xgram_window).sum() == 0:
+        return 0
+
+    sig = (
+        wasserstein_distance(
+            np.arange(xgram_window.shape[0]) / xgram_window.shape[0],
+            np.arange(xgram_window.shape[0]) / xgram_window.shape[0],
+            xgram_window,
+            np.ones_like(xgram_window),
+        )
+        * 4
+    )
+
+    if xgram_window.sum() < (min_xcorr_rate * window_size):
+        sig *= (xgram_window.sum() / (min_xcorr_rate * window_size)) ** 2
+
+        # if sig < 0.04 and xgram_window.sum() < (min_xcorr_rate * window_size):
+    if xgram_window.sum() < (min_xcorr_rate / 4 * window_size):
+        sig = -4  # don't merge if the event count is way too low
+
+    return sig
+
+
+def _sliding_RP_viol_pair(
+    correlogram,
+    bin_size_ms: float,
+    accept_threshold: float = 0.15,
+) -> float:
+    """
+    Calculate the sliding refractory period violation confidence for a cluster.
+
+    Ported from https://github.com/saikoukunt/SLAy.
+
+    Parameters
+    ----------
+    correlogram : np.array
+        The auto-correlogram of the cluster.
+    bin_size_ms : float
+        The width in ms of the bin size of the input ccgs.
+    accept_threshold : float, default: 0.15
+        The minimum ccg firing rate in Hz.
+
+    Returns
+    -------
+    sig : float
+        The refractory period violation confidence for the cluster.
+    """
+    from scipy.signal import butter, sosfiltfilt
+    from scipy.stats import poisson
+
+    # create various refractory periods sizes to test (between 0 and 20x bin size)
+    all_refractory_periods = np.arange(0, 21 * bin_size_ms, bin_size_ms) / 1000
+    test_refractory_period_indices = np.array([1, 2, 4, 6, 8, 12, 16, 20], dtype="int8")
+    test_refractory_periods = [
+        all_refractory_periods[test_rp_index] for test_rp_index in test_refractory_period_indices
+    ]
+
+    # calculate and avg halves of acg to ensure symmetry
+    # keep only second half of acg, refractory period violations are compared from the center of acg
+    half_len = int(correlogram.shape[0] / 2)
+    correlogram = (correlogram[half_len:] + correlogram[:half_len][::-1]) / 2
+
+    acg_cumsum = np.cumsum(correlogram)
+    sum_res = acg_cumsum[test_refractory_period_indices - 1]  # -1 bc 0th bin corresponds to 0-bin_size ms
+
+    # low-pass filter acg and use max as baseline event rate
+    order = 4  # Hz
+    cutoff_freq = 250  # Hz
+    fs = 1 / bin_size_ms * 1000
+    nyqist = fs / 2
+    cutoff = cutoff_freq / nyqist
+    sos = butter(order, cutoff, btype="low", output="sos")
+    smoothed_acg = sosfiltfilt(sos, correlogram)
+
+    bin_rate_max = np.max(smoothed_acg)
+    max_conts_max = np.array(test_refractory_periods) / bin_size_ms * 1000 * (bin_rate_max * accept_threshold)
+    # compute confidence of less than acceptThresh contamination at each refractory period
+    confs = 1 - poisson.cdf(sum_res, max_conts_max)
+    rp_viol = 1 - confs.max()
+
+    return rp_viol

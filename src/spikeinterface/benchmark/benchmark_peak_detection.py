@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import GroundTruthComparison
@@ -13,7 +11,7 @@ from spikeinterface.benchmark.benchmark_plot_tools import despine
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from .benchmark_base import Benchmark, BenchmarkStudy
-from spikeinterface.core.basesorting import minimum_spike_dtype
+from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 from .benchmark_plot_tools import fit_sigmoid, sigmoid
 
@@ -33,7 +31,7 @@ class PeakDetectionBenchmark(Benchmark):
         self.result = {}
 
     def run(self, **job_kwargs):
-        peaks = detect_peaks(self.recording, self.method, **self.params, **job_kwargs)
+        peaks = detect_peaks(self.recording, self.method, method_kwargs=self.params, job_kwargs=job_kwargs)
         self.result["peaks"] = peaks
 
     def compute_result(self, **result_params):
@@ -116,6 +114,13 @@ class PeakDetectionBenchmark(Benchmark):
 
 
 class PeakDetectionStudy(BenchmarkStudy):
+    """
+    Benchmark study to compare peak detection methods.
+
+    The ground truth sorting must be given.
+    Peak detected by methods will be compared to the ground truth to estimate the
+    recall.
+    """
 
     benchmark_class = PeakDetectionBenchmark
 
@@ -165,7 +170,7 @@ class PeakDetectionStudy(BenchmarkStudy):
         import matplotlib.pyplot as plt
 
         if ax is None:
-            fig, ax = plt.subplots(figsize=figsize, squeeze=False)
+            fig, ax = plt.subplots(figsize=figsize)
         else:
             fig = ax.get_figure()
 

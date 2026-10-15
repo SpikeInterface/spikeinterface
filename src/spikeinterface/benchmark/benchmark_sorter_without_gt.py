@@ -10,7 +10,6 @@ from spikeinterface.comparison import compare_multiple_sorters
 
 from spikeinterface.benchmark import analyse_residual
 
-
 # TODO later integrate CollisionGTComparison optionally in this class.
 
 

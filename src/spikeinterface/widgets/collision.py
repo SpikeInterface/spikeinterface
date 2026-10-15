@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -7,7 +5,7 @@ from .base import BaseWidget, to_attr
 
 class ComparisonCollisionBySimilarityWidget(BaseWidget):
     """
-    Plots CollisionGTComparison pair by pair orderer by cosine_similarity
+    Plots CollisionGTComparison pair by pair ordered by cosine_similarity
 
     Parameters
     ----------
@@ -91,7 +89,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         templates_array = dp.templates_array[template_inds, :, :].copy()
         flat_templates = templates_array.reshape(templates_array.shape[0], -1)
 
-        similarity_matrix = compute_similarity_with_templates_array(
+        similarity_matrix, _ = compute_similarity_with_templates_array(
             templates_array,
             templates_array,
             method=dp.metric,
@@ -186,7 +184,7 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
 class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
     """
-    Plots CollisionGTComparison pair by pair orderer by cosine_similarity for all
+    Plots CollisionGTComparison pair by pair ordered by cosine_similarity for all
     cases in a study.
 
     Parameters

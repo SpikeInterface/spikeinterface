@@ -118,23 +118,23 @@ The :py:mod:`spikeinterface.extractors` module is designed to load and save reco
 Quality metrics tutorial
 ------------------------
 
-The :code:`spikeinterface.qualitymetrics` module allows users to compute various quality metrics to assess the goodness of a spike sorting output.
+The :code:`spikeinterface.metrics.quality` module allows users to compute various quality metrics to assess the goodness of a spike sorting output.
 
 .. grid:: 1 2 2 3
    :gutter: 2
 
    .. grid-item-card:: Quality Metrics
       :link-type: ref
-      :link: sphx_glr_tutorials_qualitymetrics_plot_3_quality_metrics.py
-      :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_3_quality_metrics_thumb.png
+      :link: sphx_glr_tutorials_metrics_plot_3_quality_metrics.py
+      :img-top: /tutorials/metrics/images/thumb/sphx_glr_plot_3_quality_metrics_thumb.png
       :img-alt: Quality Metrics
       :class-card: gallery-card
       :text-align: center
 
    .. grid-item-card:: Curation Tutorial
       :link-type: ref
-      :link: sphx_glr_tutorials_qualitymetrics_plot_4_curation.py
-      :img-top: /tutorials/qualitymetrics/images/thumb/sphx_glr_plot_4_curation_thumb.png
+      :link: sphx_glr_tutorials_metrics_plot_4_curation.py
+      :img-top: /tutorials/metrics/images/thumb/sphx_glr_plot_4_curation_thumb.png
       :img-alt: Curation Tutorial
       :class-card: gallery-card
       :text-align: center
@@ -196,27 +196,27 @@ The :code:`widgets` module contains several plotting routines (widgets) for visu
 .. grid:: 1 2 2 3
    :gutter: 2
 
-   .. grid-item-card:: RecordingExtractor Widgets
+   .. grid-item-card:: BaseRecording Widgets
       :link-type: ref
       :link: sphx_glr_tutorials_widgets_plot_1_rec_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_1_rec_gallery_thumb.png
-      :img-alt: Recording Widgets
+      :img-alt: BaseRecording Widgets
       :class-card: gallery-card
       :text-align: center
 
-   .. grid-item-card:: SortingExtractor Widgets
+   .. grid-item-card:: BaseSorting Widgets
       :link-type: ref
       :link: sphx_glr_tutorials_widgets_plot_2_sort_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_2_sort_gallery_thumb.png
-      :img-alt: Sorting Widgets
+      :img-alt: BaseSorting Widgets
       :class-card: gallery-card
       :text-align: center
 
-   .. grid-item-card:: Waveforms Widgets
+   .. grid-item-card:: SortingAnalyzer Widgets
       :link-type: ref
       :link: sphx_glr_tutorials_widgets_plot_3_waveforms_gallery.py
       :img-top: /tutorials/widgets/images/thumb/sphx_glr_plot_3_waveforms_gallery_thumb.png
-      :img-alt: Waveforms Widgets
+      :img-alt: SortingAnalyzer Widgets
       :class-card: gallery-card
       :text-align: center
 

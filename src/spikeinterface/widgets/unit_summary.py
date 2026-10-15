@@ -1,6 +1,6 @@
-from __future__ import annotations
 from collections import defaultdict
 
+import warnings
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -18,7 +18,7 @@ class UnitSummaryWidget(BaseWidget):
     """
     Plot a unit summary.
 
-    If amplitudes are alreday computed, they are displayed.
+    If amplitudes are already computed, they are displayed.
 
     Parameters
     ----------
@@ -107,7 +107,7 @@ class UnitSummaryWidget(BaseWidget):
 
         self.figure, self.axes, self.ax = make_mpl_figure(**backend_kwargs)
 
-        # and use custum grid spec
+        # and use custom grid spec
         fig = self.figure
         nrows = 2
         ncols = 2
@@ -134,8 +134,14 @@ class UnitSummaryWidget(BaseWidget):
         col_counter += 1
 
         unit_locations = sorting_analyzer.get_extension("unit_locations").get_data(outputs="by_unit")
+        main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
+
         unit_location = unit_locations[unit_id]
         x, y = unit_location[0], unit_location[1]
+        if np.isnan(x) or np.isnan(y):
+            warnings.warn(f"Unit {unit_id} location contains NaN values. Replacing NaN extremum channel location.")
+            x, y = sorting_analyzer.get_channel_locations()[main_channels[unit_id]]
+
         ax_unit_locations.set_xlim(x - 80, x + 80)
         ax_unit_locations.set_ylim(y - 250, y + 250)
         ax_unit_locations.set_xticks([])
@@ -173,6 +179,7 @@ class UnitSummaryWidget(BaseWidget):
                 **unitwaveformdensitymapwidget_kwargs,
             )
             col_counter += 1
+            ax_waveform_density.set_xlabel(None)
             ax_waveform_density.set_ylabel(None)
 
         if sorting_analyzer.has_extension("correlograms"):
