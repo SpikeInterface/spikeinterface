@@ -157,6 +157,32 @@ class FilterRecording(BasePreprocessor):
             direction=direction,
         )
 
+    def _init_fir(self, recording, taps, dtype, filter_kwargs):
+        """Set this recording up to apply the zero-phase FIR `taps` by overlap-save, for ``method="fir"``."""
+        from .fir_filter import FIRFilterRecordingSegment
+
+        iir_defaults = dict(filter_order=5, ftype="butter", filter_mode="sos", coeff=None, direction="forward-backward")
+        for name, value in filter_kwargs.items():
+            if name not in iir_defaults and name != "add_reflect_padding":
+                raise TypeError(f"Unexpected argument {name!r}")
+            default = iir_defaults.get(name)
+            if name in iir_defaults and (value is not None if default is None else value != default):
+                raise ValueError(f"{name} applies to method='iir' only; method='fir' is set by its transition bands")
+        dtype = fix_dtype(recording, dtype)
+
+        BasePreprocessor.__init__(self, recording, dtype=dtype)
+        self.annotate(is_filtered=True)
+        if "offset_to_uV" in self.get_property_keys():
+            self.set_channel_offsets(0)
+        self.margin_samples = taps.size // 2
+        kernels = taps[np.newaxis, :]
+        groups = np.zeros(recording.get_num_channels(), dtype=np.intp)
+        add_reflect_padding = filter_kwargs.get("add_reflect_padding", False)
+        for parent_segment in recording.segments:
+            self.add_recording_segment(
+                FIRFilterRecordingSegment(parent_segment, kernels, groups, taps.size // 2, dtype, add_reflect_padding)
+            )
+
 
 class FilterRecordingSegment(BasePreprocessorSegment):
     def __init__(
@@ -243,6 +269,16 @@ class BandpassFilterRecording(FilterRecording):
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     ignore_low_freq_error : bool, default: False
         If True, does not raise an error if freq_min is too low for the sampling frequency.
+    method : "iir" | "fir", default: "iir"
+        "iir" applies a Butterworth (or `ftype`) filter with `scipy.signal`. "fir" applies a linear-phase Kaiser
+        bandpass from ``design_fir_bandpass`` by overlap-save: it is -6 dB at `freq_min` and `freq_max`, at least
+        `stopband_db` down beyond the transition bands, and its output does not depend on chunking. With "fir",
+        `margin_ms` is ignored, and `filter_order`, `ftype`, `filter_mode`, `coeff` and `direction` must be left
+        at their defaults.
+    transition_low_hz, transition_high_hz : float, default: 175.0, 2000.0
+        For `method="fir"`, the width of the transition band centred on each cutoff, in Hz.
+    stopband_db : float, default: 45.0
+        For `method="fir"`, the least attenuation in both stopbands, in dB.
     {}
 
     Returns
@@ -260,19 +296,32 @@ class BandpassFilterRecording(FilterRecording):
         dtype=None,
         ignore_low_freq_error=False,
         _skip_margin_warning_for_old_version=False,
+        method="iir",
+        transition_low_hz=175.0,
+        transition_high_hz=2000.0,
+        stopband_db=45.0,
         **filter_kwargs,
     ):
-        if margin_ms == "auto":
-            margin_ms = adjust_margin_ms_for_highpass(freq_min)
-        highpass_check(
-            freq_min,
-            margin_ms,
-            ignore_low_freq_error=ignore_low_freq_error,
-            skip_warning=_skip_margin_warning_for_old_version,
-        )
-        FilterRecording.__init__(
-            self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype, **filter_kwargs
-        )
+        if method == "iir":
+            if margin_ms == "auto":
+                margin_ms = adjust_margin_ms_for_highpass(freq_min)
+            highpass_check(
+                freq_min,
+                margin_ms,
+                ignore_low_freq_error=ignore_low_freq_error,
+                skip_warning=_skip_margin_warning_for_old_version,
+            )
+            FilterRecording.__init__(
+                self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype, **filter_kwargs
+            )
+        elif method == "fir":
+            from .filter_design import design_fir_bandpass
+
+            fs = recording.get_sampling_frequency()
+            taps = design_fir_bandpass(freq_min, freq_max, fs, transition_low_hz, transition_high_hz, stopband_db)
+            self._init_fir(recording, taps, dtype, filter_kwargs)
+        else:
+            raise ValueError(f"method must be 'iir' or 'fir', got {method!r}")
         dtype = fix_dtype(recording, dtype)
         self._kwargs = dict(
             recording=recording,
@@ -281,6 +330,10 @@ class BandpassFilterRecording(FilterRecording):
             margin_ms=margin_ms,
             dtype=dtype.str,
             ignore_low_freq_error=ignore_low_freq_error,
+            method=method,
+            transition_low_hz=transition_low_hz,
+            transition_high_hz=transition_high_hz,
+            stopband_db=stopband_db,
         )
         self._kwargs.update(filter_kwargs)
 
@@ -314,6 +367,15 @@ class HighpassFilterRecording(FilterRecording):
         The dtype of the returned traces. If None, the dtype of the parent recording is used
     ignore_low_freq_error : bool, default: False
         If True, does not raise an error if freq_min is too low for the sampling frequency.
+    method : "iir" | "fir", default: "iir"
+        "iir" applies a Butterworth (or `ftype`) filter with `scipy.signal`. "fir" applies a linear-phase Kaiser
+        highpass from ``design_fir_highpass`` by overlap-save: it is -6 dB at `freq_min`, at least `stopband_db`
+        down below the transition band, and its output does not depend on chunking. With "fir", `margin_ms` is
+        ignored, and `filter_order`, `ftype`, `filter_mode`, `coeff` and `direction` must be left at their defaults.
+    transition_low_hz : float, default: 175.0
+        For `method="fir"`, the width of the transition band centred on `freq_min`, in Hz.
+    stopband_db : float, default: 45.0
+        For `method="fir"`, the least attenuation in the stopband, in dB.
     {}
 
     Returns
@@ -330,19 +392,30 @@ class HighpassFilterRecording(FilterRecording):
         dtype=None,
         ignore_low_freq_error=False,
         _skip_margin_warning_for_old_version=False,
+        method="iir",
+        transition_low_hz=175.0,
+        stopband_db=45.0,
         **filter_kwargs,
     ):
-        if margin_ms == "auto":
-            margin_ms = adjust_margin_ms_for_highpass(freq_min)
-        highpass_check(
-            freq_min,
-            margin_ms,
-            ignore_low_freq_error=ignore_low_freq_error,
-            skip_warning=_skip_margin_warning_for_old_version,
-        )
-        FilterRecording.__init__(
-            self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
-        )
+        if method == "iir":
+            if margin_ms == "auto":
+                margin_ms = adjust_margin_ms_for_highpass(freq_min)
+            highpass_check(
+                freq_min,
+                margin_ms,
+                ignore_low_freq_error=ignore_low_freq_error,
+                skip_warning=_skip_margin_warning_for_old_version,
+            )
+            FilterRecording.__init__(
+                self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
+            )
+        elif method == "fir":
+            from .filter_design import design_fir_highpass
+
+            taps = design_fir_highpass(freq_min, recording.get_sampling_frequency(), transition_low_hz, stopband_db)
+            self._init_fir(recording, taps, dtype, filter_kwargs)
+        else:
+            raise ValueError(f"method must be 'iir' or 'fir', got {method!r}")
         dtype = fix_dtype(recording, dtype)
         self._kwargs = dict(
             recording=recording,
@@ -350,6 +423,9 @@ class HighpassFilterRecording(FilterRecording):
             margin_ms=margin_ms,
             dtype=dtype.str,
             ignore_low_freq_error=ignore_low_freq_error,
+            method=method,
+            transition_low_hz=transition_low_hz,
+            stopband_db=stopband_db,
         )
         self._kwargs.update(filter_kwargs)
 

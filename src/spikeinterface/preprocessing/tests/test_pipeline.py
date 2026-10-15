@@ -83,6 +83,9 @@ def test_pipeline_equiv_to_step():
             elif pp_name == "remove_artifacts":
                 pp_dict[pp_name] = {"list_triggers": [0.5]}
                 pp_rec_from_class = pp_class(rec, list_triggers=[0.5])
+            elif pp_name == "fir_filter":
+                pp_dict[pp_name] = {"taps": [0.25, 0.5, 0.25]}
+                pp_rec_from_class = pp_class(rec, taps=[0.25, 0.5, 0.25])
             elif pp_name == "zero_channel_pad":
                 pp_dict[pp_name] = {"num_channels": 2}
                 pp_rec_from_class = pp_class(rec, num_channels=2)

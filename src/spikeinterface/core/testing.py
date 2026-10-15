@@ -91,6 +91,35 @@ def check_recordings_equal(
         check_extractor_properties_equal(RX1, RX2)
 
 
+def check_chunk_invariance(
+    recording: BaseRecording, chunk_size: int, atol: float = 0.0, segment_index: int = 0
+) -> float:
+    """
+    Check that traces read in chunks of `chunk_size` and concatenated equal traces read in one call.
+
+    A preprocessor whose margin covers its full support should pass with `atol` at float rounding; one that
+    truncates an unbounded response, such as an IIR filter, should pass with `atol` at its stated seam error.
+
+    Returns
+    -------
+    max_error : float
+        The largest absolute difference between the chunked and the whole traces.
+    """
+    whole = recording.get_traces(segment_index=segment_index).astype(np.float64)
+    num_samples = whole.shape[0]
+    chunked = np.concatenate(
+        [
+            recording.get_traces(
+                segment_index=segment_index, start_frame=start, end_frame=min(start + chunk_size, num_samples)
+            )
+            for start in range(0, num_samples, chunk_size)
+        ]
+    )
+    max_error = float(np.abs(chunked - whole).max())
+    assert max_error <= atol, f"chunked traces differ from whole traces by {max_error}, above {atol}"
+    return max_error
+
+
 def check_sortings_equal(
     SX1: BaseSorting,
     SX2: BaseSorting,
