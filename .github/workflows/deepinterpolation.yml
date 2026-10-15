@@ -1,10 +1,8 @@
 name: Testing deepinterpolation
 
+# Manual only: the pinned tensorflow 2.8.4 has no wheels for Python 3.11+, the minimum spikeinterface supports
 on:
-  pull_request:
-    types: [synchronize, opened, reopened]
-    branches:
-      - main
+  workflow_dispatch:
 
 concurrency: # Cancel previous workflows on the same pull request
   group: ${{ github.workflow }}-${{ github.ref }}
