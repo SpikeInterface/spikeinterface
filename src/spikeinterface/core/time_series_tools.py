@@ -594,6 +594,35 @@ def get_chunks(time_series: TimeSeries, concatenated=True, get_data_kwargs=None,
         return chunk_list
 
 
+def apply_raised_cosine_taper(data, margin, *, inplace=True):
+    """Taper the first and last `margin` rows of `data` with a raised cosine that is zero at the ends.
+
+    Use it on a zero-padded chunk before an FFT, to limit spectral leakage from the padded edges.
+
+    Parameters
+    ----------
+    data : ndarray
+        Array of shape ``(num_samples, ...)``; must be floating point when ``inplace=True``.
+    margin : int
+        Number of rows to taper at each end.
+    inplace : bool, default: True
+        If True, modify `data` and return it; otherwise return a tapered copy.
+
+    Returns
+    -------
+    ndarray
+        The tapered array.
+    """
+    if margin <= 0:
+        return data
+    taper = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
+    taper = taper[:, np.newaxis]
+    out = data if inplace else np.array(data, copy=True)
+    out[:margin] *= taper
+    out[-margin:] *= taper[::-1]
+    return out
+
+
 def get_time_series_chunk_with_margin(
     chunkable_segment: TimeSeriesSegment,
     start_frame,
@@ -613,6 +642,8 @@ def get_time_series_chunk_with_margin(
     of `add_zeros` or `add_reflect_padding` is True. In the first
     case zero padding is used, in the second case np.pad is called
     with mod="reflect".
+
+    `window_on_margin=True` is deprecated: call :func:`apply_raised_cosine_taper` on the returned chunk instead.
     """
     length = int(chunkable_segment.get_num_samples())
 
@@ -695,11 +726,13 @@ def get_time_series_chunk_with_margin(
                 i1 = left_pad + data_chunk.shape[0]
                 data_chunk2[i0:i1, :] = data_chunk
                 if window_on_margin:
-                    # apply inplace taper on border
-                    taper = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
-                    taper = taper[:, np.newaxis]
-                    data_chunk2[:margin] *= taper
-                    data_chunk2[-margin:] *= taper[::-1]
+                    warnings.warn(
+                        "window_on_margin=True is deprecated and will be removed in a future release; "
+                        "call apply_raised_cosine_taper() on the returned chunk instead.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                    apply_raised_cosine_taper(data_chunk2, margin, inplace=True)
                 data_chunk = data_chunk2
             elif add_reflect_padding:
                 # in this case, we don't want to taper
