@@ -263,11 +263,9 @@ def get_preprocessing_list_from_analyzer(analyzer_folder, format="auto", backend
         storage_options = backend_options.get("storage_options", {})
         zarr_root = super_zarr_open(str(analyzer_folder), mode="r", storage_options=storage_options)
 
-        rec_field = zarr_root.get("recording")
-        if rec_field is not None:
-            recording_dict = rec_field[0]
-        else:
-            recording_dict = {}
+        recording_dict = zarr_root.attrs.get("recording")
+        if recording_dict is None:
+            raise ValueError(f"Cannot find `recording` attribute in {analyzer_folder}.")
 
         preprocessing_list = _make_pipeline_list_from_recording_dict(recording_dict)
 

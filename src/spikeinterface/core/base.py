@@ -873,7 +873,6 @@ class BaseExtractor:
         folder=None,
         overwrite=False,
         storage_options=None,
-        channel_chunk_size=None,
         verbose=True,
         **save_kwargs,
     ):
@@ -893,76 +892,6 @@ class BaseExtractor:
         )
         # we keep the default format for recording and sorting like in old version
         return self.save(folder=folder, format="zarr", verbose=verbose, **save_kwargs)
-
-        # """
-        # Save extractor to zarr.
-
-        # Parameters
-        # ----------
-        # name: str or None, default: None
-        #     Name of the subfolder in get_global_tmp_folder()
-        #     If "name" is given, "folder" must be None
-        # folder: str, Path, or None, default: None
-        #     The folder used to save the zarr output. If the folder does not have a ".zarr" suffix,
-        #     it will be automatically appended
-        # overwrite: bool, default: False
-        #     If True, the folder is removed if it already exists
-        # storage_options: dict or None, default: None
-        #     Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
-        #     For cloud storage locations, this should not be None (in case of default values, use an empty dict)
-        # channel_chunk_size: int or None, default: None
-        #     Channels per chunk (only for BaseRecording)
-        # compressor: numcodecs.Codec or None, default: None
-        #     Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
-        # filters: list[numcodecs.Codec] or None, default: None
-        #     Global filters for zarr (global)
-        # compressor_by_dataset: dict or None, default: None
-        #     Optional compressor per dataset:
-        #         - traces
-        #         - times
-        #     If None, the global compressor is used
-        # filters_by_dataset: dict or None, default: None
-        #     Optional filters per dataset:
-        #         - traces
-        #         - times
-        #     If None, the global filters are used
-        # verbose: bool, default: True
-        #     If True, the output is verbose
-        # auto_cast_uint: bool, default: True
-        #     If True, unsigned integers are cast to signed integers to avoid issues with zarr (only for BaseRecording)
-
-        # Returns
-        # -------
-        # cached: ZarrExtractor
-        #     Saved copy of the extractor.
-        # """
-        # from .zarrextractors import read_zarr
-
-        # save_kwargs.pop("format", None)
-
-        # if folder is None:
-        #     cache_folder = get_global_tmp_folder()
-        #     if name is None:
-        #         name = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
-        #     zarr_path = (cache_folder / name).with_suffix(".zarr")
-        #     if verbose:
-        #         print(f"Saving to zarr_path={zarr_path}")
-        # else:
-        #     if storage_options is None:  # save locally (not cloud storage)
-        #         folder = clean_zarr_folder_name(folder)
-        #         if folder.is_dir() and overwrite:
-        #             shutil.rmtree(folder)
-        #     zarr_path = folder
-
-        # if not is_path_remote(zarr_path):
-        #     assert not zarr_path.exists(), f"Path {zarr_path} already exists, choose another name"
-        # save_kwargs["zarr_path"] = zarr_path
-        # save_kwargs["storage_options"] = storage_options
-        # save_kwargs["channel_chunk_size"] = channel_chunk_size
-        # cached = self._save(format="zarr", verbose=verbose, **save_kwargs)
-        # cached = read_zarr(zarr_path)
-
-        # return cached
 
 
 def _load_extractor_from_dict(dic) -> "BaseExtractor":
