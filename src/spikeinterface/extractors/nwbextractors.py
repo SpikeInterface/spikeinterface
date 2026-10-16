@@ -449,15 +449,20 @@ class _NWBReader:
 
     @staticmethod
     def _reading_method(use_pynwb, file_path=None, file=None, stream_mode=None, storage_options=None):
-        # The in-house zarr reader only reads zarr v3 files. Zarr v2 files (written by hdmf-zarr<0.14)
-        # are read with pynwb, where hdmf-zarr keeps the backward compatibility code for them.
+        # With zarr-python 3, the in-house zarr reader only reads zarr v3 files. Zarr v2 files (written by
+        # hdmf-zarr<0.14) are read with pynwb, where hdmf-zarr keeps the backward compatibility code for them.
         if use_pynwb:
             return "use_pynwb"
         backend = _NWBReader._storage_backend(file_path, file, stream_mode)
-        if backend == "zarr" and _get_zarr_format(file_path, stream_mode, storage_options) == 2:
-            if not HAVE_PYNWB:
+        if (
+            backend == "zarr"
+            and _has_zarr_python_3()
+            and _get_zarr_format(file_path, stream_mode, storage_options) == 2
+        ):
+            if not HAVE_PYNWB or importlib.util.find_spec("hdmf_zarr") is None:
                 raise ImportError(
-                    "To read zarr v2 NWB files, install pynwb and hdmf-zarr: \n\n pip install pynwb hdmf-zarr\n\n"
+                    "To read zarr v2 NWB files with zarr-python 3, install pynwb and hdmf-zarr>=0.14, which requires "
+                    'Python 3.12 or newer: \n\n pip install pynwb "hdmf-zarr>=0.14"\n\n'
                 )
             warnings.warn(
                 f"{file_path} is a zarr v2 NWB file, which is read with pynwb. This can be slower than "
