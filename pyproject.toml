@@ -139,7 +139,7 @@ sortingcomponents = [
     # pip install torch
     # `medicine-neuro` is likewise optional (and itself depends on torch), needed only
     # for the "medicine" motion estimation method. Install separately if needed:
-    # pip install medicine-neuro
+    # pip install "medicine-neuro>=1.7"
 ]
 
 sorters_internal = [
@@ -314,7 +314,7 @@ test-exporters = [{include-group = "test-common"}]
 test-sortingcomponents = [
     {include-group = "test-common"},
     "torch",  # neural network peak detection, motion, matching
-    "medicine-neuro",  # "medicine" motion estimation method
+    "medicine-neuro>=1.7",  # "medicine" motion estimation method
     "huggingface_hub", # for `test_single_channel_toy_denoiser_in_peak_pipeline`
 ]
 test-generation = [
