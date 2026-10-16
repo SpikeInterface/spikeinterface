@@ -4,7 +4,7 @@ from .base import BaseWidget, to_attr
 
 from spikeinterface.core import BaseRecording, SortingAnalyzer
 from .rasters import BaseRasterWidget
-from .utils import compute_segment_durations_from_spike_vector, get_segment_start_stop_times
+from .utils import estimate_segment_durations_from_spike_vector, get_segment_start_stop_times
 from spikeinterface.core.motion import Motion
 
 
@@ -265,7 +265,7 @@ class DriftRasterMapWidget(BaseRasterWidget):
             segment_start_stop_times = get_segment_start_stop_times(recording, segment_indices)
         else:
             # Find boundaries between segments using searchsorted
-            _, segment_start_stop_times = compute_segment_durations_from_spike_vector(
+            _, segment_start_stop_times = estimate_segment_durations_from_spike_vector(
                 filtered_peaks, segment_indices, sampling_frequency
             )
 

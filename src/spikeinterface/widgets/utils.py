@@ -446,12 +446,12 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
 
     segment_t_starts = [sorting.get_start_time(seg_idx) for seg_idx in segment_indices]
 
-    return compute_segment_durations_from_spike_vector(
+    return estimate_segment_durations_from_spike_vector(
         spikes, segment_indices, sorting.get_sampling_frequency(), segment_t_starts
     )
 
 
-def compute_segment_durations_from_spike_vector(
+def estimate_segment_durations_from_spike_vector(
     spike_vector: np.ndarray,
     segment_indices: list[int],
     sampling_frequency: float,
