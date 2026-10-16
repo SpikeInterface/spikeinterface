@@ -9,6 +9,8 @@ from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecuto
 
 from .common_reference import common_reference
 from .filter import highpass_filter
+from spikeinterface.widgets import plot_raw_data_quality_metrics
+import matplotlib.pyplot as plt
 
 
 def raw_data_quality_metrics(
@@ -163,14 +165,29 @@ def raw_data_quality_metrics(
 
         all_rolling_rms[recording_name] = rolling_rms
 
-    if folder is not None:
-        _write_rms_summary_csvs(folder, recordings, all_chunk_results)
-        raise NotImplementedError("Plots saving is not yet implemented.")
-
-    return {
+    results = {
         "chunked_results": all_chunk_results,
         "rolling_rms": all_rolling_rms,
     }
+    if folder is not None:
+
+        _write_rms_summary_csvs(folder, recordings, all_chunk_results)
+
+        for segment_index in range(raw_ap_recording.get_num_segments()):
+            widget = plot_raw_data_quality_metrics(
+                results,
+                recordings=recordings,
+                segment_index=segment_index,
+                backend="matplotlib",
+            )
+            widget.figure.savefig(
+                Path(folder) / f"raw_data_quality_metrics_seg_{segment_index}.png",
+                dpi=150,
+                bbox_inches="tight",
+            )
+            plt.close(widget.figure)
+
+    return results
 
 
 def _get_job_kwargs(job_kwargs, chunk_size_s, rolling_rms_window_size_s):
@@ -325,7 +342,7 @@ def _compute_rms_psd(segment_index, start_frame, end_frame, worker_context):
         return_in_uV=True,
     ).astype(np.float64, copy=False)
 
-    traces -= np.mean(traces, axis=0)
+    traces = traces - np.mean(traces, axis=0)
     rms = _compute_rms(traces)
 
     frequencies, psd = periodogram(
@@ -353,7 +370,7 @@ def _compute_rms_with_times(segment_index, start_frame, end_frame, worker_contex
         return_in_uV=True,
     ).astype(np.float64, copy=False)
 
-    traces -= np.mean(traces, axis=0)
+    traces = traces - np.mean(traces, axis=0)
     rms = _compute_rms(traces)
 
     rms_time_center_bin = (

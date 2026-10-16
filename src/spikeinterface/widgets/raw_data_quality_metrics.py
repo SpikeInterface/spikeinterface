@@ -77,6 +77,7 @@ class RawDataQualityMetricsWidget(BaseWidget):
         self.axes = np.asarray(self.axes).reshape(2, num_recordings)
 
         for column_index, (recording_name, recording_data) in enumerate(data_plot["recording_data"].items()):
+
             rms_axis, psd_axis = self.axes[:, column_index]
 
             rms_axis.text(
@@ -88,26 +89,27 @@ class RawDataQualityMetricsWidget(BaseWidget):
                 fontsize=18,
                 fontweight="bold",
             )
-            rms_axis.set_title("RMS", fontsize=15, pad=26)
-            rms_axis.text(
-                0.5,
-                1.03,
-                f"(median RMS: {recording_data['median_channel_rms']:.2f} µV)",
-                transform=rms_axis.transAxes,
-                ha="center",
-                fontsize=10,
-            )
-            psd_axis.set_title("PSD", fontsize=15)
 
             if recording_data["rms"] is not None:
+
+                rms_axis.set_title("RMS", fontsize=15, pad=26)
+                rms_axis.text(
+                    0.5,
+                    1.03,
+                    f"(median RMS: {recording_data['median_channel_rms']:.2f} µV)",
+                    transform=rms_axis.transAxes,
+                    ha="center",
+                    fontsize=10,
+                )
+
                 rms_image = self._plot_map(rms_axis, recording_data["times"], recording_data["rms"])
                 rms_axis.set_xlabel("Time (s)")
                 self.figure.colorbar(rms_image, ax=rms_axis, label="RMS (µV)")
+
             else:
                 rms_axis.set_axis_off()
-                rms_axis.text(
-                    0.5, 0.5, "Rolling RMS not computed", transform=rms_axis.transAxes, ha="center", va="center"
-                )
+
+            psd_axis.set_title("PSD", fontsize=15)
 
             # Zero power cannot be shown on a log scale; keep all-zero data linear.
             psd = recording_data["psd"]
@@ -124,7 +126,7 @@ class RawDataQualityMetricsWidget(BaseWidget):
             num_channels = len(recording_data["channel_ids"])
             tick_indices = np.linspace(0, num_channels - 1, min(8, num_channels), dtype=int)
 
-            for axis in (rms_axis, psd_axis):
+            for axis in (psd_axis, rms_axis):
                 axis.set_yticks(tick_indices, labels=recording_data["channel_ids"][tick_indices])
                 axis.set_ylim(-0.5, num_channels - 0.5)
                 axis.set_ylabel("Channel ID")
