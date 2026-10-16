@@ -149,6 +149,44 @@ class BaseSorting(BaseExtractor):
         ), "This methods requires an associated recording. Call self.register_recording() first."
         return self._recording.get_total_duration()
 
+    def search_cached_spikes_sorted(
+        self,
+        indices: list[int],
+        segment_index: int | None = None,
+    ):
+        """
+        Search sample indices (frames) in the cached spike vector of one segment.
+
+        Equivalent to `np.searchsorted(segment_sample_index, indices, side="left")`.
+        Sortings with a lazy spike vector override this to avoid materialising it.
+
+        Parameters
+        ----------
+        indices : list[int]
+            The sample indices (frames) to search.
+        segment_index : int | None, default: None
+            The segment to search. Can be None for mono-segment sortings.
+
+        Returns
+        -------
+        positions : np.ndarray
+            The insertion positions, relative to the start of the segment in the spike vector.
+        """
+        if self._cached_spike_vector is None:
+            self._compute_and_cache_spike_vector()
+        spikes = self._cached_spike_vector
+        if not isinstance(spikes, np.ndarray):  # np.memmap is an ndarray
+            # np.searchsorted would materialise a lazy vector on every call
+            raise TypeError(
+                f"{type(self).__name__} holds a lazy spike vector ({type(spikes).__name__}) "
+                "and must override search_cached_spikes_sorted()"
+            )
+        if segment_index is None:
+            assert self.get_num_segments() == 1, "segment_index is required for multi-segment sortings"
+            segment_index = 0
+        start, stop = self._get_spike_vector_segment_slices()[segment_index]
+        return np.searchsorted(spikes["sample_index"][start:stop], indices)
+
     def get_unit_spike_train(
         self,
         unit_id: str | int,
@@ -200,6 +238,7 @@ class BaseSorting(BaseExtractor):
                 segment_index=segment_index,
                 start_time=start_time,
                 end_time=end_time,
+                use_cache=use_cache,
             )
 
         segment_index = self._check_segment_index(segment_index)
@@ -237,6 +276,7 @@ class BaseSorting(BaseExtractor):
         segment_index: int | None = None,
         start_time: float | None = None,
         end_time: float | None = None,
+        use_cache: bool = True,
     ) -> np.ndarray:
         """
         Get spike train for a unit in seconds.
@@ -261,6 +301,9 @@ class BaseSorting(BaseExtractor):
             The start time in seconds for spike train extraction
         end_time : float or None, default: None
             The end time in seconds for spike train extraction
+        use_cache : bool, default: True
+            Passed to `get_unit_spike_train` when the times are computed from frames.
+            Ignored when the segment returns native times.
 
         Returns
         -------
@@ -283,7 +326,7 @@ class BaseSorting(BaseExtractor):
                 start_frame=start_frame,
                 end_frame=end_frame,
                 return_times=False,
-                use_cache=True,
+                use_cache=use_cache,
             )
 
             spike_times = self.sample_index_to_time(spike_frames, segment_index=segment_index)
@@ -322,7 +365,7 @@ class BaseSorting(BaseExtractor):
             start_frame=start_frame,
             end_frame=end_frame,
             return_times=False,
-            use_cache=True,
+            use_cache=use_cache,
         )
 
         t_start = segment._t_start if segment._t_start is not None else 0
@@ -535,6 +578,8 @@ class BaseSorting(BaseExtractor):
             * "numpy_folder" format:
                 - folder : str or Path
                     The folder where the files will be saved.
+                - mmap_mode : str or None, default: None
+                    The memory-mapping mode to use when saving numpy files. If None, no memory mapping is used.
                 - overwrite : bool, default: False
                     If True, existing files in the folder will be overwritten.
             * "zarr" format:
@@ -1076,11 +1121,16 @@ class BaseSorting(BaseExtractor):
         if self._cached_spike_vector_segment_slices is None:
             # compute the, this is needed when spikevector is loaded from format and not computed
             num_seg = self.get_num_segments()
-            slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg + 1))
-            self._cached_spike_vector_segment_slices = np.zeros((num_seg, 2), dtype="int64")
-            for seg_index in range(num_seg):
-                self._cached_spike_vector_segment_slices[seg_index, 0] = slices[seg_index]
-                self._cached_spike_vector_segment_slices[seg_index, 1] = slices[seg_index + 1]
+            if num_seg == 1:
+                self._cached_spike_vector_segment_slices = np.array(
+                    [[0, self._cached_spike_vector.size]], dtype="int64"
+                )
+            else:
+                slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg + 1))
+                self._cached_spike_vector_segment_slices = np.zeros((num_seg, 2), dtype="int64")
+                for seg_index in range(num_seg):
+                    self._cached_spike_vector_segment_slices[seg_index, 0] = slices[seg_index]
+                    self._cached_spike_vector_segment_slices[seg_index, 1] = slices[seg_index + 1]
         return self._cached_spike_vector_segment_slices
 
     def to_reordered_spike_vector(

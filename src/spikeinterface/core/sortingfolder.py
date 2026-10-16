@@ -15,7 +15,7 @@ from .core_tools import (
     save_properties_to_folder,
     save_annotations_to_folder,
     load_annotations_from_folder,
-    save_extractor_provenance,
+    save_provenance_to_folder,
 )
 
 
@@ -61,7 +61,13 @@ class NumpyFolderSorting(BaseSorting):
         self._kwargs = dict(folder_path=str(folder_path.absolute()), mmap_mode=mmap_mode)
 
     @staticmethod
-    def write_sorting(sorting, folder_path, overwrite: bool = False):
+    def write_sorting(
+        sorting,
+        folder_path,
+        overwrite: bool = False,
+        mmap_mode: str | None = None,
+        relative_to: str | Path | None = None,
+    ):
         # the folder can already exists but not contaning numpysorting_info.json
         folder_path = Path(folder_path)
         if folder_path.is_dir():
@@ -81,14 +87,15 @@ class NumpyFolderSorting(BaseSorting):
         np.save(folder_path / "spikes.npy", sorting.to_spike_vector())
 
         save_properties_to_folder(folder_path / "properties", sorting)
-        save_extractor_provenance(folder_path, sorting)
+        relative_to = folder_path if relative_to is None else relative_to
+        save_provenance_to_folder(folder_path, sorting, relative_to=relative_to)
         # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
         save_annotations_to_folder(folder_path, sorting)
 
         # Create the si_folder file to make the load() easier until version 0.105.0
         # All properties, annotations, and probe information are already saved in the folder,
         # so we don't need to include them in the si_folder.json
-        cached = NumpyFolderSorting(folder_path=folder_path)
+        cached = NumpyFolderSorting(folder_path=folder_path, mmap_mode=mmap_mode)
         si_folder_path = folder_path / f"si_folder.json"
         cached.dump_to_json(
             file_path=si_folder_path,

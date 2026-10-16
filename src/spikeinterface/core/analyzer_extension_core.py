@@ -182,7 +182,6 @@ class ComputeWaveforms(AnalyzerExtension):
 
         recording = self.sorting_analyzer.recording
         sorting = self.sorting_analyzer.sorting
-        unit_ids = sorting.unit_ids
 
         # retrieve spike vector and the sampling
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
@@ -191,6 +190,10 @@ class ComputeWaveforms(AnalyzerExtension):
             # in that case waveforms are extacted directly in files
             file_path = self._get_binary_extension_folder() / "waveforms.npy"
             mode = "memmap"
+            copy = False
+        elif self.format == "zarr":
+            file_path = self._get_binary_extension_folder() / "waveforms"
+            mode = "zarr"
             copy = False
         else:
             file_path = None
@@ -205,7 +208,6 @@ class ComputeWaveforms(AnalyzerExtension):
         all_waveforms = extract_waveforms_to_single_buffer(
             recording,
             some_spikes,
-            unit_ids,
             self.nbefore,
             self.nafter,
             mode=mode,
@@ -218,6 +220,8 @@ class ComputeWaveforms(AnalyzerExtension):
             verbose=verbose,
             **job_kwargs,
         )
+        if not self.sorting_analyzer._lazy and not isinstance(all_waveforms, np.ndarray):
+            all_waveforms = materialize_array(all_waveforms)
 
         self.data["waveforms"] = all_waveforms
 

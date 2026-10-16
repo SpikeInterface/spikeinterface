@@ -3,11 +3,17 @@ import pickle
 
 import pytest
 import numpy as np
+import zarr
 
 from spikeinterface import load
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.extractors.extractor_classes import NwbRecordingExtractor, NwbSortingExtractor
+
+# TODO: remove once streaming zarr is supported with zarr>=3
+skip_zarr_3 = pytest.mark.skipif(
+    int(zarr.__version__.split(".")[0]) >= 3, reason="Streaming zarr is not supported yet with zarr>=3"
+)
 
 
 @pytest.mark.streaming_extractors
@@ -185,6 +191,7 @@ def test_sorting_s3_nwb_remfile(tmp_path):
 
 
 @pytest.mark.streaming_extractors
+@skip_zarr_3
 def test_sorting_s3_nwb_zarr(tmp_path):
     file_path = (
         "s3://aind-open-data/ecephys_625749_2022-08-03_15-15-06_nwb_2023-05-16_16-34-55/"
