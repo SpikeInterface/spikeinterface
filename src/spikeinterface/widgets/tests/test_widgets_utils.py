@@ -138,5 +138,5 @@ def test_get_segment_durations_with_recording():
 if __name__ == "__main__":
     test_get_some_colors()
     test_validate_segment_indices()
-    test_get_segment_durations()
+    test_get_segment_durations_estimate()
     test_get_segment_durations_with_recording()

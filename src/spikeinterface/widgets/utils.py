@@ -461,8 +461,11 @@ def estimate_segment_durations_from_spike_vector(
     start and stop times for each segment from the spike times.
 
     Starts are supplied or default to zero. Durations include the final sample interval.
+    Empty segments have zero duration and placeholder bounds from their start to one sample interval later.
     """
     segment_start_stop_times = {}
+    durations = []
+    ts = 1 / sampling_frequency
     for i, seg_idx in enumerate(segment_indices):
 
         if segment_t_starts is None:
@@ -472,15 +475,16 @@ def estimate_segment_durations_from_spike_vector(
 
         seg_end_idx = np.searchsorted(spike_vector["segment_index"], seg_idx + 1)
 
-        assert (
-            seg_end_idx > 0 and spike_vector["segment_index"][seg_end_idx - 1] == seg_idx
-        ), f"Cannot estimate duration for segment {seg_idx}: it contains no spikes."
+        if seg_end_idx == 0 or spike_vector["segment_index"][seg_end_idx - 1] != seg_idx:
+            segment_start_stop_times[seg_idx] = (segment_start, segment_start + ts)
+            durations.append(0.0)
+            continue
 
         segment_end = spike_vector["sample_index"][seg_end_idx - 1] / sampling_frequency + segment_start
 
         segment_start_stop_times[seg_idx] = (segment_start, segment_end)
+        durations.append(segment_end - segment_start + ts)
 
-    ts = 1 / sampling_frequency
-    durations = np.array([stop - start + ts for start, stop in segment_start_stop_times.values()])
+    durations = np.array(durations)
 
     return durations, segment_start_stop_times
