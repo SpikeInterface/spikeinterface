@@ -440,6 +440,7 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
         segment_start_stop_times = get_segment_start_stop_times(sorting, segment_indices)
         ts = 1 / sorting.get_sampling_frequency()
         durations = np.array([stop - start + ts for start, stop in segment_start_stop_times.values()])
+
         return durations, segment_start_stop_times
 
     spikes = sorting.to_spike_vector()
@@ -458,7 +459,8 @@ def estimate_segment_durations_from_spike_vector(
     segment_t_starts: list[float] | None = None,
 ):
     """
-    If segment_t_starts is `None` then assume 0
+    When we don't have the true segment times, we can estimate the
+    start and stop times for each segment from the spike times.
     """
     segment_start_stop_times = {}
     for i, seg_idx in enumerate(segment_indices):

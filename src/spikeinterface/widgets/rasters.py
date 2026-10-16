@@ -127,11 +127,9 @@ class BaseRasterWidget(BaseWidget):
             if len(segment_start_stop_times) > 1:
                 if sampling_frequency is None:
                     raise ValueError("sampling_frequency is required when plotting multiple segments")
-                # When plotting, the segments are aligned such that consecutive segments
-                # appear directly next to eachother, rather than at their true times. If
-                # their true times are used, large inter-segment gaps can appear on the plot.
-                # 1 ts padding is used to ensure the end of one segment is not the same as the
-                # start time of the next segment.
+                # Align the segment times such that consecutive segments appear directly next to each other
+                # on the plot, rather than at their true times (if true times are used, large inter-segment
+                # gaps can appear on the plot)
                 starts, stops = np.array(list(segment_start_stop_times.values())).T
                 ts = 1 / sampling_frequency
                 segment_time_offsets = np.r_[0, np.cumsum(starts[1:] - (stops[:-1] + ts))]
@@ -188,7 +186,6 @@ class BaseRasterWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
         from matplotlib.colors import Normalize
-        from matplotlib.ticker import MaxNLocator, ScalarFormatter
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -273,37 +270,8 @@ class BaseRasterWidget(BaseWidget):
             segment_times = np.array(list(dp.segment_start_stop_times.values()))
             if len(segment_times) > 1:
 
-                # Update xticklabels for multi-segment times.
                 segment_times = segment_times - dp.segment_time_offsets[:, None]
-                time_formatter = ScalarFormatter()
-                time_formatter.set_axis(scatter_ax.xaxis)
-
-                def format_original_time(x, pos):
-                    segment = np.searchsorted(segment_times[1:, 0], x, side="right")
-                    return time_formatter.format_data_short(x + dp.segment_time_offsets[segment])
-
-                class SegmentTimeLocator(MaxNLocator):
-                    def tick_values(self, vmin, vmax):
-                        vmin, vmax = sorted((vmin, vmax))
-                        self.set_params(nbins=max(1, self.axis.get_tick_space()))
-                        step = np.diff(super().tick_values(0, vmax - vmin))[0]
-                        ticks = []
-                        for start, stop in segment_times:
-                            left, right = max(start, vmin), min(stop, vmax)
-                            if left > right:
-                                continue
-                            # Allow at least two ticks per segment, even on narrow axes.
-                            segment_step = min(
-                                step,
-                                np.diff(MaxNLocator(nbins=2, steps=[1, 2, 2.5, 5, 10]).tick_values(0, stop - start))[0],
-                            )
-                            first = max(0, int(np.ceil((left - start) / segment_step)))
-                            last = int(np.floor((right - start) / segment_step))
-                            ticks.extend(start + np.arange(first, last + 1) * segment_step)
-                        return self.raise_if_exceeds(np.unique(ticks))
-
-                scatter_ax.xaxis.set_major_locator(SegmentTimeLocator(steps=[1, 2, 2.5, 5, 10]))
-                scatter_ax.xaxis.set_major_formatter(format_original_time)
+                self._set_segment_time_ticks(scatter_ax, segment_times, dp.segment_time_offsets)
 
                 for boundary in segment_times[1:, 0]:
                     scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
@@ -436,6 +404,25 @@ class BaseRasterWidget(BaseWidget):
         self.plot_matplotlib(data_plot, **backend_kwargs)
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
+
+
+    @staticmethod
+    def _set_segment_time_ticks(ax, segment_times, segment_offsets):
+        """Label concatenated segments with original times, using default tick placement.
+
+        ``segment_times`` contains displayed bounds; ``segment_offsets`` restores
+        each segment's original timestamps after gaps have been removed.
+        """
+        from matplotlib.ticker import ScalarFormatter
+
+        time_formatter = ScalarFormatter()
+        time_formatter.set_axis(ax.xaxis)
+
+        def format_original_time(x, pos):
+            segment = np.searchsorted(segment_times[1:, 0], x, side="right")
+            return time_formatter.format_data_short(x + segment_offsets[segment])
+
+        ax.xaxis.set_major_formatter(format_original_time)
 
 
 class RasterWidget(BaseRasterWidget):
