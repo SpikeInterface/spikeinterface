@@ -1,6 +1,6 @@
 name: Testing deepinterpolation
 
-# Manual only — deepinterpolation requires Python 3.12, incompatible with 3.12+ required by Zarr 3.0.0+
+# Manual only: the pinned tensorflow 2.8.4 has no wheels for Python 3.11+, the minimum spikeinterface supports
 on:
   workflow_dispatch:
 
