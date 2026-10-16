@@ -405,7 +405,6 @@ class BaseRasterWidget(BaseWidget):
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
 
-
     @staticmethod
     def _set_segment_time_ticks(ax, segment_times, segment_offsets):
         """Label concatenated segments with original times, using default tick placement.
