@@ -386,7 +386,28 @@ def solve_monopolar_triangulation(wf_data, local_contact_locations, max_distance
         max_data = wf_data.max()
         args = (wf_data, local_contact_locations, max_data)
         try:
-            output = minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
+            bounds_array = np.asarray(bounds)
+            use_batch = (
+                type(wf_data) is np.ndarray
+                and type(local_contact_locations) is np.ndarray
+                and wf_data.dtype.kind in "biuf"
+                and local_contact_locations.dtype.kind in "biuf"
+                and np.isfinite(wf_data).all()
+                and max_data > 0
+                and np.all(bounds_array[:, 1] > bounds_array[:, 0])
+            )
+            if use_batch:
+                output = minimize(
+                    _estimate_distance_error_with_log_and_gradient,
+                    x0=x0,
+                    bounds=bounds,
+                    args=(*args, bounds_array[:, 0], bounds_array[:, 1]),
+                    jac=True,
+                    # Each callback evaluates four parameter points.
+                    options={"maxfun": 15000 // 4},
+                )
+            else:
+                output = minimize(estimate_distance_error_with_log, x0=x0, bounds=bounds, args=args)
             # final alpha
             q = data_at(*output["x"], 1.0, local_contact_locations)
             alpha = (wf_data * q).sum() / np.square(q).sum()
@@ -428,6 +449,46 @@ def estimate_distance_error_with_log(vec, wf_data, local_contact_locations, max_
         - np.log1p(10.0 * z) / 10000.0
     )
     return err
+
+
+def _estimate_distance_error_with_log_and_gradient(
+    position, waveform_data, contact_locations, max_data, lower_bounds, upper_bounds
+):
+    """Evaluate the objective and the three forward differences in one batch."""
+    # Match the L-BFGS-B absolute finite-difference step and bound adjustment.
+    steps = np.full(3, 1e-8)
+    ineffective = (position + steps) - position == 0
+    steps[ineffective] = (
+        np.sqrt(np.finfo("float64").eps)
+        * np.where(position[ineffective] >= 0, 1, -1)
+        * np.maximum(1, np.abs(position[ineffective]))
+    )
+    lower_distance = position - lower_bounds
+    upper_distance = upper_bounds - position
+    violates = (position + steps < lower_bounds) | (position + steps > upper_bounds)
+    fits = np.abs(steps) <= np.maximum(lower_distance, upper_distance)
+    steps[violates & fits] *= -1
+    forward = (~fits) & (upper_distance >= lower_distance)
+    backward = (~fits) & (upper_distance < lower_distance)
+    steps[forward] = upper_distance[forward]
+    steps[backward] = -lower_distance[backward]
+    points = np.broadcast_to(position, (4, 3)).copy()
+    points[np.arange(1, 4), np.arange(3)] += steps
+    differences = points[np.arange(1, 4), np.arange(3)] - position
+    distances = np.sqrt(
+        np.square(points[:, 0, None] - contact_locations[:, 0])
+        + np.square(points[:, 1, None] - contact_locations[:, 1])
+        + np.square(points[:, 2, None])
+    )
+    inverse_distances = 1 / distances
+    alpha = (inverse_distances * waveform_data / max_data).sum(axis=1) / (inverse_distances * inverse_distances).sum(
+        axis=1
+    )
+    values = (
+        np.square(waveform_data / max_data - alpha[:, None] / distances).mean(axis=1)
+        - np.log1p(10.0 * points[:, 2]) / 10000.0
+    )
+    return values[0], (values[1:] - values[0]) / differences
 
 
 # ---
