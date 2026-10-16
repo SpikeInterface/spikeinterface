@@ -401,9 +401,8 @@ def validate_segment_indices(segment_indices: list[int] | None, sorting: BaseSor
 
 
 def get_segment_start_stop_times(recording_or_sorting, segment_indices):
-    """Return first and last sample timestamps, without extending the stop times.
-
-    The input must be a recording or a sorting with a recording attached.
+    """Convenience function to return the start and stop times of
+    a recording or sorting in the `segment_start_stop_times` format.
     """
     return {
         seg: (recording_or_sorting.get_start_time(seg), recording_or_sorting.get_end_time(seg))
@@ -413,11 +412,10 @@ def get_segment_start_stop_times(recording_or_sorting, segment_indices):
 
 def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = None):
     """
-    Calculate segment durations and start/stop bounds.
+    Calculate the duration and start, stop times of each segment in a sorting object.
 
     Use first/last sample timestamps when a recording is available; otherwise
-    estimate an exclusive stop from spikes. Recording-backed durations include
-    the final sample interval.
+    estimate from spikes.
 
     Parameters
     ----------
@@ -431,7 +429,7 @@ def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = Non
     durations : np.ndarray
         Segment durations in seconds, ordered like ``segment_indices``.
     segment_start_stop_times : dict[int, tuple[float, float]]
-        Start and stop times keyed by segment index.
+        Start and stop times of each segment, where the dict key is segment index.
     """
     if segment_indices is None:
         segment_indices = range(sorting.get_num_segments())
