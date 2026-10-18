@@ -210,9 +210,9 @@ VanillaSort
 * Url: https://github.com/IgarashiAkatuki/VanillaSort
 * Authors: Zishuo Feng and Feng Cao
 * Reference: `Spike Sorting with VanillaSort <https://doi.org/10.64898/2026.09.18.752552>`_ (bioRxiv, 2026)
-* Installation (requires the VanillaSort package, version 0.1.0 or newer)::
+* Installation::
 
-      pip install vanillasort
+      pip install --upgrade vanillasort
 
 VanillaSort combines VanillaDet spike detection, HuiduRep waveform embeddings,
 relative-amplitude features, Gaussian-mixture clustering, and template-residual

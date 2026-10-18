@@ -1,12 +1,28 @@
 import importlib.util
+import sys
 from contextlib import redirect_stdout
 from importlib.metadata import version
 from pathlib import Path
 
-from packaging.version import parse
-
 from ..basesorter import BaseSorter
 from ...core import load
+
+
+class _LogAndStdout:
+    """Keep the runtime log while echoing verbose package progress."""
+
+    def __init__(self, log, stdout):
+        self.log = log
+        self.stdout = stdout
+
+    def write(self, text):
+        written = self.log.write(text)
+        self.stdout.write(text)
+        return written
+
+    def flush(self):
+        self.log.flush()
+        self.stdout.flush()
 
 
 class VanillaSortSorter(BaseSorter):
@@ -48,18 +64,16 @@ class VanillaSortSorter(BaseSorter):
     """
 
     installation_mesg = """
-    Install VanillaSort >= 0.1.0 from PyPI:
+    Install or upgrade VanillaSort from PyPI:
 
-        pip install vanillasort
+        pip install --upgrade vanillasort
 
     Follow the repository README for CPU/CUDA PyTorch installation instructions.
     """
 
     @classmethod
     def is_installed(cls):
-        if importlib.util.find_spec("vanillasort") is None:
-            return False
-        return parse(cls.get_sorter_version()) >= parse("0.1.0")
+        return importlib.util.find_spec("vanillasort") is not None
 
     @staticmethod
     def get_sorter_version():
@@ -95,16 +109,17 @@ class VanillaSortSorter(BaseSorter):
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
         if recording is None:
             raise RuntimeError("Unable to load the recording for VanillaSort")
-        # Capture the package's print-based progress in vanillasort.log, which
-        # BaseSorter copies into spikeinterface_log.json's runtime_trace.
-        # redirect_stdout restores sys.stdout on exit, including exceptions.
-        # Its process-wide effect is why this wrapper disables threaded runs.
-        with (sorter_output_folder / "vanillasort.log").open("w", encoding="utf-8") as log, redirect_stdout(log):
-            print(f"VanillaSort {vanillasort.__version__}", flush=True)
-            sorting = vanillasort.sort(
-                recording, output_folder=sorter_output_folder / "inference", verbose=verbose, **params
-            )
-            print(f"Completed: {sorting.get_num_units()} units, {sorting.get_num_segments()} segments", flush=True)
+        # Keep progress in the runtime trace and echo it for verbose runs.
+        # redirect_stdout restores sys.stdout even on failure. Its process-wide
+        # effect is why this wrapper disables threaded runs.
+        with (sorter_output_folder / "vanillasort.log").open("w", encoding="utf-8", buffering=1) as log:
+            stream = _LogAndStdout(log, sys.stdout) if verbose else log
+            with redirect_stdout(stream):
+                print(f"VanillaSort {vanillasort.__version__}", flush=True)
+                sorting = vanillasort.sort(
+                    recording, output_folder=sorter_output_folder / "inference", verbose=verbose, **params
+                )
+                print(f"Completed: {sorting.get_num_units()} units, {sorting.get_num_segments()} segments", flush=True)
 
     @classmethod
     def _get_result_from_folder(cls, sorter_output_folder):
