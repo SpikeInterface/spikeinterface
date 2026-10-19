@@ -40,8 +40,8 @@ from .job_tools import split_job_kwargs, fix_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
-from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
-from .zarr_tools import write_json_array, read_encoded_array
+from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
+from .zarr_tools import write_json_array, write_pickle_array, read_encoded_array
 from .node_pipeline import run_node_pipeline
 
 # Typing hints
@@ -3370,10 +3370,12 @@ class AnalyzerExtension:
             for ext_data_name in extension_group.keys():
                 ext_data_ = extension_group[ext_data_name]
                 if "encoding" in ext_data_.attrs:
+                    if lazy and ext_data_.attrs["encoding"] == "pickle":
+                        continue
                     ext_data = read_encoded_array(ext_data_)
                 elif "dict" in ext_data_.attrs:
                     # legacy json object array (spikeinterface<=0.105)
-                    ext_data = ext_data_[0]
+                    ext_data = read_encoded_array(ext_data_)
                 elif "dataframe" in ext_data_.attrs:
                     import pandas as pd
 
@@ -3384,9 +3386,10 @@ class AnalyzerExtension:
                             ext_data.loc[:, col] = ext_data_[col][:]
                     ext_data = ext_data.convert_dtypes()
                 elif "object" in ext_data_.attrs:
+                    # legacy pickle object array (spikeinterface<=0.105)
                     if lazy:
                         continue
-                    ext_data = ext_data_[0]
+                    ext_data = read_encoded_array(ext_data_)
                 else:
                     ext_data = ext_data_ if lazy else np.array(ext_data_[:])
                 self.set_data(ext_data_name, ext_data)
@@ -3577,10 +3580,11 @@ class AnalyzerExtension:
                 else:
                     # any object
                     try:
-                        _write_object_array(extension_group, ext_data_name, ext_data, codec="pickle")
+                        write_pickle_array(
+                            extension_group, ext_data_name, ext_data, compressor=saving_options["compressor"]
+                        )
                     except:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
-                    extension_group[ext_data_name].attrs["object"] = True
 
     def _reset_extension_folder(self):
         """
