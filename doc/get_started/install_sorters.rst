@@ -203,6 +203,8 @@ Mountainsort5
 
       pip install mountainsort5
 
+.. _install-vanillasort:
+
 VanillaSort
 ^^^^^^^^^^^
 
@@ -243,6 +245,12 @@ Choose ``components`` (GMM K per neighborhood/segment) for your data; the defaul
 22 is a historical preset, not an automatic unit-count estimate. ``model_path``
 can select a local checkpoint bundle or directory. Results retain segment sample
 indices and the ``main_channel_id`` property.
+
+See :ref:`vanillasort-parameters` for the complete wrapper parameter table and the
+additional VanillaSort 0.2.1 Python API options, including detection thresholds,
+SNR gates, custom callbacks, neighborhood selection, and fixed-K postprocessing.
+The guide distinguishes parameters registered by ``run_sorter()`` from options
+that currently require calling ``vanillasort.sort()`` directly.
 
 
 SpyKING CIRCUS
