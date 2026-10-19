@@ -21,8 +21,6 @@ from .job_tools import split_job_kwargs, fix_job_kwargs
 from .zarr_tools import iterate_zarr_group, adjust_chunks_shards_and_job_kwargs
 from .time_series_tools import _write_time_series_to_zarr
 
-zarr.config.set({"default_zarr_version": 3})
-
 
 def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
     """
