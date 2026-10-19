@@ -357,10 +357,10 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                     If integer, the shard size will be set to chunk_size * shard_factor in the first dimension (time).
                     If tuple, the shard_factor to be applied to each dimension. Note that `shard_factor` cannot
                     be specified together with `shards`.
-                -shards: tuple | None, default: None
+                - shards: tuple | None, default: None
                     Number of shard size. If None, no sharding is done. Note that shards dimensions need to be larger than
                     chunk dimensions (if chunks is not None) and that sharding is only done on the first dimension.
-                - compressor: numcodecs.Codec or None, default: None
+                - compressors: zarr.Codec or None, default: None
                     Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
                 - filters: list[numcodecs.Codec] or None, default: None
                     Global filters for zarr (global)
