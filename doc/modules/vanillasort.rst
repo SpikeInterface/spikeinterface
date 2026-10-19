@@ -6,23 +6,27 @@ VanillaSort parameters and examples
 VanillaSort accepts a SpikeInterface recording and returns a
 :py:class:`~spikeinterface.core.BaseSorting`. This page describes the VanillaSort
 0.2.1 API and the parameters exposed by the current SpikeInterface wrapper.
+The wrapper requires VanillaSort >= 0.2.1; upgrade with
+``pip install --upgrade vanillasort`` and use a SpikeInterface version containing
+the updated wrapper.
 See :ref:`install-vanillasort` for installation and model downloads.
 
 Choose the calling interface
 ----------------------------
 
-``ss.run_sorter("vanillasort", ...)`` accepts the eight sorter parameters in the
-first table below. SpikeInterface validates parameter names against the wrapper's
-registered defaults before calling VanillaSort. Extra package parameters such as
-``threshold``, ``gate_fn``, and ``target_units`` currently raise ``ValueError``
-when passed to this wrapper. Upgrading the VanillaSort package alone does not
-extend that registered parameter list.
+``ss.run_sorter("vanillasort", ...)`` accepts all 17 parameters in the model and
+detection/merging tables below, including ``threshold``, ``enable_gate``,
+``neighborhood_mode``, ``target_units``, and the ``postprocessing`` dictionary.
+SpikeInterface validates parameter names against the wrapper's registered
+defaults, saves their values as JSON, and forwards them to ``vanillasort.sort()``.
+The default settings preserve the existing gate, dense neighborhoods, and disabled
+fixed-K postprocessing. Older wrappers expose only the eight model/inference
+parameters, so upgrading VanillaSort alone does not update the wrapper.
 
-Use ``vanillasort.sort(recording, ...)`` directly for the additional 0.2.1 options.
-Its result is also a SpikeInterface sorting object and can be used with the same
-analysis, comparison, and export tools. Custom gate callbacks belong to this
-direct Python interface; SpikeInterface saves wrapper parameters as JSON and
-does not serialize arbitrary Python functions.
+Use ``vanillasort.sort(recording, gate_fn=...)`` directly for custom Python gate
+callbacks. ``gate_fn`` remains outside the wrapper's JSON parameter interface;
+passing it to ``run_sorter()`` raises ``ValueError``. Both interfaces return a
+SpikeInterface sorting object for the same analysis, comparison, and export tools.
 
 Inspect the wrapper available in your installed SpikeInterface version:
 
@@ -41,10 +45,10 @@ in micrometres. Each group/shank needs at least four channels. Channel gains and
 offsets are applied when available; otherwise traces need a common voltage scale.
 Filtering and normalization run inside VanillaSort.
 
-Parameters accepted by run_sorter
----------------------------------
+Model and inference parameters
+------------------------------
 
-.. list-table:: Registered VanillaSort wrapper parameters
+.. list-table:: Model and inference parameters accepted by run_sorter
    :header-rows: 1
    :widths: 20 15 65
 
@@ -107,14 +111,14 @@ a sorter parameter. With ``verbose=True``, progress is shown in the terminal and
 retained in ``sorter_output/vanillasort.log``; ``spikeinterface_log.json`` is
 finalized when sorting finishes.
 
-Additional parameters in vanillasort.sort
------------------------------------------
+Detection and merging parameters
+--------------------------------
 
-The direct API accepts all eight parameters above plus the following options.
-The options in this table require VanillaSort 0.2.1 or later and are not currently
-registered by the SpikeInterface wrapper.
+The following nine options are accepted by both ``ss.run_sorter("vanillasort",
+...)`` and the direct ``vanillasort.sort()`` API. Their defaults match the package;
+``None`` threshold/SNR overrides preserve the loaded model configuration.
 
-.. list-table:: Additional direct Python API options
+.. list-table:: Detection and merging parameters accepted by run_sorter
    :header-rows: 1
    :widths: 23 15 62
 
@@ -123,7 +127,7 @@ registered by the SpikeInterface wrapper.
      - Meaning and accepted values
    * - ``enable_gate``
      - ``True``
-     - Boolean enabling the built-in SNR gate or a supplied custom gate.
+     - Boolean enabling the built-in SNR gate.
        ``False`` keeps score thresholding, peak selection, refractory NMS, and
        main-channel ownership checks while disabling the SNR gate.
    * - ``threshold``
@@ -136,8 +140,7 @@ registered by the SpikeInterface wrapper.
      - ``None``
      - Finite score in [0, 1]. In the built-in gate, eligible candidates with
        ``score >= direct_keep`` bypass the SNR checks. Published defaults are
-       0.045 for ``d1`` and 0.041 for ``canonical``. A custom gate replaces this
-       bypass together with the SNR rule.
+       0.045 for ``d1`` and 0.041 for ``canonical``.
    * - ``primary_snr``
      - ``None``
      - Finite, nonnegative minimum SNR on the strongest channel for the built-in
@@ -150,11 +153,6 @@ registered by the SpikeInterface wrapper.
      - ``None``
      - Integer from 1 to 3: how many additional channels must meet
        ``secondary_snr``. ``None`` uses the model setting, published default 1.
-   * - ``gate_fn``
-     - ``None``
-     - Callable ``gate_fn(context)`` returning one boolean per candidate.
-       Replaces the built-in SNR/direct-acceptance rule and requires
-       ``enable_gate=True``. See the callback example below.
    * - ``neighborhood_mode``
      - ``"dense"``
      - ``"dense"`` retains the original nearest-four neighborhoods.
@@ -191,11 +189,12 @@ Disable the SNR gate while retaining a detector-score threshold:
 
 .. code-block:: python
 
-    import vanillasort
+    import spikeinterface.sorters as ss
 
-    sorting = vanillasort.sort(
-        recording, components=22, threshold=0.139, enable_gate=False,
-        output_folder="vanillasort_no_gate", device="auto",
+    sorting = ss.run_sorter(
+        "vanillasort", recording, components=22,
+        threshold=0.139, enable_gate=False,
+        folder="vanillasort_no_gate", device="auto", verbose=True,
     )
 
 ``threshold`` and ``direct_keep`` are independent. If ``threshold >= direct_keep``,
@@ -206,6 +205,10 @@ change the defaults. Omitting overrides preserves the loaded model settings.
 
 Custom Python gate
 ------------------
+
+``gate_fn=None`` is available only through the direct Python API. A supplied
+callable ``gate_fn(context)`` replaces the built-in SNR rule and its
+``direct_keep`` bypass, and requires ``enable_gate=True``.
 
 .. code-block:: python
 
@@ -250,20 +253,28 @@ local GMM size. Different segments retain separate unit identities; a target of
 
 .. code-block:: python
 
-    sorting = vanillasort.sort(
+    import spikeinterface.sorters as ss
+
+    sorting = ss.run_sorter(
+        "vanillasort",
         recording,
         components=22,
         target_units=10,
         neighborhood_mode="dense",
         postprocessing={"on_shortfall": "return_available"},
-        output_folder="vanillasort_fixed_k",
+        folder="vanillasort_fixed_k",
         device="auto",
+        verbose=True,
     )
 
-The default ``on_shortfall="raise"`` raises
+With the default ``on_shortfall="raise"``, the package raises
 ``vanillasort.postprocessing.InsufficientAnchorsError`` when fewer than the target
 number of reliable anchors are available. The exception's ``audit`` attribute
-describes the shortfall. ``"return_available"`` allows fewer units, including
+describes the shortfall. Through ``run_sorter()``, SpikeInterface records the
+underlying exception in ``spikeinterface_log.json`` and raises
+``SpikeSortingError`` unless ``raise_error=False``. The per-segment diagnostic
+remains in ``sorter_output/inference/postprocessing_segment*.json``.
+``"return_available"`` allows fewer units, including
 zero, and records ``exact_k=False``. ``anchor_policy="supplement"`` permits
 observed weak or duplicate clusters and marks quality relaxation; it cannot
 create missing units. Noise labels and degenerate templates are excluded.
@@ -335,7 +346,9 @@ property retains original recording channel IDs. Use
 ``sorting.get_annotation("fixed_k_postprocessing")`` after enabling fixed-K
 postprocessing. Saved runs contain ``run.json``, ``events.npz``, and a reloadable
 ``sorting/`` directory; fixed-K runs also save ``postprocessing_segment*.npz/json``.
-On a strict fixed-K shortfall, the JSON diagnostic is written before the error.
+These files are under ``folder/sorter_output/inference/`` for ``run_sorter()`` or
+the direct API's ``output_folder``. On a strict fixed-K shortfall, the JSON
+diagnostic is written before the error.
 
 Full-segment filtering and normalization require host RAM even with small
 inference batches. Runtime grows with duration and neighborhood count because

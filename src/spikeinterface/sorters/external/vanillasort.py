@@ -4,6 +4,8 @@ from contextlib import redirect_stdout
 from importlib.metadata import version
 from pathlib import Path
 
+from packaging.version import parse
+
 from ..basesorter import BaseSorter
 from ...core import load
 
@@ -41,8 +43,17 @@ class VanillaSortSorter(BaseSorter):
         "seed": 0,
         "components": 22,
         "profile": "d1",
+        "enable_gate": True,
+        "threshold": None,
+        "direct_keep": None,
+        "primary_snr": None,
+        "secondary_snr": None,
+        "min_secondary_channels": None,
         "detector_batch": 8,
         "embedding_batch": 128,
+        "neighborhood_mode": "dense",
+        "target_units": None,
+        "postprocessing": None,
     }
 
     _params_description = {
@@ -50,10 +61,25 @@ class VanillaSortSorter(BaseSorter):
         "model_path": "Optional local combined .pt checkpoint or directory containing config.json and both models.",
         "device": "'auto' selects CUDA when available, otherwise CPU; also accepts 'cpu', 'cuda', or 'cuda:N'.",
         "seed": "Random seed for model initialization and GMM clustering.",
-        "components": "GMM component count per neighborhood/segment; choose K for the recording (no automatic estimation).",
+        "components": (
+            "GMM component count per neighborhood/segment, at least 2; "
+            "independent of the output target_units. No automatic K estimation."
+        ),
         "profile": "Published preprocessing/threshold profile: 'd1' or 'canonical'.",
+        "enable_gate": "Enable the built-in SNR gate; False retains score thresholding, peak/NMS and ownership checks.",
+        "threshold": "Minimum detector sigmoid score in [0, 1]; None uses the loaded profile's default.",
+        "direct_keep": "Eligible scores at or above this value bypass SNR checks; None uses the profile's default.",
+        "primary_snr": "Nonnegative strongest-channel event SNR minimum; None uses the model's default.",
+        "secondary_snr": "Nonnegative additional-channel event SNR minimum; None uses the model's default.",
+        "min_secondary_channels": "Number of additional channels meeting secondary_snr, from 1 to 3; None uses the model.",
         "detector_batch": "Number of 2500-sample detector chunks per batch; reduced on CUDA out-of-memory errors.",
         "embedding_batch": "Number of waveforms per HuiduRep batch; reduced on CUDA out-of-memory errors.",
+        "neighborhood_mode": "'dense' preserves original neighborhoods; 'cover' uses fewer passes and may change accuracy.",
+        "target_units": "Optional positive output unit count per segment after merging; None disables fixed-K processing.",
+        "postprocessing": (
+            "Optional fixed-K options dictionary; requires target_units. "
+            "on_shortfall='return_available' permits fewer units when reliable anchors are insufficient."
+        ),
     }
 
     sorter_description = """VanillaSort combines VanillaDet detection, HuiduRep waveform embeddings and
@@ -64,7 +90,7 @@ class VanillaSortSorter(BaseSorter):
     """
 
     installation_mesg = """
-    Install or upgrade VanillaSort from PyPI:
+    This wrapper requires VanillaSort >= 0.2.1. Install or upgrade from PyPI:
 
         pip install --upgrade vanillasort
 
@@ -89,6 +115,12 @@ class VanillaSortSorter(BaseSorter):
 
     @classmethod
     def _check_params(cls, recording, output_folder, params):
+        installed_version = cls.get_sorter_version()
+        if parse(installed_version) < parse("0.2.1"):
+            raise RuntimeError(
+                f"VanillaSort >= 0.2.1 is required; found {installed_version}. "
+                "Upgrade with 'pip install --upgrade vanillasort'."
+            )
         if params["model_path"] is not None:
             params["model_path"] = str(Path(params["model_path"]).expanduser().resolve())
         return params

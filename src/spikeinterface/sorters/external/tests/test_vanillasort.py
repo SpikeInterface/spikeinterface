@@ -40,6 +40,14 @@ def test_vanillasort_discovery_without_heavy_imports(monkeypatch):
     ]:
         assert VanillaSortSorter.use_gpu(params) is expected
 
+    # Version checks must also stay lightweight and fail before inference.
+    for installed_version in ("0.1.0", "0.2.0"):
+        with pytest.raises(RuntimeError, match="VanillaSort >= 0.2.1.*pip install --upgrade vanillasort"):
+            VanillaSortSorter._check_params(None, None, VanillaSortSorter.default_params())
+    for installed_version in ("0.2.1", "0.10.0"):
+        params = VanillaSortSorter.default_params()
+        assert VanillaSortSorter._check_params(None, None, params) == params
+
 
 @pytest.fixture
 def tiny_model(tmp_path):
@@ -164,3 +172,82 @@ def test_vanillasort_direct_and_wrapper(tmp_path, tiny_model, capsys):
     failed_log = json.loads((failed_folder / "spikeinterface_log.json").read_text())
     assert failed_log["error"] is True
     assert "30 kHz" in "\n".join(failed_log["error_trace"])
+
+
+@pytest.mark.skipif(not VanillaSortSorter.is_installed(), reason="vanillasort not installed")
+def test_vanillasort_extended_params_roundtrip(tmp_path, tiny_model):
+    import vanillasort
+
+    base = make_recording(multi_segment=True)
+    segments = []
+    for segment in range(base.get_num_segments()):
+        traces = base.get_traces(segment_index=segment)
+        segments.append(np.column_stack([traces, 0.8 * np.roll(traces, 13, axis=0)]))
+    recording = NumpyRecording(segments, 30000, channel_ids=list("abcdefgh"))
+    recording.set_dummy_probe_from_locations(np.column_stack([np.tile([0, 20], 4), np.repeat([0, 20, 40, 60], 2)]))
+    recording = recording.save(folder=tmp_path / "rec", verbose=False)
+    options = dict(
+        enable_gate=False,
+        threshold=0.0002,
+        direct_keep=0.75,
+        primary_snr=4,
+        secondary_snr=2.5,
+        min_secondary_channels=2,
+        neighborhood_mode="cover",
+        target_units=1,
+        postprocessing={"core_filter": False, "on_shortfall": "return_available", "min_cosine": 0.8},
+    )
+    params = dict(components=4, device="cpu", seed=0, model_path=str(tiny_model), **options)
+    direct = vanillasort.sort(recording, verbose=False, **params)
+    folder = tmp_path / "wrapped"
+    wrapped = run_sorter("vanillasort", recording, folder=folder, verbose=False, **params)
+    np.testing.assert_array_equal(wrapped.unit_ids, direct.unit_ids)
+    np.testing.assert_array_equal(wrapped.to_spike_vector(), direct.to_spike_vector())
+    np.testing.assert_array_equal(wrapped.get_property("main_channel_id"), direct.get_property("main_channel_id"))
+    assert wrapped.get_num_segments() == 2 and wrapped.get_num_units() == 2
+    for segment in range(2):
+        active_units = [u for u in wrapped.unit_ids if len(wrapped.get_unit_spike_train(u, segment_index=segment))]
+        assert len(active_units) == 1
+
+    saved = json.loads((folder / "spikeinterface_params.json").read_text())["sorter_params"]
+    assert {name: saved[name] for name in options} == options
+    inference = folder / "sorter_output" / "inference"
+    audit = json.loads((inference / "run.json").read_text())
+    assert audit["neighborhood_mode"] == "cover" and audit["target_units"] == 1
+    assert len(audit["runs"]) == 4  # two covering patches in each segment
+    gate = wrapped.get_annotation("detection_gate")
+    for name in ("enable_gate", "threshold", "direct_keep", "primary_snr", "secondary_snr", "min_secondary_channels"):
+        assert gate[name] == options[name]
+    assert gate["mode"] == "off"
+    for segment, diagnostic in enumerate(wrapped.get_annotation("fixed_k_postprocessing")):
+        assert diagnostic["requested_units"] == diagnostic["output_units"] == 1
+        for name, value in options["postprocessing"].items():
+            assert diagnostic["config"][name] == value
+        assert (inference / f"postprocessing_segment{segment}.json").is_file()
+
+    # A high score threshold produces empty results with an explicit shortfall policy.
+    empty_params = dict(params, threshold=1.0)
+    empty = run_sorter("vanillasort", recording, folder=tmp_path / "empty", verbose=False, **empty_params)
+    assert empty.get_num_units() == 0 and empty.get_num_segments() == 2
+    assert all(d["status"] == "partial" for d in empty.get_annotation("fixed_k_postprocessing"))
+
+    failed_folder = tmp_path / "failed"
+    failed = run_sorter(
+        "vanillasort",
+        recording,
+        folder=failed_folder,
+        verbose=False,
+        raise_error=False,
+        with_output=False,
+        **dict(empty_params, postprocessing={"core_filter": False}),
+    )
+    assert failed is None
+    failure = json.loads((failed_folder / "spikeinterface_log.json").read_text())
+    assert failure["error"] and "InsufficientAnchorsError" in "\n".join(failure["error_trace"])
+    diagnostic = json.loads(
+        (failed_folder / "sorter_output" / "inference" / "postprocessing_segment0.json").read_text()
+    )
+    assert diagnostic["failure_reason"] == "empty_input"
+
+    with pytest.raises(ValueError, match="Invalid parameters.*gate_fn"):
+        VanillaSortSorter.set_params_to_folder(recording, tmp_path, {"gate_fn": lambda context: []}, verbose=False)
