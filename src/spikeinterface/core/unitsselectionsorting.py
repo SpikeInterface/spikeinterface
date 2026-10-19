@@ -34,9 +34,6 @@ class UnitsSelectionSorting(BaseSorting):
         BaseSorting.__init__(self, sampling_frequency, self._renamed_unit_ids)
 
         self._is_identity_selection = bool(np.array_equal(self._unit_ids, parents_unit_ids))
-        if self._is_identity_selection:
-            # Same units (possibly renamed), same order => we can use the parent's cached spike vector
-            self._cached_lexsorted_spike_vector = parent_sorting._cached_lexsorted_spike_vector
 
         for parent_segment in self._parent_sorting.segments:
             sub_segment = UnitsSelectionSortingSegment(parent_segment, ids_conversion)
@@ -50,26 +47,40 @@ class UnitsSelectionSorting(BaseSorting):
 
         self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
 
+    @property
+    def _cached_unit_grouped(self):
+        # Same units (possibly renamed), same order => we read and fill the parent's unit-grouped cache
+        if getattr(self, "_is_identity_selection", False):
+            return self._parent_sorting._cached_unit_grouped
+        return self._own_cached_unit_grouped
+
+    @_cached_unit_grouped.setter
+    def _cached_unit_grouped(self, value):
+        if getattr(self, "_is_identity_selection", False):
+            self._parent_sorting._cached_unit_grouped = value
+        else:
+            self._own_cached_unit_grouped = value
+
     def _compute_and_cache_spike_vector(self) -> None:
         from spikeinterface.core.sorting_tools import remap_unit_indices_in_vector
 
-        if self._parent_sorting._cached_spike_vector is None:
+        if self._parent_sorting._cached_time_ordered is None:
             self._parent_sorting._compute_and_cache_spike_vector()
 
-            if self._parent_sorting._cached_spike_vector is None:
+            if self._parent_sorting._cached_time_ordered is None:
                 return
 
         if self._is_identity_selection:
-            self._cached_spike_vector = self._parent_sorting._cached_spike_vector
-            self._cached_spike_vector_segment_slices = self._parent_sorting._get_spike_vector_segment_slices()
+            self._parent_sorting._get_spike_vector_segment_slices()
+            self._cached_time_ordered = self._parent_sorting._cached_time_ordered
             return
 
         spike_vector, _ = remap_unit_indices_in_vector(
-            vector=self._parent_sorting._cached_spike_vector,
+            vector=self._parent_sorting._cached_time_ordered["spikes"],
             all_old_unit_ids=self._parent_sorting.unit_ids,
             all_new_unit_ids=self._unit_ids,
         )
-        self._cached_spike_vector = spike_vector
+        self._cached_time_ordered = {"spikes": spike_vector, "segment_slices": None}
 
     def search_cached_spikes_sorted(
         self,

@@ -595,10 +595,12 @@ class ZarrSortingExtractor(BaseSorting):
         self._lazy_spike_vector = lazy_spike_vector
         self._spikes_group = spikes_group
         self._sample_index_search = None
-        self._cached_spike_vector = spikes
         # pre-populate segment slices so _get_spike_vector_segment_slices() never
         # needs to materialise the full segment_index array
-        self._cached_spike_vector_segment_slices = np.asarray(segment_slices_list, dtype="int64")
+        self._cached_time_ordered = {
+            "spikes": spikes,
+            "segment_slices": np.asarray(segment_slices_list, dtype="int64"),
+        }
 
         for segment_index in range(num_segments):
             soring_segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids)
@@ -642,7 +644,7 @@ class ZarrSortingExtractor(BaseSorting):
             if "sample_index_chunk_firsts" in self._spikes_group:
                 chunk_firsts = self._spikes_group["sample_index_chunk_firsts"][:]
             self._sample_index_search = ZarrSampleIndexSearch(self._spikes_group["sample_index"], chunk_firsts)
-        start, stop = self._cached_spike_vector_segment_slices[segment_index]
+        start, stop = self._cached_time_ordered["segment_slices"][segment_index]
         return self._sample_index_search.searchsorted(indices, int(start), int(stop))
 
     @staticmethod
