@@ -371,7 +371,7 @@ def get_zarr_group_keys(zarr_group) -> list[str]:
     return _list_member_names(zarr_group)
 
 
-def write_json_array(group, name: str, data, compressor=None):
+def write_json_array(group, name: str, data, compressors=None):
     """
     Save json-serializable data as the utf-8 bytes of its json text in a uint8 array.
 
@@ -389,7 +389,7 @@ def write_json_array(group, name: str, data, compressor=None):
         The name of the array.
     data : dict | list
         The json-serializable data to save.
-    compressor : numcodecs.Codec | None, default: None
+    compressors : numcodecs.Codec | None, default: None
         The compressor of the array.
 
     Returns
@@ -398,12 +398,12 @@ def write_json_array(group, name: str, data, compressor=None):
         The created array.
     """
     payload = np.frombuffer(json.dumps(data).encode("utf-8"), dtype="uint8")
-    array = group.create_dataset(name=name, data=payload, compressor=compressor)
+    array = group.create_array(name=name, data=payload, compressors=compressors)
     array.attrs["encoding"] = "json"
     return array
 
 
-def write_pickle_array(group, name: str, data, compressor=None):
+def write_pickle_array(group, name: str, data, compressors=None):
     """
     Save a python object as its pickle bytes in a uint8 array.
 
@@ -419,7 +419,7 @@ def write_pickle_array(group, name: str, data, compressor=None):
         The name of the array.
     data : Any
         The picklable object to save.
-    compressor : numcodecs.Codec | None, default: None
+    compressors : numcodecs.Codec | None, default: None
         The compressor of the array.
 
     Returns
@@ -428,7 +428,7 @@ def write_pickle_array(group, name: str, data, compressor=None):
         The created array.
     """
     payload = np.frombuffer(pickle.dumps(data), dtype="uint8")
-    array = group.create_dataset(name=name, data=payload, compressor=compressor)
+    array = group.create_array(name=name, data=payload, compressors=compressors)
     array.attrs["encoding"] = "pickle"
     return array
 

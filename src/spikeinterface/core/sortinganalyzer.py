@@ -3609,6 +3609,7 @@ class AnalyzerExtension:
                             extension_group, ext_data_name, ext_data, compressor=saving_options["compressor"]
                         )
                     except:
+                        # TODO: fix
                         raise Exception(f"Could not save {ext_data_name} as extension data")
 
     def _reset_extension_folder(self):
