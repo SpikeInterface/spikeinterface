@@ -1,5 +1,6 @@
 import warnings
-
+import json
+import pickle
 import numpy as np
 import zarr
 
@@ -370,108 +371,91 @@ def get_zarr_group_keys(zarr_group) -> list[str]:
     return _list_member_names(zarr_group)
 
 
-def is_sklearn_estimator(obj) -> bool:
+def write_json_array(group, name: str, data, compressor=None):
     """
-    Check whether an object looks like a fitted scikit-learn estimator
-    (e.g. the PCA models of the "principal_components" extension).
-    """
-    return (
-        callable(getattr(obj, "get_params", None))
-        and callable(getattr(obj, "set_params", None))
-        and hasattr(obj, "__dict__")
-    )
+    Save json-serializable data as the utf-8 bytes of its json text in a uint8 array.
 
-
-def save_sklearn_model_to_zarr_group(parent_group, name: str, model, **saving_options) -> None:
-    """
-    Save a scikit-learn estimator in a zarr sub-group without using pickle.
-
-    The state of the estimator (`vars(model)`) is split in two: numpy arrays are saved as
-    zarr arrays and the remaining (json-serializable) values are saved in the
-    "sklearn_model" attribute of the group, together with the class of the estimator.
-    See `load_sklearn_model_from_zarr_group` for the reverse operation.
+    This replaces the length-1 object arrays with a json codec, which zarr-python 3 cannot write.
+    The data is stored as array data rather than as an attribute, so it is only read when needed:
+    attributes are read every time the group is opened, which is slow for large data such as a
+    recording dict. The array is marked with an "encoding" attribute, so that other encodings can be
+    added later. See `read_encoded_array` for the reverse operation.
 
     Parameters
     ----------
-    parent_group : zarr.Group
-        The zarr group in which the sub-group is created.
+    group : zarr.Group
+        The zarr group in which the array is created.
     name : str
-        The name of the sub-group.
-    model : sklearn estimator
-        The estimator to save.
-    **saving_options : dict
-        Options passed to `zarr.Group.create_array` for the array parts of the state.
-
-    Raises
-    ------
-    ValueError
-        If part of the state of the estimator can neither be saved as a zarr array nor
-        serialized to json (e.g. a nested estimator or an arbitrary python object).
-    """
-    import json
-
-    state = {}
-    arrays = {}
-    for key, value in vars(model).items():
-        if isinstance(value, np.ndarray):
-            if value.dtype.kind == "O":
-                raise ValueError(f"Cannot save object-dtype array '{key}' of {type(model).__name__} to zarr")
-            arrays[key] = value
-        else:
-            if isinstance(value, np.generic):
-                value = value.item()
-            try:
-                json.dumps(value)
-            except TypeError:
-                raise ValueError(
-                    f"Cannot save attribute '{key}' of {type(model).__name__} to zarr: "
-                    f"{type(value).__name__} is not json-serializable"
-                )
-            state[key] = value
-
-    model_group = parent_group.create_group(name)
-    for key, value in arrays.items():
-        model_group.create_array(name=key, data=value, **saving_options)
-
-    model_info = {
-        "class": f"{type(model).__module__}.{type(model).__qualname__}",
-        "state": state,
-        "array_keys": sorted(arrays.keys()),
-    }
-    try:
-        import sklearn
-
-        model_info["sklearn_version"] = sklearn.__version__
-    except ImportError:
-        pass
-    model_group.attrs["sklearn_model"] = model_info
-
-
-def load_sklearn_model_from_zarr_group(model_group):
-    """
-    Rebuild a scikit-learn estimator saved by `save_sklearn_model_to_zarr_group`.
-
-    Parameters
-    ----------
-    model_group : zarr.Group
-        The zarr group containing the estimator state.
+        The name of the array.
+    data : dict | list
+        The json-serializable data to save.
+    compressor : numcodecs.Codec | None, default: None
+        The compressor of the array.
 
     Returns
     -------
-    model : sklearn estimator
-        The estimator, with the same state it had when saved.
+    array : zarr.Array
+        The created array.
     """
-    import importlib
+    payload = np.frombuffer(json.dumps(data).encode("utf-8"), dtype="uint8")
+    array = group.create_dataset(name=name, data=payload, compressor=compressor)
+    array.attrs["encoding"] = "json"
+    return array
 
-    model_info = model_group.attrs["sklearn_model"]
-    module_name, _, class_name = model_info["class"].rpartition(".")
-    model_class = getattr(importlib.import_module(module_name), class_name)
 
-    # the full state is restored, so the constructor is bypassed on purpose
-    model = model_class.__new__(model_class)
-    for key, value in model_info["state"].items():
-        setattr(model, key, value)
-    for key in model_info["array_keys"]:
-        setattr(model, key, np.asarray(model_group[key][...]))
+def write_pickle_array(group, name: str, data, compressor=None):
+    """
+    Save a python object as its pickle bytes in a uint8 array.
 
-    return model
+    This replaces the length-1 object arrays with a pickle codec, which zarr-python 3 cannot write.
+    It is used for extension data that is not json-serializable, such as the PCA models of the
+    "principal_components" extension. See `read_encoded_array` for the reverse operation.
+
+    Parameters
+    ----------
+    group : zarr.Group
+        The zarr group in which the array is created.
+    name : str
+        The name of the array.
+    data : Any
+        The picklable object to save.
+    compressor : numcodecs.Codec | None, default: None
+        The compressor of the array.
+
+    Returns
+    -------
+    array : zarr.Array
+        The created array.
+    """
+    payload = np.frombuffer(pickle.dumps(data), dtype="uint8")
+    array = group.create_dataset(name=name, data=payload, compressor=compressor)
+    array.attrs["encoding"] = "pickle"
+    return array
+
+
+def read_encoded_array(array):
+    """
+    Read data saved by `write_json_array` or `write_pickle_array`, or a legacy length-1 object array
+    (json or pickle codec) saved by spikeinterface<=0.105.
+
+    Parameters
+    ----------
+    array : zarr.Array
+        The array to read.
+
+    Returns
+    -------
+    data : Any
+        The saved data.
+    """
+    encoding = array.attrs.get("encoding", None)
+    if encoding is None:
+        # legacy length-1 object array
+        return array[0]
+    if encoding == "json":
+        return json.loads(np.asarray(array[:]).tobytes().decode("utf-8"))
+    if encoding == "pickle":
+        return pickle.loads(np.asarray(array[:]).tobytes())
+    raise ValueError(
+        f"Unknown encoding {encoding!r} for {array.name}. It was probably saved by a newer version of spikeinterface."
+    )

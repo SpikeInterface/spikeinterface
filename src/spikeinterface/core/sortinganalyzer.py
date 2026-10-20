@@ -44,8 +44,9 @@ from .zarr_tools import (
     iterate_zarr_group,
     get_zarr_attr_or_legacy_object,
     is_sklearn_estimator,
-    save_sklearn_model_to_zarr_group,
-    load_sklearn_model_from_zarr_group,
+    write_json_array,
+    write_pickle_array,
+    read_encoded_array,
 )
 from .node_pipeline import run_node_pipeline
 
@@ -1085,11 +1086,14 @@ class SortingAnalyzer:
         if recording is not None:
             rec_dict = recording.to_dict(relative_to=relative_to, recursive=True)
             if recording.check_serializability("json"):
-                # In zarr v3, store JSON-serializable data in attributes instead of using object_codec
-                zarr_root.attrs["recording"] = check_json(rec_dict)
+                compressors = saving_options.get("compressors", get_default_zarr_compressor())
+                write_json_array(zarr_root, "recording", check_json(rec_dict), compressors=compressors)
             else:
-                warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
-
+                warnings.warn(
+                    "The recording is not JSON-serializable, so it is not saved in the zarr SortingAnalyzer, which "
+                    "will load without a recording. Use `set_temporary_recording()` after loading to attach it "
+                    "again, or save the SortingAnalyzer in 'binary_folder' format, which keeps it."
+                )
         else:
             assert rec_attributes is not None, "recording or rec_attributes must be provided"
             warnings.warn("Recording not provided, instantiating SortingAnalyzer in recordingless mode.")
@@ -1192,9 +1196,9 @@ class SortingAnalyzer:
 
         # Load recording (if available)
         if recording is None:
-            # In zarr v3, recording is stored in attributes (in zarr v2 it was an object array)
-            rec_dict = get_zarr_attr_or_legacy_object(zarr_root, "recording")
-            if rec_dict is not None:
+            rec_field = zarr_root.get("recording")
+            if rec_field is not None:
+                rec_dict = read_encoded_array(rec_field)
                 try:
                     recording = load(rec_dict, base_folder=folder)
                 except:
@@ -3385,14 +3389,15 @@ class AnalyzerExtension:
                 self.set_data(ext_data_name, ext_data)
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
-            # iterate_zarr_group is used to be compatible with both zarr v2 (saved by
-            # spikeinterface < 0.105) and zarr v3 groups
-            for ext_data_name, ext_data_ in iterate_zarr_group(extension_group):
-                # In zarr v3, check if it's a group with dict_data attribute
-                if "dict_data" in ext_data_.attrs:
-                    ext_data = ext_data_.attrs["dict_data"]
-                elif "sklearn_model" in ext_data_.attrs:
-                    ext_data = load_sklearn_model_from_zarr_group(ext_data_)
+            for ext_data_name in extension_group.keys():
+                ext_data_ = extension_group[ext_data_name]
+                if "encoding" in ext_data_.attrs:
+                    if lazy and ext_data_.attrs["encoding"] == "pickle":
+                        continue
+                    ext_data = read_encoded_array(ext_data_)
+                elif "dict" in ext_data_.attrs:
+                    # legacy json object array (spikeinterface<=0.105)
+                    ext_data = read_encoded_array(ext_data_)
                 elif "dataframe" in ext_data_.attrs:
                     import pandas as pd
 
@@ -3402,12 +3407,11 @@ class AnalyzerExtension:
                         if col != "index":
                             ext_data.loc[:, col] = col_data[:]
                     ext_data = ext_data.convert_dtypes()
-                elif "object" in ext_data_.attrs or "dict" in ext_data_.attrs:
-                    # "dict" is the zarr v2 (spikeinterface < 0.105) flag for dict/list data,
-                    # which was saved as a length-1 object array
+                elif "object" in ext_data_.attrs:
+                    # legacy pickle object array (spikeinterface<=0.105)
                     if lazy:
                         continue
-                    ext_data = ext_data_[0]
+                    ext_data = read_encoded_array(ext_data_)
                 else:
                     ext_data = ext_data_ if lazy else np.array(ext_data_[:])
                 self.set_data(ext_data_name, ext_data)
@@ -3577,10 +3581,10 @@ class AnalyzerExtension:
                     continue
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
-                if isinstance(ext_data, dict):
-                    # In zarr v3, store dict in a subgroup with attributes
-                    dict_group = extension_group.create_group(ext_data_name)
-                    dict_group.attrs["dict_data"] = check_json(ext_data)
+                if isinstance(ext_data, (dict, list)):
+                    write_json_array(
+                        extension_group, ext_data_name, check_json(ext_data), compressor=saving_options["compressor"]
+                    )
                 elif isinstance(ext_data, np.ndarray):
                     # only save the array if the dataset does not already exist, since it is created directly
                     # by the run_node_pipeline() function in the case of nodepipeline extensions
@@ -3603,14 +3607,11 @@ class AnalyzerExtension:
                     # sklearn models (e.g. the PCA models) are saved as arrays + attributes,
                     # so that no pickle is needed (in zarr v2 they were pickled object arrays)
                     try:
-                        save_sklearn_model_to_zarr_group(extension_group, ext_data_name, ext_data, **saving_options)
-                    except Exception as e:
-                        warnings.warn(f"Could not save the {ext_data_name} model to zarr, skipping: {e}")
-                        if ext_data_name in extension_group:
-                            del extension_group[ext_data_name]
-                else:
-                    # any other object
-                    warnings.warn(f"Data type of {ext_data_name} not supported for zarr saving, skipping.")
+                        write_pickle_array(
+                            extension_group, ext_data_name, ext_data, compressor=saving_options["compressor"]
+                        )
+                    except:
+                        raise Exception(f"Could not save {ext_data_name} as extension data")
 
     def _reset_extension_folder(self):
         """

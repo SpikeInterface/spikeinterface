@@ -4,6 +4,7 @@ import warnings
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.core_tools import is_dict_extractor, is_path_remote
 from spikeinterface.core.zarrextractors import super_zarr_open
+from spikeinterface.core.zarr_tools import read_encoded_array
 from spikeinterface.preprocessing.preprocessing_classes import preprocessor_dict, _all_preprocesser_dict
 
 pp_names_to_functions = {preprocessor.__name__: preprocessor for preprocessor in preprocessor_dict.values()}
@@ -263,9 +264,11 @@ def get_preprocessing_list_from_analyzer(analyzer_folder, format="auto", backend
         storage_options = backend_options.get("storage_options", {})
         zarr_root = super_zarr_open(str(analyzer_folder), mode="r", storage_options=storage_options)
 
-        recording_dict = zarr_root.attrs.get("recording")
-        if recording_dict is None:
-            raise ValueError(f"Cannot find `recording` attribute in {analyzer_folder}.")
+        rec_field = zarr_root.get("recording")
+        if rec_field is not None:
+            recording_dict = read_encoded_array(rec_field)
+        else:
+            recording_dict = {}
 
         preprocessing_list = _make_pipeline_list_from_recording_dict(recording_dict)
 
