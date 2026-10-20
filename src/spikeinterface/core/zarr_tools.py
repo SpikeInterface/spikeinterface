@@ -1,4 +1,5 @@
 import json
+import pickle
 
 import numpy as np
 
@@ -35,10 +36,40 @@ def write_json_array(group, name: str, data, compressor=None):
     return array
 
 
+def write_pickle_array(group, name: str, data, compressor=None):
+    """
+    Save a python object as its pickle bytes in a uint8 array.
+
+    This replaces the length-1 object arrays with a pickle codec, which zarr-python 3 cannot write.
+    It is used for extension data that is not json-serializable, such as the PCA models of the
+    "principal_components" extension. See `read_encoded_array` for the reverse operation.
+
+    Parameters
+    ----------
+    group : zarr.Group
+        The zarr group in which the array is created.
+    name : str
+        The name of the array.
+    data : Any
+        The picklable object to save.
+    compressor : numcodecs.Codec | None, default: None
+        The compressor of the array.
+
+    Returns
+    -------
+    array : zarr.Array
+        The created array.
+    """
+    payload = np.frombuffer(pickle.dumps(data), dtype="uint8")
+    array = group.create_dataset(name=name, data=payload, compressor=compressor)
+    array.attrs["encoding"] = "pickle"
+    return array
+
+
 def read_encoded_array(array):
     """
-    Read data saved by `write_json_array`, or a legacy length-1 object array (json or pickle codec)
-    saved by spikeinterface<=0.105.
+    Read data saved by `write_json_array` or `write_pickle_array`, or a legacy length-1 object array
+    (json or pickle codec) saved by spikeinterface<=0.105.
 
     Parameters
     ----------
@@ -56,6 +87,8 @@ def read_encoded_array(array):
         return array[0]
     if encoding == "json":
         return json.loads(np.asarray(array[:]).tobytes().decode("utf-8"))
+    if encoding == "pickle":
+        return pickle.loads(np.asarray(array[:]).tobytes())
     raise ValueError(
         f"Unknown encoding {encoding!r} for {array.name}. It was probably saved by a newer version of spikeinterface."
     )
