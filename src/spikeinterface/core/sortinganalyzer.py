@@ -41,6 +41,7 @@ from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
 from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
+from .zarr_tools import write_json_array, read_encoded_array
 from .node_pipeline import run_node_pipeline
 
 # Typing hints
@@ -1076,17 +1077,14 @@ class SortingAnalyzer:
         if recording is not None:
             rec_dict = recording.to_dict(relative_to=relative_to, recursive=True)
             if recording.check_serializability("json"):
-                _write_object_array(zarr_root, "recording", check_json(rec_dict), codec="json")
-            elif recording.check_serializability("pickle"):
-                try:
-                    _write_object_array(zarr_root, "recording", rec_dict, codec="pickle")
-                except:
-                    warnings.warn(
-                        "Failed to serialize recording with Pickle Codec! "
-                        "The recording link will be lost for future load"
-                    )
+                compressor = saving_options.get("compressor", get_default_zarr_compressor())
+                write_json_array(zarr_root, "recording", check_json(rec_dict), compressor=compressor)
             else:
-                warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
+                warnings.warn(
+                    "The recording is not JSON-serializable, so it is not saved in the zarr SortingAnalyzer, which "
+                    "will load without a recording. Use `set_temporary_recording()` after loading to attach it "
+                    "again, or save the SortingAnalyzer in 'binary_folder' format, which keeps it."
+                )
         else:
             assert rec_attributes is not None, "recording or rec_attributes must be provided"
             warnings.warn("Recording not provided, instantiating SortingAnalyzer in recordingless mode.")
@@ -1187,7 +1185,7 @@ class SortingAnalyzer:
         if recording is None:
             rec_field = zarr_root.get("recording")
             if rec_field is not None:
-                rec_dict = rec_field[0]
+                rec_dict = read_encoded_array(rec_field)
                 try:
                     recording = load(rec_dict, base_folder=folder)
                 except:
@@ -3371,7 +3369,10 @@ class AnalyzerExtension:
             extension_group = self._get_zarr_extension_group(mode="r")
             for ext_data_name in extension_group.keys():
                 ext_data_ = extension_group[ext_data_name]
-                if "dict" in ext_data_.attrs:
+                if "encoding" in ext_data_.attrs:
+                    ext_data = read_encoded_array(ext_data_)
+                elif "dict" in ext_data_.attrs:
+                    # legacy json object array (spikeinterface<=0.105)
                     ext_data = ext_data_[0]
                 elif "dataframe" in ext_data_.attrs:
                     import pandas as pd
@@ -3552,9 +3553,9 @@ class AnalyzerExtension:
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, (dict, list)):
-                    ext_data_ = check_json(ext_data)
-                    _write_object_array(extension_group, ext_data_name, ext_data_, codec="json")
-                    extension_group[ext_data_name].attrs["dict"] = True
+                    write_json_array(
+                        extension_group, ext_data_name, check_json(ext_data), compressor=saving_options["compressor"]
+                    )
                 elif isinstance(ext_data, np.ndarray):
                     # only save the array if the dataset does not already exist, since it is created directly
                     # by the run_node_pipeline() function in the case of nodepipeline extensions
