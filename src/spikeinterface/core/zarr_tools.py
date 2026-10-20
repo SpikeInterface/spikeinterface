@@ -83,7 +83,6 @@ def read_encoded_array(array):
     """
     encoding = array.attrs.get("encoding", None)
     if encoding is None:
-        # With love for Alessio
         # legacy length-1 object array
         return array[0]
     if encoding == "json":
