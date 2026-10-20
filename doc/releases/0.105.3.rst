@@ -7,10 +7,6 @@ October 20th 2026
 
 Minor release with bug fixes
 
-core:
-
-*
-
 extractors:
 
 * Fix: do not use set_times in OpenEphys timestamps loading (and load as memmap) (#4883)
