@@ -484,15 +484,10 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **RTSort** :code:`run_sorter(sorter_name='rtsort')`
 * **SpyKING Circus** :code:`run_sorter(sorter_name='spykingcircus')`
 * **Tridesclous** :code:`run_sorter(sorter_name='tridesclous')`
-* **VanillaSort** :code:`run_sorter(sorter_name='vanillasort')` (:ref:`parameters and examples <vanillasort-parameters>`)
+* **VanillaSort** :code:`run_sorter(sorter_name='vanillasort')` (`parameters and examples <https://github.com/IgarashiAkatuki/VanillaSort/blob/main/docs/spikeinterface.md>`_)
 * **Wave clus** :code:`run_sorter(sorter_name='waveclus')`
 * **Combinato** :code:`run_sorter(sorter_name='combinato')`
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`
-
-.. toctree::
-    :hidden:
-
-    vanillasort
 
 Here is a list of internal sorter based on :py:mod:`spikeinterface.sortingcomponents`:
 

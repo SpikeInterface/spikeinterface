@@ -84,9 +84,10 @@ class VanillaSortSorter(BaseSorter):
 
     sorter_description = """VanillaSort combines VanillaDet detection, HuiduRep waveform embeddings and
     relative-amplitude features with Gaussian-mixture clustering and template-residual refinement.
-    The pretrained models require 30 kHz recordings and 2D channel locations, with at least four channels
+    The pretrained models use multichannel recordings with 2D channel locations and at least four channels
     per group/shank. Larger probes use experimental local neighborhoods. Segments have independent unit IDs.
-    See https://github.com/IgarashiAkatuki/VanillaSort and https://doi.org/10.64898/2026.09.18.752552.
+    Parameters and examples: https://github.com/IgarashiAkatuki/VanillaSort/blob/main/docs/spikeinterface.md
+    Reference: https://doi.org/10.64898/2026.09.18.752552.
     """
 
     installation_mesg = """

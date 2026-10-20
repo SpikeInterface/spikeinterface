@@ -216,48 +216,9 @@ VanillaSort
 
       pip install --upgrade vanillasort
 
-VanillaSort combines VanillaDet spike detection, HuiduRep waveform embeddings,
-relative-amplitude features, Gaussian-mixture clustering, and template-residual
-refinement. The wrapper requires VanillaSort >= 0.2.1 and calls the package's
-public ``vanillasort.sort()`` API;
-the algorithm and pretrained checkpoints are maintained in VanillaSort.
-The default checkpoints are hosted at https://huggingface.co/Kohaku2580/VanillaSort.
-They download from a pinned revision on first inference and are then cached locally;
-installation and ordinary import do not download weights.
-See the repository README for platform-specific PyTorch installation.
-
-The pretrained model requires raw 30 kHz recordings with 2D channel locations in
-micrometres and at least four channels in each group/shank. Larger probes use
-experimental nearest-four-channel neighborhoods. Segments are clustered
-independently with distinct unit IDs. Full-segment filtering and normalization
-require sufficient host RAM even though detector and embedding inference are
-batched. The package documents these limitations and its validation scope.
-
-.. code-block:: python
-
-    import spikeinterface.sorters as ss
-
-    sorting = ss.run_sorter(
-        "vanillasort", recording, folder="vanillasort_output",
-        device="auto", components=22, seed=0,
-    )
-
-Choose ``components`` (GMM K per neighborhood/segment) for your data; the default
-22 is a historical preset, not an automatic unit-count estimate. ``model_path``
-can select a local checkpoint bundle or directory. Results retain segment sample
-indices and the ``main_channel_id`` property.
-
-The wrapper also accepts ``enable_gate``, ``threshold``, ``direct_keep``,
-``primary_snr``, ``secondary_snr``, ``min_secondary_channels``,
-``neighborhood_mode``, ``target_units``, and ``postprocessing``. For example,
-``target_units=10`` enables merging into a requested count of nonempty units per
-segment; it is independent of the per-neighborhood ``components``. The default
-shortfall policy raises when too few reliable anchors are available.
-
-See :ref:`vanillasort-parameters` for all 17 wrapper parameters, fixed-K policies,
-and examples. Only the Python callback ``gate_fn`` requires calling
-``vanillasort.sort()`` directly. Update both VanillaSort and the SpikeInterface
-wrapper to use the newly exposed parameters.
+The wrapper requires VanillaSort >= 0.2.1. See the
+`VanillaSort documentation <https://github.com/IgarashiAkatuki/VanillaSort/blob/main/docs/spikeinterface.md>`_
+for input requirements, model downloads, parameters, and examples.
 
 
 SpyKING CIRCUS
