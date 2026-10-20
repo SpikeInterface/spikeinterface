@@ -43,7 +43,6 @@ from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, s
 from .zarr_tools import (
     iterate_zarr_group,
     get_zarr_attr_or_legacy_object,
-    is_sklearn_estimator,
     write_json_array,
     write_pickle_array,
     read_encoded_array,
@@ -3603,9 +3602,8 @@ class AnalyzerExtension:
                             col_data = col_data.astype(str)
                         df_group.create_array(name=col, data=col_data)
                     df_group.attrs["dataframe"] = True
-                elif is_sklearn_estimator(ext_data):
-                    # sklearn models (e.g. the PCA models) are saved as arrays + attributes,
-                    # so that no pickle is needed (in zarr v2 they were pickled object arrays)
+                else:
+                    # any object
                     try:
                         write_pickle_array(
                             extension_group, ext_data_name, ext_data, compressor=saving_options["compressor"]
