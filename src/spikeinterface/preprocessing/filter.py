@@ -14,6 +14,7 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 HIGHPASS_ERROR_THRESHOLD_HZ = 100
 MARGIN_TO_CHUNK_PERCENT_WARNING = 0.2  # 20%
+NUM_CHANNELS_PER_BLOCK = 16
 
 
 _common_filter_docs = """**filter_kwargs : dict
@@ -194,15 +195,14 @@ class FilterRecordingSegment(BasePreprocessorSegment):
 
         from scipy.signal import sosfiltfilt, filtfilt, sosfilt, lfilter
 
-        # Channels are filtered independently, so filtering in banks gives the same result with a
+        # Channels are filtered independently, so filtering in blocks gives the same result with a
         # much lower peak memory (scipy makes several float copies of its input)
         num_samples = traces_chunk.shape[0] - left_margin - right_margin
         num_channels = traces_chunk.shape[1]
-        num_channels_per_bank = 16
         filtered_traces = np.empty((num_samples, num_channels), dtype=self.dtype)
 
-        for channel_index in range(0, num_channels, num_channels_per_bank):
-            channel_slice = slice(channel_index, channel_index + num_channels_per_bank)
+        for channel_index in range(0, num_channels, NUM_CHANNELS_PER_BLOCK):
+            channel_slice = slice(channel_index, channel_index + NUM_CHANNELS_PER_BLOCK)
             block = traces_chunk[:, channel_slice]
 
             if self.direction == "forward-backward":
