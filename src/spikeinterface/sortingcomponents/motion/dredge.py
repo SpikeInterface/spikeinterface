@@ -367,13 +367,7 @@ def dredge_ap(
         if chunk_len_s is None:
             chunk_len_s = max(time_horizon_s, int(np.floor(1000 / bin_s)))
 
-        threshold_kw = dict(
-            mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
-            in_place=True,
-            soft=False,
-            time_horizon_s=time_horizon_s,
-            bin_s=bin_s,
-        )
+        threshold_kw = dict(bin_s=bin_s)
 
         displacement, extra = compute_displacement_online(
             raster,
@@ -592,7 +586,9 @@ def dredge_online_lfp(
 
     weights_kw = dict(
         mincorr=mincorr,
+        mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
         time_horizon_s=time_horizon_s,
+        do_window_weights=False,
     )
 
     full_xcorr_kw = dict(
@@ -605,10 +601,7 @@ def dredge_online_lfp(
     )
 
     threshold_kw = dict(
-        mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
-        in_place=True,
         soft=soft,
-        time_horizon_s=time_horizon_s,
         bin_s=1 / lfp_recording.sampling_frequency,  # only relevant for time_horizon_s
     )
 
@@ -654,6 +647,25 @@ def compute_displacement_online(
 
     B = len(windows)
 
+    def get_Us(Ds, Cs, raster, raster_b=None, t_offset_bins=0, mincorr=weights_kw["mincorr"], mincorr_percentile=mincorr_percentile):
+        Us, wextra = weight_correlation_matrix(
+            Ds,
+            Cs,
+            windows,
+            raster,
+            spatial_bin_edges_um,
+            threshold_kw,
+            raster_b=raster_b,
+            t_offset_bins=t_offset_bins,
+            lambda_t=thomas_kw.get("lambda_t", DEFAULT_LAMBDA_T),
+            eps=thomas_kw.get("eps", DEFAULT_EPS),
+            progress_bar=False,
+            in_place=not extra_outputs,
+            mincorr_percentile=mincorr_percentile,
+            **dict(weights_kw, mincorr=mincorr),
+        )
+        return Us, wextra["mincorr"]
+
     # -- allocate output and initialize first chunk
     P_online = np.empty((B, T_total), dtype=np.float32)
     # below, t0 is start of prev chunk, t1 start of cur chunk, t2 end of cur
@@ -671,13 +683,7 @@ def compute_displacement_online(
         win_scale_um,
         **full_xcorr_kw,
     )
-    mincorr = weights_kw["mincorr"]
-    Ss0, mincorr0 = threshold_correlation_matrix(
-        Cs0,
-        mincorr=mincorr,
-        mincorr_percentile=mincorr_percentile,
-        **threshold_kw,
-    )
+    Ss0, mincorr0 = get_Us(Ds0, Cs0, traces0.T)
     if extra_outputs:
         extra["D"] = [Ds0]
         extra["C"] = [Cs0]
@@ -722,13 +728,16 @@ def compute_displacement_online(
 
         # cross-correlation in current chunk
         Ds1, Cs1, _ = xcorr_windows(traces1.T, windows, spatial_bin_edges_um, win_scale_um, **full_xcorr_kw)
-        Ss1, mincorr1 = threshold_correlation_matrix(
-            Cs1,
-            mincorr_percentile=mincorr_percentile,
-            mincorr=mincorr,
-            **threshold_kw,
+        Ss1, mincorr1 = get_Us(Ds1, Cs1, traces1.T)
+        Ss10, _ = get_Us(
+            Ds10,
+            Cs10,
+            traces1.T,
+            raster_b=traces0.T,
+            t_offset_bins=T_chunk,
+            mincorr=mincorr1,
+            mincorr_percentile=None,
         )
-        Ss10, _ = threshold_correlation_matrix(Cs10, mincorr=mincorr1, t_offset_bins=T_chunk, **threshold_kw)
 
         if extra_outputs:
             extra["mincorrs"].append(mincorr1)
@@ -1504,6 +1513,8 @@ def weight_correlation_matrix(
     raster,
     depth_bin_edges,
     threshold_kw,
+    raster_b=None,
+    t_offset_bins=0,
     # @charlie raster_kw is remove in favor of post_transform only
     # raster_kw,
     post_transform=np.log1p,
@@ -1519,7 +1530,11 @@ def weight_correlation_matrix(
     progress_bar=True,
     in_place=False,
 ):
-    """Transform the correlation matrix into the weights used in optimization."""
+    """Transform the correlation matrix into the weights used in optimization.
+
+    If raster_b is supplied, Cs[:, i, j] correlates time bin i of raster with
+    time bin j of raster_b, as in xcorr_windows().
+    """
     extra = {}
 
     Ds = np.asarray(Ds)
@@ -1528,7 +1543,6 @@ def weight_correlation_matrix(
         Ds = Ds[None]
         Cs = Cs[None]
     B, T, T_ = Ds.shape
-    assert T == T_
     assert Ds.shape == Cs.shape
     extra = {}
 
@@ -1539,6 +1553,7 @@ def weight_correlation_matrix(
         mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
         time_horizon_s=time_horizon_s,
         in_place=in_place,
+        t_offset_bins=t_offset_bins,
         **threshold_kw,
     )
     extra["S"] = Ss
@@ -1562,6 +1577,20 @@ def weight_correlation_matrix(
         weights_threshold_high=weights_threshold_high,
         progress_bar=progress_bar,
     )
+    weights_thresh_b = weights_thresh
+    if raster_b is not None:
+        _, weights_thresh_b, _ = get_weights(
+            Ds,
+            Ss,
+            L_t,
+            windows,
+            raster_b,
+            depth_bin_edges,
+            post_transform=post_transform,
+            weights_threshold_low=weights_threshold_low,
+            weights_threshold_high=weights_threshold_high,
+            progress_bar=progress_bar,
+        )
     extra["weights_orig"] = weights_orig
     extra["weights_thresh"] = weights_thresh
     extra["Pind"] = Pind
@@ -1569,11 +1598,10 @@ def weight_correlation_matrix(
     # update noise model. we deliberately divide by zero and inf here.
     Us = Ss if in_place else np.zeros_like(Ss)
     with np.errstate(divide="ignore"):
-        # low mem impl of U = abs(1/(1/weights_thresh+1/weights_thresh'+1/S))
+        # low mem impl of U = abs(1/(1/weights_thresh+1/weights_thresh_b'+1/S))
         np.reciprocal(Ss, out=Us)
-        invW = 1.0 / weights_thresh
-        Us += invW[:, :, None]
-        Us += invW[:, None, :]
+        Us += 1.0 / weights_thresh[:, :, None]
+        Us += 1.0 / weights_thresh_b[:, None, :]
         np.reciprocal(Us, out=Us)
         # handles possible -0s that cause issues elsewhere
         np.abs(Us, out=Us)
