@@ -241,38 +241,8 @@ def dredge_ap(
     if time_horizon_s:
         xcorr_kw["max_dt_bins"] = np.ceil(time_horizon_s / bin_s)
 
-    # TODO @charlie I think this is a bad to have the dict which is transported to every function
-    # this should be used only in histogram function but not in weight_correlation_matrix()
-    # only important kwargs should be explicitly reported
-    # raster_kw = dict(
-    #     amp_scale_fn=amp_scale_fn,
-    #     post_transform=post_transform,
-    #     histogram_depth_smooth_um=histogram_depth_smooth_um,
-    #     histogram_time_smooth_s=histogram_time_smooth_s,
-    #     bin_s=bin_s,
-    #     bin_um=bin_um,
-    #     avg_in_bin=avg_in_bin,
-    #     return_counts=count_masked_correlation,
-    #     count_bins=count_bins,
-    #     count_bin_min=count_bin_min,
-    # )
-
     # this will store return values other than the MotionEstimate
     extra = {}
-
-    # TODO charlie I switch this to make_2d_motion_histogram
-    # but we need to add all options from the original spike_raster()
-    # but I think this is OK
-    # raster_res = spike_raster(
-    #     amps,
-    #     depths_um,
-    #     times_s,
-    #     **raster_kw,
-    # )
-    # if count_masked_correlation:
-    #     raster, spatial_bin_edges_um, time_bin_edges_s, counts = raster_res
-    # else:
-    #     raster, spatial_bin_edges_um, time_bin_edges_s = raster_res
 
     motion_histogram, time_bin_edges_s, spatial_bin_edges_um = make_2d_motion_histogram(
         recording,
@@ -298,18 +268,6 @@ def dredge_ap(
 
         raster = gaussian_filter1d(raster, histogram_time_smooth_s / bin_s, axis=1, mode="constant")
 
-    # TODO @charlie you should check that we are doing the same thing
-    # windows, window_centers = get_spatial_windows(
-    #     np.c_[np.zeros_like(spatial_bin_edges_um), spatial_bin_edges_um],
-    #     win_step_um,
-    #     win_scale_um,
-    #     spatial_bin_edges=spatial_bin_edges_um,
-    #     margin_um=-win_scale_um / 2 if win_margin_um is None else win_margin_um,
-    #     win_shape=win_shape,
-    #     zero_threshold=1e-5,
-    #     rigid=rigid,
-    # )
-
     dim = ["x", "y", "z"].index(direction)
     contact_depths = recording.get_channel_locations()[:, dim]
     spatial_bin_centers = 0.5 * (spatial_bin_edges_um[1:] + spatial_bin_edges_um[:-1])
@@ -324,10 +282,6 @@ def dredge_ap(
         win_margin_um=win_margin_um,
         zero_threshold=1e-5,
     )
-
-    # TODO charlie : the count has disapeared
-    # if extra_outputs and count_masked_correlation:
-    #     extra["counts"] = counts
 
     weights_kw = dict(
         mincorr=mincorr,
@@ -798,8 +752,6 @@ def compute_displacement_full(
             windows,
             spatial_bin_edges_um,
             win_scale_um,
-            # TODO charlie : put back the count for the mask
-            # masks=(counts > 0) if count_masked_correlation else None,
             **dict(full_xcorr_kw, progress_bar=progress_bar),
         )
     else:
@@ -813,8 +765,7 @@ def compute_displacement_full(
         raster,
         spatial_bin_edges_um,
         threshold_kw,
-        # raster_kw, #@charlie this is removed
-        post_transform=post_transform,  # @charlie this isnew
+        post_transform=post_transform,
         lambda_t=thomas_kw.get("lambda_t", DEFAULT_LAMBDA_T),
         eps=thomas_kw.get("eps", DEFAULT_EPS),
         progress_bar=progress_bar,
@@ -1154,7 +1105,6 @@ def xcorr_windows(
     progress_bar=True,
     centered=True,
     normalized=True,
-    masks=None,
     device=None,
 ):
     """Main computational function
@@ -1190,8 +1140,6 @@ def xcorr_windows(
     else:
         T1 = T0
         raster_b_ = raster_a_
-    if masks is not None:
-        masks = torch.as_tensor(masks, dtype=torch.float, device=device)
 
     # estimate each window's displacement
     Ds = np.zeros((B, T0, T1), dtype=np.float32)
@@ -1218,8 +1166,6 @@ def xcorr_windows(
             raster_a_[slices[b]],
             raster_b_[b_low:b_high],
             weights=window[slices[b]],
-            masks=None if masks is None else masks[slices[b]],
-            xmasks=None if masks is None else masks[b_low:b_high],
             disp=padding,
             possible_displacement=poss_disp,
             device=device,
@@ -1236,8 +1182,6 @@ def calc_corr_decent_pair(
     raster_a,
     raster_b,
     weights=None,
-    masks=None,
-    xmasks=None,
     disp=None,
     batch_size=512,
     normalized=True,
@@ -1306,14 +1250,10 @@ def calc_corr_decent_pair(
             dt_bins = 0 if dt_low <= 0 <= dt_high else min(abs(dt_low), abs(dt_high))
             if max_dt_bins and dt_bins > max_dt_bins:
                 continue
-            weights_ = weights
-            if masks is not None:
-                weights_ = masks.T[i : i + batch_size] * weights
             corr = normxcorr1d(
                 raster_a[i : i + batch_size],
                 raster_b[j : j + batch_size],
-                weights=weights_,
-                xmasks=None if xmasks is None else xmasks.T[j : j + batch_size],
+                weights=weights,
                 padding=disp,
                 normalized=normalized,
                 centered=centered,
@@ -1330,7 +1270,6 @@ def normxcorr1d(
     template,
     x,
     weights=None,
-    xmasks=None,
     centered=True,
     normalized=True,
     padding="same",
@@ -1396,13 +1335,8 @@ def normxcorr1d(
 
     # generalize over weighted / unweighted case
     device_kw = {} if conv_engine == "numpy" else dict(device=x.device)
-    if xmasks is None:
-        onesx = npx.ones((1, 1, lengthx), dtype=x.dtype, **device_kw)
-        wx = x[:, None, :]
-    else:
-        assert xmasks.shape == x.shape
-        onesx = xmasks[:, None, :]
-        wx = x[:, None, :] * onesx
+    onesx = npx.ones((1, 1, lengthx), dtype=x.dtype, **device_kw)
+    wx = x[:, None, :]
     no_weights = weights is None
     if no_weights:
         weights = npx.ones((1, 1, lengtht), dtype=x.dtype, **device_kw)
@@ -1475,8 +1409,6 @@ def get_weights(
     windows,
     raster,
     dbe,
-    # @charlie raster_kw is removed in favor of post_transform only is this OK ???
-    # raster_kw,
     post_transform=np.log1p,
     weights_threshold_low=0.0,
     weights_threshold_high=np.inf,
@@ -1495,7 +1427,6 @@ def get_weights(
         weights.append(window_sliced @ raster[ilow:ihigh])
     weights_orig = np.array(weights)
 
-    # scale_fn = raster_kw["post_transform"] or raster_kw["amp_scale_fn"]
     scale_fn = post_transform
     if isinstance(weights_threshold_low, tuple):
         nspikes_threshold_low, amp_threshold_low = weights_threshold_low
@@ -1523,8 +1454,6 @@ def weight_correlation_matrix(
     threshold_kw,
     raster_b=None,
     t_offset_bins=0,
-    # @charlie raster_kw is remove in favor of post_transform only
-    # raster_kw,
     post_transform=np.log1p,
     mincorr=0.0,
     mincorr_percentile=None,
