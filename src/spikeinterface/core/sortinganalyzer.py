@@ -2183,8 +2183,8 @@ class SortingAnalyzer:
             zarr_root = self._get_zarr_root(mode="r")
             sorting_provenance = None
             # In zarr v3, sorting_provenance is stored in attributes (in zarr v2 it was an object array)
-            sort_dict = get_zarr_attr_or_legacy_object(zarr_root, "provenance")
-            if sort_dict is not None:
+            sort_dict = zarr_root["sorting"].attrs.get("provenance")
+            if sort_dict is None:
                 # Legacy
                 sort_dict = get_zarr_attr_or_legacy_object(zarr_root, "sorting_provenance")
             if sort_dict is not None:
@@ -3388,8 +3388,7 @@ class AnalyzerExtension:
                 self.set_data(ext_data_name, ext_data)
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
-            for ext_data_name in extension_group.keys():
-                ext_data_ = extension_group[ext_data_name]
+            for ext_data_name, ext_data_ in iterate_zarr_group(extension_group):
                 if "encoding" in ext_data_.attrs:
                     if lazy and ext_data_.attrs["encoding"] == "pickle":
                         continue
@@ -3582,7 +3581,7 @@ class AnalyzerExtension:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, (dict, list)):
                     write_json_array(
-                        extension_group, ext_data_name, check_json(ext_data), compressor=saving_options["compressor"]
+                        extension_group, ext_data_name, check_json(ext_data), compressors=saving_options["compressors"]
                     )
                 elif isinstance(ext_data, np.ndarray):
                     # only save the array if the dataset does not already exist, since it is created directly
@@ -3606,10 +3605,9 @@ class AnalyzerExtension:
                     # any object
                     try:
                         write_pickle_array(
-                            extension_group, ext_data_name, ext_data, compressor=saving_options["compressor"]
+                            extension_group, ext_data_name, ext_data, compressors=saving_options["compressors"]
                         )
                     except:
-                        # TODO: fix
                         raise Exception(f"Could not save {ext_data_name} as extension data")
 
     def _reset_extension_folder(self):
