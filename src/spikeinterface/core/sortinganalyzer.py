@@ -1195,9 +1195,13 @@ class SortingAnalyzer:
 
         # Load recording (if available)
         if recording is None:
-            rec_field = zarr_root.get("recording")
-            if rec_field is not None:
-                rec_dict = read_encoded_array(rec_field)
+            try:
+                rec_field = zarr_root.get("recording")
+                rec_dict = read_encoded_array(rec_field) if rec_field is not None else None
+            except Exception:
+                # legacy zarr v2 object array, which zarr v3 cannot open natively
+                rec_dict = get_zarr_attr_or_legacy_object(zarr_root, "recording")
+            if rec_dict is not None:
                 try:
                     recording = load(rec_dict, base_folder=folder)
                 except:
