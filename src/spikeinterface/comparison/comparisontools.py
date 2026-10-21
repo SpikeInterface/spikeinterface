@@ -565,6 +565,75 @@ def make_hungarian_match(agreement_scores, min_score):
     return hungarian_match_12, hungarian_match_21
 
 
+def get_optimized_compute_pair_match_indices():
+    """
+    Like get_optimized_compute_matching_matrix, but for do_score_labels
+    Cache a compiled hot loop for that function
+    """
+
+    if hasattr(get_optimized_compute_pair_match_indices, "_cached_function"):
+        return get_optimized_compute_pair_match_indices._cached_function
+
+    from numba import jit
+
+    @jit(nopython=True, nogil=True)
+    def compute_pair_match_indices(spike_frames1, spike_frames2, delta_frames):
+        """
+        Internal function used by `do_score_labels()` to match the spikes of one unit pair in one segment,
+        using each spike at most once.
+
+        Each spike of the first train, in order, is matched to the earliest unmatched spike of the second train
+        within `delta_frames`. The matched indices of the second train are increasing, so a spike of the second
+        train is unmatched if and only if its index is greater than that of the last match.
+
+        Parameters
+        ----------
+        spike_frames1 : ndarray
+            An array of integer frame numbers for the first train. Must be in ascending order.
+        spike_frames2 : ndarray
+            An array of integer frame numbers for the second train. Must be in ascending order.
+        delta_frames : int
+            The inclusive upper limit on the frame difference for which two spikes are considered matching.
+
+        Returns
+        -------
+        match_indices1, match_indices2 : ndarray
+            Indices of the matched spikes in each train: `spike_frames1[match_indices1[i]]` is matched to
+            `spike_frames2[match_indices2[i]]`.
+        """
+        match_indices1 = np.zeros(min(spike_frames1.size, spike_frames2.size), dtype=np.int64)
+        match_indices2 = np.zeros_like(match_indices1)
+        num_matches = 0
+
+        # Keeps track of which frame in the second spike train should be used as a search start for matches
+        second_train_search_start = 0
+        for index1 in range(spike_frames1.size):
+            frame1 = spike_frames1[index1]
+
+            for index2 in range(second_train_search_start, spike_frames2.size):
+                frame2 = spike_frames2[index2]
+                if frame2 < frame1 - delta_frames:
+                    # no match move the left limit for the next loop
+                    second_train_search_start += 1
+                    continue
+                elif frame2 > frame1 + delta_frames:
+                    # no match stop search in train2 and continue increment in train1
+                    break
+                elif num_matches == 0 or index2 > match_indices2[num_matches - 1]:
+                    # match with a spike that is not matched yet
+                    match_indices1[num_matches] = index1
+                    match_indices2[num_matches] = index2
+                    num_matches += 1
+                    break
+
+        return match_indices1[:num_matches], match_indices2[:num_matches]
+
+    # Cache the compiled function
+    get_optimized_compute_pair_match_indices._cached_function = compute_pair_match_indices
+
+    return compute_pair_match_indices
+
+
 def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclassification=False):
     """
     Makes the labeling at spike level for each spike train:
@@ -596,6 +665,8 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
     labels_st2 : dict of lists of np.array of str
         Contain score labels for units of sorting 2 for each segment
     """
+    compute_pair_match_indices = get_optimized_compute_pair_match_indices()
+
     unit1_ids = sorting1.get_unit_ids()
     unit2_ids = sorting2.get_unit_ids()
     labels_st1 = dict()
@@ -620,25 +691,11 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
             if u2 != -1 and u2 != "":
                 lab_st1 = labels_st1[u1][seg_index]
                 lab_st2 = labels_st2[u2][seg_index]
-                mapped_st = sorting2.get_unit_spike_train(u2, seg_index)
-                times_concat = np.concatenate((sts, mapped_st))
-                membership = np.concatenate((np.ones(sts.shape) * 1, np.ones(mapped_st.shape) * 2))
-                indices = times_concat.argsort()
-                times_concat_sorted = times_concat[indices]
-                membership_sorted = membership[indices]
-                diffs = times_concat_sorted[1:] - times_concat_sorted[:-1]
-                inds = np.where((diffs <= delta_frames) & (membership_sorted[:-1] != membership_sorted[1:]))[0]
-                if len(inds) > 0:
-                    inds2 = inds[np.where(inds[:-1] + 1 != inds[1:])[0]] + 1
-                    inds2 = np.concatenate((inds2, [inds[-1]]))
-                    times_matched = times_concat_sorted[inds2]
-                    # find and label closest spikes
-                    ind_st1 = np.array([np.abs(sts1[u1] - tm).argmin() for tm in times_matched])
-                    ind_st2 = np.array([np.abs(mapped_st - tm).argmin() for tm in times_matched])
-                    assert len(np.unique(ind_st1)) == len(ind_st1)
-                    assert len(np.unique(ind_st2)) == len(ind_st2)
-                    lab_st1[ind_st1] = "TP"
-                    lab_st2[ind_st2] = "TP"
+                mapped_st = sts2[u2][seg_index]
+                assert np.all(np.diff(sts) >= 0) and np.all(np.diff(mapped_st) >= 0)
+                match_indices1, match_indices2 = compute_pair_match_indices(sts, mapped_st, delta_frames)
+                lab_st1[match_indices1] = "TP"
+                lab_st2[match_indices2] = "TP"
             else:
                 lab_st1 = np.array(["FN"] * len(sts))
                 labels_st1[u1][seg_index] = lab_st1
