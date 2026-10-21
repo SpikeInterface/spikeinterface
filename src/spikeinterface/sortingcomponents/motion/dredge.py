@@ -364,8 +364,7 @@ def dredge_ap(
 
         # T_total is number of bin_s in recording
         T_total = raster.shape[1]
-        if chunk_len_s is None:
-            chunk_len_s = max(time_horizon_s, int(np.floor(1000 / bin_s)))
+        T_chunk = max(1, int(np.ceil(chunk_len_s / bin_s)))
 
         threshold_kw = dict(bin_s=bin_s)
 
@@ -373,7 +372,7 @@ def dredge_ap(
             raster,
             windows,
             T_total,
-            chunk_len_s,
+            T_chunk,
             spatial_bin_edges_um,
             win_scale_um,
             mincorr_percentile,
