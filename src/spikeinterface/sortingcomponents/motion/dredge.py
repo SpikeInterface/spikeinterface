@@ -391,7 +391,7 @@ def dredge_ap(
             threshold_kw,
         )
     else:
-        raise ValueError(f"No `batching_mode` called {batching_mode}. Available modes are ['batch', 'offline'].")
+        raise ValueError(f"No `batching_mode` called {batching_mode}. Available modes are ['full', 'online'].")
 
     if extra_outputs:
         extra["windows"] = windows
