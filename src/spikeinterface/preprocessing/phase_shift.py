@@ -2,7 +2,7 @@ import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
-from spikeinterface.core import get_chunk_with_margin, apply_raised_cosine_taper
+from spikeinterface.core import get_chunk_with_margin
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -142,19 +142,16 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         return self._get_traces_fft(start_frame, end_frame, channel_indices)
 
     def _get_traces_fft(self, start_frame, end_frame, channel_indices):
-        # A float64 parent can return a view of its own data, so pin the dtype to get a copy the taper can modify.
-        compute_dtype = self.tmp_dtype if self.tmp_dtype is not None else np.dtype("float64")
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
             end_frame,
             channel_indices,
             self.margin,
-            dtype=compute_dtype,
+            dtype=self.tmp_dtype,
             add_zeros=True,
-            window_on_margin=False,
+            window_on_margin=True,
         )
-        apply_raised_cosine_taper(traces_chunk, self.margin, inplace=True)
         traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
@@ -340,7 +337,7 @@ except ImportError:  # pragma: no cover - the FIR path falls back to _sinc_fir_n
 if _HAS_NUMBA:
     # Single-threaded: chunk workers supply the parallelism, and parallel=True crashes under numba's workqueue
     # layer with the thread engine and under its omp layer with forked processes.
-    @numba.njit(nogil=True, cache=True, boundscheck=False)
+    @numba.njit(nogil=True, cache=False, boundscheck=False)
     def _sinc_fir_kernel_tc(signal_tc, kernels_kc):
         """Per-channel FIR on a ``(T, C)`` float32 signal, treating samples outside it as zero."""
         T, C = signal_tc.shape
@@ -365,7 +362,7 @@ if _HAS_NUMBA:
                             out[n, c] += kernels_kc[k, c] * signal_tc[idx, c]
         return out
 
-    @numba.njit(nogil=True, cache=True, boundscheck=False)
+    @numba.njit(nogil=True, cache=False, boundscheck=False)
     def _sinc_fir_kernel_int16_tc(signal_tc, kernels_kc):
         """int16-input variant: reads int16 and writes float32, so an int16 parent needs no cast first."""
         T, C = signal_tc.shape

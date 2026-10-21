@@ -163,23 +163,6 @@ def test_phase_shift_fir_int16_to_float32():
     assert out.dtype == np.dtype("float32")
 
 
-def test_phase_shift_fft_still_matches_stock_after_taper_refactor():
-    """Regression guard: FFT path must still behave the same after get_chunk_with_margin's
-    taper was split into apply_raised_cosine_taper.  This reruns the core chunked-vs-full
-    identity check on one representative combo.
-    """
-    traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
-    rec = NumpyRecording([traces.astype("int16")], sampling_frequency)
-    rec.set_property("inter_sample_shift", inter_sample_shift)
-    rec2 = phase_shift(rec, margin_ms=30.0, method="fft")
-    rec3 = rec2.save(format="memory", chunk_size=500, n_jobs=1, progress_bar=False)
-    t2 = rec2.get_traces()
-    t3 = rec3.get_traces()
-    rms = float(np.sqrt(np.mean(traces**2)))
-    err = float(np.sqrt(np.mean((t2 - t3) ** 2)))
-    assert err / rms < 0.001
-
-
 @pytest.mark.parametrize("parent_dtype", ["int16", "float32"])
 @pytest.mark.parametrize("dtype", [None, "float32"])
 def test_phase_shift_fir_numpy_fallback_matches_numba(monkeypatch, parent_dtype, dtype):
@@ -216,7 +199,6 @@ if __name__ == "__main__":
     test_phase_shift()
     test_phase_shift_fir_matches_fft_in_spike_band()
     test_phase_shift_fir_int16_advertises_float32()
-    test_phase_shift_fft_still_matches_stock_after_taper_refactor()
 
 
 def test_phase_shift_fir_taps_are_in_convolution_order():
