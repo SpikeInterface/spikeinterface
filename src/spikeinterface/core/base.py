@@ -556,6 +556,7 @@ class BaseExtractor:
             to_dict_kwargs = dict(
                 include_annotations=include_annotations,
                 include_properties=include_properties,
+                include_extra_metadata=include_extra_metadata,
                 # make_paths_relative() will make the recursivity later:
                 relative_to=None,
                 recursive=recursive,
