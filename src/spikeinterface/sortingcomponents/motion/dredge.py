@@ -286,11 +286,17 @@ def dredge_ap(
         hist_margin_um=0.0,  # @charlie maybe we should expose this and set +20. for instance
         spatial_bin_edges=None,
         depth_smooth_um=histogram_depth_smooth_um,
-        time_smooth_s=histogram_time_smooth_s,
+        time_smooth_s=None,
     )
     raster = motion_histogram.T
 
-    # TODO charlie : put the log for hitstogram
+    # as in dredge: spatial smoothing, then post_transform, then temporal smoothing
+    if post_transform is not None:
+        raster = post_transform(raster)
+    if histogram_time_smooth_s:
+        from scipy.ndimage import gaussian_filter1d
+
+        raster = gaussian_filter1d(raster, histogram_time_smooth_s / bin_s, axis=1, mode="constant")
 
     # TODO @charlie you should check that we are doing the same thing
     # windows, window_centers = get_spatial_windows(
