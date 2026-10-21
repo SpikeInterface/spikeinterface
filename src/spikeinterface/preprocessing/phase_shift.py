@@ -3,6 +3,7 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from spikeinterface.core import get_chunk_with_margin
+from spikeinterface.core.time_series_tools import _taper_margins
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -80,12 +81,13 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         self.margin = margin
         self.dtype = dtype
         self.tmp_dtype = tmp_dtype
+        self._margin_window = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
             channel_indices = slice(None)
 
-        # this return a copy with margin  + taper on border always
+        # The in-place taper requires an owned buffer, including for float64 parents.
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
@@ -94,8 +96,9 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             self.margin,
             dtype=self.tmp_dtype,
             add_zeros=True,
-            window_on_margin=True,
+            copy=True,
         )
+        _taper_margins(traces_chunk, self._margin_window)
         traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
