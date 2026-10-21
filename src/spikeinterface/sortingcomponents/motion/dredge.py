@@ -655,7 +655,15 @@ def compute_displacement_online(
 
     B = len(windows)
 
-    def get_Us(Ds, Cs, raster, raster_b=None, t_offset_bins=0, mincorr=weights_kw["mincorr"], mincorr_percentile=mincorr_percentile):
+    def get_Us(
+        Ds,
+        Cs,
+        raster,
+        raster_b=None,
+        t_offset_bins=0,
+        mincorr=weights_kw["mincorr"],
+        mincorr_percentile=mincorr_percentile,
+    ):
         Us, wextra = weight_correlation_matrix(
             Ds,
             Cs,
@@ -1058,9 +1066,7 @@ def thomas_solve(
         return P, extra
 
     # spatial prior is a sparse, block tridiagonal kronecker product
-    Lambda_s_diagb = laplacian(
-        T, eps=eps, lambd=lambd_s_diag[0], ridge_mask=had_weights[0], wink_start=not online
-    )
+    Lambda_s_diagb = laplacian(T, eps=eps, lambd=lambd_s_diag[0], ridge_mask=had_weights[0], wink_start=not online)
     Lambda_s_offdiag = laplacian(T, eps=0, lambd=lambd_s_offdiag, wink_start=not online)
 
     # initialize block-LU stuff and forward variable
@@ -1075,9 +1081,7 @@ def thomas_solve(
 
     # forward pass
     for b in trange(1, B, desc="Solve") if progress_bar else range(1, B):
-        Lambda_s_diagb = laplacian(
-            T, eps=eps, lambd=lambd_s_diag[b], ridge_mask=had_weights[b], wink_start=not online
-        )
+        Lambda_s_diagb = laplacian(T, eps=eps, lambd=lambd_s_diag[b], ridge_mask=had_weights[b], wink_start=not online)
 
         alpha_hat_b = neg_hessian_likelihood_term(Us[b], **online_kw_hess(b))
         alpha_hat_b += L_t[b]
