@@ -95,6 +95,26 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     _check_sorting_analyzers(sorting_analyzer, sorting2, cache_folder=tmp_path)
 
 
+@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+def test_provenance_saved(tmp_path, dataset, format):
+    recording, sorting = dataset
+    recording = recording.save(folder=tmp_path / "recording_binary")
+    sorting = sorting.save(folder=tmp_path / "sorting_npz")
+    folder = tmp_path / f"analyzer_{format}" if format == "binary_folder" else tmp_path / "analyzer.zarr"
+    create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False)
+
+    loaded = load_sorting_analyzer(folder)
+    assert loaded.has_recording()
+    assert np.array_equal(loaded.recording.channel_ids, recording.channel_ids)
+    assert np.array_equal(loaded.recording.get_traces(end_frame=100), recording.get_traces(end_frame=100))
+
+    sorting_provenance = loaded.get_sorting_provenance()
+    assert sorting_provenance is not None
+    assert np.array_equal(sorting_provenance.unit_ids, sorting.unit_ids)
+    for unit_id in sorting.unit_ids:
+        assert np.array_equal(sorting_provenance.get_unit_spike_train(unit_id), sorting.get_unit_spike_train(unit_id))
+
+
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     recording, sorting = dataset
     recording = recording.save(folder=tmp_path / "recording_binary")
