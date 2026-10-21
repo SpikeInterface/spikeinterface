@@ -839,16 +839,19 @@ DEFAULT_EPS = 1e-3
 # -- linear algebra, Newton method solver, block tridiagonal (Thomas) solver
 
 
-def laplacian(n, wink=True, eps=DEFAULT_EPS, lambd=1.0, ridge_mask=None):
+def laplacian(n, wink=True, eps=DEFAULT_EPS, lambd=1.0, ridge_mask=None, wink_start=None):
     """Construct a discrete Laplacian operator (plus eps*identity)."""
+    if wink_start is None:
+        wink_start = wink
     lap = np.zeros((n, n))
     if ridge_mask is None:
         diag = lambd + eps
     else:
         diag = lambd + eps * ridge_mask
     np.fill_diagonal(lap, diag)
-    if wink:
+    if wink_start:
         lap[0, 0] -= 0.5 * lambd
+    if wink:
         lap[-1, -1] -= 0.5 * lambd
     # fill diagonal using a for loop for space reasons when this is large
     for i in range(n - 1):
@@ -886,6 +889,7 @@ def newton_rhs(
     Ub_prevcur=None,
     Db_curprev=None,
     Ub_curprev=None,
+    prior_rhs=None,
 ):
     """Newton step right hand side
 
@@ -901,6 +905,8 @@ def newton_rhs(
     # online case
     align_term = (Ub_prevcur.T + Ub_curprev) @ Pb_prev
     rhs = align_term + grad_at_0 + (Ub_curprev * Db_curprev).sum(1) - (Ub_prevcur * Db_prevcur).sum(0)
+    if prior_rhs is not None:
+        rhs += prior_rhs
 
     return rhs
 
@@ -914,6 +920,7 @@ def newton_solve_rigid(
     Ub_prevcur=None,
     Db_curprev=None,
     Ub_curprev=None,
+    prior_rhs=None,
 ):
     """Solve the rigid Newton step
 
@@ -934,6 +941,7 @@ def newton_solve_rigid(
         Ub_prevcur=Ub_prevcur,
         Db_curprev=Db_curprev,
         Ub_curprev=Ub_curprev,
+        prior_rhs=prior_rhs,
     )
     try:
         p = solve(Sigma0inv + negHU, targ, assume_a="pos")
@@ -978,26 +986,40 @@ def thomas_solve(
 
     Ds = np.asarray(Ds, dtype=np.float64)
     Us = np.asarray(Us, dtype=np.float64)
+    B, T, T_ = Ds.shape
+    assert T == T_
+    assert Us.shape == Ds.shape
+
+    # spatial prior's diagonal and off-diagonal block laplacian coefficients
+    lambd_s_diag = np.full(B, float(lambda_s))
+    lambd_s_diag[[0, -1]] = lambda_s / 2
+    lambd_s_offdiag = -lambda_s / 2
+
     online = P_prev is not None
     online_kw_rhs = online_kw_hess = lambda b: {}
     if online:
         assert Ds_prevcur is not None
         assert Us_prevcur is not None
+        # priors linking cur first bin to prev last bin
+        p_last = P_prev[:, -1].astype(np.float64)
+        prior_rhs = np.zeros((B, T))
+        prior_rhs[:, 0] = 0.5 * lambda_t * p_last
+        if B > 1 and lambda_s:
+            prior_rhs[:, 0] += 0.5 * lambd_s_diag * p_last
+            prior_rhs[1:, 0] += 0.5 * lambd_s_offdiag * p_last[:-1]
+            prior_rhs[:-1, 0] += 0.5 * lambd_s_offdiag * p_last[1:]
         online_kw_rhs = lambda b: dict(  # noqa
             Pb_prev=P_prev[b].astype(np.float64, copy=False),
             Db_prevcur=Ds_prevcur[b].astype(np.float64, copy=False),
             Ub_prevcur=Us_prevcur[b].astype(np.float64, copy=False),
             Db_curprev=Ds_curprev[b].astype(np.float64, copy=False),
             Ub_curprev=Us_curprev[b].astype(np.float64, copy=False),
+            prior_rhs=prior_rhs[b],
         )
         online_kw_hess = lambda b: dict(  # noqa
             Ub_prevcur=Us_prevcur[b].astype(np.float64, copy=False),
             Ub_curprev=Us_curprev[b].astype(np.float64, copy=False),
         )
-
-    B, T, T_ = Ds.shape
-    assert T == T_
-    assert Us.shape == Ds.shape
 
     # figure out which temporal bins are included in the problem
     # these are used to figure out where epsilon can be added
@@ -1006,7 +1028,7 @@ def thomas_solve(
     had_weights[~had_weights.any(axis=1)] = 1
 
     # temporal prior matrix
-    L_t = [laplacian(T, eps=eps, lambd=lambda_t, ridge_mask=w) for w in had_weights]
+    L_t = [laplacian(T, eps=eps, lambd=lambda_t, ridge_mask=w, wink_start=not online) for w in had_weights]
     extra = dict(L_t=L_t)
 
     # just solve independent problems when there's no spatial regularization
@@ -1019,10 +1041,10 @@ def thomas_solve(
         return P, extra
 
     # spatial prior is a sparse, block tridiagonal kronecker product
-    # the first and last diagonal blocks are
-    Lambda_s_diagb = laplacian(T, eps=eps, lambd=lambda_s / 2, ridge_mask=had_weights[0])
-    # and the off-diagonal blocks are
-    Lambda_s_offdiag = laplacian(T, eps=0, lambd=-lambda_s / 2)
+    Lambda_s_diagb = laplacian(
+        T, eps=eps, lambd=lambd_s_diag[0], ridge_mask=had_weights[0], wink_start=not online
+    )
+    Lambda_s_offdiag = laplacian(T, eps=0, lambd=lambd_s_offdiag, wink_start=not online)
 
     # initialize block-LU stuff and forward variable
     alpha_hat_b = neg_hessian_likelihood_term(Us[0], **online_kw_hess(0))
@@ -1036,10 +1058,9 @@ def thomas_solve(
 
     # forward pass
     for b in trange(1, B, desc="Solve") if progress_bar else range(1, B):
-        if b < B - 1:
-            Lambda_s_diagb = laplacian(T, eps=eps, lambd=lambda_s, ridge_mask=had_weights[b])
-        else:
-            Lambda_s_diagb = laplacian(T, eps=eps, lambd=lambda_s / 2, ridge_mask=had_weights[b])
+        Lambda_s_diagb = laplacian(
+            T, eps=eps, lambd=lambd_s_diag[b], ridge_mask=had_weights[b], wink_start=not online
+        )
 
         alpha_hat_b = neg_hessian_likelihood_term(Us[b], **online_kw_hess(b))
         alpha_hat_b += L_t[b]
