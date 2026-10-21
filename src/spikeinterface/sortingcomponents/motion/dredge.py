@@ -716,6 +716,7 @@ def compute_displacement_online(
             spatial_bin_edges_um,
             win_scale_um,
             raster_b=traces0.T,
+            t_offset_bins=T_chunk,
             **full_xcorr_kw,
         )
 
@@ -1071,8 +1072,7 @@ def threshold_correlation_matrix(
     time_horizon_s=0,
     in_place=False,
     bin_s=1,
-    t_offset_bins=None,
-    T=None,
+    t_offset_bins=0,
     soft=True,
 ):
     if mincorr_percentile is not None:
@@ -1095,14 +1095,10 @@ def threshold_correlation_matrix(
             Ss = np.square((Cs >= mincorr) * Cs)
         else:
             Ss = (Cs >= mincorr).astype(Cs.dtype)
-    if time_horizon_s is not None and time_horizon_s > 0 and T is not None and time_horizon_s < T:
-        tt0 = bin_s * np.arange(T)
-        tt1 = tt0
-        if t_offset_bins:
-            tt1 = tt0 + t_offset_bins
-        dt = tt1[:, None] - tt0[None, :]
-        mask = (np.abs(dt) <= time_horizon_s).astype(Ss.dtype)
-        Ss *= mask[None]
+    if time_horizon_s:
+        Ta, Tb = Ss.shape[-2:]
+        dt_bins = np.arange(Ta)[:, None] + t_offset_bins - np.arange(Tb)[None, :]
+        Ss *= np.abs(dt_bins) * bin_s <= time_horizon_s
     return Ss, mincorr
 
 
@@ -1116,6 +1112,7 @@ def xcorr_windows(
     bin_um=1,
     max_disp_um=None,
     max_dt_bins=None,
+    t_offset_bins=0,
     progress_bar=True,
     centered=True,
     normalized=True,
@@ -1191,6 +1188,7 @@ def xcorr_windows(
             centered=centered,
             normalized=normalized,
             max_dt_bins=max_dt_bins,
+            t_offset_bins=t_offset_bins,
         )
 
     return Ds, Cs, max_disp_um
@@ -1208,6 +1206,7 @@ def calc_corr_decent_pair(
     centered=True,
     possible_displacement=None,
     max_dt_bins=None,
+    t_offset_bins=0,
     device=None,
 ):
     """Weighted pairwise cross-correlation
@@ -1264,7 +1263,9 @@ def calc_corr_decent_pair(
     C = np.zeros((Ta, Tb), dtype=np.float32)
     for i in range(0, Ta, batch_size):
         for j in range(0, Tb, batch_size):
-            dt_bins = min(abs(i - j), abs(i + batch_size - j), abs(i - j - batch_size))
+            dt_low = i + t_offset_bins - (j + batch_size - 1)
+            dt_high = i + batch_size - 1 + t_offset_bins - j
+            dt_bins = 0 if dt_low <= 0 <= dt_high else min(abs(dt_low), abs(dt_high))
             if max_dt_bins and dt_bins > max_dt_bins:
                 continue
             weights_ = weights
@@ -1516,7 +1517,6 @@ def weight_correlation_matrix(
         mincorr_percentile=mincorr_percentile,
         mincorr_percentile_nneighbs=mincorr_percentile_nneighbs,
         time_horizon_s=time_horizon_s,
-        T=T,
         in_place=in_place,
         **threshold_kw,
     )
