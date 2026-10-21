@@ -358,6 +358,7 @@ def dredge_ap(
             threshold_kw,
             precomputed_D_C_maxdisp,
             post_transform,
+            progress_bar=progress_bar,
         )
 
     elif batching_mode == "online":
@@ -382,6 +383,7 @@ def dredge_ap(
             weights_kw,
             full_xcorr_kw,
             threshold_kw,
+            progress_bar=progress_bar,
         )
     else:
         raise ValueError(f"No `batching_mode` called {batching_mode}. Available modes are ['full', 'online'].")
@@ -389,7 +391,6 @@ def dredge_ap(
     if extra_outputs:
         extra["windows"] = windows
         extra["window_centers"] = window_centers
-        extra["max_disp_um"] = max_disp_um
 
     time_bin_centers = 0.5 * (time_bin_edges_s[1:] + time_bin_edges_s[:-1])
 
@@ -618,6 +619,7 @@ def dredge_online_lfp(
         weights_kw,
         full_xcorr_kw,
         threshold_kw,
+        progress_bar=progress_bar,
     )
 
     motion = Motion([P_online.T], [lfp_recording.get_times(0)], window_centers, direction=direction)
@@ -642,6 +644,7 @@ def compute_displacement_online(
     weights_kw,
     full_xcorr_kw,
     threshold_kw,
+    progress_bar=False,
 ):
 
     B = len(windows)
@@ -697,13 +700,12 @@ def compute_displacement_online(
 
     # -- loop through chunks
     chunk_starts = range(T_chunk, T_total, T_chunk)
-    progress_bar = full_xcorr_kw["progress_bar"]
     if progress_bar:
         chunk_starts = trange(
             T_chunk,
             T_total,
             T_chunk,
-            desc=f"Online chunks [{T_chunk}s each]",
+            desc="Online chunks",
         )
     for t1 in chunk_starts:
         t2 = min(T_total, t1 + T_chunk)
@@ -780,6 +782,7 @@ def compute_displacement_full(
     threshold_kw,
     precomputed_D_C_maxdisp,
     post_transform,
+    progress_bar=False,
 ):
 
     # cross-correlate to get D and C
@@ -791,13 +794,12 @@ def compute_displacement_full(
             win_scale_um,
             # TODO charlie : put back the count for the mask
             # masks=(counts > 0) if count_masked_correlation else None,
-            **full_xcorr_kw,
+            **dict(full_xcorr_kw, progress_bar=progress_bar),
         )
     else:
         Ds, Cs, max_disp_um = precomputed_D_C_maxdisp
 
     # turn Cs into weights
-    progress_bar = full_xcorr_kw["progress_bar"]
     Us, wextra = weight_correlation_matrix(
         Ds,
         Cs,
@@ -821,6 +823,7 @@ def compute_displacement_full(
     if extra_outputs:
         extra["D"] = Ds
         extra["C"] = Cs
+        extra["max_disp_um"] = max_disp_um
     del Cs
 
     # @charlie : is this needed ?
