@@ -11,6 +11,7 @@ class ALFSortingExtractor(BaseSorting):
 
     Parameters
     ----------
+
     folder_path : str or Path
         Path to the ALF folder.
     sampling_frequency : int, default: 30000
@@ -40,7 +41,7 @@ class ALFSortingExtractor(BaseSorting):
         sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"])
         self.add_sorting_segment(sorting_segment)
         self.extra_requirements.append("ONE-api")
-        self._kwargs = {"folder_path": str(Path(folder_path).resolve()), "sampling_frequency": sampling_frequency}
+        self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "sampling_frequency": sampling_frequency}
 
 
 class ALFSortingSegment(BaseSortingSegment):

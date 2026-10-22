@@ -1,4 +1,5 @@
 from .external.combinato import CombinatoSorter
+from .external.dartsort import DartsortSorter
 from .external.hdsort import HDSortSorter
 from .external.herdingspikes import HerdingspikesSorter
 from .external.ironclust import IronClustSorter
@@ -14,6 +15,7 @@ from .external.mountainsort5 import Mountainsort5Sorter
 from .external.rt_sort import RTSortSorter
 from .external.spyking_circus import SpykingcircusSorter
 from .external.tridesclous import TridesclousSorter
+from .external.vanillasort import VanillaSortSorter
 from .external.waveclus import WaveClusSorter
 from .external.waveclus_snippets import WaveClusSnippetsSorter
 from .external.yass import YassSorter
@@ -27,6 +29,7 @@ from .internal.lupin import LupinSorter
 sorter_full_list = [
     # external
     CombinatoSorter,
+    DartsortSorter,
     HDSortSorter,
     HerdingspikesSorter,
     IronClustSorter,
@@ -41,6 +44,7 @@ sorter_full_list = [
     RTSortSorter,
     SpykingcircusSorter,
     TridesclousSorter,
+    VanillaSortSorter,
     WaveClusSorter,
     WaveClusSnippetsSorter,
     YassSorter,

@@ -12,17 +12,7 @@ from probeinterface import Probe, generate_linear_probe, generate_multi_columns_
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
 from .snippets_tools import snippets_from_sorting
-from .core_tools import define_function_from_class, ms_to_samples
-
-
-def _ensure_seed(seed):
-    # when seed is None:
-    # we want to set one to push it in the Recordind._kwargs to reconstruct the same signal
-    # this is a better approach than having seed=42 or seed=my_dog_birthday because we ensure to have
-    # a new signal for all call with seed=None but the dump/load will still work
-    if seed is None:
-        seed = np.random.default_rng(seed=None).integers(0, 2**63)
-    return seed
+from .core_tools import define_function_from_class, ms_to_samples, _ensure_seed
 
 
 def generate_recording(
@@ -77,7 +67,7 @@ def generate_recording(
     if t_starts is not None:
         assert len(t_starts) == len(durations), "t_starts must have the same length as durations"
         for segment_index, t_start in enumerate(t_starts):
-            recording.segments[segment_index].t_start = t_start
+            recording.segments[segment_index]._t_start = t_start
 
     recording.annotate(is_filtered=True)
 
@@ -2007,7 +1997,7 @@ class InjectTemplatesRecording(BaseRecording):
 
             parent_recording_segment = None if parent_recording is None else parent_recording.segments[segment_index]
             recording_segment = InjectTemplatesRecordingSegment(
-                self.sampling_frequency,
+                self._sampling_frequency,
                 self.dtype,
                 spikes,
                 templates,
@@ -2067,7 +2057,7 @@ class InjectTemplatesRecordingSegment(BaseRecordingSegment):
         BaseRecordingSegment.__init__(
             self,
             sampling_frequency,
-            t_start=0 if parent_recording_segment is None else parent_recording_segment.t_start,
+            t_start=0 if parent_recording_segment is None else parent_recording_segment._t_start,
         )
         assert not (parent_recording_segment is None and num_samples is None)
 

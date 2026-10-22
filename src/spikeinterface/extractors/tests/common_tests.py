@@ -1,4 +1,5 @@
 import pickle
+import inspect
 
 import numpy as np
 
@@ -74,6 +75,24 @@ class RecordingCommonTestSuite(CommonTestSuite):
             if rec.get_property("gain_to_uV") is not None and rec.get_property("offset_to_uV") is not None:
                 trace_scaled = rec.get_traces(segment_index=segment_index, return_in_uV=True, end_frame=2)
                 assert trace_scaled.dtype == "float32"
+
+    def test_get_streams(self):
+        for entity in self.entities:
+            if isinstance(entity, tuple):
+                path, kwargs = entity
+            elif isinstance(entity, str):
+                path = entity
+                kwargs = {}
+
+            if not hasattr(self.ExtractorClass, "NeoRawIOClass"):
+                continue
+
+            # get_streams is called before the extractor exists, with the path and whatever neo needs to open it
+            neo_parameters = inspect.signature(self.ExtractorClass.map_to_neo_kwargs).parameters
+            neo_kwargs = {key: value for key, value in kwargs.items() if key in neo_parameters}
+
+            stream_names, stream_ids = self.ExtractorClass.get_streams(self.get_full_path(path), **neo_kwargs)
+            assert len(stream_names) == len(stream_ids)
 
     def test_neo_annotations(self):
         for entity in self.entities:

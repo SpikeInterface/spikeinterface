@@ -6,12 +6,16 @@ from spikeinterface.core import (
     NpzSortingExtractor,
     NumpySorting,
     NpySnippetsExtractor,
-    ZarrRecordingExtractor,
-    ZarrSortingExtractor,
     read_binary,
     read_zarr,
     read_npz_sorting,
     read_npy_snippets,
+)
+
+from spikeinterface.core.zarrextractors import (
+    ZarrRecordingExtractor,
+    ZarrSortingExtractor,
+    read_zarr_array,
 )
 
 # sorting/recording/event from neo
@@ -199,5 +203,6 @@ __all__.extend(
         "read_zarr",
         "read_neuroscope",  # convenience function for neuroscope
         "read_split_intan_files",  # convenience function for segmented intan files
+        "read_zarr_array",
     ]
 )

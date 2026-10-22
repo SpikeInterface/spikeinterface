@@ -4,6 +4,7 @@ import numpy as np
 from itertools import chain
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
+from spikeinterface.core.core_tools import slice_rows, materialize_array
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
@@ -46,15 +47,15 @@ class ComputeISIHistograms(AnalyzerExtension):
     def _select_units_extension_data(self, unit_ids):
         # filter metrics dataframe
         unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-        new_isi_hists = self.data["isi_histograms"][unit_indices, :]
-        new_bins = self.data["bins"]
+        new_isi_hists = slice_rows(self.data["isi_histograms"], unit_indices)
+        new_bins = materialize_array(self.data["bins"])
         new_extension_data = dict(isi_histograms=new_isi_hists, bins=new_bins)
         return new_extension_data
 
     def _merge_extension_data(
         self, merge_unit_groups, new_unit_ids, new_sorting_analyzer, censor_ms=None, verbose=False, **job_kwargs
     ):
-        new_bins = self.data["bins"]
+        new_bins = materialize_array(self.data["bins"])
         arr = self.data["isi_histograms"]
         num_dims = arr.shape[1]
         all_new_units = new_sorting_analyzer.unit_ids
@@ -76,7 +77,7 @@ class ComputeISIHistograms(AnalyzerExtension):
         return new_extension_data
 
     def _split_extension_data(self, split_units, new_unit_ids, new_sorting_analyzer, verbose=False, **job_kwargs):
-        new_bins = self.data["bins"]
+        new_bins = materialize_array(self.data["bins"])
         arr = self.data["isi_histograms"]
         num_dims = arr.shape[1]
         all_new_units = new_sorting_analyzer.unit_ids

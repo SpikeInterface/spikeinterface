@@ -8,7 +8,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
 
     def __init__(
         self,
-        parent_recording: BaseRecording,
+        recording: BaseRecording,
         direction: str = "y",
         dtype="float32",
     ):
@@ -20,8 +20,8 @@ class AverageAcrossDirectionRecording(BaseRecording):
 
         Parameters
         ----------
-        parent_recording : BaseRecording
-            recording to zero-pad
+        recording : BaseRecording
+            The recording whose channels will be averaged across `direction`
         direction : "x" | "y" | "z", default: "y"
             Channels living at unique positions along this direction
             will be averaged.
@@ -29,7 +29,7 @@ class AverageAcrossDirectionRecording(BaseRecording):
             If None, parent dtype is preserved, but the average will
             lose accuracy
         """
-        parent_channel_locations = parent_recording.get_channel_locations()
+        parent_channel_locations = recording.get_channel_locations()
         dim = ["x", "y", "z"].index(direction)
         if dim > parent_channel_locations.shape[1]:
             raise ValueError(f"Direction {direction} not present in this recording.")
@@ -44,18 +44,17 @@ class AverageAcrossDirectionRecording(BaseRecording):
 
         # join the original channel ids in each group with -
         joined_channel_ids = [
-            "-".join(map(str, parent_recording.channel_ids[same_along_dim_chans == i]))
-            for i in range(dim_unique_pos.size)
+            "-".join(map(str, recording.channel_ids[same_along_dim_chans == i])) for i in range(dim_unique_pos.size)
         ]
         joined_channel_ids = np.array(joined_channel_ids)
 
         dtype_ = dtype
         if dtype_ is None:
-            dtype_ = parent_recording.dtype
+            dtype_ = recording.dtype
 
         BaseRecording.__init__(
             self,
-            parent_recording.get_sampling_frequency(),
+            recording.get_sampling_frequency(),
             joined_channel_ids,
             dtype_,
         )
@@ -73,9 +72,8 @@ class AverageAcrossDirectionRecording(BaseRecording):
         channel_locations[:, dim] = dim_unique_pos
         self.set_channel_locations(channel_locations)
 
-        self.parent_recording = parent_recording
         self.num_channels = n_pos_unique
-        for segment in parent_recording.segments:
+        for segment in recording.segments:
             recording_segment = AverageAcrossDirectionRecordingSegment(
                 segment,
                 self.num_channels,
@@ -86,10 +84,23 @@ class AverageAcrossDirectionRecording(BaseRecording):
             self.add_recording_segment(recording_segment)
 
         self._kwargs = dict(
-            parent_recording=parent_recording,
+            recording=recording,
             direction=direction,
             dtype=dtype,
         )
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `parent_recording' argument,
+        which is renamed to `recording'.
+        """
+        if "parent_recording" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording"] = new_kwargs.pop("parent_recording")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 class AverageAcrossDirectionRecordingSegment(BasePreprocessorSegment):

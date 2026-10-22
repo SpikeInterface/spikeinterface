@@ -1,5 +1,6 @@
 import numpy as np
-from spikeinterface import NumpyRecording
+from spikeinterface import NumpyRecording, load
+from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.preprocessing import phase_shift
 
@@ -91,6 +92,36 @@ def test_phase_shift():
     # ~ si.plot_traces(rec2, segment_index=0, time_range=[0, 10])
     # ~ si.plot_traces(rec3, segment_index=0, time_range=[0, 10])
     # ~ plt.show()
+
+
+def test_phase_shift_recovers_delayed_signal():
+    sampling_frequency = 1000.0
+    times = np.arange(5000) / sampling_frequency
+    inter_sample_shift = np.tile([0.0, 0.25, 0.5, 0.75], 8)
+
+    def signal(time):
+        return np.sin(2 * np.pi * 2.5 * time) + np.sin(2 * np.pi * 8.5 * time)
+
+    traces = signal(times[:, np.newaxis] + inter_sample_shift / sampling_frequency)
+    recording = NumpyRecording([traces], sampling_frequency)
+    recording.set_property("inter_sample_shift", inter_sample_shift)
+
+    shifted_traces = phase_shift(recording).get_traces()
+
+    interior = slice(100, -100)
+    expected = np.broadcast_to(signal(times)[:, np.newaxis], traces.shape)
+    np.testing.assert_allclose(shifted_traces[interior], expected[interior], atol=1e-3)
+
+
+def test_phase_shift_dtype_survives_reload():
+    traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
+    recording = NumpyRecording([traces.astype("int16")], sampling_frequency)
+    recording.set_property("inter_sample_shift", inter_sample_shift)
+
+    shifted = phase_shift(recording, dtype="float32")
+    reloaded = load(shifted.to_dict())
+
+    check_recordings_equal(shifted, reloaded, return_in_uV=False)
 
 
 if __name__ == "__main__":
