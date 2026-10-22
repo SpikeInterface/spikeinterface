@@ -1011,7 +1011,9 @@ def add_recording_to_zarr_group(
     job_kwargs = fix_job_kwargs(job_kwargs)
 
     if recording.check_serializability("json"):
-        zarr_group.attrs["provenance"] = check_json(recording.to_dict(recursive=True, relative_to=relative_to))
+        zarr_group.attrs["provenance"] = check_json(
+            recording.to_dict(recursive=True, include_extra_metadata=False, relative_to=relative_to)
+        )
     else:
         zarr_group.attrs["provenance"] = None
 
