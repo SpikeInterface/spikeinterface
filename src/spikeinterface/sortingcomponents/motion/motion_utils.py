@@ -106,6 +106,7 @@ def get_spatial_windows(
     windows = np.array(windows)
 
     if zero_threshold is not None:
+        windows /= windows.sum(axis=1, keepdims=True)
         windows[windows < zero_threshold] = 0
         windows /= windows.sum(axis=1, keepdims=True)
 
