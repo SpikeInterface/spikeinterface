@@ -24,6 +24,7 @@ def raw_data_quality_metrics(
     folder: Path | str | None = None,
     compute_raw_rolling_rms: bool = False,
     verbose: bool = False,
+    quick_metrics_only: bool = False,
     **job_kwargs,
 ):
     """Compute raw data quality metrics for the provided recordings.
@@ -37,7 +38,8 @@ def raw_data_quality_metrics(
     See 'Returns' section for details.
 
     Next, a 'rolling' RMS is computed using consecutive chunks across the entire
-    recording. This is used to generate plots rather than compute metrics.
+    recording. This is used to generate plots rather than compute metrics. Set
+    ``quick_metrics_only=True`` to skip this full-recording pass for all recordings.
 
     All quality metrics are computed on the raw recording, the preprocessed recording and
     LFP recording (if provided). If no AP-preprocessed recording is used, the data is filtered
@@ -75,6 +77,10 @@ def raw_data_quality_metrics(
         If  `True`, the rolling RMS will be output for the raw dataset.
     verbose :
         Whether to print the progress of the quality metric computation.
+    quick_metrics_only : bool, default: False
+        Compute only the sampled RMS summaries and PSD. Skip rolling RMS for all
+        recordings, including LFP and raw AP even if ``compute_raw_rolling_rms=True``.
+        The returned ``rolling_rms`` is None in this mode.
     **job_kwargs : dict
         Keyword arguments forwarded to :class:`TimeSeriesChunkExecutor` (e.g. ``n_jobs``).
         This must not contain arguments related to chunk-size, as these are set by this module.
@@ -106,7 +112,8 @@ def raw_data_quality_metrics(
     ``"rolling_rms"``
         A dictionary with keys [recording_name]["rms" or "times"][segment_index]
         where "rms" gives the rolling RMS across the recording and "times" gives the
-        center time for each corresponding RMS measurement.
+        center time for each corresponding RMS measurement. None when
+        ``quick_metrics_only=True``.
 
     References
     ----------
@@ -133,7 +140,7 @@ def raw_data_quality_metrics(
         recordings.update({"raw_lfp_recording": raw_lfp_recording})
 
     all_chunk_results = {}
-    all_rolling_rms = {}
+    all_rolling_rms = None if quick_metrics_only else {}
 
     for recording_name, recording in recordings.items():
 
@@ -155,6 +162,9 @@ def raw_data_quality_metrics(
         )
 
         all_chunk_results[recording_name] = chunk_results
+
+        if quick_metrics_only:
+            continue
 
         if recording_name == "raw_ap_recording" and not compute_raw_rolling_rms:
             continue
