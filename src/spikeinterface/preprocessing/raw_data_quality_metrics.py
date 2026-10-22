@@ -1,13 +1,11 @@
 import csv
-from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
 from scipy.signal import periodogram
 
 from spikeinterface.core import BaseRecording
-from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecutor, divide_time_series_into_chunks
-from spikeinterface.core.core_tools import make_shared_array
+from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecutor
 
 from .common_reference import common_reference
 from .filter import highpass_filter
@@ -26,7 +24,6 @@ def raw_data_quality_metrics(
     folder: Path | str | None = None,
     compute_raw_rolling_rms: bool = False,
     verbose: bool = False,
-    quick_metrics_only: bool = False,
     **job_kwargs,
 ):
     """Compute raw data quality metrics for the provided recordings.
@@ -40,8 +37,7 @@ def raw_data_quality_metrics(
     See 'Returns' section for details.
 
     Next, a 'rolling' RMS is computed using consecutive chunks across the entire
-    recording. This is used to generate plots rather than compute metrics. Set
-    ``quick_metrics_only=True`` to skip this full-recording pass for all recordings.
+    recording. This is used to generate plots rather than compute metrics.
 
     All quality metrics are computed on the raw recording, the preprocessed recording and
     LFP recording (if provided). If no AP-preprocessed recording is used, the data is filtered
@@ -79,10 +75,6 @@ def raw_data_quality_metrics(
         If  `True`, the rolling RMS will be output for the raw dataset.
     verbose :
         Whether to print the progress of the quality metric computation.
-    quick_metrics_only : bool, default: False
-        Compute only the sampled RMS summaries and PSD. Skip rolling RMS for all
-        recordings, including LFP and raw AP even if ``compute_raw_rolling_rms=True``.
-        The returned ``rolling_rms`` dictionary is empty in this mode.
     **job_kwargs : dict
         Keyword arguments forwarded to :class:`TimeSeriesChunkExecutor` (e.g. ``n_jobs``).
         This must not contain arguments related to chunk-size, as these are set by this module.
@@ -114,8 +106,7 @@ def raw_data_quality_metrics(
     ``"rolling_rms"``
         A dictionary with keys [recording_name]["rms" or "times"][segment_index]
         where "rms" gives the rolling RMS across the recording and "times" gives the
-        center time for each corresponding RMS measurement. Empty when
-        ``quick_metrics_only=True``.
+        center time for each corresponding RMS measurement.
 
     References
     ----------
@@ -164,9 +155,6 @@ def raw_data_quality_metrics(
         )
 
         all_chunk_results[recording_name] = chunk_results
-
-        if quick_metrics_only:
-            continue
 
         if recording_name == "raw_ap_recording" and not compute_raw_rolling_rms:
             continue
@@ -235,46 +223,64 @@ def _get_job_kwargs(job_kwargs, chunk_size_s, rolling_rms_window_size_s):
 
 
 def _compute_rms_psd_over_sparse_chunks(recording, sparse_slices_for_recording, verbose, job_kwargs):
-    """Compute sparse RMS/PSD into preallocated buffers and summarize by segment."""
-    # Keep each segment contiguous without changing its within-segment chunk order.
-    slices = sorted(sparse_slices_for_recording, key=lambda item: item[0])
-    lengths = {end - start for _, start, end in slices}
-    if len(lengths) != 1 or next(iter(lengths)) <= 0:
-        raise ValueError("Sparse chunks must be nonempty and have the same number of samples")
-    num_samples = next(iter(lengths))
-    frequencies = np.fft.rfftfreq(num_samples, d=1.0 / recording.get_sampling_frequency())
-    slice_rows, segment_offsets = _get_metric_buffer_rows(slices, recording.get_num_segments())
-    shapes = {
-        "rms": (len(slices), recording.get_num_channels()),
-        "psd": (len(slices), frequencies.size, recording.get_num_channels()),
-    }
+    """
+    Compute the RMS metrics and PSD over uniformly sampled sparse chunks in parallel.
+
+    The `TimeSeriesChunkExecutor` returns a list of tuple in the form (segment index, rms, ...)
+    We first unnpack this to that all metrics are organised into separate arrays, by segment.
+    The statistics (e.g. median, 10-90 quantiles) are computed over the chunks.
+    """
     executor = TimeSeriesChunkExecutor(
         recording,
         _compute_rms_psd,
         _init_rms_worker,
-        (),
+        (recording,),
         job_name="compute_rms",
         verbose=verbose,
-        handle_returns=False,
+        handle_returns=True,
         **job_kwargs,
     )
+    results_per_chunk = executor.run(slices=sparse_slices_for_recording)
+
+    # Unpack the (segment_index, rms, ...) per-chunk results into single arrays
+    # organized by segment and result type
+    num_segments = recording.get_num_segments()
+    chunk_results = {
+        "rms": [[] for _ in range(num_segments)],
+        "psd": [[] for _ in range(num_segments)],
+    }
+
+    shared_freqs = None
+    for segment_index, rms_by_channel, freqs, psd in results_per_chunk:
+        chunk_results["rms"][segment_index].append(rms_by_channel)
+        chunk_results["psd"][segment_index].append(psd)
+
+        if shared_freqs is None:
+            shared_freqs = freqs
+        else:
+            assert np.array_equal(shared_freqs, freqs), "All chunks should have the same frequency grid."
+
+    # Stack the per-chunk arrays and compute RMS summary statistics and
+    # average the PSD over them
     summary_over_chunks = {
         "rms_median": [],
         "rms_quantile": [],
         "psd": [],
         "freqs": [],
     }
-    use_shared_memory = executor.pool_engine == "process" and executor.n_jobs > 1
-    with _allocate_metric_buffers(shapes, use_shared_memory) as (buffers, buffer_info):
-        executor.init_args = (recording, buffer_info, slice_rows)
-        # Repeated slices are computed once and written into all corresponding rows.
-        executor.run(slices=list(slice_rows))
-        for start, stop in zip(segment_offsets[:-1], segment_offsets[1:]):
-            seg_rms_median = np.median(buffers["rms"][start:stop], axis=0)
-            summary_over_chunks["rms_median"].append(seg_rms_median)
-            summary_over_chunks["rms_quantile"].append(np.percentile(seg_rms_median, [10, 90]))
-            summary_over_chunks["psd"].append(np.mean(buffers["psd"][start:stop], axis=0))
-            summary_over_chunks["freqs"].append(frequencies)
+    for segment_index in range(num_segments):
+
+        seg_rms_median = np.median(np.stack(chunk_results["rms"][segment_index]), axis=0)
+        seg_rms_quantile = np.percentile(seg_rms_median, [10, 90])
+
+        seg_welch_no_overlap = np.mean(
+            np.stack(chunk_results["psd"][segment_index]),
+            axis=0,
+        )
+        summary_over_chunks["rms_median"].append(seg_rms_median)
+        summary_over_chunks["rms_quantile"].append(seg_rms_quantile)
+        summary_over_chunks["psd"].append(seg_welch_no_overlap)
+        summary_over_chunks["freqs"].append(shared_freqs)
 
     return summary_over_chunks
 
@@ -284,94 +290,43 @@ def _compute_rolling_rms(recording, verbose, job_kwargs):
     Compute the 'rolling' RMS i.e. RMS of consecutive chunks of size ``rolling_rms_window_size_s``
     Note ``rolling_rms_window_size_s`` is set in on the job_kwargs in `get_job_kwargs`.
 
-    Workers write RMS vectors and midpoint times directly into preallocated rows.
+    Run in parallel and unpack the rseults into per-segment arrays for "rms" and "times",
+    where "rms" is the rms computed over each chunk and "times" are the center time for each chunk.
     """
     executor = TimeSeriesChunkExecutor(
         recording,
         _compute_rms_with_times,
         _init_rms_worker,
-        (),
+        (recording,),
         job_name="compute_rms_with_times",
         verbose=verbose,
-        handle_returns=False,
+        handle_returns=True,
         **job_kwargs,
     )
-    slices = divide_time_series_into_chunks(recording, executor.chunk_size)
-    slice_rows, segment_offsets = _get_metric_buffer_rows(slices, recording.get_num_segments())
-    shapes = {
-        "rms": (len(slices), recording.get_num_channels()),
-        "times": (len(slices),),
+    results = executor.run()
+
+    segment_results_chunked = {
+        segment_index: {"rms": [], "times": []} for segment_index in range(recording.get_num_segments())
     }
-    results = {"rms": [], "times": []}
-    use_shared_memory = executor.pool_engine == "process" and executor.n_jobs > 1
-    with _allocate_metric_buffers(shapes, use_shared_memory) as (buffers, buffer_info):
-        executor.init_args = (recording, buffer_info, slice_rows)
-        executor.run(slices=list(slice_rows))
-        for start, stop in zip(segment_offsets[:-1], segment_offsets[1:]):
-            # Return ordinary arrays that outlive the shared-memory allocation.
-            results["rms"].append(buffers["rms"][start:stop].copy())
-            results["times"].append(buffers["times"][start:stop].copy())
-    return results
 
+    for segment_index, rms, time in results:
+        segment_results_chunked[segment_index]["rms"].append(rms)
+        segment_results_chunked[segment_index]["times"].append(time)
 
-def _get_metric_buffer_rows(slices, num_segments):
-    """Map segment-grouped slices to disjoint output rows, including duplicates."""
-    slice_rows = {}
-    counts = np.zeros(num_segments, dtype=np.int64)
-    for row, (segment_index, start, end) in enumerate(slices):
-        slice_rows.setdefault((segment_index, start, end), []).append(row)
-        counts[segment_index] += 1
-    return slice_rows, np.r_[0, np.cumsum(counts)]
-
-
-@contextmanager
-def _allocate_metric_buffers(shapes, use_shared_memory):
-    """Allocate output buffers; release shared memory after success or failure."""
-    buffers = {}
-    buffer_info = {}
-    shms = []
-    try:
-        for name, shape in shapes.items():
-            if use_shared_memory and np.prod(shape) > 0:
-                array, shm = make_shared_array(shape, np.float64)
-                shms.append(shm)
-                buffers[name] = array
-                buffer_info[name] = (shm.name, array.shape, array.dtype.str)
-            else:
-                # Threads share these arrays directly; serial execution needs no IPC.
-                buffers[name] = np.empty(shape, dtype=np.float64)
-                buffer_info[name] = buffers[name]
-        yield buffers, buffer_info
-    finally:
-        buffers.clear()
-        buffer_info.clear()
-        for shm in shms:
-            shm.close()
-            shm.unlink()
+    return {
+        "rms": [np.stack(data["rms"]) for data in segment_results_chunked.values()],
+        "times": [np.asarray(data["times"]) for data in segment_results_chunked.values()],
+    }
 
 
 # Executor functions
 # --------------------------------------------------------------------------------------
 
 
-def _init_rms_worker(recording, buffer_info, slice_rows):
-    from multiprocessing.shared_memory import SharedMemory
-
-    worker_context = {
+def _init_rms_worker(recording):
+    return {
         "recording": recording,
-        "slice_rows": slice_rows,
-        "buffers": {},
-        "shms": [],
     }
-    for name, info in buffer_info.items():
-        if isinstance(info, np.ndarray):
-            worker_context["buffers"][name] = info
-        else:
-            shm_name, shape, dtype = info
-            shm = SharedMemory(name=shm_name)
-            worker_context["shms"].append(shm)  # Keep the mapping alive in this worker.
-            worker_context["buffers"][name] = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
-    return worker_context
 
 
 def _compute_rms_psd(segment_index, start_frame, end_frame, worker_context):
@@ -399,9 +354,7 @@ def _compute_rms_psd(segment_index, start_frame, end_frame, worker_context):
         axis=0,
     )
 
-    for row in worker_context["slice_rows"][(segment_index, start_frame, end_frame)]:
-        worker_context["buffers"]["rms"][row] = rms
-        worker_context["buffers"]["psd"][row] = psd
+    return segment_index, rms, frequencies, psd
 
 
 def _compute_rms_with_times(segment_index, start_frame, end_frame, worker_context):
@@ -430,9 +383,7 @@ def _compute_rms_with_times(segment_index, start_frame, end_frame, worker_contex
         .mean()
     )
 
-    for row in worker_context["slice_rows"][(segment_index, start_frame, end_frame)]:
-        worker_context["buffers"]["rms"][row] = rms
-        worker_context["buffers"]["times"][row] = rms_time_center_bin
+    return segment_index, rms, rms_time_center_bin
 
 
 def _compute_rms(traces):
