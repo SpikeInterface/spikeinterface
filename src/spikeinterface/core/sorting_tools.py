@@ -447,7 +447,7 @@ def random_spikes_selection(
                 if maximum_rate is None:
                     raise ValueError(f"maximum_rate must be defined")
 
-                t_duration = np.sum(get_segment_durations(sorting))
+                t_duration = np.sum(get_segment_durations(sorting)[0])
                 rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
                 selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
