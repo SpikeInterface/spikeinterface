@@ -5,9 +5,10 @@ from typing import Literal
 
 from spikeinterface.core import BaseRecording, get_noise_levels
 from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
+from .waveform_utils import WaveformTransformer
 
 
-class WaveformThresholder(WaveformsNode):
+class WaveformThresholder(WaveformTransformer):
     """
     A node that performs waveform thresholding based on a selected feature.
 
@@ -47,14 +48,8 @@ class WaveformThresholder(WaveformsNode):
         random_chunk_kwargs: dict = {},
         operator: callable = operator.le,
     ):
-        waveform_extractor = find_parent_of_type(parents, WaveformsNode)
-        if waveform_extractor is None:
-            raise TypeError(f"SavGolDenoiser should have a single {WaveformsNode.__name__} in its parents")
-
         super().__init__(
             recording,
-            waveform_extractor.ms_before,
-            waveform_extractor.ms_after,
             return_output=return_output,
             parents=parents,
         )
