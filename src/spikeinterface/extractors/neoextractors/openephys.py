@@ -354,7 +354,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                         sync_times = np.load(stream_folder / "synchronized_timestamps.npy", mmap_mode="r")
                     else:
                         sync_times = None
-                    if len(sync_times) == self.segments[segment_index].get_num_samples():
+                    if sync_times is not None and len(sync_times) == self.segments[segment_index].get_num_samples():
                         self.segments[segment_index]._time_vector = sync_times
                     else:
                         warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
