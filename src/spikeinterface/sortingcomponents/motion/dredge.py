@@ -91,7 +91,7 @@ class DredgeApRegistration:
         What torch device to run on? E.g., "cpu" or "cuda" or "cuda:1".
     batching_mode : Literal["full", "online"], default: "full"
         Which batching_mode to run when computing displacement vector.
-    chunk_len_s=None,
+    chunk_len_s : float, default: 3000.0
         If `batching_mode` is "online", how long should each batch be, in seconds. In general,
         longer is better but will use more RAM.
     """
@@ -177,7 +177,7 @@ def dredge_ap(
     progress_bar=True,
     extra_outputs=False,
     precomputed_D_C_maxdisp=None,
-    chunk_len_s=None,
+    chunk_len_s=3000.0,
     batching_mode="full",
 ):
     """Estimate motion from spikes
@@ -287,6 +287,7 @@ def dredge_ap(
         do_window_weights=do_window_weights,
         weights_threshold_low=weights_threshold_low,
         weights_threshold_high=weights_threshold_high,
+        post_transform=post_transform,
     )
 
     full_xcorr_kw = dict(
@@ -298,9 +299,9 @@ def dredge_ap(
         **xcorr_kw,
     )
 
-    if batching_mode == "full":
+    threshold_kw = dict(bin_s=bin_s)
 
-        threshold_kw = dict(bin_s=bin_s)
+    if batching_mode == "full":
 
         displacement, extra = compute_displacement_full(
             raster,
@@ -314,7 +315,6 @@ def dredge_ap(
             full_xcorr_kw,
             threshold_kw,
             precomputed_D_C_maxdisp,
-            post_transform,
             progress_bar=progress_bar,
         )
 
@@ -323,8 +323,6 @@ def dredge_ap(
         # T_total is number of bin_s in recording
         T_total = raster.shape[1]
         T_chunk = max(1, int(np.ceil(chunk_len_s / bin_s)))
-
-        threshold_kw = dict(bin_s=bin_s)
 
         displacement, extra = compute_displacement_online(
             raster,
@@ -613,7 +611,7 @@ def compute_displacement_online(
         return Us
 
     # -- allocate output and initialize first chunk
-    P_online = np.empty((B, T_total), dtype=np.float32)
+    P_online = np.empty((B, T_total))
     # below, t0 is start of prev chunk, t1 start of cur chunk, t2 end of cur
     t0, t1 = 0, T_chunk
 
@@ -714,7 +712,6 @@ def compute_displacement_full(
     full_xcorr_kw,
     threshold_kw,
     precomputed_D_C_maxdisp,
-    post_transform,
     progress_bar=False,
 ):
 
@@ -738,7 +735,6 @@ def compute_displacement_full(
         raster,
         spatial_bin_edges_um,
         threshold_kw,
-        post_transform=post_transform,
         progress_bar=progress_bar,
         in_place=not extra_outputs,
         **weights_kw,
