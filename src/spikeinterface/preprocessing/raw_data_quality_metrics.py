@@ -93,7 +93,9 @@ def raw_data_quality_metrics(
     ``"chunked_results"" :
         A dictionary with keys [recording_name][metric][segment_index]. The
         recording names are "raw_ap_recording", "preprocessed_ap_recording" and (if LFP
-        provided) "raw_lfp_recording". The metric names are:
+        provided) "raw_lfp_recording". Each recording also includes ``"channel_ids"``,
+        an array of shape (num_channels,) shared across segments, in the channel
+        order used by ``rms_median`` and the last axis of ``psd``. The metric names are:
 
         "rms_median" :
             The median of the sampled chunk RMS values, per channel (num_channels,).
@@ -160,6 +162,7 @@ def raw_data_quality_metrics(
         chunk_results = _compute_rms_psd_over_sparse_chunks(
             recording, sparse_slices_for_recording, verbose, sparse_job_kwargs
         )
+        chunk_results["channel_ids"] = recording.get_channel_ids().copy()
 
         all_chunk_results[recording_name] = chunk_results
 
@@ -181,7 +184,7 @@ def raw_data_quality_metrics(
     }
     if folder is not None:
 
-        _write_rms_summary_csvs(folder, recordings, all_chunk_results)
+        _write_rms_summary_csvs(folder, all_chunk_results)
 
         for segment_index in range(raw_ap_recording.get_num_segments()):
             widget = plot_raw_data_quality_metrics(
@@ -308,7 +311,7 @@ def _compute_rolling_rms(recording, verbose, job_kwargs):
         _compute_rms_with_times,
         _init_rms_worker,
         (recording,),
-        job_name="compute_rms_with_times",
+        job_name="compute_rolling_rms",
         verbose=verbose,
         handle_returns=True,
         **job_kwargs,
@@ -446,17 +449,16 @@ def _generate_skipped_chunk_slices(
     return slices
 
 
-def _write_rms_summary_csvs(folder, recordings, chunked_results):
+def _write_rms_summary_csvs(folder, chunked_results):
     """Write the metrics to a CSV which has rms_median per channel (row),
     as well as the 10-90 quantiles in the first row of separate columns"""
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
 
-    for recording_name, recording in recordings.items():
-        metrics = chunked_results[recording_name]
+    for recording_name, metrics in chunked_results.items():
         num_segments = len(metrics["rms_median"])
         columns = ["channel_id"]
-        channel_rows = [{"channel_id": channel_id} for channel_id in recording.get_channel_ids()]
+        channel_rows = [{"channel_id": channel_id} for channel_id in metrics["channel_ids"]]
         summary_row = {"channel_id": "all_channels"}
 
         for segment_index in range(num_segments):
