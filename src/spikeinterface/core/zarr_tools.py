@@ -235,7 +235,12 @@ def read_legacy_zarr_object_array(store, path: str) -> LegacyZarrObjectArray:
     # filters are applied on encode, so they are decoded in reverse order.
     # for object arrays the object codec is the (only) filter
     for filter_config in reversed(zarray.get("filters", None) or []):
-        values = numcodecs.get_codec(filter_config).decode(values)
+        if filter_config.get("id") == "pickle":
+            # numcodecs>=0.16 disables Pickle.decode by default; we already trust pickles in the analyzer folder
+            values = pickle.loads(bytes(values))
+        else:
+            values = numcodecs.get_codec(filter_config).decode(values)
+
     values = np.asarray(values, dtype=object).reshape(shape)
 
     return LegacyZarrObjectArray(values, zattrs)
