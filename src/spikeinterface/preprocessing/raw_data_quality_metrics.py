@@ -31,9 +31,9 @@ def raw_data_quality_metrics(
 
     Based on the IBL white paper (reference below), this function computes a set of
     metrics used to assess raw data quality metrics. First, it takes uniformly sampled
-    chunks of data across the recording and computes the RMS and hann-windowed periodogram
-    for each. Then it computes the median RMS across time (per channel), the 10-90
-    quantiles across channels and averages across periodograms, yielding a non-overlapping
+    chunks of data across the recording and computes the RMS (following mean-subtraction)
+    and hann-windowed periodogram for each. Then it computes the median RMS across time (per channel),
+    the 10-90 quantiles across channels and averages across periodograms, yielding a non-overlapping
     Welch PSD per channel. The IBL use 1s every 300s, here we use 1s for 30 chunks over the recording.
     See 'Returns' section for details.
 
@@ -90,24 +90,28 @@ def raw_data_quality_metrics(
 
     A dictionary with keys ``"chunked_results"`` and ``"rolling_rms"``.
 
-    ``"chunked_results"" :
+    ``"chunked_results"`` :
         A dictionary with keys [recording_name][metric][segment_index]. The
         recording names are "raw_ap_recording", "preprocessed_ap_recording" and (if LFP
         provided) "raw_lfp_recording". Each recording also includes ``"channel_ids"``,
-        an array of shape (num_channels,) shared across segments, in the channel
-        order used by ``rms_median`` and the last axis of ``psd``. The metric names are:
+        an array of shape (num_channels,). The metric names are:
+
+        "channel_ids" :
+            A copy of the recording's channel IDs, shape (num_channels,), shared
+            across segments.
 
         "rms_median" :
             The median of the sampled chunk RMS values, per channel (num_channels,).
-            This gives a typical RMS value for each channel. Higher is worse.
+            This gives a typical RMS value for each channel.
         "rms_quantile" :
             The 10th and 90th percentiles of `rms_median` across channels, shape (2,).
             This gives a measure of variance of the RMS across channels (it is assumed
-            that channel RMS should all be similar). Larger spread is worse.
+            that channel RMS should all be similar).
         "psd" :
-            The average PSD computed across the chunks, shape (num_freqs, num_channels). Each chunk is Hann-windowed
-            and the periodogram computed. These periodograms are averaged into the "psd".
-            This is like a Welch PSD computed over uniformly sampled, non-overlapping chunks.
+            The average PSD computed across the chunks, shape (num_freqs, num_channels).
+            Each chunk is Hann-windowed and the periodogram computed. These periodograms are
+            averaged into the "psd". This is like a Welch PSD computed over uniformly sampled,
+            non-overlapping chunks.
         "freqs" :
             The frequency bins associated with "psd", size (num_freqs,).
 
@@ -123,11 +127,7 @@ def raw_data_quality_metrics(
     Brain Laboratory." https://doi.org/10.6084/m9.figshare.19705522
 
     """
-    # Explicit slices control sparse processing; configure a matching executor duration.
     sparse_job_kwargs, rolling_job_kwargs = _get_job_kwargs(job_kwargs, chunk_size_s, rolling_rms_window_size_s)
-
-    if not np.isfinite(first_chunk_time_s) or first_chunk_time_s < 0:
-        raise ValueError("first_chunk_time_s must be finite and non-negative")
 
     if preprocessed_ap_recording is None:
         preprocessed_ap_recording = highpass_filter(raw_ap_recording, freq_min=300)
@@ -143,14 +143,12 @@ def raw_data_quality_metrics(
 
     all_chunk_results = {}
     all_rolling_rms = {}
-
     for recording_name, recording in recordings.items():
 
         if verbose:
             print(f"Running quality metrics for: {recording_name}")
 
-        # For each recording (and segment) generate the slices for the ChunkExecutor
-        # to run over. These divide up each segment according to the chunk arguments.
+        # Generate slices for chunking for rms and psd fast computation
         sparse_slices_for_recording = _generate_skipped_chunk_slices(
             recording,
             first_chunk_time_s=first_chunk_time_s,
@@ -158,7 +156,7 @@ def raw_data_quality_metrics(
             num_chunks=num_chunks,
         )
 
-        # Compute the RMS and PSDF over these sparsely samples chunks
+        # Compute the RMS and PSD over these sparsely samples chunks
         chunk_results = _compute_rms_psd_over_sparse_chunks(
             recording, sparse_slices_for_recording, verbose, sparse_job_kwargs
         )
@@ -211,12 +209,13 @@ def _get_job_kwargs(job_kwargs, chunk_size_s, rolling_rms_window_size_s):
     we handle this outselves. Pass to `fix_job_kwargs`, for sparse_job_kwargs
     we generate ``slices`` outselves so this is not directly used, but passed
     to `fix_job_kwargs` to avoid it default inserting a chunk size.
-
-    TODO: ensure this is properly tested, its a bit brittle.
     """
     chunk_keys = {"chunk_size", "chunk_duration", "chunk_memory", "total_memory"}
     if chunk_keys.intersection(job_kwargs):
-        raise ValueError("Use the metric window parameters to control chunk sizes.")
+        raise ValueError(
+            f"Raw data quality metrics sets the chunk size internally. Do not include"
+            f"and of {chunk_keys} in the `job_kwargs`."
+        )
 
     sparse_job_kwargs = fix_job_kwargs(
         {
@@ -274,7 +273,7 @@ def _compute_rms_psd_over_sparse_chunks(recording, sparse_slices_for_recording, 
             assert np.array_equal(shared_freqs, freqs), "All chunks should have the same frequency grid."
 
     # Stack the per-chunk arrays and compute RMS summary statistics and
-    # average the PSD over them
+    # average the PSD over them for each segment
     summary_over_chunks = {
         "rms_median": [],
         "rms_quantile": [],
@@ -386,15 +385,11 @@ def _compute_rms_with_times(segment_index, start_frame, end_frame, worker_contex
     traces = traces - np.mean(traces, axis=0)
     rms = _compute_rms(traces)
 
-    rms_time_center_bin = (
-        worker_context["recording"]
-        .get_times(
-            segment_index=segment_index,
-            start_frame=start_frame,
-            end_frame=end_frame,
-        )
-        .mean()
-    )
+    rms_time_center_bin = recording.get_times(
+        segment_index=segment_index,
+        start_frame=start_frame,
+        end_frame=end_frame,
+    ).mean()
 
     return segment_index, rms, rms_time_center_bin
 
@@ -433,7 +428,7 @@ def _generate_skipped_chunk_slices(
 
         # Divide the recording time into evenly spaced chunks with the first chunk starting
         # at `first_frame` and the last chunk finishing at example `num_samples`
-        # Ensure that each segment has enough samples to fit all requested chunkds.
+        # Ensure that each segment has enough samples to fit all requested chunks.
         available_samples = num_samples - first_frame
         if num_chunks * chunk_size > available_samples:
             raise ValueError(
@@ -442,9 +437,10 @@ def _generate_skipped_chunk_slices(
             )
 
         start_frames = np.linspace(first_frame, max_start_frame, num_chunks)
-        start_frames = np.rint(start_frames).astype(np.int64)
+        start_frames = np.rint(start_frames)
 
-        slices.extend((segment_index, int(start_frame), int(start_frame + chunk_size)) for start_frame in start_frames)
+        for start_frame in start_frames:
+            slices.append((segment_index, int(start_frame), int(start_frame + chunk_size)))
 
     return slices
 
