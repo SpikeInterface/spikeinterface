@@ -42,8 +42,7 @@ class RawDataQualityMetricsWidget(BaseWidget):
 
             channel_ids = recording.get_channel_ids()[channel_indices]
 
-            rolling_rms = results["rolling_rms"]
-            rolling = rolling_rms.get(recording_name) if rolling_rms is not None else None
+            rolling = results["rolling_rms"].get(recording_name)
 
             title = display_names.get(recording_name, recording_name)
             if len(summary["rms_median"]) > 1:

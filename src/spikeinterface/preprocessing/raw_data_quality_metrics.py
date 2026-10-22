@@ -80,7 +80,7 @@ def raw_data_quality_metrics(
     quick_metrics_only : bool, default: False
         Compute only the sampled RMS summaries and PSD. Skip rolling RMS for all
         recordings, including LFP and raw AP even if ``compute_raw_rolling_rms=True``.
-        The returned ``rolling_rms`` is None in this mode.
+        The returned ``rolling_rms`` dictionary is empty in this mode.
     **job_kwargs : dict
         Keyword arguments forwarded to :class:`TimeSeriesChunkExecutor` (e.g. ``n_jobs``).
         This must not contain arguments related to chunk-size, as these are set by this module.
@@ -112,7 +112,7 @@ def raw_data_quality_metrics(
     ``"rolling_rms"``
         A dictionary with keys [recording_name]["rms" or "times"][segment_index]
         where "rms" gives the rolling RMS across the recording and "times" gives the
-        center time for each corresponding RMS measurement. None when
+        center time for each corresponding RMS measurement. Empty when
         ``quick_metrics_only=True``.
 
     References
@@ -140,7 +140,7 @@ def raw_data_quality_metrics(
         recordings.update({"raw_lfp_recording": raw_lfp_recording})
 
     all_chunk_results = {}
-    all_rolling_rms = None if quick_metrics_only else {}
+    all_rolling_rms = {}
 
     for recording_name, recording in recordings.items():
 
