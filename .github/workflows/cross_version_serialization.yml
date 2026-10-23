@@ -112,6 +112,10 @@ jobs:
             python .github/scripts/serialization/serialize_objects.py "$SI_SERIALIZATION_FIXTURES_DIR"
 
       - name: Load fixtures with the branch
+        env:
+          # Legacy Zarr fixtures contain pickled objects. These fixtures are trusted:
+          # they were generated locally by the preceding step in this job.
+          NUMCODECS_ALLOW_UNSAFE_PICKLE_DECODE: "1"
         run: |
           # [full] here too: loading the analyzer extensions unpickles e.g. the
           # scikit-learn PCA models written at generation time
