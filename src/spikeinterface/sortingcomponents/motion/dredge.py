@@ -773,10 +773,8 @@ DEFAULT_EPS = 1e-3
 # -- linear algebra, Newton method solver, block tridiagonal (Thomas) solver
 
 
-def laplacian(n, wink=True, eps=DEFAULT_EPS, lambd=1.0, ridge_mask=None, wink_start=None):
+def laplacian(n, eps=DEFAULT_EPS, lambd=1.0, ridge_mask=None, wink_start=True, wink_end=True):
     """Construct a discrete Laplacian operator (plus eps*identity)."""
-    if wink_start is None:
-        wink_start = wink
     lap = np.zeros((n, n))
     if ridge_mask is None:
         diag = lambd + eps
@@ -785,7 +783,7 @@ def laplacian(n, wink=True, eps=DEFAULT_EPS, lambd=1.0, ridge_mask=None, wink_st
     np.fill_diagonal(lap, diag)
     if wink_start:
         lap[0, 0] -= 0.5 * lambd
-    if wink:
+    if wink_end:
         lap[-1, -1] -= 0.5 * lambd
     # fill diagonal using a for loop for space reasons when this is large
     for i in range(n - 1):
