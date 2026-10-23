@@ -113,10 +113,7 @@ class DredgeApRegistration:
         extra,
         **method_kwargs,
     ):
-        torch_spec = importlib.util.find_spec("torch")
-        if torch_spec is not None:
-            import torch
-        else:
+        if importlib.util.find_spec("torch") is None:
             raise ImportError("The DREDGE method requires torch: pip install torch")
 
         outs = dredge_ap(
@@ -142,7 +139,6 @@ class DredgeApRegistration:
         return motion
 
 
-# @TODO : Charlie I started very small refactoring, I let you continue
 def dredge_ap(
     recording,
     peaks,
@@ -164,8 +160,7 @@ def dredge_ap(
     weights_threshold_low=0.2,
     weights_threshold_high=0.2,
     # raster arguments
-    amp_scale_fn=None,  ## @Charlie this one is not used anymore
-    post_transform=np.log1p,  ###@this one is directly transimited to weight_correlation_matrix() and so get_wieiith()
+    post_transform=np.log1p,
     histogram_depth_smooth_um=1,
     histogram_time_smooth_s=1,
     avg_in_bin=False,
@@ -266,7 +261,6 @@ def dredge_ap(
 
         raster = gaussian_filter1d(raster, histogram_time_smooth_s / bin_s, axis=1, mode="constant")
 
-    dim = ["x", "y", "z"].index(direction)
     contact_depths = recording.get_channel_locations()[:, dim]
     spatial_bin_centers = 0.5 * (spatial_bin_edges_um[1:] + spatial_bin_edges_um[:-1])
 
@@ -604,7 +598,6 @@ def compute_displacement_online(
             threshold_kw,
             raster_b=raster_b,
             t_offset_bins=t_offset_bins,
-            progress_bar=False,
             in_place=not extra_outputs,
             **weights_kw,
         )
@@ -735,7 +728,6 @@ def compute_displacement_full(
         raster,
         spatial_bin_edges_um,
         threshold_kw,
-        progress_bar=progress_bar,
         in_place=not extra_outputs,
         **weights_kw,
     )
@@ -749,7 +741,6 @@ def compute_displacement_full(
         extra["max_disp_um"] = max_disp_um
     del Cs
 
-    # @charlie : is this needed ?
     gc.collect()
 
     # solve for P
@@ -898,7 +889,6 @@ def thomas_solve(
     Ds_curprev=None,
     Us_curprev=None,
     progress_bar=False,
-    bandwidth=None,
 ):
     """Block tridiagonal algorithm, special cased to our setting
 
@@ -1359,8 +1349,6 @@ def normxcorr1d(
 
 
 def get_weights(
-    Ds,
-    Ss,
     windows,
     raster,
     dbe,
@@ -1373,8 +1361,7 @@ def get_weights(
     # as a function of time
     assert windows.shape[1] == dbe.size - 1
     weights = []
-    p_inds = []
-    for b in range(len(Ds)):
+    for b in range(len(windows)):
         ilow, ihigh = np.flatnonzero(windows[b])[[0, -1]]
         ihigh += 1
         window_sliced = windows[b, ilow:ihigh]
@@ -1396,7 +1383,7 @@ def get_weights(
     weights_thresh[weights_orig < weights_threshold_low] = 0
     weights_thresh[weights_orig > weights_threshold_high] = np.inf
 
-    return weights, weights_thresh, p_inds
+    return weights_orig, weights_thresh
 
 
 def weight_correlation_matrix(
@@ -1414,7 +1401,6 @@ def weight_correlation_matrix(
     do_window_weights=True,
     weights_threshold_low=0.0,
     weights_threshold_high=np.inf,
-    progress_bar=True,
     in_place=False,
 ):
     """Transform the correlation matrix into the weights used in optimization.
@@ -1429,9 +1415,7 @@ def weight_correlation_matrix(
     if Ds.ndim == 2:
         Ds = Ds[None]
         Cs = Cs[None]
-    B, T, T_ = Ds.shape
     assert Ds.shape == Cs.shape
-    extra = {}
 
     Ss = threshold_correlation_matrix(
         Cs,
@@ -1447,22 +1431,17 @@ def weight_correlation_matrix(
         return Ss, extra
 
     # get weights
-    weights_orig, weights_thresh, Pind = get_weights(
-        Ds,
-        Ss,
+    weights_orig, weights_thresh = get_weights(
         windows,
         raster,
         depth_bin_edges,
-        # raster_kw,
         post_transform=post_transform,
         weights_threshold_low=weights_threshold_low,
         weights_threshold_high=weights_threshold_high,
     )
     weights_thresh_b = weights_thresh
     if raster_b is not None:
-        _, weights_thresh_b, _ = get_weights(
-            Ds,
-            Ss,
+        _, weights_thresh_b = get_weights(
             windows,
             raster_b,
             depth_bin_edges,
@@ -1472,7 +1451,6 @@ def weight_correlation_matrix(
         )
     extra["weights_orig"] = weights_orig
     extra["weights_thresh"] = weights_thresh
-    extra["Pind"] = Pind
 
     # update noise model. we deliberately divide by zero and inf here.
     Us = Ss if in_place else np.zeros_like(Ss)
