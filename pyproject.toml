@@ -27,9 +27,7 @@ dependencies = [
     "zarr>=3,<4",
     # for release we need pypi, so this needs to be commented
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
-    # for testing we need probeinterface Zarr v3 branch, so this needs to be commented
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-
     # "neo>=0.14.5",
     # "probeinterface>=0.4.0",
     "packaging",
