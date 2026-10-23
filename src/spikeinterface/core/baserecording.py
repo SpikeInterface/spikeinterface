@@ -360,9 +360,10 @@ class BaseRecording(BaseRecordingSnippets, TimeSeries):
                 - shards: tuple | None, default: None
                     Number of shard size. If None, no sharding is done. Note that shards dimensions need to be larger than
                     chunk dimensions (if chunks is not None) and that sharding is only done on the first dimension.
-                - compressors: zarr.Codec or None, default: None
-                    Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
-                - filters: list[numcodecs.Codec] or None, default: None
+                - compressors: BytesBytesCodec | ArrayBytesCodec | list of them, or None, default: None
+                    Global compressors. Only one ArrayBytesCodec (serializer) is supported.
+                    If None, Blosc-zstd, level 5, with bit shuffle is used.
+                - filters: ArrayArrayCodec | list[ArrayArrayCodec] or None, default: None
                     Global filters for zarr (global)
                 - compressor_by_dataset: dict or None, default: None
                     Optional compressor per dataset:

@@ -220,7 +220,7 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     assert len(sorting_analyzer_no_compression._get_zarr_root()["extensions"]["templates"]["average"].compressors) == 0
 
     # test a different compressor
-    from zarr.codecs.numcodecs import LZMA
+    from zarr.codecs import LZMA
 
     lzma_compressor = LZMA()
     folder = tmp_path / "test_SortingAnalyzer_zarr_lzma.zarr"

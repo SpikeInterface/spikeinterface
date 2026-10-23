@@ -14,6 +14,15 @@ from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwarg
 from spikeinterface.core import get_channel_distances
 from spikeinterface.core.core_tools import ms_to_samples, samples_to_ms
 
+compressors_type = (
+    zarr.abc.codec.BytesBytesCodec
+    | zarr.abc.codec.ArrayBytesCodec
+    | list[zarr.abc.codec.BytesBytesCodec | zarr.abc.codec.ArrayBytesCodec]
+    | str
+    | None
+)
+filters_type = zarr.abc.codec.ArrayArrayCodec | list[zarr.abc.codec.ArrayArrayCodec] | None
+
 
 class PipelineNode:
 
@@ -1076,10 +1085,13 @@ class GatherToZarr:
           Note that in both modes the `dest` must contain a ".zarr" suffix.
     names : list of str | None
         Names of the outputs. Can be None when `dest` is a list of explicit destinations.
-    compressor : numcodecs codec | "default" | None, default: "default"
-        The compressor used for every array. If "default", the SpikeInterface default
+    compressors : zarr.abc.codec.BytesBytesCodec | zarr.abc.codec.ArrayBytesCodec | list of them | str, or None, default: "default"
+        The compressors used for every array. If "default", the SpikeInterface default
         zarr compressor is used (Blosc-zstd, level 5, bitshuffle). If None, no compression.
         Ignored for destinations that are already a ``zarr.Array`` (they keep their own compressor).
+    filters : zarr.abc.codec.ArrayArrayCodec | list[zarr.abc.codec.ArrayArrayCodec] or None, default: None
+        The filters used for every array. If None, no filters are applied.
+        Ignored for destinations that are already a ``zarr.Array`` (they keep their own filters).
     zarr_target_chunk_bytes : int | dict[str, int], default: 10485760 (10 MiB)
         Target (uncompressed) size in bytes of one zarr chunk, used to compute the number of
         rows per chunk. An int applies the same target to every array, a dict sets it per array
@@ -1091,16 +1103,16 @@ class GatherToZarr:
         self,
         dest: str | Path | list[str | Path | zarr.Array] | None = None,
         names: list[str] | None = None,
-        compressor: "numcodecs.abc.Codec | str | None" = "default",
+        compressors: compressors_type = "default",
+        filters: filters_type = None,
         zarr_target_chunk_bytes: int | dict[str, int] = 10 * 1024 * 1024,
     ):
-        import zarr
-
         from spikeinterface.core.zarrextractors import get_default_zarr_compressor
+        from spikeinterface.core.zarr_tools import build_codec_pipeline
 
-        if compressor == "default":
-            compressor = get_default_zarr_compressor()
-        self.compressor = compressor
+        if compressors == "default":
+            compressors = get_default_zarr_compressor()
+        self.codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
 
         if isinstance(dest, (list, tuple)):
             # append to explicit destinations (paths inside a store or pre-created zarr.Arrays)
@@ -1187,8 +1199,8 @@ class GatherToZarr:
                     shape=(0,) + trailing_shape,
                     chunks=(chunk0,) + trailing_shape,
                     dtype=buf.dtype,
-                    compressors=self.compressor,
                     overwrite=True,
+                    **self.codec_kwargs,
                 )
             self.arrays[i_name].append(buf, axis=0)
 

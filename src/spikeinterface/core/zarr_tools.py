@@ -87,9 +87,9 @@ def check_compressors_match(comp1, comp2, skip_typesize=True):
 
     Parameters
     ----------
-    comp1 : zarr.Codec | Tuple[zarr.Codec]
+    comp1 : zarr.abc.codec.Codec | Tuple[zarr.abc.codec.Codec]
         The first compressor object to compare.
-    comp2 : zarr.Codec | Tuple[zarr.Codec]
+    comp2 : zarr.abc.codec.Codec | Tuple[zarr.abc.codec.Codec]
         The second compressor object to compare.
     skip_typesize : bool, optional
         Whether to skip the typesize check, default: True
@@ -376,7 +376,7 @@ def get_zarr_group_keys(zarr_group) -> list[str]:
     return _list_member_names(zarr_group)
 
 
-def write_json_array(group, name: str, data, compressors=None):
+def write_json_array(group, name: str, data, compressors=None, filters=None):
     """
     Save json-serializable data as the utf-8 bytes of its json text in a uint8 array.
 
@@ -394,8 +394,10 @@ def write_json_array(group, name: str, data, compressors=None):
         The name of the array.
     data : dict | list
         The json-serializable data to save.
-    compressors : numcodecs.Codec | None, default: None
-        The compressor of the array.
+    compressors: BytesBytesCodec | ArrayBytesCodec | list of them, or None, default: None
+        Compressors to use for the array.
+    filters: ArrayArrayCodec | list[ArrayArrayCodec] or None, default: None
+        Filters to use for the array.
 
     Returns
     -------
@@ -403,12 +405,13 @@ def write_json_array(group, name: str, data, compressors=None):
         The created array.
     """
     payload = np.frombuffer(json.dumps(data).encode("utf-8"), dtype="uint8")
-    array = group.create_array(name=name, data=payload, compressors=compressors)
+    codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
+    array = group.create_array(name=name, data=payload, **codec_kwargs)
     array.attrs["encoding"] = "json"
     return array
 
 
-def write_pickle_array(group, name: str, data, compressors=None):
+def write_pickle_array(group, name: str, data, compressors=None, filters=None):
     """
     Save a python object as its pickle bytes in a uint8 array.
 
@@ -424,8 +427,10 @@ def write_pickle_array(group, name: str, data, compressors=None):
         The name of the array.
     data : Any
         The picklable object to save.
-    compressors : numcodecs.Codec | None, default: None
-        The compressor of the array.
+    compressors: BytesBytesCodec | ArrayBytesCodec | list of them, or None, default: None
+        Compressors to use for the array.
+    filters: ArrayArrayCodec | list[ArrayArrayCodec] or None, default: None
+        Filters to use for the array.
 
     Returns
     -------
@@ -433,7 +438,8 @@ def write_pickle_array(group, name: str, data, compressors=None):
         The created array.
     """
     payload = np.frombuffer(pickle.dumps(data), dtype="uint8")
-    array = group.create_array(name=name, data=payload, compressors=compressors)
+    codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
+    array = group.create_array(name=name, data=payload, **codec_kwargs)
     array.attrs["encoding"] = "pickle"
     return array
 
@@ -464,3 +470,70 @@ def read_encoded_array(array):
     raise ValueError(
         f"Unknown encoding {encoding!r} for {array.name}. It was probably saved by a newer version of spikeinterface."
     )
+
+
+def build_codec_pipeline(filters=None, compressors=None):
+    """
+    Build zarr v3 codec kwargs from filters and compressors.
+
+    Classifies codecs into the three slots accepted by ``zarr.Group.create_array()``:
+      1. ``filters``    — ArrayArrayCodec  (e.g. Delta)
+      2. ``serializer`` — ArrayBytesCodec  (e.g. WavPack, BytesCodec)
+      3. ``compressors``— BytesBytesCodec  (e.g. BloscCodec, ZstdCodec)
+
+    This allows callers to pass an ArrayBytesCodec (e.g. WavPack) as a
+    compressor and have it placed in the correct serializer slot automatically.
+
+    Parameters
+    ----------
+    filters : ArrayArrayCodec or list of ArrayArrayCodec or None
+        Codec(s) applied before serialization.
+    compressors : codec or list of codecs or None
+        Can be a mix of ArrayBytesCodec (serializer) and BytesBytesCodec
+        (byte-level compressors). At most one ArrayBytesCodec is allowed.
+
+    Returns
+    -------
+    dict
+        Keyword arguments to unpack into ``zarr.Group.create_array()``.
+        Only keys with explicit values are included; omitted keys let zarr
+        use its defaults.
+
+    Raises
+    ------
+    ValueError
+        If filters contain non-ArrayArrayCodec instances, if more than one
+        ArrayBytesCodec is provided, or if an unrecognised codec type is passed.
+    """
+    from zarr.abc.codec import ArrayArrayCodec, ArrayBytesCodec, BytesBytesCodec
+
+    if filters is None:
+        filters = []
+    if not isinstance(filters, (list, tuple)):
+        filters = [filters]
+
+    if compressors is None:
+        compressors = []
+    if not isinstance(compressors, (list, tuple)):
+        compressors = [compressors]
+
+    for f in filters:
+        if not isinstance(f, ArrayArrayCodec):
+            raise ValueError(f"All filters must be ArrayArrayCodec instances, got {type(f)}")
+
+    serializers = [c for c in compressors if isinstance(c, ArrayBytesCodec)]
+    byte_compressors = [c for c in compressors if isinstance(c, BytesBytesCodec)]
+    invalid = [c for c in compressors if not isinstance(c, (ArrayBytesCodec, BytesBytesCodec))]
+
+    if invalid:
+        raise ValueError(
+            f"Compressors must be ArrayBytesCodec or BytesBytesCodec instances, got {[type(c) for c in invalid]}"
+        )
+    if len(serializers) > 1:
+        raise ValueError("Only one ArrayBytesCodec (serializer) is allowed in the codec pipeline.")
+
+    codec_kwargs = {}
+    codec_kwargs["filters"] = filters
+    codec_kwargs["serializer"] = serializers[0] if len(serializers) == 1 else "auto"
+    codec_kwargs["compressors"] = byte_compressors
+    return codec_kwargs

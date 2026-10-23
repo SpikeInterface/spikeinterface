@@ -2,7 +2,6 @@ from pathlib import Path
 import warnings
 
 import numpy as np
-import numpy.typing
 
 from .core_tools import add_suffix, make_shared_array
 from .job_tools import (
@@ -340,10 +339,12 @@ def _write_time_series_to_zarr(
     {}
     """
     from .job_tools import (
-        ensure_chunk_size,
         fix_job_kwargs,
         TimeSeriesChunkExecutor,
     )
+
+    # place an ArrayBytesCodec passed as a compressor (e.g. WavPack) in the serializer slot
+    from .zarr_tools import build_codec_pipeline
 
     assert dataset_paths is not None, "Provide 'dataset_paths' to save data in zarr format"
     if dataset_timestamps_paths is not None:
@@ -361,9 +362,6 @@ def _write_time_series_to_zarr(
         dtype = time_series.get_dtype()
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-
-    # place an ArrayBytesCodec passed as a compressor (e.g. WavPack) in the serializer slot
-    from .zarrextractors import build_codec_pipeline
 
     codec_kwargs_data = build_codec_pipeline(filters=filters_data, compressors=compressor_data)
     codec_kwargs_times = build_codec_pipeline(filters=filters_times, compressors=compressor_times)

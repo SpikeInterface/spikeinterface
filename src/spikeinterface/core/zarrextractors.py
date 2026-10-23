@@ -18,7 +18,7 @@ from .core_tools import (
     is_path_remote,
 )
 from .job_tools import split_job_kwargs, fix_job_kwargs
-from .zarr_tools import iterate_zarr_group, adjust_chunks_shards_and_job_kwargs
+from .zarr_tools import iterate_zarr_group, adjust_chunks_shards_and_job_kwargs, build_codec_pipeline
 from .time_series_tools import _write_time_series_to_zarr
 
 
@@ -582,35 +582,20 @@ class ZarrSortingExtractor(BaseSorting):
 
         unit_ids = np.array(unit_ids)
         assert "spikes" in self._root.keys(), "'spikes' dataset not found!"
-        spikes_item = self._root["spikes"]
+        spikes_group = self._root["spikes"]
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
-        if isinstance(spikes_item, zarr.Group):
-            # Legacy format: individual field arrays + a "segment_slices" sub-array inside the group.
-            spikes_group = spikes_item
-            segment_slices_list = np.asarray(spikes_group["segment_slices"][:], dtype="int64")
+        segment_slices_list = np.asarray(spikes_group["segment_slices"][:], dtype="int64")
 
-            if lazy_spike_vector:
-                spikes = ZarrSpikeVector(spikes_group, segment_slices_list)
-            else:
-                spikes = np.zeros(spikes_group["sample_index"].shape[0], dtype=minimum_spike_dtype)
-                spikes["sample_index"] = spikes_group["sample_index"][:]
-                spikes["unit_index"] = spikes_group["unit_index"][:]
-                for i, (start, end) in enumerate(segment_slices_list):
-                    spikes["segment_index"][start:end] = i
+        if lazy_spike_vector:
+            spikes = ZarrSpikeVector(spikes_group, segment_slices_list)
         else:
-            # New format: a single structured zarr array; segment_slices stored as an array attribute.
-            # We need https://github.com/zarr-developers/zarr-python/pull/3996 released before being able to
-            # access the structured array lazily. Until then, we always materialise it.
-            spikes = spikes_item
-            segment_slices_list = np.asarray(spikes.attrs["segment_slices"], dtype="int64")
-
-        # we do not need to lexsort at init (very high cost) because spikes are already sorted by frame before saving.
-        # In version 0.104.X this was fully lexsorted, but we don't need it anymore because it's only important in the
-        # context of SpikeVectorBased extensions in the SortingAnalyzer, which stores its own copy of the Sorting
-        # object. This makes the extension data and the spike vector always matching their order.
-        # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
+            spikes = np.zeros(spikes_group["sample_index"].shape[0], dtype=minimum_spike_dtype)
+            spikes["sample_index"] = spikes_group["sample_index"][:]
+            spikes["unit_index"] = spikes_group["unit_index"][:]
+            for i, (start, end) in enumerate(segment_slices_list):
+                spikes["segment_index"][start:end] = i
         self._lazy_spike_vector = lazy_spike_vector
         self._spikes_group = spikes_group
         self._sample_index_search = None
@@ -792,73 +777,6 @@ def get_default_zarr_compressor(clevel: int = 5):
     return BloscCodec(cname="zstd", clevel=clevel, shuffle=BloscShuffle.bitshuffle)
 
 
-def build_codec_pipeline(filters=None, compressors=None):
-    """
-    Build zarr v3 codec kwargs from filters and compressors.
-
-    Classifies codecs into the three slots accepted by ``zarr.Group.create_array()``:
-      1. ``filters``    — ArrayArrayCodec  (e.g. Delta)
-      2. ``serializer`` — ArrayBytesCodec  (e.g. WavPack, BytesCodec)
-      3. ``compressors``— BytesBytesCodec  (e.g. BloscCodec, ZstdCodec)
-
-    This allows callers to pass an ArrayBytesCodec (e.g. WavPack) as a
-    compressor and have it placed in the correct serializer slot automatically.
-
-    Parameters
-    ----------
-    filters : ArrayArrayCodec or list of ArrayArrayCodec or None
-        Codec(s) applied before serialization.
-    compressors : codec or list of codecs or None
-        Can be a mix of ArrayBytesCodec (serializer) and BytesBytesCodec
-        (byte-level compressors). At most one ArrayBytesCodec is allowed.
-
-    Returns
-    -------
-    dict
-        Keyword arguments to unpack into ``zarr.Group.create_array()``.
-        Only keys with explicit values are included; omitted keys let zarr
-        use its defaults.
-
-    Raises
-    ------
-    ValueError
-        If filters contain non-ArrayArrayCodec instances, if more than one
-        ArrayBytesCodec is provided, or if an unrecognised codec type is passed.
-    """
-    from zarr.abc.codec import ArrayArrayCodec, ArrayBytesCodec, BytesBytesCodec
-
-    if filters is None:
-        filters = []
-    if not isinstance(filters, (list, tuple)):
-        filters = [filters]
-
-    if compressors is None:
-        compressors = []
-    if not isinstance(compressors, (list, tuple)):
-        compressors = [compressors]
-
-    for f in filters:
-        if not isinstance(f, ArrayArrayCodec):
-            raise ValueError(f"All filters must be ArrayArrayCodec instances, got {type(f)}")
-
-    serializers = [c for c in compressors if isinstance(c, ArrayBytesCodec)]
-    byte_compressors = [c for c in compressors if isinstance(c, BytesBytesCodec)]
-    invalid = [c for c in compressors if not isinstance(c, (ArrayBytesCodec, BytesBytesCodec))]
-
-    if invalid:
-        raise ValueError(
-            f"Compressors must be ArrayBytesCodec or BytesBytesCodec instances, got {[type(c) for c in invalid]}"
-        )
-    if len(serializers) > 1:
-        raise ValueError("Only one ArrayBytesCodec (serializer) is allowed in the codec pipeline.")
-
-    codec_kwargs = {}
-    codec_kwargs["filters"] = filters
-    codec_kwargs["serializer"] = serializers[0] if len(serializers) == 1 else "auto"
-    codec_kwargs["compressors"] = byte_compressors
-    return codec_kwargs
-
-
 def _has_string_fields(dtype: np.dtype) -> bool:
     """Return True if dtype is or contains fixed-length unicode (U) sub-fields."""
     if dtype.names:
@@ -908,9 +826,15 @@ def add_sorting_to_zarr_group(
     kwargs : dict
         Other arguments passed to the zarr writer:
 
-        * "compressors" : zarr compressor or None, default: None
-        * "target_chunk_size_bytes" : tuple or None, default: None
-            The target chunk size for the zarr datasets.
+        * "target_chunk_size_bytes" : int or None, default: 10 * 1024 * 1024 (10 MB)
+            The target chunk size for each spike field in the zarr arrays.
+            If explicitly set to None, no chunking is used.
+        * "compressors" : zarr compressors or str or None, default: "default"
+            The compressor used for each spike field in the zarr arrays.
+            If "default", the SpikeInterface default zarr compressor is used (Blosc-zstd, level 5, bitshuffle).
+        * "filters" : list of zarr filters or None, default: None
+            The list of zarr filters to apply to each spike field in the zarr arrays.
+            If None, a Delta filter is applied.
         * "shard_factor" : int or None, default: None
             If given, a shard will be shard_factor * chunk size.
     """
@@ -926,9 +850,9 @@ def add_sorting_to_zarr_group(
     zarr_group.attrs["num_segments"] = int(num_segments)
     zarr_group.create_array(name="unit_ids", data=sorting.unit_ids, compressors=None)
 
-    compressor = kwargs.get("compressors") or kwargs.get("compressor")
-    if compressor is None:
-        compressor = get_default_zarr_compressor()
+    compressors = kwargs.get("compressors", "default")
+    if isinstance(compressors, str) and compressors == "default":
+        compressors = get_default_zarr_compressor()
 
     # Save the full structured spike array. The "segment_index" field is additionally stored as
     # "segment_slices" (an attribute on the spikes array) which contains the start and end indices
@@ -937,27 +861,7 @@ def add_sorting_to_zarr_group(
 
     chunks = None
     shards = None
-    target_chunk_size_bytes = kwargs.get("target_chunk_size_bytes")
-
-    # We need https://github.com/zarr-developers/zarr-python/pull/3996 released before being able to
-    # access the structured array lazily. Until then, we always materialise it.
-    # For now, let's keep the old by field implementation
-    # if target_chunk_size_bytes is not None:
-    #     spike_num_bytes = spikes.dtype.itemsize
-    #     target_chunk_size = target_chunk_size_bytes // spike_num_bytes
-    #     chunks = (target_chunk_size,)
-    #     shard_factor = kwargs.get("shard_factor")
-    #     if shard_factor is not None:
-    #         shards = (target_chunk_size * shard_factor,)
-    # else:
-    #     chunks = (len(spikes),)
-    # spikes = zarr_group.create_array(
-    #     name="spikes",
-    #     data=spikes,
-    #     chunks=chunks,
-    #     shards=shards,
-    #     **codec_kwargs
-    # )
+    target_chunk_size_bytes = kwargs.get("target_chunk_size_bytes", 10 * 1024 * 1024)
 
     # Save sub fields: in this case chunks and shards are set per field
     spikes_group = zarr_group.create_group(name="spikes")
@@ -973,7 +877,10 @@ def add_sorting_to_zarr_group(
                     shards = (target_chunk_size * shard_factor,)
             else:
                 chunks = (len(spikes),)
-            codec_kwargs = build_codec_pipeline(filters=Delta(dtype=spikes[field].dtype.str), compressors=compressor)
+            filters = kwargs.get("filters", None)
+            if filters is None:
+                filters = Delta(dtype=spikes[field].dtype.str)
+            codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
             spikes_group.create_array(name=field, data=spikes[field], chunks=chunks, shards=shards, **codec_kwargs)
 
     segment_slices = []
@@ -985,7 +892,6 @@ def add_sorting_to_zarr_group(
             segment_slices.append([i0, i1])
     segment_slices = np.array(segment_slices, dtype="int64")
     spikes_group.create_array(name="segment_slices", data=segment_slices, compressors=None)
-    # spikes.attrs["segment_slices"] = segment_slices.tolist()
 
     # first sample_index of every zarr chunk: lets a lazy reader search sample_index
     # one chunk at a time (see ZarrSampleIndexSearch) instead of materialising it
@@ -993,7 +899,7 @@ def add_sorting_to_zarr_group(
     spikes_group.create_array(
         name="sample_index_chunk_firsts",
         data=np.asarray(spikes["sample_index"][::chunk_length], dtype="int64"),
-        compressor=None,
+        compressors=None,
     )
 
     add_properties_and_annotations(zarr_group, sorting)

@@ -683,20 +683,24 @@ Compression
 
 **NOTE:** the Zarr format by default applies data compression with :code:`Blosc.Zstandard` codec with BIT shuffling.
 Any other Zarr-compatible compressors and filters can be applied using the :code:`compressor` and :code:`filters`
-arguments. For example, in this case we apply `LZMA <https://numcodecs.readthedocs.io/en/stable/lzma.html>`_
-and use a `Delta <https://numcodecs.readthedocs.io/en/stable/delta.html>`_ filter:
+arguments. For example, in this case we apply ``LZMA <https://numcodecs.readthedocs.io/en/stable/compression/lzma.html>`_
+and use a `Delta <https://numcodecs.readthedocs.io/en/stable/filter/delta.html>`_ filter:
 
 
 .. code-block:: python
 
-    from numcodecs import LZMA, Delta
+    from zarr.codecs import LZMA, Delta
 
-    compressor = LZMA()
+    compressors = [LZMA()]
     filters = [Delta(dtype="int16")]
 
-    recording_custom_comp = recording.save(folder="recording", format="zarr",
-                                           compressors=compressor, filters=filters,
-                                           **job_kwargs)
+    recording_custom_comp = recording.save(
+        folder="recording",
+        format="zarr",
+        compressor=compressors,
+        filters=filters,
+        **job_kwargs
+    )
 
 Zarr stores each dataset as a grid of **chunks**: the unit of compression and of reading, so a chunk is always
 decompressed as a whole. When saving a recording, the chunk size along time is set by the job parameters

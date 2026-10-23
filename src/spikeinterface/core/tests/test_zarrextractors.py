@@ -21,8 +21,7 @@ from spikeinterface.core.zarrextractors import (
 
 
 def test_zarr_compression_options(tmp_path):
-    from zarr.codecs.numcodecs import Delta, FixedScaleOffset
-    from zarr.codecs import BloscCodec, BloscShuffle
+    from zarr.codecs import BloscCodec, BloscShuffle, Delta, FixedScaleOffset
 
     recording = generate_recording(durations=[2])
     recording.set_times(recording.get_times() + 100)
