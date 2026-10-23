@@ -61,7 +61,16 @@ class ComputeQualityMetrics(BaseMetricExtension):
             self.params["metric_params"] = qm_params
             del self.params["qm_params"]
 
-        # handle metric names change: isolation_distance/l_ratio merged into mahalanobis
+        # handle metric names and parameters change: isolation_distance/l_ratio merged into mahalanobis
+        legacy_mahalanobis_params = []
+        for legacy_name in ("isolation_distance", "l_ratio"):
+            if legacy_name in self.params["metric_params"]:
+                legacy_mahalanobis_params.append(self.params["metric_params"].pop(legacy_name))
+        if legacy_mahalanobis_params and "mahalanobis" not in self.params["metric_params"]:
+            if any(params != legacy_mahalanobis_params[0] for params in legacy_mahalanobis_params[1:]):
+                raise ValueError("Legacy isolation_distance and l_ratio parameters do not match")
+            self.params["metric_params"]["mahalanobis"] = legacy_mahalanobis_params[0]
+
         if "isolation_distance" in self.params["metric_names"]:
             self.params["metric_names"].remove("isolation_distance")
             if "mahalanobis" not in self.params["metric_names"]:

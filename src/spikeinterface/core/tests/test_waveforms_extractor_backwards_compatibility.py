@@ -238,6 +238,9 @@ def test_load_legacy_we_with_deprecated_metrics(create_cache_folder, tmp_path):
     # qm_params should have been renamed to metric_params
     assert "qm_params" not in qm.params
     assert "metric_params" in qm.params
+    assert qm.params["metric_params"]["mahalanobis"] == {}
+    assert "isolation_distance" not in qm.params["metric_params"]
+    assert "l_ratio" not in qm.params["metric_params"]
 
     # template_metrics: deprecated names should be migrated
     tm = sorting_analyzer.get_extension("template_metrics")
