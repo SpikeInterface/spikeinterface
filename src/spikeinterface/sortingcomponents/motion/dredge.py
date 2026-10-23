@@ -23,16 +23,16 @@ but the original function dredge_ap() and dredge_online_lfp() can be used direct
 """
 
 import gc
-import warnings
 import importlib.util
+import warnings
 
 import numpy as np
 from tqdm.auto import trange
 
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.motion import Motion
+
 from .motion_utils import (
-    get_spatial_bin_edges,
     get_spatial_windows,
     get_window_domains,
     make_2d_motion_histogram,
@@ -807,6 +807,7 @@ def neg_hessian_likelihood_term(Ub, Ub_prevcur=None, Ub_curprev=None):
     if Ub_prevcur is None:
         np.fill_diagonal(negHUb, diagonal_terms)
     else:
+        assert Ub_curprev is not None
         diagonal_terms += Ub_prevcur.sum(0) + Ub_curprev.sum(1)
         np.fill_diagonal(negHUb, diagonal_terms)
 
@@ -835,6 +836,8 @@ def newton_rhs(
         return grad_at_0
 
     # online case
+    assert Ub_prevcur is not None
+    assert Db_curprev is not None
     align_term = (Ub_prevcur.T + Ub_curprev) @ Pb_prev
     rhs = align_term + grad_at_0 + (Ub_curprev * Db_curprev).sum(1) - (Ub_prevcur * Db_prevcur).sum(0)
     if prior_rhs is not None:
@@ -858,7 +861,7 @@ def newton_solve_rigid(
 
     D is TxT displacement, U is TxT subsampling or soft weights matrix.
     """
-    from scipy.linalg import solve, lstsq
+    from scipy.linalg import lstsq, solve
 
     negHU = neg_hessian_likelihood_term(
         U,
@@ -932,6 +935,8 @@ def thomas_solve(
     if online:
         assert Ds_prevcur is not None
         assert Us_prevcur is not None
+        assert Ds_curprev is not None
+        assert Us_curprev is not None
         # priors linking cur first bin to prev last bin
         p_last = P_prev[:, -1].astype(np.float64)
         prior_rhs = np.zeros((B, T))
@@ -961,7 +966,7 @@ def thomas_solve(
 
     # temporal prior matrix
     L_t = [laplacian(T, eps=eps, lambd=lambda_t, ridge_mask=w, wink_start=not online) for w in had_weights]
-    extra = dict(L_t=L_t)
+    extra: dict[str, list[np.ndarray] | np.ndarray] = dict(L_t=L_t)
 
     # just solve independent problems when there's no spatial regularization
     # not that there's much overhead to the backward pass etc but might as well
@@ -1172,7 +1177,7 @@ def calc_corr_decent_pair(
 
     # sensible default: at most half the domain.
     if disp is None:
-        disp == D // 2
+        disp = D // 2
 
     # range of displacements
     if D == D_:
@@ -1282,7 +1287,7 @@ def normxcorr1d(
 
     x = npx.atleast_2d(x)
     num_templates, lengtht = template.shape
-    num_inputs, lengthx = x.shape
+    _num_inputs, lengthx = x.shape
 
     # generalize over weighted / unweighted case
     device_kw = {} if conv_engine == "numpy" else dict(device=x.device)
@@ -1362,7 +1367,6 @@ def get_weights(
     post_transform=np.log1p,
     weights_threshold_low=0.0,
     weights_threshold_high=np.inf,
-    progress_bar=False,
 ):
     """Compute per-time-bin weighting for each nonrigid window"""
     # determine window-weighted raster "heat" in each nonrigid window
@@ -1370,7 +1374,7 @@ def get_weights(
     assert windows.shape[1] == dbe.size - 1
     weights = []
     p_inds = []
-    for b in range((len(Ds))):
+    for b in range(len(Ds)):
         ilow, ihigh = np.flatnonzero(windows[b])[[0, -1]]
         ihigh += 1
         window_sliced = windows[b, ilow:ihigh]
@@ -1453,7 +1457,6 @@ def weight_correlation_matrix(
         post_transform=post_transform,
         weights_threshold_low=weights_threshold_low,
         weights_threshold_high=weights_threshold_high,
-        progress_bar=progress_bar,
     )
     weights_thresh_b = weights_thresh
     if raster_b is not None:
@@ -1466,7 +1469,6 @@ def weight_correlation_matrix(
             post_transform=post_transform,
             weights_threshold_low=weights_threshold_low,
             weights_threshold_high=weights_threshold_high,
-            progress_bar=progress_bar,
         )
     extra["weights_orig"] = weights_orig
     extra["weights_thresh"] = weights_thresh
