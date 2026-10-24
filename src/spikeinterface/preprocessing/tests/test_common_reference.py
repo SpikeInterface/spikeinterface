@@ -20,6 +20,51 @@ def recording():
     return _generate_test_recording()
 
 
+def test_median_reference_matches_numpy():
+    from spikeinterface.preprocessing.common_reference import _median_reference
+
+    rng = np.random.default_rng(0)
+    for dtype in ("int16", "float32", "float64"):
+        for num_channels in (1, 2, 3, 4, 5):
+            traces = rng.integers(-100, 100, size=(101, num_channels)).astype(dtype)
+            for keepdims in (False, True):
+                expected = np.median(traces, axis=1, keepdims=keepdims)
+                result = _median_reference(traces, axis=1, keepdims=keepdims)
+
+                assert result.dtype == expected.dtype
+                assert np.array_equal(result, expected)
+
+
+@pytest.mark.parametrize("num_channels", (2, 3, 4, 5))
+def test_median_reference_special_values(num_channels):
+    from spikeinterface.preprocessing.common_reference import _median_reference
+
+    nan_traces = np.array([[1.0, np.nan, 3.0, 4.0, 5.0], [6.0, 7.0, 8.0, 9.0, 10.0]], dtype="float32")
+    sliced = nan_traces[:, :num_channels]
+    expected = np.median(sliced, axis=1, keepdims=True)
+    result = _median_reference(sliced, axis=1, keepdims=True)
+    assert np.array_equal(result, expected, equal_nan=True)
+
+    special_traces = np.array([[-0.0, 0.0, -np.inf, np.inf, 1.0], [-np.inf, -0.0, 0.0, np.inf, -1.0]], dtype="float32")
+    sliced = special_traces[:, :num_channels]
+    with np.errstate(invalid="ignore"):
+        expected = np.median(sliced, axis=1, keepdims=True)
+        result = _median_reference(sliced, axis=1, keepdims=True)
+    if num_channels % 2:
+        assert np.array_equal(result, expected)
+    else:
+        assert result.tobytes() == expected.tobytes()
+
+    integer_limits = np.array(
+        [[np.iinfo(np.int64).max, np.iinfo(np.int64).max, np.iinfo(np.int64).min, np.iinfo(np.int64).min, 0]],
+        dtype="int64",
+    )
+    sliced = integer_limits[:, :num_channels]
+    expected = np.median(sliced, axis=1, keepdims=True)
+    result = _median_reference(sliced, axis=1, keepdims=True)
+    assert result.tobytes() == expected.tobytes()
+
+
 def test_common_reference(recording, create_cache_folder):
     # Test simple case
     rec_cmr = common_reference(recording, reference="global", operator="median")
