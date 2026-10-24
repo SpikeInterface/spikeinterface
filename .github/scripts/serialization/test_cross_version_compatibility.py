@@ -13,7 +13,6 @@ import json
 from pathlib import Path
 
 import pytest
-import numcodecs.pickles
 
 from spikeinterface.core import load
 
@@ -25,12 +24,9 @@ _CASES = [(entry, fmt) for entry in OBJECTS for fmt in entry["formats"]]
 
 
 @pytest.mark.parametrize("entry,fmt", _CASES, ids=[f"{entry['id']}-{fmt}" for entry, fmt in _CASES])
-def test_load_old_serialized_object(entry, fmt, monkeypatch):
+def test_load_old_serialized_object(entry, fmt):
     fixture = FIXTURES_DIR / f"{entry['id']}{FIXTURE_SUFFIX[fmt]}"
     assert fixture.exists(), f"missing fixture {fixture}"
-    # Legacy Zarr fixtures contain pickled objects generated locally by this CI job.
-    # Limit the opt-in to this test and support older Numcodecs without this flag.
-    monkeypatch.setattr(numcodecs.pickles, "ALLOW_UNSAFE_PICKLE_DECODE", True, raising=False)
     obj = load(fixture)
     check_extra_data = None
     if (FIXTURES_DIR / f"{entry['id']}.json").exists():

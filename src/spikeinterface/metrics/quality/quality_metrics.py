@@ -68,7 +68,11 @@ class ComputeQualityMetrics(BaseMetricExtension):
                 legacy_mahalanobis_params.append(self.params["metric_params"].pop(legacy_name))
         if legacy_mahalanobis_params and "mahalanobis" not in self.params["metric_params"]:
             if any(params != legacy_mahalanobis_params[0] for params in legacy_mahalanobis_params[1:]):
-                raise ValueError("Legacy isolation_distance and l_ratio parameters do not match")
+                warnings.warn(
+                    "Legacy isolation_distance and l_ratio parameters do not match. "
+                    "Using isolation_distance parameters for mahalanobis and discarding l_ratio parameters.",
+                    stacklevel=2,
+                )
             self.params["metric_params"]["mahalanobis"] = legacy_mahalanobis_params[0]
 
         if "isolation_distance" in self.params["metric_names"]:
