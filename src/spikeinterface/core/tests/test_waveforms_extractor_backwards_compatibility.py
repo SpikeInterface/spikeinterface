@@ -238,6 +238,9 @@ def test_load_legacy_we_with_deprecated_metrics(create_cache_folder, tmp_path):
     # qm_params should have been renamed to metric_params
     assert "qm_params" not in qm.params
     assert "metric_params" in qm.params
+    assert qm.params["metric_params"]["mahalanobis"] == {}
+    assert "isolation_distance" not in qm.params["metric_params"]
+    assert "l_ratio" not in qm.params["metric_params"]
 
     # template_metrics: deprecated names should be migrated
     tm = sorting_analyzer.get_extension("template_metrics")
@@ -248,6 +251,17 @@ def test_load_legacy_we_with_deprecated_metrics(create_cache_folder, tmp_path):
     # metrics_kwargs should have been renamed to metric_params
     assert "metrics_kwargs" not in tm.params
     assert "metric_params" in tm.params
+
+    # Conflicting legacy parameters must not prevent loading the analyzer.
+    params_path = we_folder / "quality_metrics" / "params.json"
+    with open(params_path) as f:
+        legacy_params = json.load(f)
+    legacy_params["qm_params"]["l_ratio"] = {"legacy_parameter": 1}
+    with open(params_path, "w") as f:
+        json.dump(legacy_params, f)
+    with pytest.warns(UserWarning, match="Using isolation_distance parameters for mahalanobis"):
+        reloaded = load_waveforms_backwards(we_folder, sorting=sorting, output="SortingAnalyzer")
+    assert reloaded.get_extension("quality_metrics").params["metric_params"]["mahalanobis"] == {}
 
 
 # @pytest.mark.skip("This test is run locally")
