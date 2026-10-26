@@ -25,13 +25,37 @@ from spikeinterface.core import (
 from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
 from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
-from spikeinterface.core.core_tools import _is_zarr_write_supported
+
+
+def _make_sorting_with_shuffled_ties(num_units, num_segments, seed=42):
+    """Build a NumpySorting whose cotemporal spikes are in arbitrary unit_index order.
+
+    A spike vector is only guaranteed to be segment-blocked and sample_index-ascending within each
+    segment; the unit_index order among spikes sharing a sample_index is unspecified (see #4606).
+    Building via `NumpySorting.from_unit_dict` happens to produce unit-ascending ties, so it
+    can't test the shuffled tie case.
+    """
+    rng = np.random.default_rng(seed)
+    num_spikes = 2_000
+
+    # A sample range far smaller than num_spikes, so cotemporal spikes are abundant -- including
+    # repeats of the same (segment, sample, unit), the tie that np.lexsort itself cannot break.
+    spikes = np.empty(num_spikes, dtype=minimum_spike_dtype)
+    spikes["sample_index"] = rng.integers(0, 200, size=num_spikes)
+    spikes["unit_index"] = rng.integers(0, num_units, size=num_spikes)
+    spikes["segment_index"] = rng.integers(0, num_segments, size=num_spikes)
+
+    # Order by segment then sample, breaking ties randomly rather than by unit_index.
+    spikes = spikes[np.lexsort((rng.random(num_spikes), spikes["sample_index"], spikes["segment_index"]))]
+
+    sorting = NumpySorting(spikes, 30_000.0, np.arange(num_units))
+    assert sorting.get_num_segments() == num_segments
+    return sorting
 
 
 def test_BaseSorting(create_cache_folder):
-    cache_folder = create_cache_folder
     num_seg = 2
-    file_path = cache_folder / "test_BaseSorting.npz"
+    file_path = create_cache_folder / "test_BaseSorting.npz"
     file_path.parent.mkdir(exist_ok=True)
 
     create_sorting_npz(num_seg, file_path)
@@ -58,28 +82,28 @@ def test_BaseSorting(create_cache_folder):
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
     # dump/load json
-    sorting.dump_to_json(cache_folder / "test_BaseSorting.json")
-    sorting2 = load(cache_folder / "test_BaseSorting.json")
-    sorting3 = load(cache_folder / "test_BaseSorting.json")
+    sorting.dump_to_json(create_cache_folder / "test_BaseSorting.json")
+    sorting2 = load(create_cache_folder / "test_BaseSorting.json")
+    sorting3 = load(create_cache_folder / "test_BaseSorting.json")
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=False)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=False)
 
     # dump/load pickle
-    sorting.dump_to_pickle(cache_folder / "test_BaseSorting.pkl")
-    sorting2 = load(cache_folder / "test_BaseSorting.pkl")
-    sorting3 = load(cache_folder / "test_BaseSorting.pkl")
+    sorting.dump_to_pickle(create_cache_folder / "test_BaseSorting.pkl")
+    sorting2 = load(create_cache_folder / "test_BaseSorting.pkl")
+    sorting3 = load(create_cache_folder / "test_BaseSorting.pkl")
     check_sortings_equal(sorting, sorting2, check_annotations=True, check_properties=True)
     check_sortings_equal(sorting, sorting3, check_annotations=True, check_properties=True)
 
     # cache old format : npz_folder
-    folder = cache_folder / "simple_sorting_npz_folder"
+    folder = create_cache_folder / "simple_sorting_npz_folder"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder, format="npz_folder")
     sorting2 = load(folder)
     assert isinstance(sorting2, NpzFolderSorting)
 
     # cache new format : binary
-    folder = cache_folder / "simple_sorting_binary"
+    folder = create_cache_folder / "simple_sorting_binary"
     sorting.set_property("test", np.ones(len(sorting.unit_ids)))
     sorting.save(folder=folder, format="numpy_folder")
     sorting2 = load(folder)
@@ -144,44 +168,46 @@ def test_BaseSorting(create_cache_folder):
     del sorting6
     del sorting5
 
-    # TODO: remove once writing to zarr is supported with zarr>=3
-    if _is_zarr_write_supported():
-        # test save to zarr
-        # compressor = get_default_zarr_compressor()
-        sorting_zarr = sorting.save(format="zarr", folder=cache_folder / "sorting.zarr")
-        sorting_zarr_loaded = load(cache_folder / "sorting.zarr")
-        # annotations is False because Zarr adds compression ratios
-        check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
-        check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
-        for annotation_name in sorting.get_annotation_keys():
-            assert sorting.get_annotation(annotation_name) == sorting_zarr.get_annotation(annotation_name)
-            assert sorting.get_annotation(annotation_name) == sorting_zarr_loaded.get_annotation(annotation_name)
+    # test save to zarr
+    # compressor = get_default_zarr_compressor()
+    sorting_zarr = sorting.save(format="zarr", folder=create_cache_folder / "sorting.zarr")
+    sorting_zarr_loaded = load(create_cache_folder / "sorting.zarr")
+    # annotations is False because Zarr adds compression ratios
+    check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
+    check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
+    for annotation_name in sorting.get_annotation_keys():
+        assert sorting.get_annotation(annotation_name) == sorting_zarr.get_annotation(annotation_name)
+        assert sorting.get_annotation(annotation_name) == sorting_zarr_loaded.get_annotation(annotation_name)
 
 
-def _make_sorting_with_shuffled_ties(num_units, num_segments, seed=42):
-    """Build a NumpySorting whose cotemporal spikes are in arbitrary unit_index order.
+def test_zarr_save_with_sharding(create_cache_folder):
+    sorting = generate_sorting(durations=[600, 600])
+    # 1 MB target chunk size for Zarr
+    zarr_target_bytes = 1 * 1024 * 1024
+    shard_factor = 3
+    sorting_zarr = sorting.save(
+        format="zarr",
+        folder=create_cache_folder / "sorting_sharded.zarr",
+        target_chunk_size_bytes=zarr_target_bytes,
+        shard_factor=shard_factor,
+    )
+    sorting_zarr_loaded = load(create_cache_folder / "sorting_sharded.zarr")
+    check_sortings_equal(sorting, sorting_zarr, check_annotations=False, check_properties=True)
+    check_sortings_equal(sorting_zarr, sorting_zarr_loaded, check_annotations=False, check_properties=True)
 
-    A spike vector is only guaranteed to be segment-blocked and sample_index-ascending within each
-    segment; the unit_index order among spikes sharing a sample_index is unspecified (see #4606).
-    Building via `NumpySorting.from_unit_dict` happens to produce unit-ascending ties, so it
-    can't test the shuffled tie case.
-    """
-    rng = np.random.default_rng(seed)
-    num_spikes = 2_000
-
-    # A sample range far smaller than num_spikes, so cotemporal spikes are abundant -- including
-    # repeats of the same (segment, sample, unit), the tie that np.lexsort itself cannot break.
-    spikes = np.empty(num_spikes, dtype=minimum_spike_dtype)
-    spikes["sample_index"] = rng.integers(0, 200, size=num_spikes)
-    spikes["unit_index"] = rng.integers(0, num_units, size=num_spikes)
-    spikes["segment_index"] = rng.integers(0, num_segments, size=num_spikes)
-
-    # Order by segment then sample, breaking ties randomly rather than by unit_index.
-    spikes = spikes[np.lexsort((rng.random(num_spikes), spikes["sample_index"], spikes["segment_index"]))]
-
-    sorting = NumpySorting(spikes, 30_000.0, np.arange(num_units))
-    assert sorting.get_num_segments() == num_segments
-    return sorting
+    # check that chunks and shards are correctly set
+    spikes_group = sorting_zarr._root["spikes"]
+    for field in spikes_group:
+        if field not in ("segment_slices", "sample_index_chunk_firsts"):
+            array = spikes_group[field]
+            assert array.chunks is not None
+            assert array.shards is not None
+            assert array.shards[0] == array.chunks[0] * shard_factor
+            assert array.chunks[0] * array.dtype.itemsize <= zarr_target_bytes
+            print(f"Field: {field}, Chunks: {array.chunks}, Shards: {array.shards}")
+            print(
+                f"Field: {field}, Chunk size in bytes: {array.chunks[0] * array.dtype.itemsize} - Target: {zarr_target_bytes}"
+            )
 
 
 @pytest.mark.parametrize("use_numba", [True, False], ids=["numba", "numpy"])
@@ -418,9 +444,9 @@ if __name__ == "__main__":
     from pathlib import Path
 
     with tempfile.TemporaryDirectory() as tmpdirname:
-        cache_folder = Path(tmpdirname)
+        create_cache_folder = Path(tmpdirname)
 
-    test_BaseSorting(cache_folder)
+    test_BaseSorting(create_cache_folder)
     test_npy_sorting()
     test_empty_sorting()
     test_select_periods()

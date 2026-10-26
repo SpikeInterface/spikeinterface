@@ -157,7 +157,6 @@ def test_waveform_tools(create_cache_folder):
     _check_all_wf_equal(list_wfs_sparse)
 
 
-@pytest.mark.requires_zarr_write
 @pytest.mark.parametrize("sparse", [False, True])
 def test_extract_waveforms_to_single_buffer_zarr(tmp_path, sparse):
     # the "zarr" mode writes waveforms directly to a zarr dataset. Workers return their block and
@@ -211,7 +210,6 @@ def test_extract_waveforms_to_single_buffer_zarr(tmp_path, sparse):
         assert np.array_equal(reference, reloaded[:])
 
 
-@pytest.mark.requires_zarr_write
 def test_waveforms_at_segment_borders(tmp_path):
     # spikes near the segment borders are partially filled: samples outside of the segment are 0
     from spikeinterface.core import NumpySorting
