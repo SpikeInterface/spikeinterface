@@ -1,3 +1,4 @@
+import importlib
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
@@ -5,6 +6,11 @@ from spikeinterface.core.core_tools import define_function_handling_dict_from_cl
 from spikeinterface.core import get_chunk_with_margin, apply_raised_cosine_taper
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+
+if importlib.util.find_spec("numba") is not None:
+    HAVE_NUMBA = True
+else:
+    HAVE_NUMBA = False
 
 # Default 16-tap FIR with DC-gain normalization.  Worst-case in-band RMS
 # error vs the FFT reference is ~0.02 % on a white test signal bandlimited
@@ -444,16 +450,8 @@ def _build_fir_kernels_kc(shift_samples, n_taps, beta=8.6):
     return np.ascontiguousarray(kernels_ck.T, dtype=np.float32)
 
 
-try:
+if HAVE_NUMBA:
     import numba
-    from numba import prange
-
-    _HAS_NUMBA = True
-except ImportError:  # pragma: no cover - numba is a hard dep for the FIR path only
-    _HAS_NUMBA = False
-
-
-if _HAS_NUMBA:
 
     @numba.njit(parallel=True, cache=True, boundscheck=False)
     def _sinc_fir_kernel_tc(signal_tc, kernels_kc):
