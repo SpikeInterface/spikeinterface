@@ -34,6 +34,15 @@ def setup_NumpyRecording(tmp_path_factory):
     return cache_folder
 
 
+def test_NumpyRecording_traces_read_only():
+    traces = np.zeros((100, 4), dtype="float32")
+    rec = NumpyRecording(traces, 30000.0)
+    with pytest.raises(ValueError):
+        rec.get_traces()[:] = 1
+    assert np.all(rec.get_traces() == 0)
+    assert traces.flags.writeable  # the caller's array is untouched
+
+
 def test_SharedMemoryRecording():
     rec0 = generate_recording(num_channels=2, durations=[4.0, 3.0])
     # print(rec0)
