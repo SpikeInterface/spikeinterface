@@ -374,7 +374,12 @@ def compute_motion(
 
     # get preset params and update if necessary
     detect_kwargs, select_kwargs, denoise_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
-        preset, detect_kwargs, select_kwargs, denoise_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
+        preset=preset,
+        detect_kwargs=detect_kwargs,
+        select_kwargs=select_kwargs,
+        denoise_kwargs=denoise_kwargs,
+        localize_peaks_kwargs=localize_peaks_kwargs,
+        estimate_motion_kwargs=estimate_motion_kwargs,
     )
 
     job_kwargs = fix_job_kwargs(job_kwargs)
@@ -601,8 +606,13 @@ def correct_motion(
 
     from spikeinterface.sortingcomponents.motion import interpolate_motion
 
-    detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
-        preset, detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs
+    detect_kwargs, select_kwargs, denoise_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
+        preset=preset,
+        detect_kwargs=detect_kwargs,
+        select_kwargs=select_kwargs,
+        denoise_kwargs=denoise_kwargs,
+        localize_peaks_kwargs=localize_peaks_kwargs,
+        estimate_motion_kwargs=estimate_motion_kwargs,
     )
 
     interpolate_motion_kwargs = _update_interpolation_kwargs(preset, interpolate_motion_kwargs)
