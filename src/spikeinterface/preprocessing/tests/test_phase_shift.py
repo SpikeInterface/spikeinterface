@@ -171,7 +171,7 @@ def test_phase_shift_fir_numpy_fallback_matches_numba(monkeypatch, parent_dtype,
 
     # the package re-exports the phase_shift function under the module's name
     phase_shift_module = importlib.import_module("spikeinterface.preprocessing.phase_shift")
-    if not phase_shift_module._HAS_NUMBA:
+    if not phase_shift_module.HAVE_NUMBA:
         pytest.skip("needs numba for the reference output")
     rng = np.random.default_rng(0)
     num_channels = 24
@@ -183,7 +183,7 @@ def test_phase_shift_fir_numpy_fallback_matches_numba(monkeypatch, parent_dtype,
     windows = [dict(), dict(start_frame=0, end_frame=1000), dict(start_frame=2000, end_frame=4990)]
 
     expected = [fir_rec.get_traces(**w) for w in windows] + [fir_rec.get_traces(channel_ids=channel_ids)]
-    monkeypatch.setattr(phase_shift_module, "_HAS_NUMBA", False)
+    monkeypatch.setattr(phase_shift_module, "HAVE_NUMBA", False)
     actual = [fir_rec.get_traces(**w) for w in windows] + [fir_rec.get_traces(channel_ids=channel_ids)]
 
     for a, e in zip(actual, expected):
