@@ -1,17 +1,14 @@
-import importlib
+import importlib.util
+
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
-from spikeinterface.core import get_chunk_with_margin, apply_raised_cosine_taper
+from spikeinterface.core import get_chunk_with_margin
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
-if importlib.util.find_spec("numba") is not None:
-    HAVE_NUMBA = True
-else:
-    HAVE_NUMBA = False
-
+HAVE_NUMBA = importlib.util.find_spec("numba") is not None
 
 # 16 taps keep the response flat across the Neuropixels passband; fewer start to cut into it.
 _DEFAULT_FIR_TAPS = 16
@@ -157,11 +154,8 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             self.margin,
             dtype=self.tmp_dtype,
             add_zeros=True,
-            window_on_margin=False,
+            window_on_margin=True,
         )
-        # Apply the FFT-specific taper ourselves — explicit is better than implicit,
-        # and it keeps get_chunk_with_margin method-agnostic.
-        traces_chunk = apply_raised_cosine_taper(traces_chunk, self.margin, inplace=False)
         traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
