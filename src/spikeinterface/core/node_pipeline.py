@@ -14,6 +14,13 @@ from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwarg
 from spikeinterface.core import get_channel_distances
 from spikeinterface.core.core_tools import ms_to_samples, samples_to_ms
 
+# Ignore Zarr consolidated metadata warning
+warnings.filterwarnings(
+    "ignore",
+    message="Consolidated metadata is currently not part",
+    category=UserWarning,
+)
+
 compressors_type = (
     zarr.abc.codec.BytesBytesCodec
     | zarr.abc.codec.ArrayBytesCodec

@@ -49,6 +49,13 @@ from .zarr_tools import (
 )
 from .node_pipeline import run_node_pipeline
 
+# Ignore Zarr consolidated metadata warning
+warnings.filterwarnings(
+    "ignore",
+    message="Consolidated metadata is currently not part",
+    category=UserWarning,
+)
+
 # Typing hints
 PeakSignType = Literal["both", "neg", "pos"]
 PeakModeType = Literal["extremum", "at_index", "peak_to_peak"]

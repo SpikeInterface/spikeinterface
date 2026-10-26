@@ -28,6 +28,14 @@ from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.node_pipeline import SpikeRetriever
 from spikeinterface.core.tests.test_node_pipeline import AmplitudeExtractionNode
 
+# Ignore Zarr consolidated metadata warning
+warnings.filterwarnings(
+    "ignore",
+    message="Consolidated metadata is currently not part",
+    category=UserWarning,
+)
+
+
 analyzer_formats = ("memory", "binary_folder", "zarr")
 
 

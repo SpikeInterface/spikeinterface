@@ -772,9 +772,9 @@ def get_default_zarr_compressor(clevel: int = 5):
     Blosc.compressor
         The compressor object that can be used with the save to zarr function
     """
-    from zarr.codecs import BloscCodec, BloscShuffle
+    from zarr.codecs import BloscCodec
 
-    return BloscCodec(cname="zstd", clevel=clevel, shuffle=BloscShuffle.bitshuffle)
+    return BloscCodec(cname="zstd", clevel=clevel, shuffle="bitshuffle")
 
 
 def _has_string_fields(dtype: np.dtype) -> bool:
