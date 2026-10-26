@@ -15,6 +15,7 @@ from .external.mountainsort5 import Mountainsort5Sorter
 from .external.rt_sort import RTSortSorter
 from .external.spyking_circus import SpykingcircusSorter
 from .external.tridesclous import TridesclousSorter
+from .external.vanillasort import VanillaSortSorter
 from .external.waveclus import WaveClusSorter
 from .external.yass import YassSorter
 
@@ -42,6 +43,7 @@ sorter_full_list = [
     RTSortSorter,
     SpykingcircusSorter,
     TridesclousSorter,
+    VanillaSortSorter,
     WaveClusSorter,
     YassSorter,
     # internal

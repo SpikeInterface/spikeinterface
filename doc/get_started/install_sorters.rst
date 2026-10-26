@@ -203,6 +203,24 @@ Mountainsort5
 
       pip install mountainsort5
 
+.. _install-vanillasort:
+
+VanillaSort
+^^^^^^^^^^^
+
+* Python / PyTorch, CPU or optional CUDA
+* Url: https://github.com/IgarashiAkatuki/VanillaSort
+* Authors: Zishuo Feng and Feng Cao
+* Reference: `Spike Sorting with VanillaSort <https://doi.org/10.64898/2026.09.18.752552>`_ (bioRxiv, 2026)
+* Installation::
+
+      pip install --upgrade vanillasort
+
+The wrapper requires VanillaSort >= 0.2.1. See the
+`VanillaSort documentation <https://github.com/IgarashiAkatuki/VanillaSort/blob/main/docs/spikeinterface.md>`_
+for input requirements, model downloads, parameters, and examples.
+
+
 SpyKING CIRCUS
 ^^^^^^^^^^^^^^
 
