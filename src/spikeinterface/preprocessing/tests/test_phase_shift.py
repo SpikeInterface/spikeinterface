@@ -1,5 +1,7 @@
 import numpy as np
-from spikeinterface import NumpyRecording
+import pytest
+from spikeinterface import NumpyRecording, load
+from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.preprocessing import phase_shift
 
@@ -93,6 +95,36 @@ def test_phase_shift():
     # ~ plt.show()
 
 
+def test_phase_shift_recovers_delayed_signal():
+    sampling_frequency = 1000.0
+    times = np.arange(5000) / sampling_frequency
+    inter_sample_shift = np.tile([0.0, 0.25, 0.5, 0.75], 8)
+
+    def signal(time):
+        return np.sin(2 * np.pi * 2.5 * time) + np.sin(2 * np.pi * 8.5 * time)
+
+    traces = signal(times[:, np.newaxis] + inter_sample_shift / sampling_frequency)
+    recording = NumpyRecording([traces], sampling_frequency)
+    recording.set_property("inter_sample_shift", inter_sample_shift)
+
+    shifted_traces = phase_shift(recording).get_traces()
+
+    interior = slice(100, -100)
+    expected = np.broadcast_to(signal(times)[:, np.newaxis], traces.shape)
+    np.testing.assert_allclose(shifted_traces[interior], expected[interior], atol=1e-3)
+
+
+def test_phase_shift_dtype_survives_reload():
+    traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
+    recording = NumpyRecording([traces.astype("int16")], sampling_frequency)
+    recording.set_property("inter_sample_shift", inter_sample_shift)
+
+    shifted = phase_shift(recording, dtype="float32")
+    reloaded = load(shifted.to_dict())
+
+    check_recordings_equal(shifted, reloaded, return_in_uV=False)
+
+
 def test_phase_shift_fir_matches_fft_in_spike_band():
     """PhaseShift(method="fir") output must track method="fft" within ~1% spike-band RMS."""
     import scipy.signal
@@ -120,36 +152,66 @@ def test_phase_shift_fir_matches_fft_in_spike_band():
     assert err_rms / sig_rms < 0.01, f"FIR spike-band RMS error {err_rms / sig_rms:.2%} > 1%"
 
 
-def test_phase_shift_fir_int16_advertises_float32():
-    """method='fir' + output_dtype=float32 on an int16 parent yields float32 output."""
+def test_phase_shift_fir_int16_to_float32():
+    """method='fir' with dtype=float32 on an int16 parent yields float32 output."""
     traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
     rec = NumpyRecording([traces.astype("int16")], sampling_frequency)
     rec.set_property("inter_sample_shift", inter_sample_shift)
-    fir_rec = phase_shift(rec, method="fir", output_dtype=np.float32)
+    fir_rec = phase_shift(rec, method="fir", dtype=np.float32)
     assert fir_rec.get_dtype() == np.dtype("float32")
     out = fir_rec.get_traces(start_frame=0, end_frame=100)
     assert out.dtype == np.dtype("float32")
 
 
-def test_phase_shift_fft_still_matches_stock_after_taper_refactor():
-    """Regression guard: FFT path must still behave the same after get_chunk_with_margin's
-    taper was split into apply_raised_cosine_taper.  This reruns the core chunked-vs-full
-    identity check on one representative combo.
-    """
-    traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
-    rec = NumpyRecording([traces.astype("int16")], sampling_frequency)
-    rec.set_property("inter_sample_shift", inter_sample_shift)
-    rec2 = phase_shift(rec, margin_ms=30.0, method="fft")
-    rec3 = rec2.save(format="memory", chunk_size=500, n_jobs=1, progress_bar=False)
-    t2 = rec2.get_traces()
-    t3 = rec3.get_traces()
-    rms = float(np.sqrt(np.mean(traces**2)))
-    err = float(np.sqrt(np.mean((t2 - t3) ** 2)))
-    assert err / rms < 0.001
+@pytest.mark.parametrize("parent_dtype", ["int16", "float32"])
+@pytest.mark.parametrize("dtype", [None, "float32"])
+def test_phase_shift_fir_numpy_fallback_matches_numba(monkeypatch, parent_dtype, dtype):
+    """Without numba, method='fir' runs a numpy path that matches the numba kernels."""
+    import importlib
+
+    # the package re-exports the phase_shift function under the module's name
+    phase_shift_module = importlib.import_module("spikeinterface.preprocessing.phase_shift")
+    if not phase_shift_module._HAS_NUMBA:
+        pytest.skip("needs numba for the reference output")
+    rng = np.random.default_rng(0)
+    num_channels = 24
+    traces = (rng.standard_normal((5000, num_channels)) * 200).astype(parent_dtype)
+    rec = NumpyRecording([traces], 30000.0)
+    rec.set_property("inter_sample_shift", (np.arange(num_channels) // 2 % 13) / 13.0)
+    fir_rec = phase_shift(rec, method="fir", dtype=dtype)
+    channel_ids = rec.channel_ids[3:11]
+    windows = [dict(), dict(start_frame=0, end_frame=1000), dict(start_frame=2000, end_frame=4990)]
+
+    expected = [fir_rec.get_traces(**w) for w in windows] + [fir_rec.get_traces(channel_ids=channel_ids)]
+    monkeypatch.setattr(phase_shift_module, "_HAS_NUMBA", False)
+    actual = [fir_rec.get_traces(**w) for w in windows] + [fir_rec.get_traces(channel_ids=channel_ids)]
+
+    for a, e in zip(actual, expected):
+        assert a.dtype == e.dtype
+        if np.issubdtype(e.dtype, np.integer):
+            # values near .5 may round either way after float32 summation-order differences
+            assert np.abs(a.astype(np.int64) - e).max() <= 1
+        else:
+            np.testing.assert_allclose(a, e, rtol=0, atol=1e-5 * np.abs(e).max())
+
+
+def test_phase_shift_fir_taps_are_in_convolution_order():
+    """Each channel's taps, convolved with the input and centred on (K - 1) // 2, give the FIR phase shift."""
+    import importlib
+
+    phase_shift_module = importlib.import_module("spikeinterface.preprocessing.phase_shift")
+    rng = np.random.default_rng(0)
+    num_channels, n_taps = 8, 16
+    traces = rng.standard_normal((2000, num_channels)).astype("float32")
+    shifts = np.linspace(-0.5, 0.9, num_channels)
+    rec = NumpyRecording([traces], 30000.0)
+    fir_rec = phase_shift(rec, method="fir", inter_sample_shift=shifts, n_taps=n_taps)
+    taps = phase_shift_module._build_fir_taps(shifts, n_taps)
+    center = (n_taps - 1) // 2
+    expected = np.stack([np.convolve(traces[:, c], taps[c])[center : center + 2000] for c in range(num_channels)], 1)
+    np.testing.assert_allclose(fir_rec.get_traces(), expected, rtol=0, atol=1e-5)
 
 
 if __name__ == "__main__":
     test_phase_shift()
     test_phase_shift_fir_matches_fft_in_spike_band()
-    test_phase_shift_fir_int16_advertises_float32()
-    test_phase_shift_fft_still_matches_stock_after_taper_refactor()

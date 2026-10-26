@@ -1,5 +1,5 @@
-import math
 import warnings
+
 import numpy as np
 
 from spikeinterface.core.core_tools import define_function_from_class
@@ -85,6 +85,13 @@ class UnitsAggregationSorting(BaseSorting):
             annotations = np.array([sort.get_annotation(annotation_name, copy=False) for sort in sorting_list])
             if np.all(annotations == annotations[0]):
                 self.set_annotation(annotation_name, sorting_list[0].get_annotation(annotation_name))
+
+        has_main_channel_ids = ["main_channel_id" in sorting.get_property_keys() for sorting in sorting_list]
+        if len(np.unique(has_main_channel_ids)) != 1:
+            raise ValueError(
+                "Either all sorters must have `main_channel_id` as a property or all sorter must not "
+                "have `main_channel_id` as a property."
+            )
 
         # Check if all the sortings have the same properties
         properties_set = set(np.concatenate([sorting.get_property_keys() for sorting in sorting_list]))

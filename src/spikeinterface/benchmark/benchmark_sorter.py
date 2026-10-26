@@ -26,7 +26,7 @@ class SorterBenchmark(Benchmark):
         self.result = {"sorting": sorting}
 
     def compute_result(self, match_score=0.5, exhaustive_gt=True, with_analyzer=False, **job_kwargs):
-        # run becnhmark result
+        # run benchmark result
         sorting = self.result["sorting"]
         comp = compare_sorter_to_ground_truth(
             self.gt_sorting, sorting, exhaustive_gt=exhaustive_gt, match_score=match_score

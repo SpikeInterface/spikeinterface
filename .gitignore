@@ -2,6 +2,10 @@
 
 spikeinterface/widgets/tests/mearec_test/*
 
+# for sam
+dev_*.ipynb
+dev_*.py
+
 # Vscode
 .vscode/*
 

@@ -55,7 +55,17 @@ class CommonReferenceRecording(BasePreprocessor):
     ref_channel_ids : list | str | int | None, default: None
         If "global" reference, a list of channels to be used as reference.
         If "single" reference, a list of one channel or a single channel id is expected.
-        If "groups" is provided, then a list of channels to be applied to each group is expected.
+        If "groups" is provided with "single" reference, a list with one reference channel id
+        per group is expected.
+        If "groups" is provided with "global" reference, a list with one *list* of reference
+        channel ids per group is expected: the reference subtracted from each group is the
+        operator (median/average) over that group's reference set. The reference set may contain
+        channels outside the group, enabling cross-group referencing (e.g. referencing each
+        tetrode to the median of all channels on the other tetrodes). If None, each group is
+        referenced to its own channels.
+        As a shortcut for that cross-group case, pass the string "out_of_group" (with "global"
+        reference and "groups"): each group is then referenced to all channels NOT in it,
+        i.e. ref_channel_ids is auto-built as each group's complement (its out-of-group channels).
     local_radius : tuple(int, int), default: (30, 55)
         Use in the local CAR implementation as the selecting annulus with the following format:
 
@@ -68,6 +78,8 @@ class CommonReferenceRecording(BasePreprocessor):
     min_local_neighbors : int, default: 5
         Use in the local CAR implementation to set a minimum number of neighbors. If the number of neighbors within the
         annulus is less than this number, then the closest neighbors are used until this number is reached.
+        If a channel has no other channel beyond the exclude radius at all, it is left unreferenced and a
+        warning is raised at init.
     dtype : None or dtype, default: None
         If None the parent dtype is kept.
 
@@ -98,9 +110,27 @@ class CommonReferenceRecording(BasePreprocessor):
             raise ValueError("'operator' must be either 'median', 'average'")
 
         if reference == "global":
+            if ref_channel_ids == "out_of_group":
+                # Convenience: reference each group to all channels NOT in it (its out-of-group channels).
+                if groups is None:
+                    raise ValueError("ref_channel_ids='out_of_group' requires 'groups' to be set")
+                all_ids = list(recording.channel_ids)
+                ref_channel_ids = [[c for c in all_ids if c not in set(group)] for group in groups]
             if ref_channel_ids is not None:
                 if not isinstance(ref_channel_ids, list):
                     raise ValueError("With 'global' reference, provide 'ref_channel_ids' as a list")
+                if groups is not None:
+                    # Per-group reference sets: one list of channel ids per group. The reference
+                    # subtracted from each group is the operator over that group's reference set
+                    # (which may be channels outside the group, e.g. for cross-group referencing).
+                    assert len(ref_channel_ids) == len(groups), (
+                        "With 'global' reference and 'groups', 'ref_channel_ids' must be a list "
+                        "with one channel-id list per group"
+                    )
+                    assert all(isinstance(r, (list, np.ndarray)) for r in ref_channel_ids), (
+                        "With 'global' reference and 'groups', each element of 'ref_channel_ids' "
+                        "must itself be a list of channel ids (the reference set for that group)"
+                    )
         elif reference == "single":
             assert ref_channel_ids is not None, "With 'single' reference, provide 'ref_channel_ids'"
             if groups is not None:
@@ -126,20 +156,32 @@ class CommonReferenceRecording(BasePreprocessor):
             # For the median operator, the neighbors are extracted from the kernel on-the-fly via nonzero.
             local_kernel = np.zeros((num_chans, num_chans))
             not_enough_channels = []
+            no_neighbor_channels = []
             for i in range(num_chans):
                 annulus_mask = (dist[i, :] > local_radius[0]) & (dist[i, :] <= local_radius[1])
                 if np.sum(annulus_mask) >= min_local_neighbors:
                     neighbors_i = closest_inds[i, annulus_mask]
                 else:
-                    # Not enough channels in the annulus — take the closest ones beyond the inner radius
-                    not_enough_channels.append(recording.channel_ids[i])
+                    # Not enough channels in the annulus, take the closest ones beyond the inner radius
                     beyond_inner = dist[i, :] > local_radius[0]
                     neighbors_i = closest_inds[i, beyond_inner][:min_local_neighbors]
+                    if len(neighbors_i) == 0:
+                        # No channel at all lies beyond the inner radius, so there is nothing to build a
+                        # reference from. The kernel row is left at zero, which keeps the channel unreferenced.
+                        no_neighbor_channels.append(str(recording.channel_ids[i]))
+                        continue
+                    not_enough_channels.append(str(recording.channel_ids[i]))
                 local_kernel[i, neighbors_i] = 1 / len(neighbors_i)
             if len(not_enough_channels) > 0:
                 warnings.warn(
                     f"The following channels did not have enough neighbors in the annulus and used the closest "
                     f"{min_local_neighbors} channels beyond the inner radius instead: {', '.join(not_enough_channels)}"
+                )
+            if len(no_neighbor_channels) > 0:
+                warnings.warn(
+                    f"The following channels have no channel beyond the exclude radius of "
+                    f"{local_radius[0]} and are left unreferenced: {', '.join(no_neighbor_channels)}. "
+                    f"Consider lowering the exclude radius of 'local_radius'."
                 )
         dtype_ = fix_dtype(recording, dtype)
         BasePreprocessor.__init__(self, recording, dtype=dtype_)
@@ -150,7 +192,11 @@ class CommonReferenceRecording(BasePreprocessor):
         else:
             group_indices = None
         if ref_channel_ids is not None:
-            ref_channel_indices = self.ids_to_indices(ref_channel_ids)
+            if reference == "global" and groups is not None:
+                # one reference-channel index array per group
+                ref_channel_indices = [self.ids_to_indices(r) for r in ref_channel_ids]
+            else:
+                ref_channel_indices = self.ids_to_indices(ref_channel_ids)
         else:
             ref_channel_indices = None
 
@@ -198,7 +244,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.local_kernel = local_kernel
         self.temp = None
         self.dtype = dtype
-        self.operator = operator
         self.operator_func = np.mean if self.operator == "average" else np.median
 
     def get_traces(self, start_frame, end_frame, channel_indices):
@@ -223,12 +268,18 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                     re_referenced_traces = np.zeros((traces.shape[0], len(channel_indices_array)), dtype="float32")
                     for i, channel_index in enumerate(channel_indices_array):
                         channel_neighborhood = np.nonzero(self.local_kernel[channel_index])[0]
+                        if channel_neighborhood.size == 0:
+                            # No neighbor was found at init time, the channel is left unreferenced
+                            re_referenced_traces[:, i] = traces[:, channel_index]
+                            continue
                         channel_shift = self.operator_func(traces[:, channel_neighborhood], axis=1)
                         re_referenced_traces[:, i] = traces[:, channel_index] - channel_shift
                 else:  # then it must be local average, use local_kernel
                     re_referenced_traces = (
                         traces[:, channel_indices] - traces.dot(self.local_kernel.T)[:, channel_indices]
                     )
+            if np.issubdtype(self.dtype, np.integer):
+                np.round(re_referenced_traces, out=re_referenced_traces)
             return re_referenced_traces.astype(self.dtype, copy=False)
 
         # Then the old implementation for backwards compatibility that supports grouping
@@ -246,7 +297,11 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                 in_group_traces = traces[:, selected_indices_in_group]
 
                 if self.reference == "global":
-                    shift = self.operator_func(traces[:, all_group_indices], axis=1, keepdims=True)
+                    if self.ref_channel_indices is None:
+                        ref_indices = all_group_indices  # reference each group to its own channels
+                    else:
+                        ref_indices = self.ref_channel_indices[group_index]  # per-group reference set
+                    shift = self.operator_func(traces[:, ref_indices], axis=1, keepdims=True)
                     re_referenced_traces[:, out_indices] = in_group_traces - shift
                 else:
                     # single (as local is not allowed for groups)

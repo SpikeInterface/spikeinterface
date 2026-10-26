@@ -1,8 +1,11 @@
-import os
 import warnings
-import numpy as np
 import json
-import spikeinterface
+from pathlib import Path
+import importlib.metadata
+import importlib.util
+
+import numpy as np
+
 from spikeinterface.core.job_tools import fix_job_kwargs
 
 # TODO fix with new metrics
@@ -13,7 +16,6 @@ from spikeinterface.metrics import (
     get_quality_pca_metric_list,
     get_template_metric_list,
 )
-from pathlib import Path
 
 
 def get_default_classifier_search_spaces():
@@ -222,7 +224,7 @@ class CurationTrainer:
         self.X = None
         self.testing_metrics = None
 
-        self.requirements = {"spikeinterface": spikeinterface.__version__}
+        self.requirements = {"spikeinterface": importlib.metadata.version("spikeinterface")}
 
         self.y = pd.concat([pd.DataFrame(one_labels)[0] for one_labels in labels])
 
@@ -448,32 +450,32 @@ class CurationTrainer:
 
         # Check lightgbm package install
         if classifier_name == "LGBMClassifier":
-            try:
+            if importlib.util.find_spec("lightgmb") is not None:
                 import lightgbm
 
                 self.requirements["lightgbm"] = lightgbm.__version__
                 classifier_mapping["LGBMClassifier"] = lightgbm.LGBMClassifier(random_state=self.seed, verbose=-1)
-            except ImportError:
+            else:
                 raise ImportError("Please install lightgbm package to use LGBMClassifier")
         elif classifier_name == "CatBoostClassifier":
-            try:
+            if importlib.util.find_spec("catboost") is not None:
                 import catboost
 
                 self.requirements["catboost"] = catboost.__version__
                 classifier_mapping["CatBoostClassifier"] = catboost.CatBoostClassifier(
                     silent=True, random_state=self.seed
                 )
-            except ImportError:
+            else:
                 raise ImportError("Please install catboost package to use CatBoostClassifier")
         elif classifier_name == "XGBClassifier":
-            try:
+            if importlib.util.find_spec("xgboost") is not None:
                 import xgboost
 
                 self.requirements["xgboost"] = xgboost.__version__
                 classifier_mapping["XGBClassifier"] = xgboost.XGBClassifier(
                     use_label_encoder=False, random_state=self.seed
                 )
-            except ImportError:
+            else:
                 raise ImportError("Please install xgboost package to use XGBClassifier")
 
         if classifier_name not in classifier_mapping:
@@ -830,7 +832,9 @@ def check_metric_names_are_the_same(metrics_for_each_analyzer):
 
 def _format_metric_dataframe(input_data):
 
-    input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
-    input_data = input_data.astype("float32")
+    # cast before replacing infs: finite float64 values beyond float32 range overflow to inf
+    with np.errstate(over="ignore"):
+        input_data = input_data.astype("float32")
+    input_data = input_data.replace([np.inf, -np.inf], np.nan)
 
     return input_data

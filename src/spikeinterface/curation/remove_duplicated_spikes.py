@@ -1,4 +1,5 @@
 import numpy as np
+
 from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.curation.curation_tools import find_duplicated_spikes

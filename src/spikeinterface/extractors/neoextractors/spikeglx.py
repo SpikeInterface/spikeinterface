@@ -86,9 +86,9 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
             probe = probeinterface.read_spikeglx(ap_meta_filename)
 
             if probe.shank_ids is not None:
-                self.set_probe(probe, in_place=True, group_mode="by_shank")
+                self.set_probe(probe, group_mode="by_shank")
             else:
-                self.set_probe(probe, in_place=True)
+                self.set_probe(probe)
 
             # get inter-sample shifts based on the probe information and mux channels
             sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
@@ -110,6 +110,15 @@ class SpikeGLXRecordingExtractor(NeoBaseRecordingExtractor):
     def map_to_neo_kwargs(cls, folder_path):
         neo_kwargs = {"dirname": str(folder_path)}
         return neo_kwargs
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "load_sync_channel" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs.pop("load_sync_channel")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 read_spikeglx = define_function_from_class(source_class=SpikeGLXRecordingExtractor, name="read_spikeglx")

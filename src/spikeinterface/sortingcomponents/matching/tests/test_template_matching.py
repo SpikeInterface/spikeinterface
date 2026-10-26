@@ -89,7 +89,8 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
 
     # print(info)
 
-    DEBUG = True
+    # DEBUG = True
+    DEBUG = False
 
     if DEBUG:
         import matplotlib.pyplot as plt

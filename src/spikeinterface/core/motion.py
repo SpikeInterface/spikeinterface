@@ -14,7 +14,8 @@ class Motion:
     Parameters
     ----------
     displacement : numpy array 2d or list of
-        Motion estimate in um.
+        Motion estimate in um, relative to the spatial_bins_um.
+        The first dimension is temporal bins, the second dimension is spatial bins.
         List is the number of segment.
         For each semgent :
 
@@ -93,6 +94,7 @@ class Motion:
         Parameters
         ----------
         times_s: np.array
+            Times at which to evaluate the motion, in seconds. This should be a one-dimensional array.
         locations_um: np.array
             Either this is a one-dimensional array (a vector of positions along self.dimension), or
             else a 2d array with the 2 or 3 spatial dimensions indexed along axis=1.
@@ -164,10 +166,11 @@ class Motion:
 
     @staticmethod
     def from_dict(d):
+        # arrays are lists when the dict comes from json
         return Motion(
-            d["displacement"],
-            d["temporal_bins_s"],
-            d["spatial_bins_um"],
+            [np.asarray(displacement) for displacement in d["displacement"]],
+            [np.asarray(temporal_bins_s) for temporal_bins_s in d["temporal_bins_s"]],
+            np.asarray(d["spatial_bins_um"]),
             direction=d["direction"],
             interpolation_method=d["interpolation_method"],
         )

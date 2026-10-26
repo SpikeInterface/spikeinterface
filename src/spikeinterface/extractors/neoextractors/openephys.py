@@ -137,10 +137,6 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         If True, the synchronized_timestamps are loaded and set as times to the recording.
         If False (default), only the t_start and sampling rate are set, and timestamps are assumed
         to be uniform and linearly increasing
-    experiment_names : str, list, or None, default: None
-        **DEPRECATED: Use experiment_name instead. Will be removed in version 0.105.0**
-        This parameter was designed for Neo's multi-block loading, but SpikeInterface only loads
-        one block at a time. Use experiment_name to select a single experiment.
     all_annotations : bool, default: False
         Load exhaustively all annotation from neo
 
@@ -224,19 +220,9 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         stream_name: str = None,
         block_index: int = None,
         load_sync_timestamps: bool = False,
-        experiment_names: str | list | None = None,
         all_annotations: bool = False,
     ):
         folder_path = Path(folder_path)
-
-        # Handle experiment_names deprecation
-        if experiment_names is not None:
-            warnings.warn(
-                "OpenEphysBinaryRecordingExtractor: 'experiment_names' is deprecated and will be removed in version 0.105.0. "
-                "Use 'experiment_name' instead to select a single experiment (e.g., experiment_name='experiment2').",
-                FutureWarning,
-                stacklevel=2,
-            )
 
         # Handle experiment_name and block_index parameters
         if experiment_name is not None and block_index is not None:
@@ -248,7 +234,7 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
         # Convert experiment_name to experiment_names for Neo
         # When using experiment_name, Neo will filter to only that experiment, making it block_index=0
         # experiment_name takes precedence over experiment_names
-        experiment_names_for_neo = experiment_names  # Use deprecated parameter if provided
+        experiment_names_for_neo = None  # No longer using the deprecated parameter
         if experiment_name is not None:
             # experiment_name overrides experiment_names
             experiment_names_for_neo = [experiment_name]
@@ -324,18 +310,16 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             if "NI-DAQmx" not in stream_name:
                 settings_file = node_structure["experiments"][exp_id]["settings_file"]
 
-                if Path(settings_file).is_file():
-                    probe = probeinterface.read_openephys(
-                        settings_file=settings_file, stream_name=oe_stream_name, raise_error=False
+                if Path(settings_file).is_file() and probeinterface.has_neuropixels_probes(
+                    settings_file, stream_name=oe_stream_name
+                ):
+                    probe = probeinterface.read_openephys_neuropixels(
+                        settings_file=settings_file, stream_name=oe_stream_name
                     )
-                else:
-                    probe = None
-
-                if probe is not None:
                     if probe.shank_ids is not None:
-                        self.set_probe(probe, in_place=True, group_mode="by_shank")
+                        self.set_probe(probe, group_mode="by_shank")
                     else:
-                        self.set_probe(probe, in_place=True)
+                        self.set_probe(probe)
                     # get inter-sample shifts based on the probe information and mux channels
                     sample_shifts = get_neuropixels_sample_shifts_from_probe(probe)
                     if sample_shifts is not None:
@@ -364,15 +348,15 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 if load_sync_timestamps:
                     if (stream_folder / "sample_numbers.npy").is_file():
                         # OE version>=v0.6
-                        sync_times = np.load(stream_folder / "timestamps.npy")
+                        sync_times = np.load(stream_folder / "timestamps.npy", mmap_mode="r")
                     elif (stream_folder / "synchronized_timestamps.npy").is_file():
                         # version<v0.6
-                        sync_times = np.load(stream_folder / "synchronized_timestamps.npy")
+                        sync_times = np.load(stream_folder / "synchronized_timestamps.npy", mmap_mode="r")
                     else:
                         sync_times = None
-                    try:
-                        self.set_times(times=sync_times, segment_index=segment_index, with_warning=False)
-                    except:
+                    if len(sync_times) == self.segments[segment_index].get_num_samples():
+                        self.segments[segment_index]._time_vector = sync_times
+                    else:
                         warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
 
             self.annotate(experiment_name=f"experiment{exp_id}")
@@ -393,6 +377,15 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
             "experiment_names": experiment_names,
         }
         return neo_kwargs
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        if "load_sync_channel" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs.pop("load_sync_channel")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
 
 class OpenEphysBinaryEventExtractor(NeoBaseEventExtractor):

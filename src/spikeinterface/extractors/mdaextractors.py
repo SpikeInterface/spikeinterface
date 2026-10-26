@@ -252,7 +252,7 @@ class MdaSortingExtractor(BaseSorting):
         all_times = _concatenate(times_list)
         all_labels = _concatenate(labels_list)
         all_primary_channels = _concatenate(primary_channels_list)
-        sort_inds = np.argsort(all_times)
+        sort_inds = np.argsort(all_times, stable=True)
         all_times = all_times[sort_inds]
         all_labels = all_labels[sort_inds]
         all_primary_channels = all_primary_channels[sort_inds]

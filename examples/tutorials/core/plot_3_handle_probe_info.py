@@ -43,8 +43,8 @@ other_probe = get_probe(manufacturer="cambridgeneurotech", probe_name="ASSY-37-E
 print(other_probe)
 
 other_probe.set_device_channel_indices(np.arange(32))
-recording_2_shanks = recording.set_probe(other_probe, group_mode="by_shank")
-plot_probe(recording_2_shanks.get_probe())
+recording.set_probe(other_probe, group_mode="by_shank")
+plot_probe(recording.get_probe())
 
 ###############################################################################
 # Now let's check what we have loaded. The :code:`group_mode='by_shank'` automatically
@@ -53,11 +53,11 @@ plot_probe(recording_2_shanks.get_probe())
 # We can access this information either as a dict with :code:`outputs='dict'` (default)
 # or as a list of recordings with :code:`outputs='list'`.
 
-print(recording_2_shanks)
-print(f'\nGroup Property: {recording_2_shanks.get_property("group")}\n')
+print(recording)
+print(f'\nGroup Property: {recording.get_property("group")}\n')
 
 # Here we split as a dict
-sub_recording_dict = recording_2_shanks.split_by(property="group", outputs='dict')
+sub_recording_dict = recording.split_by(property="group", outputs='dict')
 
 # Then we can pull out the individual sub-recordings
 sub_rec0 = sub_recording_dict[0]

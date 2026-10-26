@@ -1,0 +1,320 @@
+"""
+Canonical serializable objects for cross-version serialization testing.
+
+This module is imported and executed under OLD spikeinterface installs to generate
+fixtures, so the builders may use ONLY public API that existed in the oldest version
+in the test matrix. Keep them on the most stable public surface, and import moved
+classes portably (try the new location, fall back to the old).
+
+The invariant checks run under the CURRENT version in the loader test and may use
+anything.
+
+Two axes are covered, chosen per entry via "formats":
+  - "json" / "pickle": dump_to_json / dump_to_pickle store only the recipe (class path
+    + kwargs). Both reload through the same from_dict path. Targets the moved-class and
+    changed-signature axes. Does NOT carry properties/annotations.
+  - "binary" / "zarr" (recordings) and "numpy_folder" (sortings): save() materializes
+    the full state (traces or spike trains, properties, annotations, probe) to disk.
+    Targets the on-disk encoding axis: property and annotation preservation, and the
+    probe representation. "binary" is recording-only, hence "numpy_folder" for sortings.
+
+Additionally, the `check_extra_data` kwarg can be used to store additional information in a JSON file alongside the
+fixture, which is then passed to the check function. This is used for the SortingAnalyzer extension data keys,
+which are computed and stored in the fixture JSON to verify that they are reloaded correctly.
+
+"""
+
+# Filename suffix per format, relative to the fixtures dir (folder formats use a suffix
+# rather than an extension). Both the generator and the loader build a fixture path as
+# f"{entry_id}{FIXTURE_SUFFIX[fmt]}", so the writer and reader agree by construction.
+FIXTURE_SUFFIX = {
+    "json": ".json",
+    "pickle": ".pkl",
+    "binary": "_binary",
+    "binary_parallel": "_binary_parallel",
+    "numpy_folder": "_numpy_folder",
+    "zarr": ".zarr",
+    "binary_folder": "_binary_folder",
+    "zarr_parallel": "_parallel.zarr",
+}
+
+DEFAULT_DURATION = 2.0  # seconds, for recordings and sortings
+
+# --- json (recipe) entries: moved class + a second class -------------------------
+
+
+def _build_noise_generator_recording():
+    # NoiseGeneratorRecording moved from spikeinterface.core.generate to
+    # spikeinterface.generation. Import portably; the serialized "class" path is
+    # whatever the running version records, which is what exercises the redirect.
+    try:
+        from spikeinterface.generation import NoiseGeneratorRecording
+    except ImportError:
+        from spikeinterface.core.generate import NoiseGeneratorRecording
+
+    return NoiseGeneratorRecording(
+        num_channels=4,
+        sampling_frequency=30000.0,
+        durations=[DEFAULT_DURATION, DEFAULT_DURATION + 0.5],
+        seed=0,
+    )
+
+
+def _check_noise_generator_recording(rec, check_extra_data=None):
+    assert type(rec).__name__ == "NoiseGeneratorRecording", type(rec).__name__
+    assert rec.get_num_channels() == 4
+    assert rec.get_num_segments() == 2
+    assert rec.get_sampling_frequency() == 30000.0
+
+
+def _build_mock_recording():
+    from spikeinterface.core import generate_recording
+
+    return generate_recording(num_channels=4, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
+
+
+def _check_mock_recording(rec, check_extra_data=None):
+    from spikeinterface.core import BaseRecording
+
+    assert isinstance(rec, BaseRecording), type(rec).__name__
+    assert rec.get_num_channels() == 4
+    assert rec.get_num_segments() == 1
+
+
+# --- binary/zarr/numpy_folder (materialized) entries: encoding axis --------------
+
+
+def _build_recording_with_properties():
+    import numpy as np
+    from spikeinterface.core import generate_recording
+
+    rec = generate_recording(num_channels=4, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
+    rec.set_property("quality", np.array(["good", "good", "bad", "good"]))
+    rec.annotate(experimenter="test")
+    return rec
+
+
+def _check_recording_with_properties(rec, check_extra_data=None):
+    assert rec.get_num_channels() == 4
+    assert list(rec.get_property("quality")) == ["good", "good", "bad", "good"]
+    assert rec.get_annotation("experimenter") == "test"
+
+
+def _build_recording_with_probe():
+    import numpy as np
+    from probeinterface import generate_linear_probe
+    from spikeinterface.core import generate_recording
+
+    rec = generate_recording(num_channels=8, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
+    probe = generate_linear_probe(num_elec=8)
+    probe.set_device_channel_indices(np.arange(8))
+    # old API (in_place=False by default) returns a new recording; new API is always in place and returns None
+    rec_with_probe = rec.set_probe(probe)
+    return rec_with_probe if rec_with_probe is not None else rec
+
+
+def _build_recording_with_timestamps():
+    rec = _build_mock_recording()
+    times = rec.get_times(segment_index=0) + 100
+    rec.set_times(times, segment_index=0)
+    return rec
+
+
+def _check_recording_with_timestamps(rec, check_extra_data=None):
+    import numpy as np
+    expected_times = np.arange(int(DEFAULT_DURATION * 30000)) / 30000.0 + 100
+    times = rec.get_times(segment_index=0)
+    assert np.allclose(times, expected_times)
+
+
+def _check_recording_with_probe(rec, check_extra_data=None):
+    import numpy as np
+
+    assert rec.get_num_channels() == 8
+    assert rec.has_probe()
+    # Assert exact per-channel positions, not just shape: a shape-only check would pass
+    # through a silent channel-to-location scramble, which is exactly the encoding-change
+    # failure mode we care about.
+    expected = np.array([[0.0, float(y)] for y in range(0, 160, 20)])
+    assert np.array_equal(rec.get_channel_locations(), expected), rec.get_channel_locations().tolist()
+
+
+def _build_recording_with_interleaved_probes():
+    import numpy as np
+    from probeinterface import ProbeGroup, generate_linear_probe
+    from spikeinterface.core import generate_recording
+
+    rec = generate_recording(num_channels=8, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
+    probe0 = generate_linear_probe(num_elec=4)
+    probe1 = generate_linear_probe(num_elec=4)
+    probe1.move([100.0, 0.0])
+    probegroup = ProbeGroup()
+    probegroup.add_probe(probe0)
+    probegroup.add_probe(probe1)
+    probegroup.set_global_device_channel_indices([0, 2, 4, 6, 1, 3, 5, 7])
+    # old API (in_place=False by default) returns a new recording; new API is always in place and returns None
+    rec_with_probe = rec.set_probegroup(probegroup)
+    return rec_with_probe if rec_with_probe is not None else rec
+
+
+def _check_recording_with_interleaved_probes(rec, check_extra_data=None):
+    import numpy as np
+
+    assert rec.get_num_channels() == 8
+    assert rec.has_probe()
+    # The interleaved channel-to-contact mapping must survive the round-trip. This is the
+    # multi-probe scramble case (the one that motivated _global_contact_order in #4465):
+    # if the encoding change mis-orders contacts, these exact positions will not match.
+    expected = np.array(
+        [
+            [0.0, 0.0],
+            [100.0, 0.0],
+            [0.0, 20.0],
+            [100.0, 20.0],
+            [0.0, 40.0],
+            [100.0, 40.0],
+            [0.0, 60.0],
+            [100.0, 60.0],
+        ]
+    )
+    assert np.array_equal(rec.get_channel_locations(), expected), rec.get_channel_locations().tolist()
+
+
+def _build_preprocessed_chain():
+    from spikeinterface.core import generate_recording
+    from spikeinterface.preprocessing import common_reference, scale
+
+    rec = generate_recording(num_channels=4, durations=[DEFAULT_DURATION], sampling_frequency=30000.0, seed=0)
+    # Two nested scipy-free preprocessing wrappers (scale then common_reference): this
+    # exercises recursive parent reload without pulling scipy into the environments.
+    return common_reference(scale(rec, gain=2.0))
+
+
+def _check_preprocessed_chain(rec, check_extra_data=None):
+    # The outer wrapper and the recursive parent chain must both reload (the kwargs
+    # embed the parent recording dict, so this exercises recursive deserialization).
+    assert type(rec).__name__ == "CommonReferenceRecording", type(rec).__name__
+    assert rec.get_num_channels() == 4
+    assert rec.get_num_segments() == 1
+
+
+def _build_sorting():
+    from spikeinterface.core import generate_sorting
+
+    return generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[DEFAULT_DURATION])
+
+
+def _check_sorting(sorting, check_extra_data=None):
+    assert sorting.get_num_units() == 5, sorting.get_num_units()
+    assert sorting.get_num_segments() == 1
+    spike_train = sorting.get_unit_spike_train(sorting.unit_ids[0], segment_index=0)
+    assert spike_train.ndim == 1
+
+
+def _build_sorting_with_properties():
+    import numpy as np
+    from spikeinterface.core import generate_sorting
+
+    sorting = generate_sorting(num_units=4, sampling_frequency=30000.0, durations=[DEFAULT_DURATION])
+    sorting.set_property("quality", np.array(["good", "good", "bad", "good"]))
+    sorting.annotate(experimenter="test")
+    return sorting
+
+
+def _check_sorting_with_properties(sorting, check_extra_data=None):
+    assert sorting.get_num_units() == 4
+    assert list(sorting.get_property("quality")) == ["good", "good", "bad", "good"]
+    assert sorting.get_annotation("experimenter") == "test"
+
+
+def _build_sorting_analyzer_with_extensions():
+    from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
+    recording, sorting = generate_ground_truth_recording(durations=[10, 5], num_channels=16, num_units=5, seed=0)
+    analyzer = create_sorting_analyzer(sorting, recording)
+    extensions = analyzer.get_computable_extensions()
+    analyzer.compute(extensions, n_jobs=-1)
+    # for SortingAnalyzer, we also save a JSON file with extension as
+    # keys and date entries as values to check that everything is reloaded correctly
+    check_extra_data = {}
+    for ext_name in analyzer.extensions:
+        ext = analyzer.get_extension(ext_name)
+        check_extra_data[ext_name] = list(ext.data.keys())
+    return analyzer, check_extra_data
+
+
+def _check_sorting_analyzer_with_extensions(analyzer, check_extra_data=None):
+    extensions = analyzer.get_saved_extension_names()
+    for extension in extensions:
+        extension = analyzer.get_extension(extension)  # just check it loads without error
+        ext_data = extension.get_data()
+        assert ext_data is not None, f"extension {extension} returned None data"
+    if check_extra_data is not None:
+        # Check that the extension data keys match what was saved in the fixture JSON.
+        for ext_name, expected_keys in check_extra_data.items():
+            ext = analyzer.get_extension(ext_name)
+            actual_keys = set(ext.data.keys())
+            assert actual_keys == set(expected_keys), f"extension {ext_name} keys mismatch: {actual_keys} != {set(expected_keys)}"
+
+
+OBJECTS = [
+    {
+        "id": "noise_generator_recording",
+        "build": _build_noise_generator_recording,
+        "check": _check_noise_generator_recording,
+        "formats": ["json", "pickle"],
+    },
+    {
+        "id": "mock_recording",
+        "build": _build_mock_recording,
+        "check": _check_mock_recording,
+        "formats": ["json", "pickle"],
+    },
+    {
+        "id": "recording_with_properties",
+        "build": _build_recording_with_properties,
+        "check": _check_recording_with_properties,
+        "formats": ["binary", "zarr", "binary_parallel", "zarr_parallel"],
+    },
+    {
+        "id": "recording_with_timestamps",
+        "build": _build_recording_with_timestamps,
+        "check": _check_recording_with_timestamps,
+        "formats": ["binary", "zarr", "binary_parallel", "zarr_parallel"],
+    },
+    {
+        "id": "recording_with_probe",
+        "build": _build_recording_with_probe,
+        "check": _check_recording_with_probe,
+        "formats": ["binary", "zarr", "binary_parallel", "zarr_parallel"],
+    },
+    {
+        "id": "recording_with_interleaved_probes",
+        "build": _build_recording_with_interleaved_probes,
+        "check": _check_recording_with_interleaved_probes,
+        "formats": ["binary", "zarr", "binary_parallel", "zarr_parallel"],
+    },
+    {
+        "id": "preprocessed_chain",
+        "build": _build_preprocessed_chain,
+        "check": _check_preprocessed_chain,
+        "formats": ["json", "pickle"],
+    },
+    {
+        "id": "sorting",
+        "build": _build_sorting,
+        "check": _check_sorting,
+        "formats": ["numpy_folder", "zarr"],
+    },
+    {
+        "id": "sorting_with_properties",
+        "build": _build_sorting_with_properties,
+        "check": _check_sorting_with_properties,
+        "formats": ["numpy_folder", "zarr"],
+    },
+    {
+        "id": "sorting_analyzer_with_extensions",
+        "build": _build_sorting_analyzer_with_extensions,
+        "check": _check_sorting_analyzer_with_extensions,  # no check; the extensions are computed and stored, but the analyzer itself is not serialized
+        "formats": ["binary_folder", "zarr"],
+    },
+]

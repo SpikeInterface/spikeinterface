@@ -12,22 +12,14 @@ if importlib.util.find_spec("numba") is not None:
 else:
     HAVE_NUMBA = False
 
-# Default 16-tap FIR with DC-gain normalization.  Worst-case in-band RMS
-# error vs the FFT reference is ~0.02 % on a white test signal bandlimited
-# to the NPX analog cutoff — ~180× below the ~5 µV Johnson noise of a
-# 150 kΩ NPX 2.0 electrode at brain temperature, so the FIR's contribution
-# is well below the noise floor any in-vivo recording will see.  Smaller
-# kernels (K<16) start eating into the 0–10 kHz passband; larger ones
-# (K=32, K=64) buy accuracy that is already below the physics floor.
+
+# 16 taps keep the response flat across the Neuropixels passband; fewer start to cut into it.
 _DEFAULT_FIR_TAPS = 16
 
 
 class PhaseShiftRecording(BasePreprocessor):
     """
-    This apply a phase shift to a recording to cancel the small sampling
-    delay across for some recording system.
-
-    This is particularly relevant for neuropixel recording.
+    Apply phase shifts to compensate for the staggered ADC sampling times in Neuropixels recordings.
 
     This code is inspired from from  IBL lib.
     https://github.com/int-brain-lab/ibllib/blob/master/ibllib/dsp/fourier.py
@@ -39,65 +31,21 @@ class PhaseShiftRecording(BasePreprocessor):
     recording : Recording
         The recording. It need to have  "inter_sample_shift" in properties.
     margin_ms : float, default: 40.0
-        Margin in ms for computation. 40ms ensures a very small error when
-        doing chunk processing with the default FFT method.  When
-        ``method="fir"``, this is ignored in favour of a margin tied to the
-        FIR kernel length (``n_taps // 2`` samples — typically far smaller).
+        Margin in ms read on each side of a chunk with ``method="fft"``; 40 ms keeps the error at chunk edges small.
+        Ignored with ``method="fir"``.
     inter_sample_shift : None or numpy array, default: None
         If "inter_sample_shift" is not in recording properties,
         we can externally provide one.
     dtype : None | str | dtype, default: None
-        Dtype of input and output `recording` objects.  When parent is
-        integer-typed and ``method="fir"`` with ``output_dtype=None``, the
-        FIR fast-path advertises ``float32`` output instead to skip a full
-        int16 → float64 → int16 round-trip (see ``output_dtype``).
+        Dtype of the output. None keeps the parent's.
     method : "fft" | "fir", default: "fft"
-        Interpolation method.
-
-        - ``"fft"``: the original rfft → phase-rotate → irfft implementation
-          from IBL / SpikeGLX.  Exact to floating-point precision for all
-          frequencies up to Nyquist.  Requires the 40 ms margin and a
-          raised-cosine taper on the zero-padded edges to suppress FFT
-          spectral leakage.
-        - ``"fir"``: a Kaiser-windowed sinc FIR (default 16 taps, β=8.6)
-          with per-channel DC-gain normalization.  ~170× faster than FFT
-          on typical Neuropixels chunks (measured on a 24-core host for
-          1M × 384 float32), with ≤0.02 % worst-case in-band RMS error
-          vs the FFT reference — well below the electrode thermal noise
-          floor.  Uses a K/2-sample margin (no 40 ms tax) and no taper
-          (a bounded-support FIR at a zero-padded boundary is already
-          exact under linear convolution semantics).
-
-          **The FIR also acts as an implicit soft lowpass.**  A K-tap
-          windowed sinc cannot be a perfect allpass; it has a flat
-          passband up to roughly ``≈ 0.33 · fs`` for the K=16 default,
-          rolling off above that.  For Neuropixels (analog cutoff at
-          ~10 kHz, fs = 30 kHz) the FIR's rolloff sits at the analog
-          cutoff, so it attenuates only out-of-band noise — a side
-          effect that's *beneficial* in practice (slightly cleaner data
-          at high frequencies; the analog filter already removed signal
-          there).  For applications where signal content extends past
-          ``~0.33 · fs`` (high-fs custom probes, broadband non-ephys
-          data, or any case where exact allpass behaviour is required)
-          either raise ``n_taps`` (K=32 widens the flat passband to
-          ``~0.4 · fs``; K=64 to ``~0.45 · fs``) or use ``method="fft"``.
+        - ``"fft"``: shifts each chunk in the frequency domain. Exact up to Nyquist.
+        - ``"fir"``: convolves each channel with a short windowed-sinc filter. Faster, and with the default
+          ``n_taps`` flat up to about a third of the sampling rate, which covers the Neuropixels passband. For
+          signal above that, raise ``n_taps`` or use ``"fft"``.
     n_taps : int, default: 16
-        FIR length when ``method="fir"``.  Must be even.  Ignored for FFT.
-        K=16 is matched to NPX 2.0 (12-bit ADC + 10 kHz analog passband
-        at fs=30 kHz); the FIR's residual error is ~5000:1 (≈ 12 bits),
-        i.e. at the ADC's precision limit.  Higher K trades compute for
-        a wider flat passband and tighter accuracy: K=32 reaches
-        ~21 000:1 (~14 bits) but is ~2× more expensive on compute-bound
-        machines (kernel time on DRAM-bandwidth-bound hosts is roughly
-        the same up to K~24).
-    output_dtype : None | dtype, default: None
-        When ``method="fir"`` and the parent is integer-typed, setting
-        ``output_dtype=np.float32`` enables the int16-native fast path:
-        the FIR reads int16 directly and writes float32, skipping the
-        round-trip back to int16 that SI's default performs.  Default
-        None preserves backward-compatible behavior (round + cast back
-        to parent's dtype, identical to the FFT path).
-
+        Filter length with ``method="fir"``; must be even. Longer filters stay flat to higher frequencies and run
+        slower. Ignored with ``method="fft"``.
 
     Returns
     -------
@@ -113,7 +61,6 @@ class PhaseShiftRecording(BasePreprocessor):
         dtype=None,
         method="fft",
         n_taps=_DEFAULT_FIR_TAPS,
-        output_dtype=None,
     ):
         if method not in ("fft", "fir"):
             raise ValueError(f"method must be 'fft' or 'fir', got {method!r}")
@@ -133,25 +80,15 @@ class PhaseShiftRecording(BasePreprocessor):
         if dtype is None:
             dtype = recording.get_dtype()
 
-        # FIR path margin is tied to the kernel size, not 40 ms — a bounded-support
-        # kernel only needs K/2 samples on each side.
         if method == "fft":
             margin = int(margin_ms * recording.get_sampling_frequency() / 1000.0)
-            # FFT path returns float64 by default; keep the classic tmp_dtype dance
-            # so int-typed recordings round back faithfully.
+            # apply_frequency_shift computes in float64; other dtypes are cast back after it.
             tmp_dtype = np.dtype("float64") if str(dtype) != "float64" else None
         else:
             margin = n_taps // 2
-            tmp_dtype = None  # unused on FIR path
+            tmp_dtype = None
 
-        # int16-native advertising: parent is int, caller asked for float32 output.
         advertised_dtype = np.dtype(dtype)
-        parent_dtype = np.dtype(recording.get_dtype())
-        if method == "fir" and output_dtype is not None:
-            advertised_dtype = np.dtype(output_dtype)
-        elif method == "fir" and parent_dtype.kind in ("i", "u") and dtype is recording.get_dtype():
-            # caller didn't pin dtype; keep backward-compat (int16 in → int16 out).
-            pass
 
         BasePreprocessor.__init__(self, recording, dtype=advertised_dtype)
         for parent_segment in recording.segments:
@@ -176,7 +113,6 @@ class PhaseShiftRecording(BasePreprocessor):
             dtype=advertised_dtype.str,
             method=method,
             n_taps=int(n_taps),
-            output_dtype=None if output_dtype is None else np.dtype(output_dtype).str,
         )
 
 
@@ -198,10 +134,12 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         self.tmp_dtype = tmp_dtype
         self.method = method
         self.n_taps = int(n_taps)
-        # FIR kernel cache — built once per segment since sample_shifts are fixed.
         self._fir_kernels_kc = None
         if method == "fir":
-            self._fir_kernels_kc = _build_fir_kernels_kc(self.sample_shifts, self.n_taps)
+            # The kernels correlate, out[n] += kernels_kc[k] * x[n - half + k], in (K, C) so the channel loop is
+            # contiguous.
+            taps = _build_fir_taps(self.sample_shifts, self.n_taps)
+            self._fir_kernels_kc = np.ascontiguousarray(taps[:, ::-1].T, dtype=np.float32)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
@@ -211,20 +149,6 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         return self._get_traces_fft(start_frame, end_frame, channel_indices)
 
     def _get_traces_fft(self, start_frame, end_frame, channel_indices):
-        """Original FFT-based path.
-
-        Uses :func:`get_chunk_with_margin` with ``window_on_margin=False`` and
-        applies the raised-cosine taper explicitly via
-        :func:`apply_raised_cosine_taper`.  Functionally identical to the
-        original in-place taper inside get_chunk_with_margin, but keeps the
-        FFT-specific cosmetic step out of the generic chunk-fetcher utility.
-        """
-        # Force a fresh buffer by pinning the dtype.  Without this,
-        # get_chunk_with_margin may return a view into the parent for float64
-        # parent recordings on middle chunks (need_copy=False), and our
-        # in-place taper would corrupt the source data.  The cast-to-float64
-        # is what apply_frequency_shift does internally anyway.
-        compute_dtype = self.tmp_dtype if self.tmp_dtype is not None else np.dtype("float64")
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
@@ -249,14 +173,6 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         return traces_shift
 
     def _get_traces_fir(self, start_frame, end_frame, channel_indices):
-        """FIR path: int16-native, K/2-sample margin, no taper.
-
-        Bypasses :func:`get_chunk_with_margin` entirely.  A bounded-support
-        FIR only needs ``K/2`` samples of margin; the 40 ms margin the FFT
-        path uses is FFT-era overkill.  Zero-padded linear convolution at
-        recording edges is exact under the FIR; no taper is needed or
-        applied.
-        """
         half = self.n_taps // 2
         parent = self.parent_recording_segment
         length = int(parent.get_num_samples())
@@ -273,14 +189,14 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             padded[left_pad : left_pad + traces.shape[0], :] = traces
             traces = padded
 
-        # Channel-slice the cached all-channels kernel.
-        shifts_full = self.sample_shifts
         if isinstance(channel_indices, slice) and channel_indices == slice(None):
             kernels_kc = self._fir_kernels_kc
         else:
             kernels_kc = np.ascontiguousarray(self._fir_kernels_kc[:, channel_indices])
 
-        if traces.dtype == np.int16:
+        if not HAVE_NUMBA:
+            shifted = _sinc_fir_numpy_tc(traces, kernels_kc)
+        elif traces.dtype == np.int16:
             traces = np.ascontiguousarray(traces)
             shifted = _sinc_fir_kernel_int16_tc(traces, kernels_kc)
         else:
@@ -289,7 +205,6 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
         out = shifted[half : half + (end_frame - start_frame), :]
 
-        # Dtype reconciliation — match advertised self.dtype.
         if out.dtype == self.dtype:
             return out
         if np.issubdtype(self.dtype, np.integer):
@@ -334,30 +249,30 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     This method leverages the properties of the Fourier transform, where a phase shift in the frequency domain
     corresponds to a time shift in the time domain.
     """
-    import scipy.fft
+    from scipy.fft import irfft, next_fast_len, rfft
 
     signal_length = signal.shape[axis]
-    num_channels = shift_samples.size
-    fourier_signal_size = signal_length // 2 + 1
-
-    frequency_domain_signal = scipy.fft.rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
-    fourier_signal_size = frequency_domain_signal.shape[0]
+    # A length with a large prime factor makes the FFT slow. Zero padding after the tapered end
+    # changes only the period of the circular shift, which moves the output by far less than one int16 step.
+    fft_length = next_fast_len(signal_length, real=True)
+    frequency_domain_signal = rfft(signal, n=fft_length, axis=axis, overwrite_x=True)
 
     if axis == 0:
-        frequency_grid = np.empty(shape=(fourier_signal_size, num_channels))
-        # Note that np.fft.rfttfreq handles both even and odd signal lengths
-        frequency_grid[:, :] = 2 * np.pi * np.fft.rfftfreq(signal_length)[:, np.newaxis]
-        shifts = np.multiply(frequency_grid, shift_samples[np.newaxis, :], out=frequency_grid)
+        angular_frequencies = 2 * np.pi * np.fft.rfftfreq(fft_length)
+        # Neuropixels channels reuse a small set of ADC sampling delays, so compute each rotation once.
+        unique_shifts, shift_indices = np.unique(shift_samples, return_inverse=True)
+        unique_angles = (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]).astype(
+            np.float64, copy=False
+        )
+        unique_rotations = np.exp(-1j * unique_angles)
+        rotations = unique_rotations[:, shift_indices]
+        phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
     else:
         raise NotImplementedError("Axis != 0 is not implemented yet")
 
-    # Rotate the signal in the frequency domain
-    rotations = np.exp(-1j * shifts)
-    phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
-
     # Inverse FFT to get the translated signal
-    shifted_signal = scipy.fft.irfft(phase_shifted_signal, n=signal_length, axis=axis, overwrite_x=True)
-    return shifted_signal
+    shifted_signal = irfft(phase_shifted_signal, n=fft_length, axis=axis, overwrite_x=True)
+    return shifted_signal[:signal_length]
 
 
 apply_fshift = apply_frequency_shift
@@ -405,70 +320,39 @@ def apply_fshift_ibl(w, s, axis=0, ns=None):
     return W
 
 
-# ---------------------------------------------------------------------
-# FIR implementation — Kaiser-windowed sinc, numba-jit kernels
-# ---------------------------------------------------------------------
+def _build_fir_taps(shift_samples, n_taps, beta=8.6):
+    """Per-channel Kaiser-windowed sinc kernels that delay each channel by its fractional shift, as ``(C, K)``.
 
-
-def _build_fir_kernels_kc(shift_samples, n_taps, beta=8.6):
-    """Per-channel windowed-sinc kernels in ``(K, C)`` layout (float32).
-
-    The kernel at channel ``c`` is a Kaiser-windowed sinc sampled to delay
-    by exactly ``shift_samples[c]`` (a fractional-sample shift).
-    Convention matches SI's ``apply_frequency_shift``: positive shift = delay
-    (``y[n] = x[n - shift]``).
-
-    Parameters
-    ----------
-    shift_samples : ndarray
-        Fractional number of samples to shift each channel by.
-    n_taps : int
-        Number of taps for FIR filter.
-    beta : float, optional
-        Kaiser window β ≈ 8.6 by default ⇒ ~-80 dB stopband attenuation,
-        matching scipy/matlab.
+    Rows are in ``fir_filter``'s tap order, ``y[n] = sum_j taps[j] * x[n + center - j]`` with its default
+    ``center = (K - 1) // 2``. A positive shift delays, ``y[n] = x[n - shift]``, as in ``apply_frequency_shift``.
+    ``beta=8.6`` gives about -80 dB sidelobes.
     """
-    half = n_taps // 2
-    # Grid: n = k - half for k in [0, K), so k=half corresponds to n=0.
-    # For the convolution  y[n] = Σ_k h[k] * x[n - half + k],
-    # expanding the ideal sinc gives  h[k] = sinc(k - half + shift) * window[k].
-    # That is the (n + d) term below.
-    n = np.arange(-half, n_taps - half, dtype=np.float64)
-    window = np.kaiser(n_taps, beta=beta).astype(np.float64)
-    d = np.asarray(shift_samples, dtype=np.float64)[:, np.newaxis]  # (C, 1)
-    kernels_ck = np.sinc(n[np.newaxis, :] + d) * window[np.newaxis, :]  # (C, K)
-    # Normalize each channel's kernel to unity DC gain.  Without this, the
-    # windowed-sinc has a shift-dependent magnitude offset (Σh[k] = 0.9975…1.0
-    # for Kaiser β=8.6 on NPX inter-sample shifts), producing per-ADC-group
-    # amplitude banding ~0.3 % p-p across the probe.  Dividing by Σh[k]
-    # eliminates the offset and flattens the passband to ≤7 ppm RMS error vs
-    # FFT — a 600× improvement at zero runtime cost.  Standard practice for
-    # fractional-delay FIRs.
-    kernels_ck /= kernels_ck.sum(axis=1, keepdims=True)
-    # (K, C) contiguous float32 so the inner c-loop auto-vectorizes on the
-    # contiguous axis matching the signal/output layout.
-    return np.ascontiguousarray(kernels_ck.T, dtype=np.float32)
+    # Tap j weighs x[n + center - j], an offset of t = center - j samples, so the ideal delay gives sinc(t + shift).
+    offsets = (n_taps - 1) // 2 - np.arange(n_taps, dtype=np.float64)
+    shifts = np.asarray(shift_samples, dtype=np.float64)[:, np.newaxis]
+    taps = np.sinc(offsets + shifts) * np.kaiser(n_taps, beta=beta)
+    # Unit DC gain: the windowed sinc's sum varies with the shift, which would scale each ADC group differently.
+    taps /= taps.sum(axis=1, keepdims=True)
+    return taps
 
 
 if HAVE_NUMBA:
     import numba
 
-    @numba.njit(parallel=True, cache=True, boundscheck=False)
+    # Single-threaded: chunk workers supply the parallelism, and parallel=True crashes under numba's workqueue
+    # layer with the thread engine and under its omp layer with forked processes.
+    @numba.njit(nogil=True, cache=False, boundscheck=False)
     def _sinc_fir_kernel_tc(signal_tc, kernels_kc):
-        """Per-channel FIR on ``(T, C)`` float32 signal, parallel over time.
-
-        Interior iterations (most of the buffer) skip bounds checks; the
-        first ``half`` and last ``K-1-half`` samples use a bounds-safe
-        variant that zero-pads out-of-range reads — equivalent to linear
-        convolution with a zero-padded boundary.
-        """
+        """Per-channel FIR on a ``(T, C)`` float32 signal, treating samples outside it as zero."""
         T, C = signal_tc.shape
         K = kernels_kc.shape[0]
         half = K // 2
         interior_start = half
         interior_end = T - (K - 1 - half)
-        out = np.zeros((T, C), dtype=np.float32)
-        for n in prange(T):
+        # np.zeros would defer zeroing to page faults inside the loop; zeroing each row just before use keeps it in cache
+        out = np.empty((T, C), dtype=np.float32)
+        for n in range(T):
+            out[n] = 0.0
             if interior_start <= n < interior_end:
                 base = n - half
                 for k in range(K):
@@ -482,25 +366,18 @@ if HAVE_NUMBA:
                             out[n, c] += kernels_kc[k, c] * signal_tc[idx, c]
         return out
 
-    @numba.njit(parallel=True, cache=True, boundscheck=False)
+    @numba.njit(nogil=True, cache=False, boundscheck=False)
     def _sinc_fir_kernel_int16_tc(signal_tc, kernels_kc):
-        """int16-native variant: reads int16, accumulates in float32, writes float32.
-
-        ~8% faster than the float32 kernel on (1M, 384) on a 24-core host —
-        halved signal working set (12 KB vs 24 KB for the 16 × 384 sliding
-        window) leaves more L1 headroom, and the int16 → float32 cast
-        vectorizes cleanly.
-        More importantly, it lets callers skip the int16 → float64 → int16
-        round-trip that the FFT path requires, saving ~2.4 s/shard of cast
-        traffic when the parent is int16.
-        """
+        """int16-input variant: reads int16 and writes float32, so an int16 parent needs no cast first."""
         T, C = signal_tc.shape
         K = kernels_kc.shape[0]
         half = K // 2
         interior_start = half
         interior_end = T - (K - 1 - half)
-        out = np.zeros((T, C), dtype=np.float32)
-        for n in prange(T):
+        # np.zeros would defer zeroing to page faults inside the loop; zeroing each row just before use keeps it in cache
+        out = np.empty((T, C), dtype=np.float32)
+        for n in range(T):
+            out[n] = 0.0
             if interior_start <= n < interior_end:
                 base = n - half
                 for k in range(K):
@@ -514,10 +391,25 @@ if HAVE_NUMBA:
                             out[n, c] += kernels_kc[k, c] * np.float32(signal_tc[idx, c])
         return out
 
-else:
 
-    def _sinc_fir_kernel_tc(signal_tc, kernels_kc):  # type: ignore[misc]
-        raise RuntimeError("numba is required for method='fir'; install numba>=0.59")
+def _sinc_fir_numpy_tc(signal_tc, kernels_kc):
+    """Numpy equivalent of the numba kernels, used when numba is not installed.
 
-    def _sinc_fir_kernel_int16_tc(signal_tc, kernels_kc):  # type: ignore[misc]
-        raise RuntimeError("numba is required for method='fir'; install numba>=0.59")
+    Accumulates one tap at a time over the whole ``(T, C)`` block, in the same tap order as the numba kernels,
+    so the two agree to float32 rounding.
+    """
+    signal = np.asarray(signal_tc, dtype=np.float32)
+    T = signal.shape[0]
+    K = kernels_kc.shape[0]
+    half = K // 2
+    out = np.zeros(signal.shape, dtype=np.float32)
+    product = np.empty(signal.shape, dtype=np.float32)
+    for k in range(K):
+        offset = k - half  # out[n] += h[k] * x[n + offset], zero outside [0, T)
+        n0 = max(0, -offset)
+        n1 = min(T, T - offset)
+        if n1 <= n0:
+            continue
+        np.multiply(signal[n0 + offset : n1 + offset], kernels_kc[k], out=product[n0:n1])
+        out[n0:n1] += product[n0:n1]
+    return out

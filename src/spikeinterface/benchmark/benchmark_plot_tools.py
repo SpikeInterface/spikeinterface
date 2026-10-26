@@ -69,7 +69,7 @@ def aggregate_dataframe_by_levels(df, study, case_keys=None, levels_to_group_by=
     case_keys : list | None, default: None
         A list of case keys to use. If None, then all cases are used.
     levels_to_group_by : list | None, default: None
-        A list of levels to keep. If None, the original dataframe, keys, labels and colros are returned.
+        A list of levels to keep. If None, the original dataframe, keys, labels and colors are returned.
     map_name : str | None, default: None
         The name of the map to use for colors.
 
@@ -223,6 +223,7 @@ def plot_unit_counts(
     colors=None,
     columns=None,
     with_rectangle=True,
+    rectangle_range=None,
     revert_bad=True,
     xticks_rotation=45.0,
     show_legend=True,
@@ -243,9 +244,11 @@ def plot_unit_counts(
     colors : dict | None, default: None
         A dictionary of colors to use for each class ("Well Detected", "False Positive", "Redundant", "Overmerged").
     columns : None | list
-        Optionaly select which columns to display
+        Optionally select which columns to display
     with_rectangle : bool
         Add or not a grouping colored rectangle for each case.
+    rectangle_range: tuple | None
+        Optionaly teh limit for teh rectangle.
     revert_bad : bool
         Revert or not bad columns ('num_false_positive', 'num_redundant', 'num_overmerged' ...)
     figsize : tuple | None, default: None
@@ -325,6 +328,8 @@ def plot_unit_counts(
         if revert_bad:
             ymin = 0
         spacing = width * 0.3
+        if rectangle_range is not None:
+            ymin, ymax = rectangle_range
         for i, key in enumerate(keys_mapping):
             rect = plt.Rectangle(
                 (i + 1 - width / 2 - spacing, ymin),
@@ -351,7 +356,7 @@ def plot_unit_counts(
 
 def plot_agreement_matrix(study, ordered=True, case_keys=None, axs=None):
     """
-    Plot agreement matri ces for cases in a study.
+    Plot agreement matrices for cases in a study.
 
     Parameters
     ----------

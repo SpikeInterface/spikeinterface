@@ -34,3 +34,26 @@ class BasePreprocessorSegment(BaseRecordingSegment):
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         raise NotImplementedError
+
+    # Preprocessors never change the frame numbering (no offset, no resampling), so time
+    # handling is a pure pass-through to the parent segment. Delegating live (instead of
+    # relying on the time_vector/t_start copied into __init__ above) lets any lazy/offset-aware
+    # override further up the chain (e.g. FrameSliceRecordingSegment after a frame_slice) keep
+    # working without materializing a full time_vector every time this segment is reconstructed.
+    def get_times(self, start_frame=None, end_frame=None):
+        return self.parent_recording_segment.get_times(start_frame=start_frame, end_frame=end_frame)
+
+    def get_start_time(self):
+        return self.parent_recording_segment.get_start_time()
+
+    def get_end_time(self):
+        return self.parent_recording_segment.get_end_time()
+
+    def sample_index_to_time(self, sample_ind):
+        return self.parent_recording_segment.sample_index_to_time(sample_ind)
+
+    def time_to_sample_index(self, time_s):
+        return self.parent_recording_segment.time_to_sample_index(time_s)
+
+    def get_times_kwargs(self):
+        return self.parent_recording_segment.get_times_kwargs()

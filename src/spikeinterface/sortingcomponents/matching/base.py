@@ -53,5 +53,5 @@ class BaseTemplateMatching(PeakDetector):
         pass
 
     def get_extra_outputs(self):
-        # can be overwritten if need to ouput some variables with a dict
+        # can be overwritten if need to output some variables with a dict
         return None

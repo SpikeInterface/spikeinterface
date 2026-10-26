@@ -97,9 +97,7 @@ class LocalizeMonopolarTriangulation(LocalizeBase):
                 wf_data = np.abs(wf[self.nbefore])
 
             if self.enforce_decrease_radial_parents is not None:
-                enforce_decrease_shells_data(
-                    wf_data, peak["channel_index"], self.enforce_decrease_radial_parents, in_place=True
-                )
+                enforce_decrease_shells_data(wf_data, peak["channel_index"], self.enforce_decrease_radial_parents)
 
             peak_locations[i] = solve_monopolar_triangulation(
                 wf_data, local_contact_locations, self.max_distance_um, self.optimizer

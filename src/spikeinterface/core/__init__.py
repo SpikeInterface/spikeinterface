@@ -17,7 +17,7 @@ from .numpyextractors import (
     NumpyEvent,
     NumpySnippets,
 )
-from .zarrextractors import ZarrRecordingExtractor, ZarrSortingExtractor, read_zarr, get_default_zarr_compressor
+from .zarrextractors import read_zarr, read_zarr_array, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .sortingfolder import NumpyFolderSorting, NpzFolderSorting, read_numpy_sorting_folder, read_npz_folder
 from .npysnippetsextractor import NpySnippetsExtractor, read_npy_snippets
@@ -167,9 +167,12 @@ from .sortinganalyzer import (
 # template tools
 from .template_tools import (
     get_template_amplitudes,
-    get_template_extremum_channel,
-    get_template_extremum_channel_peak_shift,
-    get_template_extremum_amplitude,
+    get_template_peak_shift_on_main_channel,
+    get_template_amplitude_on_main_channel,
+    # this is not needed anymore
+    get_template_extremum_channel,  # keep for backward compatibility can be removed in 0.106
+    get_template_extremum_channel_peak_shift,  # keep for backward compatibility can be removed in 0.106
+    get_template_extremum_amplitude,  # keep for backward compatibility can be removed in 0.106
 )
 
 

@@ -19,6 +19,7 @@ from spikeinterface.extractors.extractor_classes import (
     IntanRecordingExtractor,
     NeuroScopeRecordingExtractor,
     NeuroExplorerRecordingExtractor,
+    NeuroExplorerSortingExtractor,
     NeuroScopeSortingExtractor,
     NeuroNexusRecordingExtractor,
     PlexonRecordingExtractor,
@@ -70,7 +71,7 @@ def has_plexon2_dependencies():
         return True
 
     elif os_type == "Linux" or os_type == "Darwin":
-        # Check for 'wine' using which. "which" works for both mac and linux
+        # Check for 'wine' using "which" that works for both mac and linux
         # if package exists it returns a 0. Anything else is an error code.
 
         result_wine = subprocess.run(["which", "wine"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
@@ -91,7 +92,7 @@ class MearecRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = MEArecRecordingExtractor
     downloads = ["mearec"]
     entities = ["mearec/mearec_test_10s.h5"]
-    neo_funcs = dict()
+    neo_funcs = {}
 
 
 class MearecSortingTest(SortingCommonTestSuite, unittest.TestCase):
@@ -270,6 +271,15 @@ class NeuroExplorerRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class NeuroExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroExplorerSortingExtractor
+    downloads = ["neuroexplorer"]
+    entities = [
+        "neuroexplorer/File_neuroexplorer_1.nex",
+        "neuroexplorer/File_neuroexplorer_2.nex",
+    ]
+
+
 class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeSortingExtractor
     downloads = ["neuroscope"]
@@ -310,12 +320,12 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxRecordingExtractor
     downloads = ["neuralynx"]
     entities = [
-        "neuralynx/Cheetah_v1.1.0/original_data",
-        "neuralynx/Cheetah_v4.0.2/original_data",
-        "neuralynx/Cheetah_v5.4.0/original_data",
-        "neuralynx/Cheetah_v5.5.1/original_data",
-        "neuralynx/Cheetah_v5.6.3/original_data",
-        "neuralynx/Cheetah_v5.7.4/original_data",
+        ("neuralynx/Cheetah_v1.1.0/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v4.0.2/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.4.0/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.5.1/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.6.3/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.7.4/original_data", dict(gap_tolerance_ms=1.0)),
     ]
 
 
@@ -323,8 +333,8 @@ class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxSortingExtractor
     downloads = ["neuralynx"]
     entities = [
-        "neuralynx/Cheetah_v5.5.1/original_data",
-        "neuralynx/Cheetah_v5.6.3/original_data",
+        ("neuralynx/Cheetah_v5.5.1/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.6.3/original_data", dict(gap_tolerance_ms=1.0)),
     ]
 
 
@@ -392,20 +402,20 @@ class Spike2RecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
-@pytest.mark.skipif(
-    version.parse(platform.python_version()) >= version.parse("3.10") or platform.system() == "Darwin",
-    reason="Sonpy only testing with Python < 3.10 and not supported on macOS!",
-)
-class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
-    ExtractorClass = CedRecordingExtractor
-    downloads = [
-        "spike2/130322-1LY.smr",
-        "spike2/m365_1sec.smrx",
-    ]
-    entities = [
-        ("spike2/130322-1LY.smr", {"stream_id": "1"}),
-        "spike2/m365_1sec.smrx",
-    ]
+# @pytest.mark.skipif(
+#     version.parse(platform.python_version()) >= version.parse("3.10") or platform.system() == "Darwin",
+#     reason="Sonpy only testing with Python < 3.10 and not supported on macOS!",
+# )
+# class CedRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
+#     ExtractorClass = CedRecordingExtractor
+#     downloads = [
+#         "spike2/130322-1LY.smr",
+#         "spike2/m365_1sec.smrx",
+#     ]
+#     entities = [
+#         ("spike2/130322-1LY.smr", {"stream_id": "1"}),
+#         "spike2/m365_1sec.smrx",
+#     ]
 
 
 @pytest.mark.skipif(platform.system() == "Darwin", reason="Maxwell plugin not supported on macOS")

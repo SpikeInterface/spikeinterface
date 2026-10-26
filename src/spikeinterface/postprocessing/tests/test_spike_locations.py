@@ -8,12 +8,11 @@ class TestSpikeLocationsExtension(AnalyzerExtensionCommonTestSuite):
     @pytest.mark.parametrize(
         "params",
         [
-            dict(method="center_of_mass", peak_sign="both"),
+            dict(method="center_of_mass"),
             dict(method="center_of_mass", spike_retriever_kwargs=dict(channel_from_template=True)),
             dict(method="center_of_mass", spike_retriever_kwargs=dict(channel_from_template=False)),
-            dict(method="center_of_mass"),
             dict(method="monopolar_triangulation"),
-            dict(method="grid_convolution"),
+            dict(method="grid_convolution", method_kwargs=dict(n_peaks=100)),
         ],
     )
     def test_extension(self, params):

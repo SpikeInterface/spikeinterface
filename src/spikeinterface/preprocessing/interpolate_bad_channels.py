@@ -165,9 +165,9 @@ def estimate_recommended_sigma_um(recording):
     Get the most common distance between channels on the y-axis
     """
     y_sorted = np.sort(recording.get_channel_locations()[:, 1])
-    import scipy.stats
+    from scipy.stats import mode
 
-    return scipy.stats.mode(np.diff(np.unique(y_sorted)), keepdims=False)[0]
+    return mode(np.diff(np.unique(y_sorted)), keepdims=False)[0]
 
 
 interpolate_bad_channels = define_function_handling_dict_from_class(

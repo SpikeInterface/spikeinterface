@@ -140,9 +140,9 @@ class NearestNeighbor(BaseMetric):
 
 
 def _nn_advanced_one_unit(args):
-    unit_id, sorting_analyzer_or_folder, n_spikes_all_units, fr_all_units, metric_params, seed = args
+    unit_id, sorting_analyzer_or_folder, n_spikes_all_units, fr_all_units, metric_params, seed, lazy = args
     if isinstance(sorting_analyzer_or_folder, (str, Path)):
-        sorting_analyzer = load(sorting_analyzer_or_folder)
+        sorting_analyzer = load(sorting_analyzer_or_folder, lazy=lazy)
     else:
         sorting_analyzer = sorting_analyzer_or_folder
 
@@ -157,14 +157,13 @@ def _nn_advanced_one_unit(args):
             "n_neighbors",
             "n_components",
             "radius_um",
-            "peak_sign",
             "min_spatial_overlap",
         ]
     }
     nn_noise_params = {
         k: v
         for k, v in metric_params.items()
-        if k in ["max_spikes", "min_spikes", "min_fr", "n_neighbors", "n_components", "radius_um", "peak_sign"]
+        if k in ["max_spikes", "min_spikes", "min_fr", "n_neighbors", "n_components", "radius_um"]
     }
 
     # NN Isolation
@@ -230,7 +229,15 @@ def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwarg
 
         for unit_id in units_loop:
             _, nn_isolation, nn_unit_id, nn_noise_overlap = _nn_advanced_one_unit(
-                (unit_id, sorting_analyzer, n_spikes_all_units, fr_all_units, metric_params, seed)
+                (
+                    unit_id,
+                    sorting_analyzer,
+                    n_spikes_all_units,
+                    fr_all_units,
+                    metric_params,
+                    seed,
+                    sorting_analyzer._lazy,
+                )
             )
             nn_isolation_dict[unit_id] = nn_isolation
             nn_noise_overlap_dict[unit_id] = nn_noise_overlap
@@ -244,7 +251,17 @@ def _nn_advanced_metric_function(sorting_analyzer, unit_ids, tmp_data, job_kwarg
         # If we got here, we are sure the sorting_analyzer is saved on disk
         args_list = []
         for unit_id in unit_ids:
-            args_list.append((unit_id, sorting_analyzer.folder, n_spikes_all_units, fr_all_units, metric_params, seed))
+            args_list.append(
+                (
+                    unit_id,
+                    sorting_analyzer.folder,
+                    n_spikes_all_units,
+                    fr_all_units,
+                    metric_params,
+                    seed,
+                    sorting_analyzer._lazy,
+                )
+            )
 
         with ProcessPoolExecutor(
             max_workers=n_jobs,
@@ -274,7 +291,6 @@ class NearestNeighborAdvanced(BaseMetric):
         "n_neighbors": 4,
         "n_components": 10,
         "radius_um": 100,
-        "peak_sign": "neg",
         "min_spatial_overlap": 0.5,
         "seed": None,
     }
@@ -519,7 +535,6 @@ def nearest_neighbors_isolation(
     n_neighbors: int = 5,
     n_components: int = 10,
     radius_um: float = 100,
-    peak_sign: str = "neg",
     min_spatial_overlap: float = 0.5,
     seed=None,
 ):
@@ -554,8 +569,6 @@ def nearest_neighbors_isolation(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in µm, that channels need to be within the peak channel to be included.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
         is not sparse already.
     min_spatial_overlap : float, default: 100
         In case sorting_analyzer is sparse, other units are selected if they share at least
@@ -653,7 +666,7 @@ def nearest_neighbors_isolation(
         if sorting_analyzer.is_sparse():
             sparsity = sorting_analyzer.sparsity
         else:
-            sparsity = compute_sparsity(sorting_analyzer, method="radius", peak_sign=peak_sign, radius_um=radius_um)
+            sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=radius_um)
         closest_chans_target_unit = sparsity.unit_id_to_channel_indices[this_unit_id]
         n_channels_target_unit = len(closest_chans_target_unit)
         # select other units that have a minimum spatial overlap with target unit
@@ -736,7 +749,6 @@ def nearest_neighbors_noise_overlap(
     n_neighbors: int = 5,
     n_components: int = 10,
     radius_um: float = 100,
-    peak_sign: str = "neg",
     seed=None,
 ):
     """
@@ -768,9 +780,6 @@ def nearest_neighbors_noise_overlap(
         The number of PC components to use to project the snippets to.
     radius_um : float, default: 100
         The radius, in µm, that channels need to be within the peak channel to be included.
-    peak_sign : "neg" | "pos" | "both", default: "neg"
-        The peak_sign used to compute sparsity and neighbor units. Used if sorting_analyzer
-        is not sparse already.
     seed : int, default: 0
         Random seed for subsampling spikes.
 
@@ -867,7 +876,7 @@ def nearest_neighbors_noise_overlap(
         if sorting_analyzer.is_sparse():
             sparsity = sorting_analyzer.sparsity
         else:
-            sparsity = compute_sparsity(sorting_analyzer, method="radius", peak_sign=peak_sign, radius_um=radius_um)
+            sparsity = compute_sparsity(sorting_analyzer, method="radius", radius_um=radius_um)
         noise_cluster = noise_cluster[:, :, sparsity.unit_id_to_channel_indices[this_unit_id]]
 
         # compute weighted noise snippet (Z)

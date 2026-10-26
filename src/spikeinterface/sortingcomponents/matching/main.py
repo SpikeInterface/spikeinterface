@@ -17,7 +17,6 @@ def find_spikes_from_templates(
     pipeline_kwargs=None,
     verbose=False,
     job_kwargs=None,
-    **old_kwargs,
 ) -> np.ndarray | tuple[np.ndarray, dict]:
     """Find spike from a recording from given templates.
 
@@ -50,15 +49,8 @@ def find_spikes_from_templates(
     outputs:
         Optionaly returns for debug purpose.
     """
-
-    if len(old_kwargs) > 0:
-        # This is the old behavior and will be remove in 0.105.0
-        warnings.warn(
-            "The signature of find_spikes_from_templates() has changed, now job_kwargs are in separated dict and not flatten"
-            "This warning will raise an error in version 0.105.0"
-        )
-        assert job_kwargs is None
-        job_kwargs = old_kwargs
+    if job_kwargs is None:
+        job_kwargs = {}
 
     if "method" in method_kwargs:
         # for flexibility the caller can put method inside method_kwargs

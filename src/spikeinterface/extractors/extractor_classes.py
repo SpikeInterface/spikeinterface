@@ -6,12 +6,16 @@ from spikeinterface.core import (
     NpzSortingExtractor,
     NumpySorting,
     NpySnippetsExtractor,
-    ZarrRecordingExtractor,
-    ZarrSortingExtractor,
     read_binary,
     read_zarr,
     read_npz_sorting,
     read_npy_snippets,
+)
+
+from spikeinterface.core.zarrextractors import (
+    ZarrRecordingExtractor,
+    ZarrSortingExtractor,
+    read_zarr_array,
 )
 
 # sorting/recording/event from neo
@@ -159,7 +163,7 @@ _snippets_extractor_full_dict = {
 # Organize the possible extractors into a user facing format with keys being extractor names
 # (e.g. 'intan' , 'kilosort') and values being the appropriate Extractor class returned as its wrapper
 # (e.g. IntanRecordingExtractor, KiloSortSortingExtractor)
-# An important note is the the formats are returned after performing `.lower()` so a format like
+# An important note is that the formats are returned after performing `.lower()` so a format like
 # SpikeGLX will have a key of 'spikeglx'
 # for example if we wanted to create a recording from an intan file we could do the following:
 # >>> recording = se.recording_extractor_full_dict['intan'](file_path='path/to/data.rhd')
@@ -199,5 +203,6 @@ __all__.extend(
         "read_zarr",
         "read_neuroscope",  # convenience function for neuroscope
         "read_split_intan_files",  # convenience function for segmented intan files
+        "read_zarr_array",
     ]
 )

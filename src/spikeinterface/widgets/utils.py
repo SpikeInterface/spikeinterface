@@ -1,4 +1,5 @@
 from warnings import warn
+
 import numpy as np
 
 from spikeinterface.core import BaseSorting
@@ -233,7 +234,7 @@ def array_to_image(
             image = Image.fromarray(output_image)
             image_editable = ImageDraw.Draw(image)
 
-            # bar should be around 1/5 of row and ultiple of 5ms
+            # bar should be around 1/5 of row and multiple of 5ms
             if row_ms / 5 > 5:
                 bar_ms = int(np.ceil((row_ms / 5) // 5 * 5))
                 text_offset = 0.3
