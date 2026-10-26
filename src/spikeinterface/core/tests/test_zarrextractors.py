@@ -155,7 +155,7 @@ def test_ZarrSortingExtractor_lazy_search(tmp_path):
     sample_index = spikes_group["sample_index"][:]
     del spikes_group["sample_index"], spikes_group["sample_index_chunk_firsts"]
     spikes_group.create_array("sample_index", data=sample_index, chunks=(97,))
-    spikes_group.create_array("sample_index_chunk_firsts", data=sample_index[::97], compressor=None)
+    spikes_group.create_array("sample_index_chunk_firsts", data=sample_index[::97], compressors=None)
     assert spikes_group["sample_index"].nchunks > 3
 
     in_ram = ZarrSortingExtractor(folder)

@@ -21,6 +21,14 @@ from .job_tools import split_job_kwargs, fix_job_kwargs
 from .zarr_tools import iterate_zarr_group, adjust_chunks_shards_and_job_kwargs, build_codec_pipeline
 from .time_series_tools import _write_time_series_to_zarr
 
+# The spike vector uses the numcodecs Delta filter (not in the zarr v3 spec) because it greatly
+# improves compression of the sorted sample_index. zarr warns every time the codec is built,
+# including on every metadata read, so we silence it here.
+warnings.filterwarnings(
+    "ignore",
+    message="Numcodecs codecs are not in the Zarr version 3 specification",
+)
+
 
 def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: dict | None = None):
     """
@@ -580,7 +588,8 @@ class ZarrSortingExtractor(BaseSorting):
         assert sampling_frequency is not None, "'sampling_frequency' attiribute not found!"
         assert num_segments is not None, "'num_segments' attiribute not found!"
 
-        unit_ids = np.array(unit_ids)
+        # zarr returns vlen-utf8 as StringDType (numpy 2.0); convert via list to classic unicode array.
+        unit_ids = np.array(unit_ids.tolist())
         assert "spikes" in self._root.keys(), "'spikes' dataset not found!"
         spikes_group = self._root["spikes"]
 
@@ -848,7 +857,11 @@ def add_sorting_to_zarr_group(
     num_segments = sorting.get_num_segments()
     zarr_group.attrs["sampling_frequency"] = float(sorting.sampling_frequency)
     zarr_group.attrs["num_segments"] = int(num_segments)
-    zarr_group.create_array(name="unit_ids", data=sorting.unit_ids, compressors=None)
+    # Use variable-length UTF-8 (stable zarr v3 spec) instead of fixed-length unicode.
+    unit_ids = sorting.unit_ids
+    if unit_ids.dtype.kind in ("U", "S"):
+        unit_ids = unit_ids.astype("T")
+    zarr_group.create_array(name="unit_ids", data=unit_ids, compressors=None)
 
     compressors = kwargs.get("compressors", "default")
     if isinstance(compressors, str) and compressors == "default":
