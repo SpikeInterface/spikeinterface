@@ -155,7 +155,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             end_frame,
             channel_indices,
             self.margin,
-            dtype=compute_dtype,
+            dtype=self.tmp_dtype,
             add_zeros=True,
             window_on_margin=False,
         )
