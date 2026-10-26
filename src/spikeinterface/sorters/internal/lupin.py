@@ -405,6 +405,9 @@ class LupinSorter(ComponentsBasedSorter):
         final_spikes["segment_index"] = spikes["segment_index"]
         sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
+        main_channel_ids = templates.get_main_channels(peak_sign=params["peak_sign"], outputs="id")
+        sorting.set_property("main_channel_id", main_channel_ids)
+
         auto_merge = True
         analyzer_final = None
         if auto_merge:
