@@ -8,6 +8,7 @@ spikeinterface.core
     .. autofunction:: load
     .. autoclass:: BaseRecording
         :members:
+        :inherited-members:
     .. autoclass:: BaseSorting
         :members:
     .. autoclass:: BaseSnippets

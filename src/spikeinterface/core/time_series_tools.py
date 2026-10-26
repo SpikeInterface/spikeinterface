@@ -2,7 +2,6 @@ from pathlib import Path
 import warnings
 
 import numpy as np
-import numpy.typing
 
 from .core_tools import add_suffix, make_shared_array
 from .job_tools import (
@@ -297,8 +296,9 @@ def _write_time_series_to_zarr(
     zarr_group,
     dataset_paths,
     dataset_timestamps_paths=None,
-    extra_chunks=None,
     dtype=None,
+    chunks=None,
+    shards=None,
     compressor_data=None,
     filters_data=None,
     compressor_times=None,
@@ -308,6 +308,7 @@ def _write_time_series_to_zarr(
 ):
     """
     Save the trace of a time_series object in several zarr format.
+    If shard
 
     Parameters
     ----------
@@ -319,10 +320,10 @@ def _write_time_series_to_zarr(
         List of paths to traces datasets in the zarr group
     dataset_timestamps_paths : list or None, default: None
         List of paths to timestamps datasets in the zarr group. If None, timestamps are not saved.
-    extra_chunks : tuple or None, default: None
-        Extra chunking dimensions to use for the zarr dataset.
-        The first dimension is always time and controlled by the job_kwargs.
-        This is for example useful to chunk by channel, with `extra_chunks=(channel_chunk_size,)`.
+    chunks : tuple or None, default: None
+        Chunking dimensions to use for the zarr dataset.
+    shards : tuple or None, default: None
+        Sharding configuration for the zarr dataset.
     dtype : dtype, default: None
         Type of the saved data
     compressor_data : zarr compressor or None, default: None
@@ -338,10 +339,12 @@ def _write_time_series_to_zarr(
     {}
     """
     from .job_tools import (
-        ensure_chunk_size,
         fix_job_kwargs,
         TimeSeriesChunkExecutor,
     )
+
+    # place an ArrayBytesCodec passed as a compressor (e.g. WavPack) in the serializer slot
+    from .zarr_tools import build_codec_pipeline
 
     assert dataset_paths is not None, "Provide 'dataset_paths' to save data in zarr format"
     if dataset_timestamps_paths is not None:
@@ -359,13 +362,9 @@ def _write_time_series_to_zarr(
         dtype = time_series.get_dtype()
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-    chunk_size = ensure_chunk_size(time_series, **job_kwargs)
 
-    if extra_chunks is not None:
-        assert len(extra_chunks) == len(time_series.get_shape(0)[1:]), (
-            "extra_chunks should have the same length as the number of dimensions "
-            "of the time_series minus one (time axis)"
-        )
+    codec_kwargs_data = build_codec_pipeline(filters=filters_data, compressors=compressor_data)
+    codec_kwargs_times = build_codec_pipeline(filters=filters_times, compressors=compressor_times)
 
     # create zarr datasets files
     zarr_datasets = []
@@ -375,25 +374,27 @@ def _write_time_series_to_zarr(
         num_samples = time_series.get_num_samples(segment_index)
         dset_name = dataset_paths[segment_index]
         shape = time_series.get_shape(segment_index)
-        dset = zarr_group.create_dataset(
+        dset = zarr_group.create_array(
             name=dset_name,
             shape=shape,
-            chunks=(chunk_size,) + extra_chunks if extra_chunks is not None else (chunk_size,),
+            chunks=chunks,
+            shards=shards,
             dtype=dtype,
-            filters=filters_data,
-            compressor=compressor_data,
+            **codec_kwargs_data,
         )
         zarr_datasets.append(dset)
         if dataset_timestamps_paths[segment_index] is not None:
             tset_name = dataset_timestamps_paths[segment_index]
+            chunks_times = (chunks[0],) if chunks is not None else None
+            shards_times = (shards[0],) if shards is not None else None
             zarr_timestamps_datasets.append(
-                zarr_group.create_dataset(
+                zarr_group.create_array(
                     name=tset_name,
                     shape=(num_samples,),
-                    chunks=(chunk_size,),
+                    chunks=chunks_times,
+                    shards=shards_times,
                     dtype="float64",
-                    filters=filters_times,
-                    compressor=compressor_times,
+                    **codec_kwargs_times,
                 )
             )
         else:
@@ -416,7 +417,7 @@ def _write_time_series_to_zarr(
             t_starts[segment_index] = time_info["t_start"]
 
     if np.any(~np.isnan(t_starts)):
-        zarr_group.create_dataset(name="t_starts", data=t_starts, compressor=None)
+        zarr_group.create_array(name="t_starts", data=t_starts, compressors=None)
 
 
 def _init_zarr_worker(time_series, zarr_datasets, dtype, zarr_timestamps_datasets=None):

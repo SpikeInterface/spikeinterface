@@ -95,21 +95,27 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
             self.margin,
             add_reflect_padding=True,
         )
-        dtype = traces.dtype
+        from scipy.fft import next_fast_len
 
-        traces_fft = np.fft.fft(traces, axis=0)
+        dtype = traces.dtype
+        signal_length = traces.shape[0]
+        # A length with a large prime factor makes the FFT up to twice as slow. The zeros appended lie beyond the
+        # margin, so they reach the returned samples only through the kernel's tail past margin_sd.
+        fft_length = next_fast_len(signal_length)
+
+        traces_fft = np.fft.fft(traces, n=fft_length, axis=0)
 
         if self.freq_max is not None:
-            pos_factor = self._create_gaussian(traces.shape[0], self.freq_max)
+            pos_factor = self._create_gaussian(fft_length, self.freq_max)
         else:
-            pos_factor = np.ones((traces.shape[0],))
+            pos_factor = np.ones((fft_length,))
         if self.freq_min is not None:
-            neg_factor = self._create_gaussian(traces.shape[0], self.freq_min)
+            neg_factor = self._create_gaussian(fft_length, self.freq_min)
         else:
-            neg_factor = np.zeros((traces.shape[0],))
+            neg_factor = np.zeros((fft_length,))
 
         filtered_fft = traces_fft * (pos_factor * (1 - neg_factor))[:, None]
-        filtered_traces = np.real(np.fft.ifft(filtered_fft, axis=0))
+        filtered_traces = np.real(np.fft.ifft(filtered_fft, axis=0))[:signal_length]
 
         if np.issubdtype(dtype, np.integer):
             filtered_traces = filtered_traces.round()
