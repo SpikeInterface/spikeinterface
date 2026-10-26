@@ -43,6 +43,11 @@ class SingleChannelDenoiser(WaveformTransformer):
         Huggingface repo id to download the model from. Must contain a .pt file and a .json file with temporal parameters
     model_name: str, optional
         Name of the model to use. If there are multiple .pt files in the model_folder, this specifies which one to use.
+    model: nn.Module | None, default: None
+        The instantiated torch model to use.
+        If None, the model will be loaded from model_folder or repo_id.
+        Note that in this case the code can only check for the shape of the input layer, not for the correct
+        waveform temporal parameters.
     """
 
     name = "single_channel_denoiser"
@@ -59,11 +64,12 @@ class SingleChannelDenoiser(WaveformTransformer):
         self,
         recording: BaseRecording,
         return_output: bool = True,
-        parents: Optional[List[PipelineNode]] = None,
-        model_folder: Optional[str] = None,
-        repo_id: Optional[str] = None,
-        model_name: Optional[str] = None,
-        device=None,
+        parents: List[PipelineNode] | None = None,
+        model_folder: str | None = None,
+        repo_id: str | None = None,
+        model_name: str | None = None,
+        model: "nn.Module | None" = None,
+        device: str | None = None,
     ):
         assert HAVE_TORCH, "To use the SingleChannelDenoiser you need to install torch"
 
@@ -72,19 +78,34 @@ class SingleChannelDenoiser(WaveformTransformer):
             return_output=return_output,
             parents=parents,
         )
-        if model_folder is None and repo_id is None:
-            raise ValueError("You need to specify either model_folder or repo_id")
-        if model_folder is not None and repo_id is not None:
-            raise ValueError("You cannot specify both model_folder and repo_id")
-        spike_size = self.waveforms_node.nbefore + self.waveforms_node.nafter
-        # Load model
-        self.denoiser, model_relative_path = self.load_model(
-            model_folder=model_folder, repo_id=repo_id, model_name=model_name, spike_size=spike_size, device=device
-        )
+        if model is None:
+            if model_folder is None and repo_id is None:
+                raise ValueError("You need to specify either model_folder or repo_id")
+            if model_folder is not None and repo_id is not None:
+                raise ValueError("You cannot specify both model_folder and repo_id")
+            spike_size = self.waveforms_node.nbefore + self.waveforms_node.nafter
+            # Load model
+            try:
+                self.denoiser, model_relative_path = self.load_model(
+                    model_folder=model_folder, repo_id=repo_id, model_name=model_name, spike_size=spike_size
+                )
+            except RuntimeError as e:
+                raise ValueError(
+                    f"Failed to load model. Check consistency between waveform node shapes and model output layer"
+                )
 
-        self.assert_model_and_waveform_temporal_match(
-            model_folder=model_folder, repo_id=repo_id, model_relative_path=model_relative_path
-        )
+            self.assert_model_and_waveform_temporal_match(
+                model_folder=model_folder, repo_id=repo_id, model_relative_path=model_relative_path
+            )
+        else:
+            self.denoiser = model
+            # Check output model to ensure it matches the expected waveform size
+            expected_output_size = self.waveforms_node.nbefore + self.waveforms_node.nafter
+            model_output_size = model.out.out_features
+            if model_output_size != expected_output_size:
+                raise ValueError(
+                    f"Model output size {model_output_size} does not match expected output size {expected_output_size}"
+                )
 
     def assert_model_and_waveform_temporal_match(
         self,
@@ -150,13 +171,13 @@ class SingleChannelDenoiser(WaveformTransformer):
                     f"Difference between model nbefore {model_nbefore} and waveform extractor nbefore {waveform_node.nbefore} is too large"
                 )
 
+    @staticmethod
     def load_model(
-        self,
-        model_folder: Optional[str] = None,
-        repo_id: Optional[str] = None,
-        model_name: Optional[str] = None,
+        model_folder: str | None = None,
+        repo_id: str | None = None,
+        model_name: str | None = None,
         spike_size: int = 121,
-        device: Optional[str] = None,
+        device: str | None = None,
     ):
         if model_folder is not None:
             pt_files = [f for f in Path(model_folder).iterdir("") if f.suffix == ".pt"]
