@@ -1239,7 +1239,7 @@ class BaseMetricExtension(AnalyzerExtension):
         )
         return params
 
-    def _prepare_data(self, sorting_analyzer, unit_ids=None):
+    def _prepare_data(self, sorting_analyzer, unit_ids=None, periods=None):
         """
         Optional function to prepare shared data for metric computation.
 
@@ -1281,11 +1281,11 @@ class BaseMetricExtension(AnalyzerExtension):
 
         if unit_ids is None:
             unit_ids = sorting_analyzer.unit_ids
-        tmp_data = self._prepare_data(sorting_analyzer=sorting_analyzer, unit_ids=unit_ids)
         if metric_names is None:
             metric_names = self.params["metric_names"]
 
         periods = self.params.get("periods", None)
+        tmp_data = self._prepare_data(sorting_analyzer=sorting_analyzer, unit_ids=unit_ids, periods=periods)
 
         column_names_dtypes = {}
         for metric_name in metric_names:

@@ -3685,6 +3685,24 @@ class AnalyzerExtension:
         self.run_info = self._default_run_info_dict()
         self.data = dict()
 
+    def _close_memmaps(self):
+        """
+        Close any open np.memmap handles held by this extension's data.
+
+        This must run before this extension's on-disk files are deleted/overwritten (e.g. when
+        recomputing an extension that a previous, possibly lazily-loaded, instance is still
+        registered for): on Windows a memory-mapped file cannot be deleted or rewritten while a
+        handle to it is still open. Only memmap-backed entries are touched: other already
+        materialized data (e.g. a DataFrame of previously computed metrics, used to carry forward
+        results that are not being recomputed) is left untouched.
+        """
+        for key, value in list(self.data.items()):
+            if isinstance(value, np.memmap):
+                mmap_obj = getattr(value, "_mmap", None)
+                if mmap_obj is not None:
+                    mmap_obj.close()
+                self.data[key] = None
+
     def set_params(self, save=True, **params):
         """
         Set parameters for the extension and
