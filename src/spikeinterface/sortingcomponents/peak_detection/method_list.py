@@ -14,5 +14,4 @@ detect_peak_methods = {
     "matched_filtering": MatchedFilteringPeakDetector,
     "by_channel": ByChannelPeakDetector,
     "by_channel_torch": ByChannelTorchPeakDetector,
-    "iterative": IterativePeakDetector,
 }
