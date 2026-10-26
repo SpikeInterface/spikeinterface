@@ -321,22 +321,20 @@ class Templates:
         to optimize read/write operations for individual units.
         """
 
-        from .core_tools import _check_zarr_write_is_supported
-
-        _check_zarr_write_is_supported()
-
         # Saves one chunk per unit
-        arrays_chunk = (1, None, None)
-        zarr_group.create_dataset("templates_array", data=self.templates_array, chunks=arrays_chunk)
-        zarr_group.create_dataset("channel_ids", data=self.channel_ids)
-        zarr_group.create_dataset("unit_ids", data=self.unit_ids)
+        # In zarr v3, chunks must be a full tuple with actual dimensions
+        num_units, num_samples, num_channels = self.templates_array.shape
+        arrays_chunk = (1, num_samples, num_channels)
+        zarr_group.create_array("templates_array", data=self.templates_array, chunks=arrays_chunk)
+        zarr_group.create_array("channel_ids", data=self.channel_ids)
+        zarr_group.create_array("unit_ids", data=self.unit_ids)
 
         zarr_group.attrs["sampling_frequency"] = self.sampling_frequency
         zarr_group.attrs["nbefore"] = self.nbefore
         zarr_group.attrs["is_in_uV"] = self.is_in_uV
 
         if self.sparsity_mask is not None:
-            zarr_group.create_dataset("sparsity_mask", data=self.sparsity_mask)
+            zarr_group.create_array("sparsity_mask", data=self.sparsity_mask)
 
         if self.probe is not None:
             probe_group = zarr_group.create_group("probe")
@@ -357,9 +355,6 @@ class Templates:
         """
         import zarr
 
-        from .core_tools import _check_zarr_write_is_supported
-
-        _check_zarr_write_is_supported()
         zarr_group = zarr.open_group(folder_path, mode="w")
 
         self.add_templates_to_zarr_group(zarr_group)
