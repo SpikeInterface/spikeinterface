@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
 
@@ -59,3 +60,47 @@ def test_correlograms_merge():
 
     recomputed_ccgs_not_censored = merged_sorting_analyzer_not_censored.compute("correlograms").get_data()
     assert np.all(computed_ccgs_not_censored[0] == recomputed_ccgs_not_censored[0])
+
+
+@pytest.mark.parametrize("sparse", [False, True])
+def test_acgs_3d_merge(sparse):
+    """
+    A 3D-ACG only depends on the spike train of its own unit, so a unit that takes no part in
+    a merge should keep the 3D-ACG and firing rate quantiles it had before the merge. This test
+    checks that a soft merge gives the same data, for every such unit, as recomputing the 3D-ACGs
+    from scratch on the merged analyzer -- for merge groups at the start, in the middle, and at
+    the end of the unit list, where a kept unit's index does or does not shift -- and for both a
+    sparse and a dense analyzer, on a multi-segment recording.
+    """
+
+    recording, sorting = generate_ground_truth_recording(durations=[10.0, 10.0], num_units=6, seed=2205)
+
+    sorting_analyzer = create_sorting_analyzer(recording=recording, sorting=sorting, sparse=sparse)
+    sorting_analyzer.compute("acgs_3d")
+
+    trial_merges = [
+        [["0", "1"]],
+        [["2", "3"]],
+        [["4", "5"]],
+        [["0", "1"], ["3", "4"]],
+    ]
+
+    for new_id_strategy in ["append", "take_first"]:
+        for merge_unit_groups in trial_merges:
+
+            merged_sorting_analyzer = sorting_analyzer.merge_units(
+                merge_unit_groups=merge_unit_groups, new_id_strategy=new_id_strategy
+            )
+            # bins is excluded from this comparison: it is independently wrong after a merge
+            # (tracks the pre-merge unit count, see spikeinterface/spikeinterface#4737) in a way
+            # this fix does not touch -- a separate defect in how ComputeACG3D builds "bins".
+            computed_acgs_3d, computed_quantiles, _computed_bins = merged_sorting_analyzer.get_extension(
+                "acgs_3d"
+            ).get_data()
+
+            recomputed_acgs_3d, recomputed_quantiles, _recomputed_bins = merged_sorting_analyzer.compute(
+                "acgs_3d"
+            ).get_data()
+
+            assert np.array_equal(computed_acgs_3d, recomputed_acgs_3d)
+            assert np.array_equal(computed_quantiles, recomputed_quantiles)

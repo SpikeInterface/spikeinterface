@@ -27,18 +27,6 @@ def get_template_metric_list():
     return get_single_channel_template_metric_names() + get_multi_channel_template_metric_names()
 
 
-def get_template_metric_names():
-    import warnings
-
-    warnings.warn(
-        "get_template_metric_names is deprecated and will be removed in a version 0.105.0. "
-        "Please use get_template_metric_list instead.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    return get_template_metric_list()
-
-
 class ComputeTemplateMetrics(BaseMetricExtension):
     """
     Compute template metrics including:
@@ -175,6 +163,18 @@ class ComputeTemplateMetrics(BaseMetricExtension):
         # then we can't save this tmp data (important for merges/splits)
         if "peaks_data" not in self.data:
             self.tmp_data_to_save = []
+
+        # We used to use whichever `template_operator` was available in the template computation, but now the user
+        # can specify. Default to  "average" unless the only computed templates were computed with median.
+        if "template_operator" not in self.params:
+            self.params["template_operator"] = "average"
+            if self.sorting_analyzer.has_extension("templates"):
+                available_template_keys = self.sorting_analyzer.get_extension("templates").data.keys()
+                template_keys_which_are_operators = [
+                    key for key in available_template_keys if key in ["average", "median"]
+                ]
+                if len(template_keys_which_are_operators) == 1:
+                    self.params["template_operator"] = template_keys_which_are_operators[0]
 
     def _set_params(
         self,
@@ -353,23 +353,3 @@ def get_default_template_metrics_params(metric_names=None):
         metric_names = list(set(metric_names) & set(default_params.keys()))
         metric_params = {m: default_params[m] for m in metric_names}
         return metric_params
-
-
-def get_default_tm_params(metric_names=None):
-    """
-    Return default dictionary of template metrics parameters.
-
-    Returns
-    -------
-    metric_params : dict
-        Dictionary with default parameters for template metrics.
-    """
-    import warnings
-
-    warnings.warn(
-        "get_default_tm_params is deprecated and will be removed in a version 0.105.0. "
-        "Please use get_default_template_metrics_params instead.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    return get_default_template_metrics_params(metric_names)

@@ -384,6 +384,7 @@ In order to check if your spike sorter is installed, a :code:`try` - :code:`exce
 sorter is implemented in Python (installed with the package :code:`myspikesorter`), this block will look as follows:
 
 .. code-block:: python
+
     import importlib.util
     if importlib.util.find_spec("myspikesorter"):
         HAVE_MYSORTER = True

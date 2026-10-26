@@ -470,6 +470,7 @@ versions.
 
 Here is the list of external sorters accessible using the run_sorter wrapper:
 
+* **dartsort** :code:`run_sorter(sorter_name='dartsort')`
 * **HerdingSpikes2** :code:`run_sorter(sorter_name='herdingspikes')`
 * **IronClust** :code:`run_sorter(sorter_name='ironclust')`
 * **Kilosort**  :code:`run_sorter(sorter_name='kilosort')`
@@ -483,6 +484,7 @@ Here is the list of external sorters accessible using the run_sorter wrapper:
 * **RTSort** :code:`run_sorter(sorter_name='rtsort')`
 * **SpyKING Circus** :code:`run_sorter(sorter_name='spykingcircus')`
 * **Tridesclous** :code:`run_sorter(sorter_name='tridesclous')`
+* **VanillaSort** :code:`run_sorter(sorter_name='vanillasort')` (`parameters and examples <https://github.com/IgarashiAkatuki/VanillaSort/blob/main/docs/spikeinterface.md>`_)
 * **Wave clus** :code:`run_sorter(sorter_name='waveclus')`
 * **Combinato** :code:`run_sorter(sorter_name='combinato')`
 * **HDSort** :code:`run_sorter(sorter_name='hdsort')`

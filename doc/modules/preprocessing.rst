@@ -53,24 +53,25 @@ CMR, and save it to a binary file in the "/path/to/preprocessed" folder. The :co
 
 **NOTE:** some sorters will automatically perform the saving operation internally.
 
+
 The Preprocessing Pipeline
 --------------------------
 
 The module also contains the :code:`PreprocessingPipeline` object which aims to allow users to easily share pipelines across
-labs. The input to create the pipeline is a dictionary of preprocessing steps whose keys are the names of the steps
+labs. The input to create the pipeline is a list of preprocessing steps whose keys are the names of the steps
 and values are dictionaries of parameters. For example, to construct a pipeline consisting of highpass filtering
 with a minimum frequency of 250 Hz followed by whitening with default parameters, and finally a detect and remove
-bad channels step. We first make the appropriate dictionary
+bad channels step. We first make the appropriate list
 
 .. code-block:: python
 
     from spikeinterface.preprocessing import apply_preprocessing_pipeline, PreprocessingPipeline
 
-    preprocessing_dict = {
-        'highpass_filter': {'freq_min': 250},
-        'whiten': {},
-        'detect_and_remove_bad_channels': {},
-    }
+    preprocessing_list = [
+        {'name': 'highpass_filter', 'params': {'freq_min': 250}},
+        {'name': 'whiten'},
+        {'name': 'detect_and_remove_bad_channels'},
+    ]
 
 We can then pass this dictionary to the :code:`apply_preprocessing_pipeline` function to make a preprocessed recording
 
@@ -146,7 +147,7 @@ can also be obtained from the pipeline object directly:
 
 .. code-block:: python
 
-    dict_used_to_make_pipeline = preprocessing_pipeline.preprocessor_dict
+    dict_used_to_make_pipeline = preprocessing_pipeline.preprocessor_list
 
 
 Some preprocessing steps, such as :code:`detect_and_remove_artifacts`, allow you to specify an input recording
@@ -158,11 +159,11 @@ recording to detect artifacts, we can specify it as follows:
 
 .. code-block:: python
 
-    preprocessing_dict = {
-        'bandpass_filter': {'freq_min': 250},
-        'common_reference': {'operator': 'median', 'reference': 'global'},
-        'detect_and_remove_artifacts': {'recording_to_detect': 'pipeline[bandpass_filter]'},
-    }
+    preprocessing_list = [
+        {'name': 'bandpass_filter', 'params': {'freq_min': 250}},
+        {'name': 'common_reference', 'params': {'operator': 'median', 'reference': 'global'}},
+        {'name': 'detect_and_remove_artifacts', 'params': {'recording_to_detect': 'pipeline[bandpass_filter]'}},
+    ]
 
 This will detect artifacts on the output of the "bandpass_filter" step, but the artifacts will be removed on the output
 of the "common_reference" step (since the parent recording for "detect_and_remove_artifacts" is by default the output of
@@ -173,11 +174,11 @@ For example, if we want to detect artifacts on the raw recording, we can specify
 
 .. code-block:: python
 
-    preprocessing_dict = {
-        'bandpass_filter': {'freq_min': 250},
-        'common_reference': {'operator': 'median', 'reference': 'global'},
-        'detect_and_remove_artifacts': {'recording_to_detect': 'pipeline[raw]'},
-    }
+    preprocessing_list = [
+        {'name': 'bandpass_filter', 'params': {'freq_min': 250}},
+        {'name': 'common_reference', 'params': {'operator': 'median', 'reference': 'global'}},
+        {'name': 'detect_and_remove_artifacts', 'params': {'recording_to_detect': 'pipeline[raw]'}},
+    ]
 
 
 Impact on recording dtype

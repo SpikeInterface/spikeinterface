@@ -5,6 +5,7 @@ import warnings
 import importlib.util
 
 import numpy as np
+from probeinterface import Probe, ProbeGroup
 
 from spikeinterface import get_global_tmp_folder
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
@@ -135,6 +136,20 @@ def read_nwbfile(
         raise ValueError("Provide either file_path or file, not both")
     if file_path is None and file is None:
         raise ValueError("Provide either file_path or file")
+
+    if backend == "zarr" and file is None and _get_zarr_format(file_path, stream_mode, storage_options) == 2:
+        from hdmf_zarr import NWBZarrV2IO
+
+        # hdmf-zarr>=0.14 reads zarr v2 files with a separate read-only IO. Files written by hdmf-zarr<0.14
+        # pickle their object references (e.g. the "group" column of the electrodes table), so pickle is allowed
+        io = NWBZarrV2IO(
+            path=str(file_path),
+            mode="r",
+            load_namespaces=True,
+            allow_pickle=True,
+            storage_options=storage_options,
+        )
+        return io.read()
 
     open_file = read_file_from_backend(
         file_path=file_path,
@@ -302,16 +317,60 @@ def _get_backend_from_local_file(file_path: str | Path) -> str:
         else:
             raise RuntimeError(f"{file_path} is not a valid HDF5 file!")
     elif file_path.is_dir():
-        try:
-            import zarr
-
-            with zarr.open(file_path, "r") as f:
-                backend = "zarr"
-        except:
+        # The root metadata file is checked instead of opening the folder, because zarr>=3 cannot open
+        # the consolidated metadata of the zarr v2 files written by hdmf-zarr<0.14
+        if _get_zarr_format(file_path) is None:
             raise RuntimeError(f"{file_path} is not a valid Zarr folder!")
+        backend = "zarr"
     else:
         raise RuntimeError(f"File {file_path} is not an existing file or folder!")
     return backend
+
+
+def _zarr_group_child_names(group):
+    """
+    Return the names of the immediate children of a zarr group without parsing their metadata.
+
+    zarr-python 3.x eagerly reads and validates every child's metadata when iterating
+    ``group.keys()``. Some arrays written by hdmf-zarr (e.g. variable-length string columns
+    with an integer ``fill_value``) cannot be parsed by zarr-python 3.x and make the whole
+    iteration fail. Listing the store directly avoids touching the children's metadata.
+    """
+    if hasattr(group, "store_path"):  # zarr v3
+        from zarr.core.sync import sync
+
+        async def _collect():
+            return [key async for key in group.store.list_dir(group.path)]
+
+        # Filter out this group's own metadata files (".zgroup", ".zattrs", "zarr.json", ...).
+        # list_dir does not guarantee an order, so sort for deterministic traversal (matches h5py).
+        names = [name for name in sync(_collect()) if not name.startswith(".") and name != "zarr.json"]
+        return sorted(names)
+    else:  # zarr v2
+        return list(group.keys())
+
+
+def _get_zarr_format(file_path: str | Path, stream_mode=None, storage_options: dict | None = None) -> int | None:
+    """
+    Return the zarr format (2 or 3) of a zarr folder, local or streamed with stream_mode="zarr", from its
+    root metadata file, or None if the folder is not a zarr group.
+    """
+    if stream_mode == "zarr":
+        import fsspec
+
+        file_system, root = fsspec.core.url_to_fs(str(file_path), **(storage_options or {}))
+        root = root.rstrip("/")
+        exists = lambda name: file_system.exists(f"{root}/{name}")
+    elif stream_mode is None:
+        folder_path = Path(file_path)
+        exists = lambda name: (folder_path / name).is_file()
+    else:
+        return None
+    if exists("zarr.json"):
+        return 3
+    if exists(".zgroup"):
+        return 2
+    return None
 
 
 def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_type="ElectricalSeries", backend="hdf5"):
@@ -323,15 +382,24 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
         import h5py
 
         group_class = h5py.Group
+        child_names = list(group.keys())
     else:
         import zarr
 
         group_class = zarr.Group
+        child_names = _zarr_group_child_names(group)
 
     if result is None:
         result = []
 
-    for neurodata_name, value in group.items():
+    for neurodata_name in child_names:
+        try:
+            value = group[neurodata_name]
+        except Exception:
+            # Skip children whose metadata cannot be parsed (e.g. hdmf-zarr arrays with a
+            # fill_value that zarr-python 3.x rejects). These are never groups, so skipping
+            # them is safe when searching for a neurodata_type.
+            continue
         # Check if it's a group and if it has the neurodata_type
         if isinstance(value, group_class):
             current_path = f"{path}/{neurodata_name}" if path else neurodata_name
@@ -346,14 +414,16 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
 def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, electrical_series, backend="hdf5"):
     """
     Retrieves the indices of the electrodes from the electrical series.
-    For the Zarr backend, the electrodes are stored in the electrical_series.attrs["zarr_link"].
+    For the Zarr backend, the electrodes are stored in the electrical_series.attrs["_LINKS"]
+    or legacy electrical_series.attrs["zarr_link"].
+    See https://github.com/hdmf-dev/hdmf-zarr/pull/336
     """
     if "electrodes" not in electrical_series:
         if backend == "zarr":
             import zarr
 
             # links must be resolved
-            zarr_links = electrical_series.attrs["zarr_link"]
+            zarr_links = electrical_series.attrs.get("_LINKS", electrical_series.attrs.get("zarr_link", []))
             electrodes_path = None
             for zarr_link in zarr_links:
                 if zarr_link["name"] == "electrodes":
@@ -397,6 +467,26 @@ class _NWBReader:
         if stream_mode is None and file is None:
             return _get_backend_from_local_file(file_path)
         return "zarr" if stream_mode == "zarr" else "hdf5"
+
+    @staticmethod
+    def _reading_method(use_pynwb, file_path=None, file=None, stream_mode=None, storage_options=None):
+        # With zarr-python 3, the in-house zarr reader only reads zarr v3 files. Zarr v2 files (written by
+        # hdmf-zarr<0.14) are read with pynwb, where hdmf-zarr keeps the backward compatibility code for them.
+        if use_pynwb:
+            return "use_pynwb"
+        backend = _NWBReader._storage_backend(file_path, file, stream_mode)
+        if backend == "zarr" and _get_zarr_format(file_path, stream_mode, storage_options) == 2:
+            if not HAVE_PYNWB or importlib.util.find_spec("hdmf_zarr") is None:
+                raise ImportError(
+                    "To read zarr v2 NWB files with zarr-python 3, install pynwb and hdmf-zarr>=0.14, which requires "
+                    'Python 3.12 or newer: \n\n pip install pynwb "hdmf-zarr>=0.14"\n\n'
+                )
+            warnings.warn(
+                f"{file_path} is a zarr v2 NWB file, which is read with pynwb. This can be slower than "
+                "the default reader, which only reads zarr v3 files."
+            )
+            return "use_pynwb"
+        return f"use_{backend}"
 
     def _open_handle(self, *, file_path, file, stream_mode, cache, stream_cache_path, storage_options=None):
         # Open the file handle: a pynwb NWBFile, or a raw h5py.File / zarr group.
@@ -998,10 +1088,7 @@ class NwbRecordingExtractor(BaseRecording):
         if use_pynwb and not HAVE_PYNWB:
             raise ImportError(self.installation_mesg)
 
-        if use_pynwb:
-            reading_method = "use_pynwb"  # the reader detects hdf5 vs zarr itself for pynwb
-        else:
-            reading_method = f"use_{_NWBReader._storage_backend(file_path, file, self.stream_mode)}"
+        reading_method = _NWBReader._reading_method(use_pynwb, file_path, file, self.stream_mode, storage_options)
 
         self._reader = _NWBReader(
             reading_method=reading_method,
@@ -1039,9 +1126,21 @@ class NwbRecordingExtractor(BaseRecording):
         self.set_channel_gains(gains_to_uV)
         self.set_channel_offsets(offsets_to_uV)
         locations = self._reader.locations()
-        if locations is not None:
-            self.set_channel_locations(locations)
         groups = self._reader.groups()
+        if locations is not None:
+            # rel_x, rel_y and rel_z are relative to each electrode group, so each group is its own
+            # probe. Two groups can then share positions (e.g. two identical probes in one
+            # ElectricalSeries), so the overlap check across probes is skipped.
+            probegroup = ProbeGroup()
+            for group_name in np.unique(groups):
+                channel_indices = np.flatnonzero(groups == group_name)
+                probe = Probe(ndim=2)
+                probe.set_contacts(locations[channel_indices, :2], shapes="circle", shape_params={"radius": 1})
+                probe.set_device_channel_indices(channel_indices)
+                if locations.shape[1] == 3:
+                    probe = probe.to_3d(axes="xy")
+                probegroup.add_probe(probe)
+            self.set_probegroup(probegroup, check_overlap=False)
         if groups is not None:
             self.set_channel_groups(groups)
 
@@ -1069,7 +1168,7 @@ class NwbRecordingExtractor(BaseRecording):
                 self.set_property(property_name, values)
 
         if stream_mode is None and file_path is not None:
-            file_path = str(Path(file_path).resolve())
+            file_path = str(Path(file_path).absolute())
 
         if stream_mode == "fsspec" and stream_cache_path is not None:
             stream_cache_path = str(Path(self.stream_cache_path).absolute())
@@ -1301,10 +1400,9 @@ class NwbSortingExtractor(BaseSorting):
         if use_pynwb and not HAVE_PYNWB:
             raise ImportError(self.installation_mesg)
 
-        if use_pynwb:
-            reading_method = "use_pynwb"
-        else:
-            reading_method = f"use_{_NWBReader._storage_backend(file_path, stream_mode=stream_mode)}"
+        reading_method = _NWBReader._reading_method(
+            use_pynwb, file_path, stream_mode=stream_mode, storage_options=storage_options
+        )
 
         self._reader = _NWBReader(
             reading_method=reading_method,
@@ -1403,7 +1501,7 @@ class NwbSortingExtractor(BaseSorting):
             self.extra_requirements.append(stream_mode)
 
         if stream_mode is None and file_path is not None:
-            file_path = str(Path(file_path).resolve())
+            file_path = str(Path(file_path).absolute())
 
         if storage_options is not None and stream_mode == "zarr":
             warnings.warn(
@@ -1454,6 +1552,23 @@ class NwbSortingExtractor(BaseSorting):
         # segment_index stays 0 for the single segment.
         self._cached_spike_vector = spikes
         self._cached_spike_vector_segment_slices = np.array([[0, num_spikes]], dtype="int64")
+
+    def get_last_spike_frame(self, segment_index: int | None = None) -> int:
+        # Performance: the generic BaseSorting version builds the full spike vector to take one maximum.
+        # spike_times_index holds the end offset of each unit's spikes, so reading only the last spike of
+        # each unit is enough. This assumes spike times are ordered within each unit, an NWB best practice
+        # checked by nwbinspector, so each unit's last stored time is its latest.
+        segment_index = self._check_segment_index(segment_index)
+        segment = self.segments[segment_index]
+        unit_ends = np.asarray(segment.spike_times_index_data[:], dtype="int64")
+        unit_counts = np.diff(unit_ends, prepend=0)
+        last_spike_positions = unit_ends[unit_counts > 0] - 1
+        if last_spike_positions.size == 0:
+            return 0
+        last_spike_times = np.asarray(segment.spike_times_data[last_spike_positions], dtype="float64")
+        last_spike_time = last_spike_times.max()
+        last_spike_frame = segment._times_to_samples(last_spike_time)
+        return int(last_spike_frame)
 
     @staticmethod
     def fetch_available_units_tables(
@@ -1611,7 +1726,9 @@ def _find_timeseries_from_backend(group, path="", result=None, backend="hdf5"):
     if result is None:
         result = []
 
-    for name, value in group.items():
+    # zarr>=3 groups have no `items()`, `keys()` works for h5py and both zarr versions
+    for name in group.keys():
+        value = group[name]
         if isinstance(value, group_class):
             current_path = f"{path}/{name}" if path else name
             if value.attrs.get("neurodata_type") == "TimeSeries":
@@ -1690,10 +1807,7 @@ class NwbTimeSeriesExtractor(BaseRecording):
         if use_pynwb and not HAVE_PYNWB:
             raise ImportError(self.installation_mesg)
 
-        if use_pynwb:
-            reading_method = "use_pynwb"
-        else:
-            reading_method = f"use_{_NWBReader._storage_backend(file_path, file, stream_mode)}"
+        reading_method = _NWBReader._reading_method(use_pynwb, file_path, file, stream_mode, storage_options)
 
         self._reader = _NWBReader(reading_method=reading_method, timeseries_path=timeseries_path)
         self._reader.load_timeseries(

@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 import numpy as np
 
@@ -259,6 +261,63 @@ def test_compute_objective():
     # Assert: check shape and equivalence to expected_objective
     assert objective.shape == (num_templates, chunk_len + num_samples - 1)
     assert np.allclose(objective, expected_objective)
+
+
+def test_find_strict_peaks_matches_argrelmax():
+    from scipy.signal import argrelmax
+
+    rng = np.random.default_rng(0)
+    nan_objective = rng.random(200).astype(np.float32)
+    nan_objective[50] = np.nan
+    cases = [
+        (rng.random(2000).astype(np.float32), 5, 0.3),
+        (rng.random(50), 60, -1.0),
+        (rng.random(50), 61, -1.0),
+        (np.array([0.0, 1.0, 1.0, 1.0, 0.5, 2.0, 2.0, 0.0], dtype=np.float32), 2, -1.0),
+        (np.array([0.0, 3.0, 0.0, -np.inf, -np.inf, 0.0, 2.0, 0.0], dtype=np.float32), 2, -1.0),
+        (nan_objective, 4, 0.2),
+        (rng.random(2).astype(np.float32), 1, -1.0),
+        (rng.random(500).astype(np.float32), 3, 10.0),
+    ]
+
+    for objective, order, threshold in cases:
+        expected = argrelmax(objective, order=order)[0]
+        expected = expected[objective[expected] > threshold]
+        actual = wobble._find_strict_peaks(objective, order, threshold)
+        assert np.array_equal(actual, expected)
+
+
+def test_find_peaks_matches_argrelmax_windowing(monkeypatch):
+    from scipy.signal import argrelmax
+
+    cases = [
+        ([0.0, 0.0, 1.0, 4.0, 1.0, 3.0, 1.0, 0.0, 0.0], 3, 2.0),
+        ([0.0, 0.0, 0.0, 5.0, 1.0, 2.0, 1.0, 4.0, 0.0, 0.0], 4, 1.5),
+        ([0.0, 0.0, 2.0, 1.0, 2.0, 0.0, 0.0], 3, 3.0),
+    ]
+
+    def no_high_res_shift(cls, spike_time_indices, *args):
+        zeros = np.zeros(spike_time_indices.size, dtype=np.int64)
+        return zeros, zeros, np.zeros(0, dtype=np.int64), np.zeros(0)
+
+    monkeypatch.setattr(wobble.WobbleMatch, "calculate_high_res_shift", classmethod(no_high_res_shift))
+    for objective_maximum, num_samples, threshold in cases:
+        objective_normalized = np.asarray([objective_maximum], dtype=np.float32)
+        window = objective_normalized[0, num_samples - 1 : -num_samples]
+        expected_indices = argrelmax(window, order=num_samples - 1)[0]
+        expected_indices = expected_indices[window[expected_indices] > threshold]
+        spike_train, scalings, distance_metric = wobble.WobbleMatch.find_peaks(
+            objective=objective_normalized,
+            objective_normalized=objective_normalized,
+            spike_trains=np.zeros((0, 2), dtype=np.int64),
+            params=SimpleNamespace(threshold=threshold, jitter_factor=1),
+            template_data=None,
+            template_meta=SimpleNamespace(num_samples=num_samples),
+        )
+
+        assert np.array_equal(spike_train[:, 0], expected_indices)
+        assert np.array_equal(scalings, np.ones(expected_indices.size, dtype=np.float32))
+        assert np.array_equal(distance_metric, window[expected_indices])
 
 
 def test_compute_scale_amplitudes():

@@ -8,12 +8,13 @@ from spikeinterface.core import (
 job_kwargs = dict(n_jobs=2, progress_bar=True, chunk_duration="1s")
 
 
-def make_small_analyzer():
+def make_small_analyzer(folder):
     recording, sorting = generate_ground_truth_recording(
         durations=[10.0],
         num_units=10,
         seed=1205,
     )
+    recording = recording.save(folder=folder / "rec_for_small_analyzer", format="binary")
 
     sorting = sorting.select_units(["2", "7", "0"], ["#3", "#9", "#4"])
 
@@ -25,6 +26,7 @@ def make_small_analyzer():
         "waveforms": {},
         "templates": {"operators": ["average", "median"]},
         "spike_amplitudes": {},
+        "amplitude_scalings": {},
         "spike_locations": {},
         "principal_components": {},
     }
@@ -35,12 +37,12 @@ def make_small_analyzer():
 
 
 @pytest.fixture(scope="module")
-def small_sorting_analyzer():
-    return make_small_analyzer()
+def small_sorting_analyzer(create_cache_folder):
+    return make_small_analyzer(create_cache_folder)
 
 
 @pytest.fixture(scope="module")
-def sorting_analyzer_simple():
+def sorting_analyzer_simple(create_cache_folder):
     # we need high firing rate for amplitude_cutoff
     recording, sorting = generate_ground_truth_recording(
         durations=[
@@ -63,6 +65,7 @@ def sorting_analyzer_simple():
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=1205,
     )
+    recording = recording.save(folder=create_cache_folder / "rec_for_sorting_analyzer_simple", format="binary")
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=True)
 
@@ -70,6 +73,6 @@ def sorting_analyzer_simple():
     sorting_analyzer.compute("noise_levels")
     sorting_analyzer.compute("waveforms", **job_kwargs)
     sorting_analyzer.compute("templates")
-    sorting_analyzer.compute(["spike_amplitudes", "spike_locations"], **job_kwargs)
+    sorting_analyzer.compute(["spike_amplitudes", "spike_locations", "amplitude_scalings"], **job_kwargs)
 
     return sorting_analyzer

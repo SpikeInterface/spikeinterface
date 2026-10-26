@@ -136,7 +136,6 @@ def test_waveform_tools(create_cache_folder):
                 all_waveforms = extract_waveforms_to_single_buffer(
                     recording,
                     spikes,
-                    unit_ids,
                     nbefore,
                     nafter,
                     return_in_uV=False,
@@ -156,6 +155,106 @@ def test_waveform_tools(create_cache_folder):
 
     _check_all_wf_equal(list_wfs_dense)
     _check_all_wf_equal(list_wfs_sparse)
+
+
+@pytest.mark.parametrize("sparse", [False, True])
+def test_extract_waveforms_to_single_buffer_zarr(tmp_path, sparse):
+    # the "zarr" mode writes waveforms directly to a zarr dataset. Workers return their block and
+    # the main process writes it (single writer), so parallel writes must match a reference and
+    # never race, even with n_jobs > 1.
+    import zarr
+
+    recording, sorting = get_dataset()
+    sampling_frequency = recording.sampling_frequency
+    nbefore = ms_to_samples(3.0, sampling_frequency)
+    nafter = ms_to_samples(4.0, sampling_frequency)
+    spikes = sorting.to_spike_vector()
+    unit_ids = sorting.unit_ids
+    dtype = recording.get_dtype()
+
+    if sparse:
+        sparsity_mask = np.random.RandomState(0).randint(
+            0, 2, size=(unit_ids.size, recording.channel_ids.size), dtype="bool"
+        )
+    else:
+        sparsity_mask = None
+
+    common = dict(return_in_uV=False, dtype=dtype, sparsity_mask=sparsity_mask, copy=True, progress_bar=False)
+
+    # reference computed in shared memory, single job
+    reference = extract_waveforms_to_single_buffer(
+        recording, spikes, nbefore, nafter, mode="shared_memory", n_jobs=1, **common
+    )
+
+    # zarr mode, single and parallel jobs, must match the reference and reload from disk
+    for n_jobs in (1, 2):
+        dataset_path = tmp_path / f"analyzer_{sparse}_{n_jobs}.zarr" / "extensions" / "waveforms" / "waveforms"
+        zarr_waveforms = extract_waveforms_to_single_buffer(
+            recording,
+            spikes,
+            nbefore,
+            nafter,
+            mode="zarr",
+            file_path=dataset_path,
+            n_jobs=n_jobs,
+            chunk_duration="0.3s",
+            **common,
+        )
+        assert isinstance(zarr_waveforms, zarr.Array)
+        assert zarr_waveforms.shape == reference.shape
+        assert np.array_equal(reference, zarr_waveforms[:])
+
+        # reload from disk
+        store_path = tmp_path / f"analyzer_{sparse}_{n_jobs}.zarr"
+        reloaded = zarr.open(str(store_path), mode="r")["extensions"]["waveforms"]["waveforms"]
+        assert np.array_equal(reference, reloaded[:])
+
+
+def test_waveforms_at_segment_borders(tmp_path):
+    # spikes near the segment borders are partially filled: samples outside of the segment are 0
+    from spikeinterface.core import NumpySorting
+
+    recording = generate_recording(num_channels=4, durations=[2.0, 3.0], seed=0)
+    nbefore, nafter = 30, 60
+    samples_list, labels_list = [], []
+    for segment_index in range(recording.get_num_segments()):
+        num_samples = recording.get_num_samples(segment_index=segment_index)
+        samples_list.append(np.array([5, 1000, num_samples - 10]))
+        labels_list.append(np.array([0, 1, 0]))
+    sorting = NumpySorting.from_samples_and_labels(samples_list, labels_list, recording.sampling_frequency)
+    spikes = sorting.to_spike_vector()
+
+    expected = np.zeros((spikes.size, nbefore + nafter, recording.get_num_channels()), dtype="float32")
+    for i, spike in enumerate(spikes):
+        segment_index = spike["segment_index"]
+        num_samples = recording.get_num_samples(segment_index=segment_index)
+        start, end = spike["sample_index"] - nbefore, spike["sample_index"] + nafter
+        traces = recording.get_traces(
+            start_frame=max(start, 0), end_frame=min(end, num_samples), segment_index=segment_index
+        )
+        expected[i, max(0, -start) : max(0, -start) + traces.shape[0]] = traces
+
+    job_kwargs = dict(n_jobs=1, chunk_duration="0.5s", progress_bar=False)
+    common = dict(return_in_uV=False, dtype="float32", **job_kwargs)
+    shared = extract_waveforms_to_single_buffer(recording, spikes, nbefore, nafter, mode="shared_memory", **common)
+    zarr_waveforms = extract_waveforms_to_single_buffer(
+        recording, spikes, nbefore, nafter, mode="zarr", file_path=tmp_path / "wf.zarr" / "waveforms", **common
+    )
+    by_units = extract_waveforms_to_buffers(
+        recording, spikes, sorting.unit_ids, nbefore, nafter, mode="shared_memory", copy=True, **common
+    )
+    np.testing.assert_array_equal(shared, expected)
+    np.testing.assert_array_equal(zarr_waveforms[:], expected)
+    for unit_index, unit_id in enumerate(sorting.unit_ids):
+        np.testing.assert_array_equal(by_units[unit_id], expected[spikes["unit_index"] == unit_index])
+
+    templates = estimate_templates_with_accumulator(
+        recording, spikes, sorting.unit_ids, nbefore, nafter, return_in_uV=False, **job_kwargs
+    )
+    for unit_index in range(sorting.unit_ids.size):
+        np.testing.assert_allclose(
+            templates[unit_index], expected[spikes["unit_index"] == unit_index].mean(axis=0), rtol=1e-5, atol=1e-5
+        )
 
 
 def test_estimate_templates_with_accumulator():

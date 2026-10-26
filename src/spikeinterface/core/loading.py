@@ -196,7 +196,7 @@ def _guess_object_from_local_folder(folder):
         # before the SortingAnlazer, it was WaveformExtractor (v<0.101)
         return "WaveformExtractor"
     elif (folder / f"si_folder.json").is_file():
-        # In later versions (0.94<v<0.102) we use the si_folder.json file
+        # In later versions (0.94<v<=0.105) we use the si_folder.json file
         # This should be Recording | Sorting
         return "Recording|Sorting"
     else:
@@ -245,7 +245,7 @@ def _load_object_from_folder(folder, object_type: str, **kwargs):
                 f = folder / f"cached.{dump_ext}"
                 if f.is_file():
                     si_file = f
-        return BaseExtractor.load(si_file, base_folder=folder)
+        return load(si_file, base_folder=folder)
 
     elif object_type.startswith("Group"):
 
@@ -270,11 +270,15 @@ def _guess_object_from_zarr(zarr_folder):
         return _guess_object_from_dict(spikeinterface_info)
 
     # here it is the old fashion and a bit ambiguous
-    if "templates_array" in zarr_root.keys():
+    # get_zarr_group_keys is used to be compatible with both zarr v2 and zarr v3 groups
+    from .zarr_tools import get_zarr_group_keys
+
+    root_keys = get_zarr_group_keys(zarr_root)
+    if "templates_array" in root_keys:
         return "Templates"
-    elif "channel_ids" in zarr_root.keys() and "unit_ids" not in zarr_root.keys():
+    elif "channel_ids" in root_keys and "unit_ids" not in root_keys:
         return "Recording"
-    elif "unit_ids" in zarr_root.keys() and "channel_ids" not in zarr_root.keys():
+    elif "unit_ids" in root_keys and "channel_ids" not in root_keys:
         return "Sorting"
 
 
@@ -292,23 +296,17 @@ def _load_object_from_zarr(folder_or_url, object_type, **kwargs):
     elif object_type == "Recording":
         from .zarrextractors import read_zarr_recording
 
-        storage_options = kwargs.get("storage_options", None)
-        load_compression_ratio = kwargs.get("load_compression_ratio", False)
-        recording = read_zarr_recording(
-            folder_or_url, storage_options=storage_options, load_compression_ratio=load_compression_ratio
-        )
+        recording = read_zarr_recording(folder_or_url, **kwargs)
         return recording
     elif object_type == "Sorting":
         from .zarrextractors import read_zarr_sorting
 
-        storage_options = kwargs.get("storage_options", None)
-        sorting = read_zarr_sorting(folder_or_url, storage_options=storage_options)
+        sorting = read_zarr_sorting(folder_or_url, **kwargs)
         return sorting
     elif object_type == "Recording|Sorting":
         # This case shoudl deprecated soon because the read_zarr is ultra ambiguous
         # just testing if the zarr contains unit_ids or channel_ids but many object also contains it (see template)!!!!
         from .zarrextractors import read_zarr
 
-        storage_options = kwargs.get("storage_options", None)
-        rec_or_sorting = read_zarr(folder_or_url, storage_options=storage_options)
+        rec_or_sorting = read_zarr(folder_or_url, **kwargs)
         return rec_or_sorting

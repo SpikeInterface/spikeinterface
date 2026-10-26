@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 import numpy as np
 
@@ -74,6 +76,7 @@ def test_compute_quality_metrics(sorting_analyzer_simple):
 def test_merging_quality_metrics(sorting_analyzer_simple):
 
     sorting_analyzer = sorting_analyzer_simple
+    sorting_analyzer.compute("principal_components")
 
     metrics = compute_quality_metrics(
         sorting_analyzer,
@@ -84,7 +87,9 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
     )
 
     # sorting_analyzer_simple has ten units
-    new_sorting_analyzer = sorting_analyzer.merge_units([["0", "1"]])
+    with warnings.catch_warnings():
+        warnings.filterwarnings("error", message="No other units found in the vicinity")
+        new_sorting_analyzer, new_unit_ids = sorting_analyzer.merge_units([["0", "1"]], return_new_unit_ids=True)
     new_metrics = new_sorting_analyzer.get_extension("quality_metrics").get_data()
 
     # we should copy over the metrics after merge
@@ -95,6 +100,9 @@ def test_merging_quality_metrics(sorting_analyzer_simple):
 
     # 10 units vs 9 units
     assert len(metrics.index) > len(new_metrics.index)
+
+    merged_unit_metrics = new_metrics.loc[new_unit_ids[0]]
+    assert merged_unit_metrics["nn_hit_rate"] != 1 or merged_unit_metrics["nn_miss_rate"] != 0
 
 
 def test_compute_quality_metrics_recordingless(sorting_analyzer_simple):

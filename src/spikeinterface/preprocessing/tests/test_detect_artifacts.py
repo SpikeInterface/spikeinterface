@@ -26,10 +26,18 @@ def test_detect_artifact_by_envelope(debug_plots):
     for start, stop in zip(artifact_starts, artifact_stops):
         data[start:stop, :] = sat_value
 
+    # one long artifact straddling a chunk boundary, to check that periods split across chunks
+    # are recovered as a single period
+    data[chunk_size - 500 : chunk_size + 500, :] = sat_value
+
     recording = NumpyRecording(data, sampling_frequency)
 
     artifacts, envelope = detect_artifact_periods_by_envelope(
-        recording, apply_envelope_common_reference=False, return_envelope=True, random_slices_kwargs={"seed": 2308}
+        recording,
+        apply_envelope_common_reference=False,
+        return_envelope=True,
+        random_slices_kwargs={"seed": 2308},
+        job_kwargs={"chunk_size": chunk_size, "n_jobs": 1},
     )
 
     if debug_plots:
@@ -42,6 +50,24 @@ def test_detect_artifact_by_envelope(debug_plots):
 
     # it finds some artifacts
     assert len(artifacts) > 0
+
+    # chunking must not change the result: the same periods are found when the whole
+    # recording is processed as a single chunk (edges can differ by a few samples because
+    # the gaussian filter is applied chunk-wise)
+    artifacts_single_chunk = detect_artifact_periods_by_envelope(
+        recording,
+        apply_envelope_common_reference=False,
+        random_slices_kwargs={"seed": 2308},
+        job_kwargs={"chunk_size": data.shape[0], "n_jobs": 1},
+    )
+    assert artifacts.size == artifacts_single_chunk.size
+    for field in ("start_sample_index", "end_sample_index"):
+        assert np.allclose(artifacts[field], artifacts_single_chunk[field], atol=100)
+
+    # the artifact straddling the chunk boundary is detected as one single period
+    straddling = artifacts[artifacts["start_sample_index"] < chunk_size]
+    straddling = straddling[straddling["end_sample_index"] > chunk_size]
+    assert straddling.size == 1
 
 
 def test_detect_saturation_periods(debug_plots):

@@ -175,8 +175,9 @@ the spiketrain, which are optimally organized for specific types of calculation.
 
 Computations involving combined recording-sorting information, such as fetching recording chunks and
 spiketrain chunks to accumulate waveforms, are often quickest when spikes are time-ordered. For
-this use case, we  use an internal representation called the `spike_vector`. This is a unique buffer:
-a numpy.array with dtype `[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
+this use case, we use an internal representation called the `spike_vector`, obtained by calling
+`sorting.to_spike_vector()`. This is a unique buffer: a numpy.array with dtype
+`[("sample_index", "int64"), ("unit_index", "int64"), ("segment_index", "int64")]`.
 
 For computations which are done unit-by-unit, like computing isi-violations per unit, it is better that
 spikes from a single unit are concurrent in memory. For these other cases, we can re-order the
@@ -185,8 +186,8 @@ spikes from a single unit are concurrent in memory. For these other cases, we ca
 * order by unit, then segment, then sample
 * order by segment, then unit, then sample
 
-This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done, the
-reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
+This is done using `sorting.to_reordered_spike_vector()`. The first time a reordering is done,
+the reordered spiketrain is cached in memory by default. Users should rarely have to worry about these
 details, but developers should keep memory layout in mind when implementing new features.
 
 
@@ -437,7 +438,7 @@ All computed extensions will be automatically propagated or merged when curating
 
 
 Handling very large datasets: ``lazy`` mode
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For very large datasets with tens-to-hundreds millions of spikes, the :code:`SortingAnalyzer` computations can be very
 memory intensive. By default, in fact, the :code:`SortingAnalyzer` computes and stores all the data in memory.
@@ -643,8 +644,8 @@ used when creating a :py:class:`~spikeinterface.core.SortingAnalyzer` which caus
 .. _save_load:
 
 
-Saving, loading, and compression
---------------------------------
+Saving and loading
+------------------
 
 The Base SpikeInterface objects (:py:class:`~spikeinterface.core.BaseRecording`,
 :py:class:`~spikeinterface.core.BaseSorting`, and
@@ -677,22 +678,42 @@ This saving/loading features enables us to store SpikeInterface objects efficien
     # save sorting to NPZ
     sorting_saved = sorting.save(folder="sorting")
 
+Compression
+-----------
+
 **NOTE:** the Zarr format by default applies data compression with :code:`Blosc.Zstandard` codec with BIT shuffling.
 Any other Zarr-compatible compressors and filters can be applied using the :code:`compressor` and :code:`filters`
-arguments. For example, in this case we apply `LZMA <https://numcodecs.readthedocs.io/en/stable/lzma.html>`_
-and use a `Delta <https://numcodecs.readthedocs.io/en/stable/delta.html>`_ filter:
+arguments. For example, in this case we apply ``LZMA <https://numcodecs.readthedocs.io/en/stable/compression/lzma.html>`_
+and use a `Delta <https://numcodecs.readthedocs.io/en/stable/filter/delta.html>`_ filter:
 
 
 .. code-block:: python
 
-    from numcodecs import LZMA, Delta
+    from zarr.codecs import LZMA, Delta
 
-    compressor = LZMA()
+    compressors = [LZMA()]
     filters = [Delta(dtype="int16")]
 
-    recording_custom_comp = recording.save(folder="recording", format="zarr",
-                                           compressor=compressor, filters=filters,
-                                           **job_kwargs)
+    recording_custom_comp = recording.save(
+        folder="recording",
+        format="zarr",
+        compressor=compressors,
+        filters=filters,
+        **job_kwargs
+    )
+
+Zarr stores each dataset as a grid of **chunks**: the unit of compression and of reading, so a chunk is always
+decompressed as a whole. When saving a recording, the chunk size along time is set by the job parameters
+(e.g. :code:`chunk_duration="1s"`). Zarr v3 also supports **shards**, which group many chunks in a single file/object.
+Chunks are still compressed and read independently, but sharding drastically reduces the number of files, which is
+useful on cluster file systems and cloud storage. A shard must be a multiple of the chunk size, which is set with
+:code:`shard_factor` (shard size = :code:`shard_factor` x chunk size). For example, 1 s chunks and 20 s shards:
+
+.. code-block:: python
+
+    job_kwargs = dict(n_jobs=8, chunk_duration="1s")
+    recording_sharded = recording.save(folder="recording", format="zarr",
+                                       shard_factor=20, **job_kwargs)
 
 
 Parallel processing and job_kwargs
@@ -701,7 +722,7 @@ Parallel processing and job_kwargs
 The :py:mod:`~spikeinterface.core` module also contains the basic tools used throughout SpikeInterface for parallel
 processing of recordings.
 In general, parallelization is achieved by splitting the recording in many small time chunks and processing
-them in parallel (for more details, see the :py:class:`~spikeinterface.core.ChunkRecordingExecutor` class).
+them in parallel (for more details, see the :py:class:`~spikeinterface.core.TimeSeriesChunkExecutor` class).
 
 Many functions support parallel processing (e.g., :py:func:`~spikeinterface.core.extract_waveforms`, :code:`save`,
 and many more). All of these functions, in addition to other arguments, also accept the so-called **job_kwargs**.
@@ -1006,7 +1027,7 @@ LEGACY objects
 --------------
 
 WaveformExtractor
-^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~
 
 This is now a legacy object that can still be accessed through the :py:class:`MockWaveformExtractor`. It is kept
 for backward compatibility. You can convert a ``WaveformExtractor`` to a ``SortingAnalyzer``

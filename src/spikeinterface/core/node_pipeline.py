@@ -1,18 +1,34 @@
-from typing import Type
+from typing import Type, Literal
 import struct
-import copy
 import warnings
 
 from pathlib import Path
 
 import numpy as np
+import zarr
 
 from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
 from spikeinterface.core.time_series import TimeSeries
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
 from spikeinterface.core import get_channel_distances
-from spikeinterface.core.core_tools import ms_to_samples
+from spikeinterface.core.core_tools import ms_to_samples, samples_to_ms
+
+# Ignore Zarr consolidated metadata warning
+warnings.filterwarnings(
+    "ignore",
+    message="Consolidated metadata is currently not part",
+    category=UserWarning,
+)
+
+compressors_type = (
+    zarr.abc.codec.BytesBytesCodec
+    | zarr.abc.codec.ArrayBytesCodec
+    | list[zarr.abc.codec.BytesBytesCodec | zarr.abc.codec.ArrayBytesCodec]
+    | str
+    | None
+)
+filters_type = zarr.abc.codec.ArrayArrayCodec | list[zarr.abc.codec.ArrayArrayCodec] | None
 
 
 class PipelineNode:
@@ -51,7 +67,11 @@ class PipelineNode:
             parents = [parents]
         self.parents = parents
 
-        self._kwargs = dict()
+        self._kwargs = dict(
+            time_series=time_series,
+            return_output=return_output,
+            parents=parents,
+        )
 
     def get_margin(self):
         # can optionally be overwritten
@@ -107,13 +127,18 @@ class PeakRetriever(PeakSource):
     def __init__(self, recording, peaks):
         PipelineNode.__init__(self, recording, return_output=False)
 
-        self.peaks = peaks
+        self._peaks = peaks
 
         # precompute segment slice
-        self.segment_slices = []
-        for segment_index in range(recording.get_num_segments()):
-            i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
-            self.segment_slices.append(slice(i0, i1))
+        if recording.get_num_segments() > 1:
+            self.segment_slices = []
+            for segment_index in range(recording.get_num_segments()):
+                i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
+                self.segment_slices.append(slice(i0, i1))
+        else:
+            self.segment_slices = None
+
+        self._kwargs.update(dict(peaks=peaks))
 
     def get_margin(self):
         return 0
@@ -122,15 +147,22 @@ class PeakRetriever(PeakSource):
         return base_peak_dtype
 
     def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
+        if self.segment_slices is not None:
+            sl = self.segment_slices[segment_index]
+            peaks_in_segment = self._peaks[sl]
+        else:
+            peaks_in_segment = self._peaks
         i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         return i0, i1
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
+        if self.segment_slices is not None:
+            sl = self.segment_slices[segment_index]
+            peaks_in_segment = self._peaks[sl]
+        else:
+            peaks_in_segment = self._peaks
+
         # i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         i0, i1 = peak_slice
         local_peaks = peaks_in_segment[i0:i1]
@@ -195,7 +227,6 @@ class SpikeRetriever(PeakSource):
                 category=FutureWarning,
                 stacklevel=2,
             )
-
         self._dtype = spike_peak_dtype
 
         self.include_spikes_in_margin = include_spikes_in_margin
@@ -204,19 +235,36 @@ class SpikeRetriever(PeakSource):
 
         main_channel_ids = sorting.get_property("main_channel_id")
         assert main_channel_ids is not None, "SpikeRetriever needs the sorting to have `main_channel_id`s."
-        main_channel_indices = recording.ids_to_indices(main_channel_ids)
-        self.peaks = sorting_to_peaks(sorting, main_channel_indices, self._dtype)
+        self.main_channel_indices = recording.ids_to_indices(main_channel_ids)
+        self.spike_vector, segment_slices = sorting.to_spike_vector(return_slices=True)
+        self.sorting = sorting
+        self._peaks = None
+
+        # get_peak_slice() returns positions relative to the segment start
+        if sorting.get_num_segments() == 1:
+            self.segment_slices = None
+        else:
+            self.segment_slices = [slice(int(s0), int(s1)) for s0, s1 in segment_slices]
+
+        # build any lazy search index now, in the parent, so forked workers inherit it
+        # instead of each building its own
+        sorting.search_cached_spikes_sorted([0], segment_index=0)
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
             self.neighbours_mask = channel_distance <= radius_um
             self.peak_sign = peak_sign
 
-        # precompute segment slice
-        self.segment_slices = []
-        for segment_index in range(recording.get_num_segments()):
-            i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
-            self.segment_slices.append(slice(i0, i1))
+        self._kwargs.update(
+            dict(
+                sorting=sorting,
+                channel_from_template=channel_from_template,
+                extremum_channel_inds=extremum_channel_inds,
+                radius_um=radius_um,
+                peak_sign=peak_sign,
+                include_spikes_in_margin=include_spikes_in_margin,
+            )
+        )
 
     def get_margin(self):
         return 0
@@ -225,26 +273,32 @@ class SpikeRetriever(PeakSource):
         return self._dtype
 
     def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
         if self.include_spikes_in_margin:
-            i0, i1 = np.searchsorted(
-                peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
-            )
+            indices = [start_frame - max_margin, end_frame + max_margin]
         else:
-            i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
-        return i0, i1
+            indices = [start_frame, end_frame]
+        return self.sorting.search_cached_spikes_sorted(
+            indices=indices,
+            segment_index=segment_index,
+        )
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
         i0, i1 = peak_slice
+        if self.segment_slices is not None:
+            s0 = self.segment_slices[segment_index].start
+            spikes = self.spike_vector[s0 + i0 : s0 + i1]
+        else:
+            spikes = self.spike_vector[i0:i1]
 
-        local_peaks = peaks_in_segment[i0:i1]
+        local_peaks = np.zeros(spikes.size, dtype=self._dtype)
+        local_peaks["sample_index"] = spikes["sample_index"]
+        local_peaks["channel_index"] = self.main_channel_indices[spikes["unit_index"]]
+        local_peaks["amplitude"] = 0.0
+        local_peaks["segment_index"] = spikes["segment_index"]
+        local_peaks["unit_index"] = spikes["unit_index"]
 
         # make sample index local to traces
-        local_peaks = local_peaks.copy()
         local_peaks["sample_index"] -= start_frame - max_margin
 
         # handle flag for margin
@@ -297,8 +351,10 @@ class WaveformsNode(PipelineNode):
     def __init__(
         self,
         recording: BaseRecording,
-        ms_before: float,
-        ms_after: float,
+        ms_before: float | None = None,
+        ms_after: float | None = None,
+        nbefore: int | None = None,
+        nafter: int | None = None,
         parents: list[PipelineNode] | None = None,
         return_output: bool = False,
     ):
@@ -319,22 +375,50 @@ class WaveformsNode(PipelineNode):
         return_output : bool, default: False
             Whether or not the output of the node is returned by the pipeline
         """
+        if ms_before is None and nbefore is None:
+            raise ValueError("Either ms_before or nbefore must be provided.")
+        if ms_after is None and nafter is None:
+            raise ValueError("Either ms_after or nafter must be provided.")
+        if ms_before is not None and nbefore is not None:
+            raise ValueError("Only one of ms_before or nbefore should be provided.")
+        if ms_after is not None and nafter is not None:
+            raise ValueError("Only one of ms_after or nafter should be provided.")
 
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.recording = recording
-        self.ms_before = ms_before
-        self.ms_after = ms_after
-        self.nbefore = ms_to_samples(ms_before, recording.get_sampling_frequency())
-        self.nafter = ms_to_samples(ms_after, recording.get_sampling_frequency())
+        sampling_frequency = recording.sampling_frequency
+        if nbefore is not None:
+            self.nbefore = nbefore
+            self.ms_before = samples_to_ms(nbefore, sampling_frequency)
+        else:
+            self.ms_before = ms_before
+            self.nbefore = ms_to_samples(ms_before, sampling_frequency)
+        if nafter is not None:
+            self.nafter = nafter
+            self.ms_after = samples_to_ms(nafter, sampling_frequency)
+        else:
+            self.ms_after = ms_after
+            self.nafter = ms_to_samples(ms_after, sampling_frequency)
         self.neighbours_mask = None
+
+        self._kwargs.update(
+            dict(
+                ms_before=ms_before,
+                ms_after=ms_after,
+                nbefore=nbefore,
+                nafter=nafter,
+            )
+        )
 
 
 class ExtractDenseWaveforms(WaveformsNode):
     def __init__(
         self,
         recording: BaseRecording,
-        ms_before: float,
-        ms_after: float,
+        ms_before: float | None = None,
+        ms_after: float | None = None,
+        nbefore: int | None = None,
+        nafter: int | None = None,
         parents: list[PipelineNode] | None = None,
         return_output: bool = False,
     ):
@@ -347,10 +431,14 @@ class ExtractDenseWaveforms(WaveformsNode):
         ----------
         recording : BaseRecording
             The recording object.
-        ms_before : float
+        ms_before : float | None
             The number of milliseconds to include before the peak of the spike
-        ms_after : float
+        ms_after : float | None
             The number of milliseconds to include after the peak of the spike
+        nbefore : int | None, default: None
+            The number of samples to include before the peak of the spike
+        nafter : int | None, default: None
+            The number of samples to include after the peak of the spike
         parents : list[PipelineNode] | None, default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
@@ -364,6 +452,8 @@ class ExtractDenseWaveforms(WaveformsNode):
             parents=parents,
             ms_before=ms_before,
             ms_after=ms_after,
+            nbefore=nbefore,
+            nafter=nafter,
             return_output=return_output,
         )
 
@@ -379,8 +469,10 @@ class ExtractSparseWaveforms(WaveformsNode):
     def __init__(
         self,
         recording: BaseRecording,
-        ms_before: float,
-        ms_after: float,
+        ms_before: float | None = None,
+        ms_after: float | None = None,
+        nbefore: int | None = None,
+        nafter: int | None = None,
         parents: list[PipelineNode] | None = None,
         return_output: bool = False,
         radius_um: float = 100.0,
@@ -401,10 +493,14 @@ class ExtractSparseWaveforms(WaveformsNode):
         ----------
         recording : BaseRecording
             The recording object
-        ms_before : float
+        ms_before : float | None
             The number of milliseconds to include before the peak of the spike
-        ms_after : float
+        ms_after : float | None
             The number of milliseconds to include after the peak of the spike
+        nbefore : int | None, default: None
+            The number of samples to include before the peak of the spike
+        nafter : int | None, default: None
+            The number of samples to include after the peak of the spike
         parents : list[PipelineNode] | None, default: None
             Pass parents nodes to perform a previous computation
         return_output : bool, default: False
@@ -421,6 +517,8 @@ class ExtractSparseWaveforms(WaveformsNode):
             parents=parents,
             ms_before=ms_before,
             ms_after=ms_after,
+            nbefore=nbefore,
+            nafter=nafter,
             return_output=return_output,
         )
 
@@ -434,6 +532,13 @@ class ExtractSparseWaveforms(WaveformsNode):
             self.radius_um = radius_um
             self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
+
+        self._kwargs.update(
+            dict(
+                radius_um=radius_um,
+                sparsity_mask=sparsity_mask,
+            )
+        )
 
     def get_margin(self):
         return max(self.nbefore, self.nafter)
@@ -534,15 +639,16 @@ def run_node_pipeline(
     nodes: list[PipelineNode],
     job_kwargs: dict,
     job_name: str = "pipeline",
-    gather_mode: str = "memory",
+    gather_mode: Literal["memory", "npy", "zarr"] = "memory",
     gather_kwargs: dict = {},
     squeeze_output: bool = True,
-    folder: str | None = None,
+    dest: str | Path | list | None = None,
     names: list[str] | None = None,
     verbose: bool = False,
     skip_after_n_peaks: int | None = None,
     slices: list[tuple] | None = None,
     check_for_peak_source: bool = False,
+    folder=None,
 ):
     """
     Machinery to compute in parallel operations on peaks and traces.
@@ -580,14 +686,16 @@ def run_node_pipeline(
         The classical job_kwargs
     job_name : str
         The name of the pipeline used for the progress_bar
-    gather_mode : "memory" | "npy"
+    gather_mode : "memory" | "npy" | "zarr"
         How to gather the output of the nodes.
     gather_kwargs : dict
-        Options to control the "gather engine". See GatherToMemory or GatherToNpy.
+        Options to control the "gather engine". See GatherToMemory, GatherToNpy or GatherToZarr.
     squeeze_output : bool, default True
         If only one output node then squeeze the tuple
-    folder : str | Path | None
-        Used for gather_mode="npy"
+    dest : str | Path | list[str | Path] | None
+        Used for gather_mode="npy" or gather_mode="zarr". Either a single folder (one file/array
+        per name is created inside it) or a list of explicit per-output destinations
+        (see GatherToNpy and GatherToZarr). For "zarr" the `dest` must contain a ".zarr" suffix.
     names : list of str
         Names of outputs.
     verbose : bool, default False
@@ -601,6 +709,7 @@ def run_node_pipeline(
         If None (default), the function iterates over the entire duration of the recording.
     check_for_peak_source : bool, default False
         Whether to check the graph of PeakSource nodes.
+    folder: deprecated, use `dest` instead.
 
     Returns
     -------
@@ -618,10 +727,19 @@ def run_node_pipeline(
     else:
         skip_after_n_peaks_per_worker = None
 
+    if folder is not None:
+        warnings.warn(
+            "`folder` is deprecated and will be removed in 0.106.0. Use `dest` instead.", FutureWarning, stacklevel=2
+        )
+        if dest is None:
+            dest = folder
+
     if gather_mode == "memory":
         gather_func = GatherToMemory()
     elif gather_mode == "npy":
-        gather_func = GatherToNpy(folder, names, **gather_kwargs)
+        gather_func = GatherToNpy(dest, names, **gather_kwargs)
+    elif gather_mode == "zarr":
+        gather_func = GatherToZarr(dest, names, **gather_kwargs)
     else:
         raise ValueError(f"wrong gather_mode : {gather_mode}")
 
@@ -807,14 +925,51 @@ class GatherToNpy:
       * speculate on a header length (1024)
       * accumulate in C order the buffer
       * create the npy v1.0 header at the end with the correct shape and dtype
+
+    Parameters
+    ----------
+    dest : str | Path | list of (str | Path) | None
+        Where to write the npy files. Two modes:
+
+        * a single folder (str | Path) : one ``<name>.npy`` file is created per name inside it.
+        * a list of file paths : explicit destination ``.npy`` file per output. This is useful
+          to gather directly to a final location (e.g. an extension folder). When `names` is
+          None, they are derived from the file stems.
+    names : list of str | None
+        Names of the outputs. Can be None when `dest` is a list of file paths.
+    npy_header_size : int, default: 1024
+        The reserved header size for the npy files.
+    exist_ok : bool, default: False
+        Whether the `folder` is allowed to already exist. Only used when `folder` is a single folder.
     """
 
-    def __init__(self, folder, names, npy_header_size=1024, exist_ok=False):
-        self.folder = Path(folder)
-        self.folder.mkdir(parents=True, exist_ok=exist_ok)
-        assert names is not None
-        self.names = names
+    def __init__(
+        self,
+        dest: str | Path | list[str | Path] | None = None,
+        names: list[str] | None = None,
+        npy_header_size: int = 1024,
+        exist_ok: bool = False,
+    ):
         self.npy_header_size = npy_header_size
+
+        if isinstance(dest, (list, tuple)):
+            # explicit destination file per output
+            self.file_paths = [Path(p) for p in dest]
+            if names is None:
+                names = [file_path.stem for file_path in self.file_paths]
+            assert len(self.file_paths) == len(names), "`dest` (list of files) must have the same length as `names`"
+            self.names = names
+            self.folder = None
+            # make sure parent folders exist
+            for file_path in self.file_paths:
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            assert dest is not None, "`dest` must be given"
+            assert names is not None, "`names` must be given when `dest` is a single folder"
+            self.folder = Path(dest)
+            self.folder.mkdir(parents=True, exist_ok=exist_ok)
+            self.names = names
+            self.file_paths = [self.folder / (name + ".npy") for name in names]
 
         self.tuple_mode = None
 
@@ -822,9 +977,8 @@ class GatherToNpy:
         self.dtypes = []
         self.shapes0 = []
         self.final_shapes = []
-        for name in names:
-            filename = self.folder / (name + ".npy")
-            f = open(filename, "wb+")
+        for file_path in self.file_paths:
+            f = open(file_path, "wb+")
             f.seek(npy_header_size)
             self.files.append(f)
             self.dtypes.append(None)
@@ -862,7 +1016,7 @@ class GatherToNpy:
             f.close()
 
         for i, name in enumerate(self.names):
-            filename = self.folder / (name + ".npy")
+            filename = self.file_paths[i]
 
             shape = (self.shapes0[i],)
             if self.final_shapes[i] is not None:
@@ -892,7 +1046,7 @@ class GatherToNpy:
         if self.tuple_mode:
             outs = ()
             for i, name in enumerate(self.names):
-                filename = self.folder / (name + ".npy")
+                filename = self.file_paths[i]
                 outs += (np.load(filename, mmap_mode="r"),)
 
             if len(outs) == 1 and squeeze_output:
@@ -903,10 +1057,210 @@ class GatherToNpy:
                 return outs
         else:
             # only one file
-            filename = self.folder / (self.names[0] + ".npy")
+            filename = self.file_paths[0]
             return np.load(filename, mmap_mode="r")
 
 
 class GatherToZarr:
-    pass
-    # Fot me (sam) this is not necessary unless someone realy really want to use
+    """
+    Gather output of nodes into a zarr folder and then open them back as zarr arrays.
+
+    Each returned output ("name") is stored as a zarr array in the root group. Buffers
+    are appended chunk by chunk along the first axis as the pipeline runs, so the full
+    result never has to be held in memory. This is the on-disk equivalent of
+    GatherToNpy but with chunking and compression.
+
+    Parameters
+    ----------
+    dest : str | Path | list of (str | Path | zarr.Array) | None
+        Where to write the zarr arrays. Two modes:
+
+        * a single destination (str | Path) : a fresh zarr store is created there and one zarr
+          array is created per name in its root.
+        * a list of explicit destinations : buffers are appended directly to these datasets
+          instead of creating a fresh store. This is useful to gather directly to a final
+          location (e.g. a SortingAnalyzer extension group). Each item can be:
+
+          - a path pointing inside a zarr store, e.g.
+            ``"my-analyzer.zarr/extensions/spike_amplitudes/amplitudes"``. The store root
+            (the ``.zarr`` part) is opened in append mode and the dataset is created on the
+            fly (with the right dtype and trailing shape) once the first buffer arrives, or
+          - a pre-created (and resizable) ``zarr.Array``, empty on the first axis
+            (shape ``(0, *trailing)``) with the correct trailing shape and dtype.
+
+          When `names` is None, they are derived from the datasets' basenames.
+          Note that in both modes the `dest` must contain a ".zarr" suffix.
+    names : list of str | None
+        Names of the outputs. Can be None when `dest` is a list of explicit destinations.
+    compressors : zarr.abc.codec.BytesBytesCodec | zarr.abc.codec.ArrayBytesCodec | list of them | str, or None, default: "default"
+        The compressors used for every array. If "default", the SpikeInterface default
+        zarr compressor is used (Blosc-zstd, level 5, bitshuffle). If None, no compression.
+        Ignored for destinations that are already a ``zarr.Array`` (they keep their own compressor).
+    filters : zarr.abc.codec.ArrayArrayCodec | list[zarr.abc.codec.ArrayArrayCodec] or None, default: None
+        The filters used for every array. If None, no filters are applied.
+        Ignored for destinations that are already a ``zarr.Array`` (they keep their own filters).
+    zarr_target_chunk_bytes : int | dict[str, int], default: 10485760 (10 MiB)
+        Target (uncompressed) size in bytes of one zarr chunk, used to compute the number of
+        rows per chunk. An int applies the same target to every array, a dict sets it per array
+        name (all names must have an entry).
+        Ignored for destinations that are already a ``zarr.Array``.
+    """
+
+    def __init__(
+        self,
+        dest: str | Path | list[str | Path | zarr.Array] | None = None,
+        names: list[str] | None = None,
+        compressors: compressors_type = "default",
+        filters: filters_type = None,
+        zarr_target_chunk_bytes: int | dict[str, int] = 10 * 1024 * 1024,
+    ):
+        from spikeinterface.core.zarrextractors import get_default_zarr_compressor
+        from spikeinterface.core.zarr_tools import build_codec_pipeline
+
+        if compressors == "default":
+            compressors = get_default_zarr_compressor()
+        self.codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
+
+        if isinstance(dest, (list, tuple)):
+            # append to explicit destinations (paths inside a store or pre-created zarr.Arrays)
+            num_datasets = len(dest)
+            self.arrays = [None] * num_datasets
+            # per output : (root_group, internal_path) used to lazily create the dataset,
+            # or None when the dataset is already a zarr.Array
+            self._create_specs = [None] * num_datasets
+            derived_names = []
+            root_cache = {}
+            for i, dataset in enumerate(dest):
+                if isinstance(dataset, (str, Path)):
+                    if ".zarr" not in str(dataset):
+                        raise ValueError("When `dest` is a list of paths, each path must contain a '.zarr' suffix")
+                    store_path, internal_path = _split_zarr_store_path(dataset)
+                    store_path = str(store_path)
+                    if store_path not in root_cache:
+                        # append mode : do not wipe an existing store (e.g. an analyzer)
+                        root_cache[store_path] = zarr.open(store_path, mode="a")
+                    self._create_specs[i] = (root_cache[store_path], internal_path)
+                    derived_names.append(internal_path.split("/")[-1])
+                else:
+                    # already a zarr.Array
+                    self.arrays[i] = dataset
+                    derived_names.append(dataset.basename)
+            if names is None:
+                names = derived_names
+            assert num_datasets == len(names), "`folder` (list of datasets) must have the same length as `names`"
+            self.names = names
+            self.folder = None
+            self.zarr_root = None
+            # we do not own the store so we must not consolidate/close it
+            self._owns_store = False
+        else:
+            assert dest is not None, "`dest` must be given"
+            assert names is not None, "`names` must be given when `dest` is a single folder"
+            assert str(dest).endswith(".zarr"), "`dest` must contain a '.zarr' suffix"
+            self.names = names
+            self.folder = Path(dest)
+            self.zarr_root = zarr.open(str(self.folder), mode="w")
+            # arrays are created lazily on the first buffer so we know dtype and trailing shape
+            self.arrays = [None] * len(names)
+            self._create_specs = [(self.zarr_root, name) for name in names]
+            self._owns_store = True
+
+        self.tuple_mode = None
+        if isinstance(zarr_target_chunk_bytes, (int, np.integer)):
+            self.zarr_target_chunk_bytes = {name: int(zarr_target_chunk_bytes) for name in self.names}
+        elif isinstance(zarr_target_chunk_bytes, dict):
+            missing = [name for name in self.names if name not in zarr_target_chunk_bytes]
+            if len(missing) > 0:
+                raise ValueError(f"`zarr_target_chunk_bytes` is missing an entry for: {missing}")
+            self.zarr_target_chunk_bytes = {name: int(zarr_target_chunk_bytes[name]) for name in self.names}
+        else:
+            raise ValueError("`zarr_target_chunk_bytes` must be an int or a dict[str, int]")
+
+    def __call__(self, res):
+        if res is None:
+            return
+
+        if self.tuple_mode is None:
+            # first loop only
+            self.tuple_mode = isinstance(res, tuple)
+            if self.tuple_mode:
+                assert len(self.names) == len(res)
+            else:
+                assert len(self.names) == 1
+
+        if not self.tuple_mode:
+            res = (res,)
+
+        # distribute buffers to zarr arrays
+        for i_name, name in enumerate(self.names):
+            buf = np.require(res[i_name], requirements="C")
+            if self.arrays[i_name] is None:
+                # first loop only : create the array with the right dtype and trailing shape
+                root, internal_path = self._create_specs[i_name]
+                trailing_shape = buf.shape[1:]
+                # pick the number of rows per chunk to target ~zarr_target_chunk_bytes per chunk
+                row_nbytes = int(np.prod(trailing_shape, dtype="int64")) * buf.dtype.itemsize
+                chunk0 = max(1, self.zarr_target_chunk_bytes[name] // max(1, row_nbytes))
+                self.arrays[i_name] = root.create_array(
+                    name=internal_path,
+                    shape=(0,) + trailing_shape,
+                    chunks=(chunk0,) + trailing_shape,
+                    dtype=buf.dtype,
+                    overwrite=True,
+                    **self.codec_kwargs,
+                )
+            self.arrays[i_name].append(buf, axis=0)
+
+    def finalize_buffers(self, squeeze_output=False):
+        import zarr
+
+        if self._owns_store:
+            # consolidate metadata for faster/cleaner re-opening
+            zarr.consolidate_metadata(self.zarr_root.store)
+
+        if self.tuple_mode:
+            outs = tuple(self.arrays)
+
+            if len(outs) == 1 and squeeze_output:
+                # when tuple size == 1 then remove the tuple
+                return outs[0]
+            else:
+                # always a tuple even of size 1
+                return outs
+        else:
+            # only one array
+            return self.arrays[0]
+
+
+def _split_zarr_store_path(dataset_path):
+    """
+    Split a path pointing inside a zarr store into (store_path, internal_path).
+
+    The store is the portion of the path up to and including the component ending with
+    ``.zarr``. The remaining components form the internal (group/dataset) path.
+
+    Example
+    -------
+    >>> _split_zarr_store_path("a/b/my-analyzer.zarr/extensions/spike_amplitudes/amplitudes")
+    (PosixPath('a/b/my-analyzer.zarr'), 'extensions/spike_amplitudes/amplitudes')
+    """
+    parts = Path(dataset_path).parts
+    zarr_index = None
+    for index, part in enumerate(parts):
+        if part.endswith(".zarr"):
+            zarr_index = index
+            break
+    if zarr_index is None:
+        raise ValueError(
+            f"Could not find a '.zarr' store in path '{dataset_path}'. "
+            "Provide a path like '<store>.zarr/<internal/dataset/path>'."
+        )
+    internal_parts = parts[zarr_index + 1 :]
+    if len(internal_parts) == 0:
+        raise ValueError(
+            f"No dataset path inside the zarr store found in '{dataset_path}'. "
+            "Provide a path like '<store>.zarr/<internal/dataset/path>'."
+        )
+    store_path = Path(*parts[: zarr_index + 1])
+    internal_path = "/".join(internal_parts)
+    return store_path, internal_path

@@ -123,7 +123,6 @@ class LupinSorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-
         from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_recording
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks

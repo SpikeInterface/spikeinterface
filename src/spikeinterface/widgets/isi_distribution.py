@@ -31,16 +31,8 @@ class ISIDistributionWidget(BaseWidget):
         window_ms: float = 100.0,
         bin_ms: float = 1.0,
         backend: str | None = None,
-        sorting: BaseSorting | None = None,
         **backend_kwargs,
     ):
-
-        if sorting is not None:
-            # When removed, make `sorting_analyzer_or_sorting` a required argument rather than None.
-            deprecation_msg = "`sorting` argument is deprecated and will be removed in version 0.105.0. Please use `sorting_analyzer_or_sorting` instead"
-            warn(deprecation_msg, category=FutureWarning, stacklevel=2)
-            sorting_analyzer_or_sorting = sorting
-
         sorting = self.ensure_sorting(sorting_analyzer_or_sorting)
 
         if unit_ids is None:

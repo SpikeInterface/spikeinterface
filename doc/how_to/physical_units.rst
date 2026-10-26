@@ -41,7 +41,7 @@ Converting to Physical Units
 ----------------------------
 
 SpikeInterface provides two preprocessing classes for converting recordings to physical units. Both wrap the
-``RecordingExtractor`` class and ensures that the data is returned in physical units when calling `get_traces <https://spikeinterface.readthedocs.io/en/stable/api.html#spikeinterface.core.BaseRecording.get_traces>`_
+``BaseRecording`` class and ensures that the data is returned in physical units when calling `get_traces <https://spikeinterface.readthedocs.io/en/stable/api.html#spikeinterface.core.BaseRecording.get_traces>`_
 
 1. ``scale_to_uV``: The primary function for extracellular recordings. SpikeInterface is centered around
     extracellular recordings, and this function is designed to convert the data to microvolts (µV).

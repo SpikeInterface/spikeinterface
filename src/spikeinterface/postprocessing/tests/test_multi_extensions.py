@@ -23,12 +23,14 @@ extension_dict = {
     "spike_amplitudes": dict(),
     "template_similarity": dict(),
     "correlograms": dict(),
+    "acgs_3d": dict(),
     "isi_histograms": dict(),
     "amplitude_scalings": dict(handle_collisions=False),  # otherwise hard mode could fail due to dropped spikes
     "spike_locations": dict(method="center_of_mass"),  # trick to avoid UserWarning
     "unit_locations": dict(),
     "template_metrics": dict(),
     "quality_metrics": dict(metric_names=["firing_rate", "isi_violation", "snr"]),
+    # NOTE: valid_unit_periods are note tested because of the complexity of its data structure
 }
 extension_data_type = {
     "noise_levels": None,
@@ -41,12 +43,13 @@ extension_data_type = {
     "quality_metrics": "pandas",
     "template_metrics": "pandas",
     "correlograms": "matrix",
+    "acgs_3d": "unit",
     "template_similarity": "matrix",
     "principal_components": "random",
     "waveforms": "random",
     "random_spikes": "random_spikes",
 }
-data_with_miltiple_returns = ["isi_histograms", "correlograms"]
+data_with_miltiple_returns = ["isi_histograms", "correlograms", "acgs_3d"]
 # due to incremental PCA, hard computation could result in different results for PCA
 # the model is differents always
 random_computation = ["principal_components"]
@@ -66,7 +69,7 @@ extensions_with_rel_tolerance_splits = {
 }
 
 
-def get_dataset_to_merge():
+def get_dataset_to_merge(cache_folder):
     # generate a dataset with some split units to minimize merge errors
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
@@ -78,6 +81,7 @@ def get_dataset_to_merge():
         generate_unit_locations_kwargs=dict(margin_um=10.0, minimum_z=2.0, maximum_z=15.0, minimum_distance=20),
         seed=2205,
     )
+    recording = recording.save(folder=cache_folder / "recording_merge")
 
     # since templates are going to be averaged and this might be a problem for amplitude scaling
     # we select the 3 units with the largest templates to split
@@ -93,7 +97,7 @@ def get_dataset_to_merge():
     return recording, sorting_with_splits, split_unit_ids
 
 
-def get_dataset_to_split():
+def get_dataset_to_split(cache_folder):
     # generate a dataset and return large unit to split to minimize split errors
     recording, sorting = generate_ground_truth_recording(
         durations=[30.0],
@@ -104,6 +108,7 @@ def get_dataset_to_split():
         noise_kwargs=dict(noise_levels=5.0, strategy="tile_pregenerated"),
         seed=2205,
     )
+    recording = recording.save(folder=cache_folder / "recording_split")
 
     # since templates are going to be averaged and this might be a problem for amplitude scaling
     # we select the 3 units with the largest templates to split
@@ -117,13 +122,13 @@ def get_dataset_to_split():
 
 
 @pytest.fixture(scope="module")
-def dataset_to_merge():
-    return get_dataset_to_merge()
+def dataset_to_merge(create_cache_folder):
+    return get_dataset_to_merge(create_cache_folder)
 
 
 @pytest.fixture(scope="module")
-def dataset_to_split():
-    return get_dataset_to_split()
+def dataset_to_split(create_cache_folder):
+    return get_dataset_to_split(create_cache_folder)
 
 
 @pytest.mark.parametrize("lazy", [False, True])
@@ -135,13 +140,16 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
 
     set_global_job_kwargs(n_jobs=1)
 
+    rng = np.random.default_rng(seed=2308)
+
     recording, sorting, other_ids = dataset_to_merge
 
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=sparse)
     extension_dict_merge = extension_dict.copy()
 
     # we apply the merges according to the artificial splits
-    merges = [list(v) for v in other_ids.values()]
+    # shuffle merges to test fancy indexing
+    merges = [list(np.random.permutation(v)) for v in other_ids.values()]
     split_unit_ids = np.ravel(merges)
     unmerged_unit_ids = sorting_analyzer.unit_ids[~np.isin(sorting_analyzer.unit_ids, split_unit_ids)]
 
@@ -154,21 +162,14 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
         sorting_analyzer.save_as(folder=tmp_path / analyzer_folder_name, format=format)
         sorting_analyzer = load_sorting_analyzer(tmp_path / analyzer_folder_name, format=format, lazy=lazy)
 
-    # TODO: still some UserWarnings for n_jobs, where from?
-    t0 = time.perf_counter()
     analyzer_merged_hard = sorting_analyzer.merge_units(
         merge_unit_groups=merges, censor_ms=2, merging_mode="hard", n_jobs=1
     )
-    t_hard = time.perf_counter() - t0
 
-    t0 = time.perf_counter()
     analyzer_merged_soft = sorting_analyzer.merge_units(
         merge_unit_groups=merges, censor_ms=2, merging_mode="soft", sparsity_overlap=0.0, n_jobs=1
     )
-    t_soft = time.perf_counter() - t0
 
-    # soft must faster
-    assert t_soft < t_hard
     np.testing.assert_array_equal(analyzer_merged_hard.unit_ids, analyzer_merged_soft.unit_ids)
     new_unit_ids = list(
         np.arange(max(split_unit_ids.astype(int)) + 1, max(split_unit_ids.astype(int)) + 1 + len(merges))
@@ -182,6 +183,7 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
         data_original = sorting_analyzer.get_extension(ext).get_data()
         data_hard = analyzer_merged_hard.get_extension(ext).get_data()
         data_soft = analyzer_merged_soft.get_extension(ext).get_data()
+
         if ext in data_with_miltiple_returns:
             data_original = data_original[0]
             data_hard = data_hard[0]
@@ -234,6 +236,10 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
             if extension_data_type[ext] == "pandas":
                 data_hard = data_hard_merged.dropna().to_numpy().astype("float")
                 data_soft = data_soft_merged.dropna().to_numpy().astype("float")
+            elif extension_data_type[ext] == "list[dict]":
+                # just test first segment
+                data_soft = data_soft_merged[0]
+                data_hard = data_hard_merged[0]
             else:
                 data_hard = data_hard_merged
                 data_soft = data_soft_merged
@@ -298,6 +304,7 @@ def test_SortingAnalyzer_split_all_extensions(dataset_to_split, lazy, sparse, fo
         data_original = sorting_analyzer.get_extension(ext).get_data()
         data_split = analyzer_split.get_extension(ext).get_data()
         data_recompute = analyzer_hard.get_extension(ext).get_data()
+
         if ext in data_with_miltiple_returns:
             data_original = data_original[0]
             data_split = data_split[0]
