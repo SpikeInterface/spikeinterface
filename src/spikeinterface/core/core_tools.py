@@ -763,27 +763,6 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     return memory
 
 
-def _is_zarr_write_supported() -> bool:
-    """
-    Whether writing to zarr is supported with the installed zarr, which is not yet the case for zarr>=3.
-    """
-    return int(zarr.__version__.split(".")[0]) < 3
-
-
-def _check_zarr_write_is_supported() -> None:
-    """
-    Raise an informative error when writing to zarr with zarr>=3, which is not supported yet.
-
-    zarr>=3 is what gets installed on Python 3.14, where reading existing zarr folders works but writing does not.
-    """
-    if not _is_zarr_write_supported():
-        raise NotImplementedError(
-            f"Writing to zarr is not supported yet with zarr {zarr.__version__}, which is the version installed "
-            "on Python 3.14. Use Python 3.13 or lower to save in zarr format, or save in another format such as "
-            "'binary_folder'."
-        )
-
-
 def is_path_remote(path: str | Path) -> bool:
     """
     Returns True if the path is a remote path (e.g., s3:// or gcs://).
