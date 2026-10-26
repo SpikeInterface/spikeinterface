@@ -1006,6 +1006,7 @@ class BaseRecording(BaseExtractor, TimeSeries):
                 # this is for SI<0.105.0 and from JSON (no contact_vector saved)
                 locations = self.get_property("location")
                 self.set_dummy_probe_from_locations(locations)
+                self.delete_property("location")
                 check_for_probes_info = True
 
             if check_for_probes_info:
