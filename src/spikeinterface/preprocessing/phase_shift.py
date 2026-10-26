@@ -161,7 +161,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         )
         # Apply the FFT-specific taper ourselves — explicit is better than implicit,
         # and it keeps get_chunk_with_margin method-agnostic.
-        apply_raised_cosine_taper(traces_chunk, self.margin, inplace=True)
+        traces_chunk = apply_raised_cosine_taper(traces_chunk, self.margin, inplace=False)
         traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
