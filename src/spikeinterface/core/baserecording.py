@@ -961,7 +961,7 @@ class BaseRecording(BaseExtractor, TimeSeries):
                 dump_dict["times_kwargs"].append(times_kwargs)
 
     def _extra_metadata_from_dict(self, dump_dict):
-        # Load probe and handle backward-compatibility with legacy "contact_vector"/"location" property
+        # Load probe
         if "probegroup" in dump_dict:
             # this is for SI>=0.105.0
             probegroup = dump_dict["probegroup"]
