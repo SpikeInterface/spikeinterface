@@ -321,14 +321,13 @@ class BaseRecordingSnippets(BaseExtractor):
             other._probegroup = self._probegroup.copy()
 
     def _extra_metadata_from_dict(self, dump_dict):
-        # load probe and handle backward-compatibility with legacy "contact_vector"/"location" property
+        # load probegroup
         if "probegroup" in dump_dict:
-            # this is for SI>=0.105.0
             probegroup = dump_dict["probegroup"]
             self._probegroup = ProbeGroup.from_dict(probegroup)
 
     def _extra_metadata_to_dict(self, dump_dict):
-        # save probe
+        # save probegroup
         if self.has_probe():
             probegroup = self.get_probegroup()
             dump_dict["probegroup"] = probegroup.to_dict()
@@ -360,6 +359,7 @@ class BaseRecordingSnippets(BaseExtractor):
                 locations = self.get_property("location")
                 self.set_dummy_probe_from_locations(locations)
                 check_for_probes_info = True
+                self.delete_property("location")
 
             if check_for_probes_info:
                 for i, probe in enumerate(self._probegroup.probes):
