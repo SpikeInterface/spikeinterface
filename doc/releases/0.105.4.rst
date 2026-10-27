@@ -32,6 +32,7 @@ sorters:
 Contributors:
 
 * @alejoe91
+* @chrishalcrow
 * @cwindolf
 * @h-mayorquin
 * @yger
