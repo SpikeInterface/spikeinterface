@@ -1,5 +1,6 @@
 import numpy as np
-from spikeinterface import NumpyRecording
+from spikeinterface import NumpyRecording, load
+from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.preprocessing import phase_shift
 
@@ -110,6 +111,17 @@ def test_phase_shift_recovers_delayed_signal():
     interior = slice(100, -100)
     expected = np.broadcast_to(signal(times)[:, np.newaxis], traces.shape)
     np.testing.assert_allclose(shifted_traces[interior], expected[interior], atol=1e-3)
+
+
+def test_phase_shift_dtype_survives_reload():
+    traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
+    recording = NumpyRecording([traces.astype("int16")], sampling_frequency)
+    recording.set_property("inter_sample_shift", inter_sample_shift)
+
+    shifted = phase_shift(recording, dtype="float32")
+    reloaded = load(shifted.to_dict())
+
+    check_recordings_equal(shifted, reloaded, return_in_uV=False)
 
 
 if __name__ == "__main__":
