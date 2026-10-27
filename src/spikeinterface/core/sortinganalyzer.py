@@ -833,11 +833,13 @@ class SortingAnalyzer:
             if sorting_main_channel_ids is not None and (self.has_recording() or self.rec_attributes):
                 if self.has_recording():
                     main_channel_indices = self.recording.ids_to_indices(sorting_main_channel_ids)
-                elif self.rec_attributes.get("channel_ids"):
+                elif self.rec_attributes.get("channel_ids") is not None:
                     channel_ids = np.array(self.rec_attributes.get("channel_ids"))
                     main_channel_indices = np.array(
                         [list(channel_ids).index(id) for id in sorting_main_channel_ids], dtype=int
                     )
+                else:
+                    main_channel_indices = None
                 self._main_channel_indices = main_channel_indices
             else:
                 self._main_channel_indices = self._compute_main_channel_backwards_compatibility()
