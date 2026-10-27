@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.105.4.rst
   releases/0.105.3.rst
   releases/0.105.2.rst
   releases/0.105.1.rst
@@ -66,7 +67,7 @@ Release notes
   releases/0.9.1.rst
 
 
-Versions 0.105.1/3
+Versions 0.105.1/4
 ==================
 
 * Minor releases with bug fixes and performance improvements
