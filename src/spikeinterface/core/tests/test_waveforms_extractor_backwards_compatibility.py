@@ -252,10 +252,22 @@ def test_load_legacy_we_with_deprecated_metrics(create_cache_folder, tmp_path):
     assert "metrics_kwargs" not in tm.params
     assert "metric_params" in tm.params
 
-    # Conflicting legacy parameters must not prevent loading the analyzer.
     params_path = we_folder / "quality_metrics" / "params.json"
     with open(params_path) as f:
         legacy_params = json.load(f)
+
+    # A single legacy entry must migrate even when its parameter dictionary is empty.
+    for legacy_name in ("isolation_distance", "l_ratio"):
+        single_legacy_params = dict(legacy_params, metric_names=[legacy_name], qm_params={legacy_name: {}})
+        with open(params_path, "w") as f:
+            json.dump(single_legacy_params, f)
+        reloaded = load_waveforms_backwards(we_folder, sorting=sorting, output="SortingAnalyzer")
+        metric_params = reloaded.get_extension("quality_metrics").params["metric_params"]
+        assert metric_params["mahalanobis"] == {}
+        assert "isolation_distance" not in metric_params
+        assert "l_ratio" not in metric_params
+
+    # Conflicting legacy parameters must not prevent loading the analyzer.
     legacy_params["qm_params"]["l_ratio"] = {"legacy_parameter": 1}
     with open(params_path, "w") as f:
         json.dump(legacy_params, f)

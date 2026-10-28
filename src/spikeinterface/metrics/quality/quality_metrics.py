@@ -62,18 +62,21 @@ class ComputeQualityMetrics(BaseMetricExtension):
             del self.params["qm_params"]
 
         # handle metric names and parameters change: isolation_distance/l_ratio merged into mahalanobis
-        legacy_mahalanobis_params = []
-        for legacy_name in ("isolation_distance", "l_ratio"):
-            if legacy_name in self.params["metric_params"]:
-                legacy_mahalanobis_params.append(self.params["metric_params"].pop(legacy_name))
-        if legacy_mahalanobis_params and "mahalanobis" not in self.params["metric_params"]:
-            if any(params != legacy_mahalanobis_params[0] for params in legacy_mahalanobis_params[1:]):
-                warnings.warn(
-                    "Legacy isolation_distance and l_ratio parameters do not match. "
-                    "Using isolation_distance parameters for mahalanobis and discarding l_ratio parameters.",
-                    stacklevel=2,
-                )
-            self.params["metric_params"]["mahalanobis"] = legacy_mahalanobis_params[0]
+        isolation_distance_legacy_params = self.params["metric_params"].pop("isolation_distance", None)
+        l_ratio_legacy_params = self.params["metric_params"].pop("l_ratio", None)
+        if "mahalanobis" not in self.params["metric_params"]:
+            if isolation_distance_legacy_params is not None and l_ratio_legacy_params is not None:
+                if isolation_distance_legacy_params != l_ratio_legacy_params:
+                    warnings.warn(
+                        "Legacy isolation_distance and l_ratio parameters do not match. "
+                        "Using isolation_distance parameters for mahalanobis and discarding l_ratio parameters.",
+                        stacklevel=2,
+                    )
+                self.params["metric_params"]["mahalanobis"] = isolation_distance_legacy_params
+            elif isolation_distance_legacy_params is not None:
+                self.params["metric_params"]["mahalanobis"] = isolation_distance_legacy_params
+            elif l_ratio_legacy_params is not None:
+                self.params["metric_params"]["mahalanobis"] = l_ratio_legacy_params
 
         if "isolation_distance" in self.params["metric_names"]:
             self.params["metric_names"].remove("isolation_distance")
