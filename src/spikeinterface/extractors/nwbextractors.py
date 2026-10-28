@@ -137,12 +137,7 @@ def read_nwbfile(
     if file_path is None and file is None:
         raise ValueError("Provide either file_path or file")
 
-    if (
-        backend == "zarr"
-        and file is None
-        and _get_zarr_format(file_path, stream_mode, storage_options) == 2
-        and _has_zarr_python_3()
-    ):
+    if backend == "zarr" and file is None and _get_zarr_format(file_path, stream_mode, storage_options) == 2:
         from hdmf_zarr import NWBZarrV2IO
 
         # hdmf-zarr>=0.14 reads zarr v2 files with a separate read-only IO. Files written by hdmf-zarr<0.14
@@ -332,6 +327,29 @@ def _get_backend_from_local_file(file_path: str | Path) -> str:
     return backend
 
 
+def _zarr_group_child_names(group):
+    """
+    Return the names of the immediate children of a zarr group without parsing their metadata.
+
+    zarr-python 3.x eagerly reads and validates every child's metadata when iterating
+    ``group.keys()``. Some arrays written by hdmf-zarr (e.g. variable-length string columns
+    with an integer ``fill_value``) cannot be parsed by zarr-python 3.x and make the whole
+    iteration fail. Listing the store directly avoids touching the children's metadata.
+    """
+    if hasattr(group, "store_path"):  # zarr v3
+        from zarr.core.sync import sync
+
+        async def _collect():
+            return [key async for key in group.store.list_dir(group.path)]
+
+        # Filter out this group's own metadata files (".zgroup", ".zattrs", "zarr.json", ...).
+        # list_dir does not guarantee an order, so sort for deterministic traversal (matches h5py).
+        names = [name for name in sync(_collect()) if not name.startswith(".") and name != "zarr.json"]
+        return sorted(names)
+    else:  # zarr v2
+        return list(group.keys())
+
+
 def _get_zarr_format(file_path: str | Path, stream_mode=None, storage_options: dict | None = None) -> int | None:
     """
     Return the zarr format (2 or 3) of a zarr folder, local or streamed with stream_mode="zarr", from its
@@ -355,12 +373,6 @@ def _get_zarr_format(file_path: str | Path, stream_mode=None, storage_options: d
     return None
 
 
-def _has_zarr_python_3() -> bool:
-    import zarr
-
-    return int(zarr.__version__.split(".")[0]) >= 3
-
-
 def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_type="ElectricalSeries", backend="hdf5"):
     """
     Recursively searches for groups with the specified neurodata_type hdf5 or zarr object,
@@ -370,17 +382,24 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
         import h5py
 
         group_class = h5py.Group
+        child_names = list(group.keys())
     else:
         import zarr
 
         group_class = zarr.Group
+        child_names = _zarr_group_child_names(group)
 
     if result is None:
         result = []
 
-    # zarr>=3 groups have no `items()`, `keys()` works for h5py and both zarr versions
-    for neurodata_name in group.keys():
-        value = group[neurodata_name]
+    for neurodata_name in child_names:
+        try:
+            value = group[neurodata_name]
+        except Exception:
+            # Skip children whose metadata cannot be parsed (e.g. hdmf-zarr arrays with a
+            # fill_value that zarr-python 3.x rejects). These are never groups, so skipping
+            # them is safe when searching for a neurodata_type.
+            continue
         # Check if it's a group and if it has the neurodata_type
         if isinstance(value, group_class):
             current_path = f"{path}/{neurodata_name}" if path else neurodata_name
@@ -395,14 +414,16 @@ def _find_neurodata_type_from_backend(group, path="", result=None, neurodata_typ
 def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, electrical_series, backend="hdf5"):
     """
     Retrieves the indices of the electrodes from the electrical series.
-    For the Zarr backend, the electrodes are stored in the electrical_series.attrs["zarr_link"].
+    For the Zarr backend, the electrodes are stored in the electrical_series.attrs["_LINKS"]
+    or legacy electrical_series.attrs["zarr_link"].
+    See https://github.com/hdmf-dev/hdmf-zarr/pull/336
     """
     if "electrodes" not in electrical_series:
         if backend == "zarr":
             import zarr
 
-            # links must be resolved, hdmf-zarr>=0.14 stores them under "_LINKS" instead of "zarr_link"
-            zarr_links = electrical_series.attrs.get("zarr_link", electrical_series.attrs.get("_LINKS"))
+            # links must be resolved
+            zarr_links = electrical_series.attrs.get("_LINKS", electrical_series.attrs.get("zarr_link", []))
             electrodes_path = None
             for zarr_link in zarr_links:
                 if zarr_link["name"] == "electrodes":
@@ -454,11 +475,7 @@ class _NWBReader:
         if use_pynwb:
             return "use_pynwb"
         backend = _NWBReader._storage_backend(file_path, file, stream_mode)
-        if (
-            backend == "zarr"
-            and _has_zarr_python_3()
-            and _get_zarr_format(file_path, stream_mode, storage_options) == 2
-        ):
+        if backend == "zarr" and _get_zarr_format(file_path, stream_mode, storage_options) == 2:
             if not HAVE_PYNWB or importlib.util.find_spec("hdmf_zarr") is None:
                 raise ImportError(
                     "To read zarr v2 NWB files with zarr-python 3, install pynwb and hdmf-zarr>=0.14, which requires "

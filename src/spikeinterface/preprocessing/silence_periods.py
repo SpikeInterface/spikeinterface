@@ -135,6 +135,8 @@ class SilencedPeriodsRecording(BasePreprocessor):
             )
             self.add_recording_segment(rec_segment)
 
+        self._periods = periods
+
         self._kwargs = dict(
             recording=recording,
             periods=periods,
@@ -143,6 +145,10 @@ class SilencedPeriodsRecording(BasePreprocessor):
             noise_levels=noise_levels,
             apodization_samples=apodization_samples,
         )
+
+    @property
+    def periods(self):
+        return self._periods
 
 
 def _all_period_list_to_periods_vec(list_periods, num_seg):
