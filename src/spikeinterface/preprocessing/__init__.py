@@ -21,6 +21,3 @@ from .pipeline import (
 )
 
 from .detect_artifacts import detect_artifact_periods, detect_artifact_periods_by_envelope, detect_saturation_periods
-
-# for snippets
-from .align_snippets import AlignSnippets

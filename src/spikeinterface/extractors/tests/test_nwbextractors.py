@@ -1,3 +1,4 @@
+import importlib.util
 import unittest
 from pathlib import Path
 
@@ -158,21 +159,26 @@ def nwbfile_with_ecephys_content():
     return nwbfile
 
 
+# hdmf-zarr>=0.14 (zarr v3) requires python>=3.12, so it may be missing
+NWB_BACKENDS = ["hdf5"] + (["zarr"] if importlib.util.find_spec("hdmf_zarr") else [])
+
+
 def _generate_nwbfile(backend, file_path):
     from pynwb import NWBHDF5IO
-    from hdmf_zarr import NWBZarrIO
 
     nwbfile = nwbfile_with_ecephys_content()
     if backend == "hdf5":
         io_class = NWBHDF5IO
     elif backend == "zarr":
+        from hdmf_zarr import NWBZarrIO
+
         io_class = NWBZarrIO
     with io_class(str(file_path), mode="w") as io:
         io.write(nwbfile)
     return file_path, nwbfile
 
 
-@pytest.fixture(scope="module", params=["hdf5", "zarr"])
+@pytest.fixture(scope="module", params=NWB_BACKENDS)
 def generate_nwbfile(request, tmp_path_factory):
     nwbfile = nwbfile_with_ecephys_content()
     backend = request.param
@@ -1158,19 +1164,20 @@ def nwbfile_with_timeseries():
 
 def _generate_nwbfile_with_time_series(backend, file_path):
     from pynwb import NWBHDF5IO
-    from hdmf_zarr import NWBZarrIO
 
     nwbfile = nwbfile_with_timeseries()
     if backend == "hdf5":
         io_class = NWBHDF5IO
     elif backend == "zarr":
+        from hdmf_zarr import NWBZarrIO
+
         io_class = NWBZarrIO
     with io_class(str(file_path), mode="w") as io:
         io.write(nwbfile)
     return file_path, nwbfile
 
 
-@pytest.fixture(scope="module", params=["hdf5", "zarr"])
+@pytest.fixture(scope="module", params=NWB_BACKENDS)
 def generate_nwbfile_with_time_series(request, tmp_path_factory):
     backend = request.param
     nwbfile_path = tmp_path_factory.mktemp("nwb_tests_directory") / "test.nwb"

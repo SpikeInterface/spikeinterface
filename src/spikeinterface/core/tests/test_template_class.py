@@ -115,7 +115,6 @@ def test_initialization_fail_with_dense_templates():
         template = generate_test_template(template_type="sparse_with_dense_templates")
 
 
-@pytest.mark.requires_zarr_write
 @pytest.mark.parametrize("is_in_uV", [True, False])
 @pytest.mark.parametrize("template_type", ["dense", "sparse"])
 def test_save_and_load_zarr(template_type, is_in_uV, tmp_path):
