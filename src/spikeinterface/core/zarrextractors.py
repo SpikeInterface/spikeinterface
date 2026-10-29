@@ -897,10 +897,10 @@ def add_sorting_to_zarr_group(
             codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
             spikes_group.create_array(name=field, data=spikes[field], chunks=chunks, shards=shards, **codec_kwargs)
 
-    segment_slices = []
-    if sorting._cached_spike_vector_segment_slices is not None:
-        segment_slices = sorting._cached_spike_vector_segment_slices
+    if "segment_slices" in sorting._cached_time_ordered:
+        segment_slices = sorting._cached_time_ordered["segment_slices"]
     else:
+        segment_slices = []
         for segment_index in range(num_segments):
             i0, i1 = np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
             segment_slices.append([i0, i1])
