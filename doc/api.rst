@@ -8,9 +8,8 @@ spikeinterface.core
     .. autofunction:: load
     .. autoclass:: BaseRecording
         :members:
+        :inherited-members:
     .. autoclass:: BaseSorting
-        :members:
-    .. autoclass:: BaseSnippets
         :members:
     .. autoclass:: BaseEvent
         :members:
@@ -27,10 +26,8 @@ spikeinterface.core
     .. autoclass:: BinaryRecordingExtractor
     .. autoclass:: BinaryFolderRecording
     .. autoclass:: NumpyFolderSorting
-    .. autoclass:: NpyFolderSnippets
     .. autoclass:: NumpyRecording
     .. autoclass:: NumpySorting
-    .. autoclass:: NumpySnippets
     .. autoclass:: AppendSegmentRecording
     .. autoclass:: ConcatenateSegmentRecording
     .. autoclass:: SelectSegmentRecording
@@ -422,7 +419,6 @@ Core
 
     .. autofunction:: generate_recording
     .. autofunction:: generate_sorting
-    .. autofunction:: generate_snippets
     .. autofunction:: generate_templates
     .. autofunction:: generate_recording_by_size
     .. autofunction:: generate_ground_truth_recording

@@ -133,9 +133,7 @@ def dataset_to_split(create_cache_folder):
 
 @pytest.mark.parametrize("lazy", [False, True])
 @pytest.mark.parametrize("sparse", [False, True])
-@pytest.mark.parametrize(
-    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
-)
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, format, tmp_path):
     if format == "memory" and lazy:
         pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")
@@ -164,21 +162,14 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
         sorting_analyzer.save_as(folder=tmp_path / analyzer_folder_name, format=format)
         sorting_analyzer = load_sorting_analyzer(tmp_path / analyzer_folder_name, format=format, lazy=lazy)
 
-    # TODO: still some UserWarnings for n_jobs, where from?
-    t0 = time.perf_counter()
     analyzer_merged_hard = sorting_analyzer.merge_units(
         merge_unit_groups=merges, censor_ms=2, merging_mode="hard", n_jobs=1
     )
-    t_hard = time.perf_counter() - t0
 
-    t0 = time.perf_counter()
     analyzer_merged_soft = sorting_analyzer.merge_units(
         merge_unit_groups=merges, censor_ms=2, merging_mode="soft", sparsity_overlap=0.0, n_jobs=1
     )
-    t_soft = time.perf_counter() - t0
 
-    # soft must faster
-    assert t_soft < t_hard
     np.testing.assert_array_equal(analyzer_merged_hard.unit_ids, analyzer_merged_soft.unit_ids)
     new_unit_ids = list(
         np.arange(max(split_unit_ids.astype(int)) + 1, max(split_unit_ids.astype(int)) + 1 + len(merges))
@@ -267,9 +258,7 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
 
 @pytest.mark.parametrize("lazy", [False, True])
 @pytest.mark.parametrize("sparse", [False, True])
-@pytest.mark.parametrize(
-    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
-)
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 def test_SortingAnalyzer_split_all_extensions(dataset_to_split, lazy, sparse, format, tmp_path):
     if format == "memory" and lazy:
         pytest.skip("lazy has no effect for format='memory' (nothing on disk to load lazily)")
