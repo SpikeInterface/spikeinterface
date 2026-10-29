@@ -155,7 +155,7 @@ def _numba_can_reorder(dtype: np.dtype) -> bool:
 
     We need integer `unit_index` and `segment_index` fields and no object fields.
 
-    Numba can handle any other fields (e.g. extra float fields, string fields) just fine through the record copy:
+    Any other fields (e.g. floats, fixed-length strings) are fine.
     """
     names = dtype.names
     if names is None or dtype.hasobject:
@@ -191,10 +191,11 @@ def reorder_spike_vector_by_unit_and_segment(
     Parameters
     ----------
     spike_vector : np.ndarray or array-like
-        Structured array whose first three fields are `minimum_spike_dtype`. Extra trailing fields
-        (e.g. the "channel_index" that `to_spike_vector(main_channel_indices=...)` adds) are carried
-        through to the output. Anything array-like is accepted and materialised with `np.asarray`,
-        so lazily-backed spike vectors work, at the cost of being read into memory.
+        Structured array with integer "unit_index" and "segment_index" fields, in any order and of
+        any width. Any other fields (e.g. the "channel_index" that
+        `to_spike_vector(main_channel_indices=...)` adds) are carried through to the output.
+        Anything array-like is accepted and materialised with `np.asarray`, so lazily-backed spike
+        vectors work, at the cost of being read into memory.
     num_units : int
         The number of units. Every `unit_index` must be in [0, num_units).
     num_segments : int
@@ -298,7 +299,7 @@ def get_numba_reorder_spike_vector():
         Stable counting-sort of a structured spike vector by (unit, segment).
 
         `unit_index` and `segment_index` are the field views (i.e., zero-copy, strided) of `spikes`.
-        they are widened to int64 so narrow fields can't overflow the bucket arithmetic.
+        They are widened to int64 so narrow fields can't overflow the bucket arithmetic.
         Rows move as whole records (`out[pos] = spikes[i]`), so any extra fields travel with their spike.
 
         Each spike's bucket is derived on the fly as
