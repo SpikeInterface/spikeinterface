@@ -380,3 +380,15 @@ def test_num_chunk_per_batch_same_results(format, n_jobs, create_cache_folder):
         np.testing.assert_array_equal(
             rec_ref.get_traces(segment_index=segment_index), rec_batch.get_traces(segment_index=segment_index)
         )
+
+
+def test_divide_time_series_into_chunks_batches_do_not_cross_segments():
+    from spikeinterface.core import generate_recording
+
+    # 2.5 chunks in seg 0 and 1.5 chunks in seg 1, batches of 2 chunks
+    recording = generate_recording(durations=[0.25, 0.15], sampling_frequency=10_000.0, num_channels=2, seed=0)
+    batches = divide_time_series_into_chunks(recording, 1000, num_chunk_per_batch=2)
+    # seg 0: 3 chunks -> [2, 1]; seg 1: 2 chunks -> [2]
+    assert [len(b) for b in batches] == [2, 1, 2]
+    for batch in batches:
+        assert len({segment_index for segment_index, _, _ in batch}) == 1

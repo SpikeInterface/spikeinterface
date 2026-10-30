@@ -230,10 +230,11 @@ def divide_time_series_into_chunks(recording, chunk_size, num_chunk_per_batch=No
     slices = []
     for segment_index in range(recording.get_num_segments()):
         num_frames = recording.get_num_samples(segment_index)
-        chunks = divide_segment_into_chunks(num_frames, chunk_size)
-        slices.extend([(segment_index, frame_start, frame_stop) for frame_start, frame_stop in chunks])
-    if num_chunk_per_batch is not None:
-        slices = [slices[i : i + num_chunk_per_batch] for i in range(0, len(slices), num_chunk_per_batch)]
+        chunks = [(segment_index, s, e) for s, e in divide_segment_into_chunks(num_frames, chunk_size)]
+        if num_chunk_per_batch is None:
+            slices.extend(chunks)
+        else:
+            slices.extend(chunks[i : i + num_chunk_per_batch] for i in range(0, len(chunks), num_chunk_per_batch))
     return slices
 
 
