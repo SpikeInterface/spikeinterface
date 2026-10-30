@@ -1,3 +1,5 @@
+import importlib.util
+
 import numpy as np
 
 from spikeinterface.core import ChannelSparsity
@@ -7,6 +9,8 @@ from spikeinterface.core.sortinganalyzer import register_result_extension
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 
 from spikeinterface.core.node_pipeline import SpikeRetriever, PipelineNode, find_parent_of_type
+
+HAVE_NUMBA = importlib.util.find_spec("numba") is not None
 
 
 class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
@@ -214,6 +218,14 @@ class AmplitudeScalingNode(PipelineNode):
         self._handle_collisions = handle_collisions
         self._delta_collision_samples = delta_collision_samples
         self._template_is_zero = template_is_zero
+        # the kernel sums over sparse channels only, so it needs templates that are zero outside them; otherwise,
+        # as with a sparsity sparser than the templates, the numpy path runs
+        self._use_numba = HAVE_NUMBA and not np.any((all_templates != 0) & ~sparsity_mask[:, np.newaxis, :])
+        if self._use_numba:
+            self._cut_templates = np.ascontiguousarray(
+                all_templates[:, nbefore - cut_out_before : nbefore + cut_out_after]
+            )
+            self._sparse_channels = _channel_lists(sparsity_mask)
 
         self._kwargs.update(
             all_templates=all_templates,
@@ -232,6 +244,8 @@ class AmplitudeScalingNode(PipelineNode):
         return self._dtype
 
     def compute(self, traces, peaks):
+        if self._use_numba:
+            return self._compute_numba(traces, peaks)
         gains = self._gains
         offsets = self._offsets
         all_templates = self._all_templates
@@ -324,8 +338,86 @@ class AmplitudeScalingNode(PipelineNode):
         # TODO: switch to collision mask and return that (to use concatenation)
         return (scalings, spike_collision_mask)
 
+    def _compute_numba(self, traces, peaks):
+        from ._amplitude_scalings_numba import compute_scalings
+
+        if self._gains is None:
+            gains = offsets = np.zeros(0, dtype=np.float32)
+            # numba reads neither float16 nor non-native byte order; both convert exactly
+            if traces.dtype == np.float16:
+                traces = traces.astype(np.float32)
+            elif not traces.dtype.isnative:
+                traces = traces.astype(traces.dtype.newbyteorder("="))
+        else:
+            # the numpy path scales float32 traces, so the product keeps float32 or the gains' wider dtype
+            dtype = np.result_type(np.float32, self._gains.dtype)
+            gains, offsets = self._gains.astype(dtype), self._offsets.astype(dtype)
+            traces = traces.astype(np.float32, copy=False)
+        if self._handle_collisions:
+            overlap_matrix, delta_collision_samples = self._overlap_matrix, self._delta_collision_samples
+        else:
+            overlap_matrix, delta_collision_samples = np.zeros((1, 1), dtype=bool), -1
+        local_spike_indices = np.flatnonzero(~peaks["in_margin"])
+        scalings, spike_collision_mask, needs_numpy_fit = compute_scalings(
+            traces,
+            gains,
+            offsets,
+            peaks["sample_index"],
+            peaks["unit_index"],
+            local_spike_indices,
+            overlap_matrix,
+            delta_collision_samples,
+            self._cut_templates,
+            self._sparsity_mask,
+            *self._sparse_channels,
+            np.asarray(self._template_is_zero),
+            self._cut_out_before,
+        )
+        # the kernel leaves two kinds of spike to the numpy path: collisions whose traces are not finite or whose fit
+        # is ill-conditioned, and spikes with a constant, non-zero template, whose slope linregress decides
+        refit = np.flatnonzero(needs_numpy_fit)
+        refit_collisions = refit[spike_collision_mask[refit]]
+        if refit_collisions.size > 0:
+            collisions = find_collisions(
+                peaks[local_spike_indices[refit_collisions]],
+                peaks,
+                self._delta_collision_samples,
+                self._overlap_matrix,
+                local_spike_indices[refit_collisions],
+            )
+            for i, collision in collisions.items():
+                scalings[refit_collisions[i]] = fit_collision(
+                    collision,
+                    traces,
+                    self._nbefore,
+                    self._all_templates,
+                    self._sparsity_mask,
+                    self._cut_out_before,
+                    self._cut_out_after,
+                    self._gains,
+                    self._offsets,
+                )[0]
+        for spike_index in refit[~spike_collision_mask[refit]]:
+            spike = peaks[local_spike_indices[spike_index]]
+            (sparse_indices,) = np.nonzero(self._sparsity_mask[spike["unit_index"]])
+            start = max(0, spike["sample_index"] - self._cut_out_before)
+            stop = min(traces.shape[0], spike["sample_index"] + self._cut_out_after)
+            first = self._nbefore - (spike["sample_index"] - start)
+            template = self._all_templates[spike["unit_index"]][first : first + stop - start, sparse_indices]
+            local_waveform = traces[start:stop, sparse_indices]
+            if self._gains is not None:
+                local_waveform = local_waveform * gains[sparse_indices] + offsets[sparse_indices]
+            scalings[spike_index] = _ordinary_scaling_slope(template, local_waveform)
+        return scalings.astype(self._dtype), spike_collision_mask
+
     def get_margin(self):
         return self._margin
+
+
+def _channel_lists(mask):
+    """The channels of each row of ``mask``, as ``lists[starts[u] : starts[u + 1]]``."""
+    starts = np.concatenate([[0], np.cumsum(mask.sum(axis=1))])
+    return starts, np.flatnonzero(mask) % mask.shape[1]
 
 
 ### Collision handling ###
@@ -568,7 +660,8 @@ def fit_collision(
     X = np.zeros((len(y), len(collision)))
     for i, spike in enumerate(collision):
 
-        full_template = np.zeros_like(local_waveform)
+        # float64 like X, so templates are not truncated to the dtype of unscaled integer or float16 traces
+        full_template = np.zeros(local_waveform.shape)
 
         # For the collision spike, take its unit template and insert
         # it into `full_template` at the time the collision spike occurred.
