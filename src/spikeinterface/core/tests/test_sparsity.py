@@ -9,6 +9,7 @@ from spikeinterface.core import ChannelSparsity, estimate_sparsity, compute_spar
 from spikeinterface.core.core_tools import check_json
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
+from spikeinterface.core import NumpyRecording, NumpySorting
 
 
 def test_ChannelSparsity():
@@ -160,6 +161,48 @@ def get_dataset():
     recording.set_property("group", ["a"] * 5 + ["b"] * 5)
     sorting.set_property("group", ["a"] * 3 + ["b"] * 2)
     return recording, sorting
+
+
+def test_estimate_sparsity_uses_single_probe_3d_geometry():
+    positions = np.array([[0, 0, 0], [50, 0, 50], [100, 0, 0], [0, 0, 200]])
+    probe = pi.Probe(ndim=3, si_units="um")
+    probe.set_contacts(
+        positions=positions,
+        plane_axes=np.broadcast_to(np.eye(3)[:2], (len(positions), 2, 3)),
+    )
+    probe.set_device_channel_indices(np.arange(len(positions)))
+
+    rng = np.random.default_rng(0)
+    traces = rng.normal(0, 0.1, (4000, len(positions))).astype("float32")
+    spike_samples = np.array([400, 900, 1400, 1900, 2400, 2900, 3400])
+    traces[spike_samples, 0] -= 20
+    recording = NumpyRecording(traces, sampling_frequency=20_000)
+    recording.set_probe(probe)
+    sorting = NumpySorting.from_unit_dict({1: spike_samples}, sampling_frequency=20_000)
+    expected_mask = [[True, True, False, False]]
+
+    direct = estimate_sparsity(sorting, recording, method="radius", radius_um=80, main_channel_indices=[0])
+    np.testing.assert_array_equal(direct.mask, expected_mask)
+
+    estimated = estimate_sparsity(
+        sorting,
+        recording,
+        method="radius",
+        radius_um=80,
+        num_spikes_for_sparsity=len(spike_samples),
+        n_jobs=1,
+    )
+    np.testing.assert_array_equal(estimated.mask, expected_mask)
+
+    closest = estimate_sparsity(
+        sorting,
+        recording,
+        method="closest_channels",
+        num_channels=2,
+        num_spikes_for_sparsity=len(spike_samples),
+        n_jobs=1,
+    )
+    np.testing.assert_array_equal(closest.mask, expected_mask)
 
 
 def test_estimate_sparsity():
