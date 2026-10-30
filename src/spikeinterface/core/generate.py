@@ -2411,10 +2411,8 @@ def generate_ground_truth_recording(
         parent_recording=noise_rec,
         upsample_vector=upsample_vector,
     )
-    recording.annotate(is_filtered=True)
-    recording.set_probe(probe)
-    recording.set_channel_gains(1.0)
-    recording.set_channel_offsets(0.0)
+
+    setup_inject_templates_recording(recording, probe)
 
     main_channel_ids = recording.channel_ids[main_channel_indices]
     sorting.set_property("main_channel_id", main_channel_ids)
@@ -2423,6 +2421,17 @@ def generate_ground_truth_recording(
     sorting.name = "GroundTruthSorting"
 
     return recording, sorting
+
+
+def setup_inject_templates_recording(recording: BaseRecording, probe: Probe) -> None:
+    """
+    Convenience function to modify a generated
+    recording in-place with annotation and probe details
+    """
+    recording.annotate(is_filtered=True)
+    recording.set_probe(probe)
+    recording.set_channel_gains(1.0)
+    recording.set_channel_offsets(0.0)
 
 
 def __getattr__(name):
