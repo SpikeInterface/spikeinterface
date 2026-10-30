@@ -1,12 +1,12 @@
 import numpy as np
 from warnings import warn
 
+from spikeinterface.core import SortingAnalyzer
+from spikeinterface.core.sorting_tools import get_segment_durations
+
 from .rasters import BaseRasterWidget
 from .base import to_attr
-from .utils import validate_segment_indices, get_segment_durations
-
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
-from spikeinterface.core import SortingAnalyzer
+from .utils import validate_segment_indices
 
 
 class AmplitudesWidget(BaseRasterWidget):

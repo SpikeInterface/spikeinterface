@@ -2,11 +2,12 @@ import numpy as np
 from warnings import warn
 
 from spikeinterface.core import SortingAnalyzer, BaseSorting
+from spikeinterface.core.sorting_tools import get_segment_durations
+
 from .base import BaseWidget, to_attr, default_backend_kwargs
 from .utils import (
     get_some_colors,
     validate_segment_indices,
-    get_segment_durations,
 )
 
 
