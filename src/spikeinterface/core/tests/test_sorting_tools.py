@@ -2,7 +2,7 @@ import importlib
 import pytest
 import numpy as np
 
-from spikeinterface.core import NumpySorting
+from spikeinterface.core import NumpySorting, NumpyRecording, generate_sorting
 
 from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core.sorting_tools import (
@@ -17,6 +17,7 @@ from spikeinterface.core.sorting_tools import (
     set_properties_after_merging,
     set_properties_after_splits,
     reorder_spike_vector_by_unit_and_segment,
+    get_segment_durations,
 )
 from spikeinterface.core.base import minimum_spike_dtype
 
@@ -528,6 +529,85 @@ def test_remap_unit_indices_in_vector():
     target_mask = np.ones(spikes.size, dtype=bool)
     target_mask[4::5] = False
     assert np.array_equal(mask, target_mask)
+
+
+def test_get_segment_durations_estimate():
+    """Test a sortings get_segment_durations when estimated from the spike time"""
+    from spikeinterface import generate_sorting
+
+    # Test with a normal multi-segment sorting
+    durations = [5.0, 10.0, 15.0]
+    t_starts = [10, 20, 30]
+
+    # Create sorting with high fr to ensure spikes near the end segments
+    sorting = generate_sorting(
+        durations=durations,
+        firing_rates=15.0,
+        t_starts=t_starts,
+    )
+
+    segment_indices = list(range(sorting.get_num_segments()))
+
+    # Calculate durations
+    calculated_durations, segment_start_stop_times = get_segment_durations(sorting, segment_indices)
+
+    # Check results
+    expected_start_stop_times = np.array([(10, 15), (20, 30), (30, 45)], dtype=float)
+    assert list(segment_start_stop_times) == segment_indices
+    start_stop_times = np.array(list(segment_start_stop_times.values()))
+    assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
+
+    # Check results
+    assert len(calculated_durations) == len(durations)
+    # Durations should be approximately correct
+    for calculated_duration, expected_duration in zip(calculated_durations, durations):
+        # Duration should be <= expected (spikes can't be after the end)
+        assert calculated_duration <= expected_duration
+        # And reasonably close
+        tolerance = max(0.1 * expected_duration, 0.1)
+        assert expected_duration - calculated_duration < tolerance
+
+    # Test with single-segment sorting
+    sorting_single = generate_sorting(
+        durations=[7.0],
+        firing_rates=15.0,
+        t_starts=[4],
+    )
+
+    single_duration, segment_start_stop_times = get_segment_durations(sorting_single, [0])
+
+    expected_start_stop_times = [(4, 11)]
+    assert list(segment_start_stop_times) == [0]
+    start_stop_times = np.array(list(segment_start_stop_times.values()))
+    assert np.allclose(expected_start_stop_times, start_stop_times, rtol=0, atol=0.1)
+
+    # Test that the calculated duration is reasonable
+    assert single_duration <= 7.0
+    assert 7.0 - single_duration < 0.7  # Within 10%
+
+
+def test_get_segment_durations_with_recording():
+    """Test a sortings get_segment_durations when a recording is
+    registered, meaning times should be exact and not estimated from spike times"""
+    durations = [5.0, 10.0, 15.0]
+    t_starts = [10, 20, 30]
+    sampling_frequency = 1024
+
+    sorting = generate_sorting(durations=durations, sampling_frequency=sampling_frequency, seed=42)
+
+    recording = NumpyRecording(
+        [np.zeros((int(duration * sampling_frequency), 1), dtype="float32") for duration in durations],
+        sampling_frequency=sampling_frequency,
+        t_starts=t_starts,
+    )
+    sorting.register_recording(recording)
+
+    actual_durations, bounds = get_segment_durations(sorting)
+    np.testing.assert_array_equal(actual_durations, durations)
+    assert bounds == {
+        seg: (start, start + duration - 1 / sampling_frequency)
+        for seg, (start, duration) in enumerate(zip(t_starts, durations))
+    }
 
 
 if __name__ == "__main__":

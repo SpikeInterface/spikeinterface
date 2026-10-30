@@ -1,12 +1,12 @@
 import numpy as np
 from warnings import warn
 
+from spikeinterface.core import SortingAnalyzer
+from spikeinterface.core.sorting_tools import get_segment_durations
+
 from .rasters import BaseRasterWidget
 from .base import to_attr
-from .utils import validate_segment_indices, get_segment_durations
-
-from spikeinterface.core.sortinganalyzer import SortingAnalyzer
-from spikeinterface.core import SortingAnalyzer
+from .utils import validate_segment_indices
 
 
 class AmplitudesWidget(BaseRasterWidget):
@@ -121,15 +121,15 @@ class AmplitudesWidget(BaseRasterWidget):
         if plot_histograms and bins is None:
             bins = 100
 
-        # Calculate durations for all segments for x-axis limits
-        durations = get_segment_durations(sorting, segment_indices)
+        _, segment_start_stop_times = get_segment_durations(sorting, segment_indices)
 
         # Build the plot data with the full dict of dicts structure
         plot_data = dict(
             unit_colors=unit_colors,
             plot_histograms=plot_histograms,
             bins=bins,
-            durations=durations,
+            segment_start_stop_times=segment_start_stop_times,
+            sampling_frequency=sorting.get_sampling_frequency(),
             unit_ids=unit_ids,
             hide_unit_selector=hide_unit_selector,
             plot_legend=plot_legend,
@@ -180,9 +180,14 @@ class AmplitudesWidget(BaseRasterWidget):
             for u in unit_ids
         ]
 
+        segment_times = dp.segment_start_stop_times.values()
+
+        start_time_sec = min(start for start, _ in segment_times)
+        end_time_sec = max(stop for _, stop in segment_times)
+
         self.view = vv_views.SpikeAmplitudes(
-            start_time_sec=0,
-            end_time_sec=np.sum(dp.durations),
+            start_time_sec=start_time_sec,
+            end_time_sec=end_time_sec,
             plots=sa_items,
             # hide_unit_selector=dp.hide_unit_selector,
         )
