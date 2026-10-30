@@ -1,3 +1,4 @@
+import numpy as np
 import os
 import time
 
@@ -364,3 +365,18 @@ if __name__ == "__main__":
     # test_get_best_job_kwargs()
 
     # quick_becnhmark()
+
+
+@pytest.mark.parametrize("format", ["binary", "zarr"])
+@pytest.mark.parametrize("n_jobs", [1, 2])
+def test_num_chunk_per_batch_same_results(format, n_jobs, create_cache_folder):
+    from spikeinterface.core import generate_recording
+
+    recording = generate_recording(durations=[2.0, 1.0], num_channels=4, sampling_frequency=10_000.0, seed=0)
+    kwargs = dict(format=format, chunk_size=1000, n_jobs=n_jobs, progress_bar=False)
+    rec_ref = recording.save(folder=create_cache_folder / f"ref_{format}_{n_jobs}", **kwargs)
+    rec_batch = recording.save(folder=create_cache_folder / f"batch_{format}_{n_jobs}", num_chunk_per_batch=4, **kwargs)
+    for segment_index in range(recording.get_num_segments()):
+        np.testing.assert_array_equal(
+            rec_ref.get_traces(segment_index=segment_index), rec_batch.get_traces(segment_index=segment_index)
+        )

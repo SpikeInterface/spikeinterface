@@ -1,8 +1,6 @@
 from .baserecording import BaseRecording, BaseRecordingSegment
 from .basesorting import BaseSorting, BaseSortingSegment, SpikeVectorSortingSegment
 from .baseevent import BaseEvent, BaseEventSegment
-from .basesnippets import BaseSnippets, BaseSnippetsSegment
-from .baserecordingsnippets import BaseRecordingSnippets
 
 from .loading import load
 
@@ -15,16 +13,13 @@ from .numpyextractors import (
     NumpySorting,
     SharedMemorySorting,
     NumpyEvent,
-    NumpySnippets,
 )
 from .zarrextractors import read_zarr, read_zarr_array, get_default_zarr_compressor
 from .binaryfolder import BinaryFolderRecording, read_binary_folder
 from .sortingfolder import NumpyFolderSorting, NpzFolderSorting, read_numpy_sorting_folder, read_npz_folder
-from .npysnippetsextractor import NpySnippetsExtractor, read_npy_snippets
-from .npyfoldersnippets import NpyFolderSnippets, read_npy_snippets_folder
 
 # utility extractors (equivalent to OLD subrecording/subsorting)
-from .channelslice import ChannelSliceRecording, ChannelSliceSnippets
+from .channelslice import ChannelSliceRecording
 from .unitsselectionsorting import UnitsSelectionSorting
 from .frameslicerecording import FrameSliceRecording
 from .frameslicesorting import FrameSliceSorting
@@ -38,7 +33,6 @@ from .generate import (
     generate_sorting,
     add_synchrony_to_sorting,
     create_sorting_npz,
-    generate_snippets,
     synthesize_random_firings,
     inject_some_duplicate_units,
     inject_some_split_units,
@@ -121,7 +115,6 @@ from .sorting_tools import (
 )
 
 from .waveform_tools import extract_waveforms_to_buffers, estimate_templates, estimate_templates_with_accumulator
-from .snippets_tools import snippets_from_sorting
 
 # waveform extractor
 # Important not for compatibility!!

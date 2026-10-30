@@ -3,6 +3,7 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from spikeinterface.core import get_chunk_with_margin
+from spikeinterface.core.time_series_tools import _taper_margins
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -65,7 +66,12 @@ class PhaseShiftRecording(BasePreprocessor):
         # for dumpability
         if inter_sample_shift is not None:
             inter_sample_shift = list(inter_sample_shift)
-        self._kwargs = dict(recording=recording, margin_ms=float(margin_ms), inter_sample_shift=inter_sample_shift)
+        self._kwargs = dict(
+            recording=recording,
+            margin_ms=float(margin_ms),
+            inter_sample_shift=inter_sample_shift,
+            dtype=np.dtype(dtype).str,
+        )
 
 
 class PhaseShiftRecordingSegment(BasePreprocessorSegment):
@@ -75,12 +81,13 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         self.margin = margin
         self.dtype = dtype
         self.tmp_dtype = tmp_dtype
+        self._margin_window = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
             channel_indices = slice(None)
 
-        # this return a copy with margin  + taper on border always
+        # The in-place taper requires an owned buffer, including for float64 parents.
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
@@ -89,8 +96,9 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             self.margin,
             dtype=self.tmp_dtype,
             add_zeros=True,
-            window_on_margin=True,
+            copy=True,
         )
+        _taper_margins(traces_chunk, self._margin_window)
         traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
@@ -139,13 +147,16 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     This method leverages the properties of the Fourier transform, where a phase shift in the frequency domain
     corresponds to a time shift in the time domain.
     """
-    from scipy.fft import rfft, irfft
+    from scipy.fft import irfft, next_fast_len, rfft
 
     signal_length = signal.shape[axis]
-    frequency_domain_signal = rfft(signal, n=signal_length, axis=axis, overwrite_x=True)
+    # A length with a large prime factor makes the FFT slow. Zero padding after the tapered end
+    # changes only the period of the circular shift, which moves the output by far less than one int16 step.
+    fft_length = next_fast_len(signal_length, real=True)
+    frequency_domain_signal = rfft(signal, n=fft_length, axis=axis, overwrite_x=True)
 
     if axis == 0:
-        angular_frequencies = 2 * np.pi * np.fft.rfftfreq(signal_length)
+        angular_frequencies = 2 * np.pi * np.fft.rfftfreq(fft_length)
         # Neuropixels channels reuse a small set of ADC sampling delays, so compute each rotation once.
         unique_shifts, shift_indices = np.unique(shift_samples, return_inverse=True)
         unique_angles = (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]).astype(
@@ -158,8 +169,8 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
         raise NotImplementedError("Axis != 0 is not implemented yet")
 
     # Inverse FFT to get the translated signal
-    shifted_signal = irfft(phase_shifted_signal, n=signal_length, axis=axis, overwrite_x=True)
-    return shifted_signal
+    shifted_signal = irfft(phase_shifted_signal, n=fft_length, axis=axis, overwrite_x=True)
+    return shifted_signal[:signal_length]
 
 
 apply_fshift = apply_frequency_shift

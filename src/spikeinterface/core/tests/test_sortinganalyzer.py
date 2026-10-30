@@ -20,15 +20,23 @@ from spikeinterface.core.sortinganalyzer import (
     AnalyzerExtension,
     _sort_extensions_by_dependency,
 )
+from spikeinterface.core.zarr_tools import check_compressors_match
 from spikeinterface.core.analyzer_extension_core import BaseSpikeVectorExtension
 from spikeinterface.core.base import minimum_spike_dtype
 
 # to test basespikevectorextension with node pipeline
 from spikeinterface.core.node_pipeline import SpikeRetriever
 from spikeinterface.core.tests.test_node_pipeline import AmplitudeExtractionNode
-from spikeinterface.core.core_tools import _is_zarr_write_supported
 
-analyzer_formats = ("memory", "binary_folder", "zarr") if _is_zarr_write_supported() else ("memory", "binary_folder")
+# Ignore Zarr consolidated metadata warning
+warnings.filterwarnings(
+    "ignore",
+    message="Consolidated metadata is currently not part",
+    category=UserWarning,
+)
+
+
+analyzer_formats = ("memory", "binary_folder", "zarr")
 
 
 def get_dataset():
@@ -95,6 +103,26 @@ def test_SortingAnalyzer_memory(tmp_path, dataset):
     _check_sorting_analyzers(sorting_analyzer, sorting2, cache_folder=tmp_path)
 
 
+@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
+def test_provenance_saved(tmp_path, dataset, format):
+    recording, sorting = dataset
+    recording = recording.save(folder=tmp_path / "recording_binary")
+    sorting = sorting.save(folder=tmp_path / "sorting_npz")
+    folder = tmp_path / f"analyzer_{format}" if format == "binary_folder" else tmp_path / "analyzer.zarr"
+    create_sorting_analyzer(sorting, recording, format=format, folder=folder, sparse=False)
+
+    loaded = load_sorting_analyzer(folder)
+    assert loaded.has_recording()
+    assert np.array_equal(loaded.recording.channel_ids, recording.channel_ids)
+    assert np.array_equal(loaded.recording.get_traces(end_frame=100), recording.get_traces(end_frame=100))
+
+    sorting_provenance = loaded.get_sorting_provenance()
+    assert sorting_provenance is not None
+    assert np.array_equal(sorting_provenance.unit_ids, sorting.unit_ids)
+    for unit_id in sorting.unit_ids:
+        assert np.array_equal(sorting_provenance.get_unit_spike_train(unit_id), sorting.get_unit_spike_train(unit_id))
+
+
 def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     recording, sorting = dataset
     recording = recording.save(folder=tmp_path / "recording_binary")
@@ -142,10 +170,12 @@ def test_SortingAnalyzer_binary_folder(tmp_path, dataset):
     assert "number" in sorting_analyzer_reloded.sorting.get_property_keys()
 
 
-@pytest.mark.requires_zarr_write
 def test_SortingAnalyzer_zarr(tmp_path, dataset):
     recording, sorting = dataset
     recording = recording.save(folder=tmp_path / "recording_zarr")
+
+    # make recording JSON serializable
+    recording = recording.save(folder=tmp_path / "recording_for_zarr", overwrite=True)
 
     folder = tmp_path / "test_SortingAnalyzer_zarr.zarr"
 
@@ -158,13 +188,12 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
     _check_sorting_analyzers(sorting_analyzer, sorting, cache_folder=tmp_path)
 
     # check that compression is applied
-    assert (
-        sorting_analyzer._get_zarr_root()["extensions"]["random_spikes"]["random_spikes_indices"].compressor.codec_id
-        == default_compressor.codec_id
+    check_compressors_match(
+        default_compressor,
+        sorting_analyzer._get_zarr_root()["extensions"]["random_spikes"]["random_spikes_indices"].compressors[0],
     )
-    assert (
-        sorting_analyzer._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
-        == default_compressor.codec_id
+    check_compressors_match(
+        default_compressor, sorting_analyzer._get_zarr_root()["extensions"]["templates"]["average"].compressors[0]
     )
 
     # test select_units see https://github.com/SpikeInterface/spikeinterface/issues/3041
@@ -185,35 +214,33 @@ def test_SortingAnalyzer_zarr(tmp_path, dataset):
         sparsity=None,
         return_in_uV=False,
         overwrite=True,
-        backend_options={"saving_options": {"compressor": None}},
+        backend_options={"saving_options": {"compressors": None}},
     )
-    print(sorting_analyzer_no_compression._backend_options)
     sorting_analyzer_no_compression.compute(["random_spikes", "templates"])
     assert (
-        sorting_analyzer_no_compression._get_zarr_root()["extensions"]["random_spikes"][
-            "random_spikes_indices"
-        ].compressor
-        is None
+        len(
+            sorting_analyzer_no_compression._get_zarr_root()["extensions"]["random_spikes"][
+                "random_spikes_indices"
+            ].compressors
+        )
+        == 0
     )
-    assert sorting_analyzer_no_compression._get_zarr_root()["extensions"]["templates"]["average"].compressor is None
+    assert len(sorting_analyzer_no_compression._get_zarr_root()["extensions"]["templates"]["average"].compressors) == 0
 
     # test a different compressor
-    from numcodecs import LZMA
+    from zarr.codecs import LZMA
 
     lzma_compressor = LZMA()
     folder = tmp_path / "test_SortingAnalyzer_zarr_lzma.zarr"
     sorting_analyzer_lzma = sorting_analyzer_no_compression.save_as(
-        format="zarr", folder=folder, backend_options={"saving_options": {"compressor": lzma_compressor}}
+        format="zarr", folder=folder, backend_options={"saving_options": {"compressors": lzma_compressor}}
     )
-    assert (
-        sorting_analyzer_lzma._get_zarr_root()["extensions"]["random_spikes"][
-            "random_spikes_indices"
-        ].compressor.codec_id
-        == LZMA.codec_id
+    check_compressors_match(
+        lzma_compressor,
+        sorting_analyzer_lzma._get_zarr_root()["extensions"]["random_spikes"]["random_spikes_indices"].compressors[0],
     )
-    assert (
-        sorting_analyzer_lzma._get_zarr_root()["extensions"]["templates"]["average"].compressor.codec_id
-        == LZMA.codec_id
+    check_compressors_match(
+        lzma_compressor, sorting_analyzer_lzma._get_zarr_root()["extensions"]["templates"]["average"].compressors[0]
     )
 
     # test set_sorting_property
@@ -314,22 +341,20 @@ def test_load_without_runtime_info(tmp_path, dataset):
     with pytest.warns(UserWarning):
         sorting_analyzer = load_sorting_analyzer(folder, format="auto")
 
-    # TODO: remove once writing to zarr is supported with zarr>=3
-    if _is_zarr_write_supported():
-        # zarr
-        folder = tmp_path / "test_SortingAnalyzer_run_info.zarr"
-        sorting_analyzer = create_sorting_analyzer(
-            sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
-        )
-        sorting_analyzer.compute(extensions)
-        # remove run_info from attrs to mimic a previous version of spikeinterface
-        root = sorting_analyzer._get_zarr_root(mode="r+")
-        for ext in extensions:
-            del root["extensions"][ext].attrs["run_info"]
-            zarr.consolidate_metadata(root.store)
-        # should raise a warning for missing run_info
-        with pytest.warns(UserWarning):
-            sorting_analyzer = load_sorting_analyzer(folder, format="auto")
+    # zarr
+    folder = tmp_path / "test_SortingAnalyzer_run_info.zarr"
+    sorting_analyzer = create_sorting_analyzer(
+        sorting, recording, format="zarr", folder=folder, sparse=False, sparsity=None
+    )
+    sorting_analyzer.compute(extensions)
+    # remove run_info from attrs to mimic a previous version of spikeinterface
+    root = sorting_analyzer._get_zarr_root(mode="r+")
+    for ext in extensions:
+        del root["extensions"][ext].attrs["run_info"]
+        zarr.consolidate_metadata(root.store)
+    # should raise a warning for missing run_info
+    with pytest.warns(UserWarning):
+        sorting_analyzer = load_sorting_analyzer(folder, format="auto")
 
 
 def test_SortingAnalyzer_tmp_recording(dataset):
@@ -373,7 +398,7 @@ def test_SortingAnalyzer_interleaved_probegroup(dataset):
     assert np.array_equal(recording.get_channel_locations(), sorting_analyzer.get_channel_locations())
 
 
-@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
+@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
 def test_load_in_lazy_mode(tmp_path, dataset, format):
     recording, sorting = dataset
 
@@ -891,9 +916,7 @@ def _compute_reference_pipeline_data(dataset):
     return analyzer.get_extension("dummy_pipeline").get_data()
 
 
-@pytest.mark.parametrize(
-    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
-)
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, format, lazy):
     """
@@ -958,7 +981,7 @@ def test_compute_pipeline_extension_gather_to_disk_lazy(tmp_path, dataset, forma
         assert np.array_equal(load_sorting_analyzer(folder).get_extension("dummy_pipeline").get_data(), amp_ref)
 
 
-@pytest.mark.parametrize("format", ["binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)])
+@pytest.mark.parametrize("format", ["binary_folder", "zarr"])
 def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     """
     With save=False on a disk-backed analyzer, node-pipeline extensions are computed in memory
@@ -980,9 +1003,7 @@ def test_compute_pipeline_extension_save_false(tmp_path, dataset, format):
     assert not analyzer_reloaded.has_extension("dummy_pipeline")
 
 
-@pytest.mark.parametrize(
-    "format", ["memory", "binary_folder", pytest.param("zarr", marks=pytest.mark.requires_zarr_write)]
-)
+@pytest.mark.parametrize("format", ["memory", "binary_folder", "zarr"])
 @pytest.mark.parametrize("lazy", [True, False])
 def test_compute_one_pipeline_extension_gather_to_disk(tmp_path, dataset, format, lazy):
     """
@@ -1160,10 +1181,10 @@ def test_select_channels_independent(dataset):
     assert np.all(sa_one.get_channel_locations() == sa_two.get_channel_locations()[shuffle_order])
 
 
-def test_main_channel_from_templates_dense_recordingless(tmp_path):
-    """When a dense analyzer has a `templates` extension but no attached recording, `get_main_channels`
-    recovers each unit's main channel from the templates (its peak channel) and reports it consistently
-    both as a positional index and as a channel id.
+def test_main_channel_from_templates_dense_no_sorting_main_channel_ids(tmp_path):
+    """When a dense analyzer has a `templates` extension but the sorting has no main channel
+    ids, `get_main_channels, recovers each unit's main channel from the templates (its peak
+    channel) and reports it consistently both as a positional index and as a channel id.
     """
     recording, sorting = generate_ground_truth_recording(
         num_channels=8,
@@ -1189,18 +1210,16 @@ def test_main_channel_from_templates_dense_recordingless(tmp_path):
     expected_main_channel_ids = [unit0_main_channel_id, unit1_main_channel_id]
 
     folder = tmp_path / "analyzer_recordingless"
-    analyzer = create_sorting_analyzer(sorting, recording, format="binary_folder", folder=folder, sparse=False)
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", folder=folder, sparse=False)
     analyzer.compute(["random_spikes", "templates"])
 
-    # simulate the recording being unavailable at load time by removing its serialized copy on disk
-    for file_ext in ("json", "pickle"):
-        recording_file = folder / f"recording.{file_ext}"
-        if recording_file.exists():
-            recording_file.unlink()
+    analyzer._recording = None
+    analyzer.sorting._properties.pop("main_channel_id")
+
+    analyzer.save_as(format="binary_folder", folder=folder)
 
     reloaded_analyzer = load_sorting_analyzer(folder)
-    assert not reloaded_analyzer.has_recording()
-    assert reloaded_analyzer.has_extension("templates")
+    assert "main_channel_id" not in reloaded_analyzer.get_sorting_property_keys()
 
     # craft a clear negative peak on each unit's main channel
     templates = reloaded_analyzer.get_extension("templates")
@@ -1217,8 +1236,8 @@ def test_main_channel_from_templates_dense_recordingless(tmp_path):
     assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
 
 
-def test_main_channel_from_templates_sparse_recordingless():
-    """When a sparse analyzer has a `templates` extension but no attached recording, `get_main_channels`
+def test_main_channel_from_templates_sparse_no_sorting_main_channel_ids():
+    """When a sparse analyzer has a `templates` extension but sorting has no main channel ids, `get_main_channels`
     reports each unit's main channel as its template peak channel, not the geometric centroid of the
     unit's sparse channel set.
     """
@@ -1272,8 +1291,8 @@ def test_main_channel_from_templates_sparse_recordingless():
     templates.data["average"] = average
 
     # recordingless, and force the backwards-compatibility recompute
-    analyzer._recording = None
     analyzer._main_channel_indices = None
+    analyzer.sorting._properties.pop("main_channel_id")
 
     # must be the template peak channels, not the geometric centroids ("c", "f" / indices [2, 5])
     recovered_main_channel_indices = np.asarray(analyzer.get_main_channels(outputs="index"))

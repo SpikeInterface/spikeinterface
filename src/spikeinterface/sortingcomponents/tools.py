@@ -130,15 +130,20 @@ def get_prototype_and_waveforms_from_peaks(
     nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
     nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
-    few_peaks = select_peaks(
+    few_peaks, few_indices = select_peaks(
         peaks,
         recording=recording,
         method="uniform",
         n_peaks=n_peaks,
         margin=(nbefore, nafter),
         channel_index_array=channel_index_array,
+        return_indices=True,
         seed=seed,
     )
+    if channel_index_array is not None:
+        few_channel_index_array = channel_index_array[few_indices]
+    else:
+        few_channel_index_array = None
     waveforms = extract_waveform_at_max_channel(
         recording,
         few_peaks,
@@ -146,7 +151,7 @@ def get_prototype_and_waveforms_from_peaks(
         ms_after=ms_after,
         job_kwargs=job_kwargs,
         job_name="waveform prototype",
-        channel_index_array=channel_index_array,
+        channel_index_array=few_channel_index_array,
     )
 
     with np.errstate(divide="ignore", invalid="ignore"):

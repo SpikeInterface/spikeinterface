@@ -548,19 +548,14 @@ class TimeSeriesChunkExecutor:
             if self.need_worker_index:
                 worker_dict["worker_index"] = worker_index
 
-            for segment_index, frame_start, frame_stop in slices:
-                res = self.func(segment_index, frame_start, frame_stop, worker_dict)
-                if self.num_chunk_per_batch is None:
+            for slice_ in slices:
+                # with batches, each item is a list of (segment_index, frame_start, frame_stop)
+                for segment_index, frame_start, frame_stop in [slice_] if self.num_chunk_per_batch is None else slice_:
+                    res = self.func(segment_index, frame_start, frame_stop, worker_dict)
                     if self.handle_returns:
                         returns.append(res)
                     if self.gather_func is not None:
                         self.gather_func(res)
-                else:
-                    for res2 in res:
-                        if self.handle_returns:
-                            returns.append(res2)
-                        if self.gather_func is not None:
-                            self.gather_func(res2)
 
         else:
             n_jobs = min(self.n_jobs, len(slices))
