@@ -4,6 +4,8 @@ from spikeinterface import NumpyRecording, load
 from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.preprocessing import phase_shift
+from spikeinterface.preprocessing.phase_shift import apply_frequency_shift
+from spikeinterface.core import get_chunk_with_margin
 
 
 def create_shifted_channel():
@@ -112,6 +114,36 @@ def test_phase_shift_recovers_delayed_signal():
     interior = slice(100, -100)
     expected = np.broadcast_to(signal(times)[:, np.newaxis], traces.shape)
     np.testing.assert_allclose(shifted_traces[interior], expected[interior], atol=1e-3)
+
+
+def test_phase_shift_taper_preserves_parent():
+    rng = np.random.default_rng(0)
+    shifts = np.array([0.0, 0.25, 0.5, 0.75])
+    for dtype in ("int16", "float32", "float64"):
+        original = (rng.standard_normal((500, 4)) * 100).astype(dtype)
+        data = original.copy()
+        data.flags.writeable = False
+        rec = NumpyRecording(data, 1000.0)
+        shifted = phase_shift(rec, inter_sample_shift=shifts, margin_ms=10)
+        for start, end in ((0, 100), (200, 300), (400, 500)):
+            chunk, left, right = get_chunk_with_margin(
+                rec.segments[0],
+                start,
+                end,
+                None,
+                10,
+                add_zeros=True,
+                window_on_margin=True,
+                dtype=None if dtype == "float64" else "float64",
+            )
+            expected = apply_frequency_shift(chunk, shifts)[left:-right]
+            if dtype == "int16":
+                expected = expected.round()
+            expected = expected.astype(dtype)
+            actual = shifted.get_traces(start_frame=start, end_frame=end)
+            np.testing.assert_array_equal(actual, expected)
+            np.testing.assert_array_equal(shifted.get_traces(start_frame=start, end_frame=end), actual)
+            np.testing.assert_array_equal(data, original)
 
 
 def test_phase_shift_dtype_survives_reload():

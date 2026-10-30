@@ -834,6 +834,8 @@ def get_chunk_with_margin(
     add_reflect_padding=False,
     window_on_margin=False,
     dtype=None,
+    *,
+    copy=False,
 ):
     """
     Helper to get chunk with margin
@@ -843,6 +845,10 @@ def get_chunk_with_margin(
     of `add_zeros` or `add_reflect_padding` is True. In the first
     case zero padding is used, in the second case np.pad is called
     with mod="reflect".
+
+    With ``copy=True``, the returned chunk is a writable copy that does not
+    share memory with the segment, even when no padding or casting is needed.
+    With ``copy=False`` (the default), the chunk may be a view of parent data.
     """
 
     # wrapper to keep backward compatibility with the previous naming and signature
@@ -857,4 +863,5 @@ def get_chunk_with_margin(
         add_reflect_padding=add_reflect_padding,
         window_on_margin=window_on_margin,
         dtype=dtype,
+        copy=copy,
     )

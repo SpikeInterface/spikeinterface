@@ -5,6 +5,7 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from spikeinterface.core import get_chunk_with_margin
+from spikeinterface.core.time_series_tools import _taper_margins
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -137,6 +138,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             # contiguous.
             taps = _build_fir_taps(self.sample_shifts, self.n_taps)
             self._fir_kernels_kc = np.ascontiguousarray(taps[:, ::-1].T, dtype=np.float32)
+        self._margin_window = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
@@ -154,8 +156,9 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
             self.margin,
             dtype=self.tmp_dtype,
             add_zeros=True,
-            window_on_margin=True,
+            copy=True,
         )
+        _taper_margins(traces_chunk, self._margin_window)
         traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
 
         traces_shift = traces_shift[left_margin:-right_margin, :]
