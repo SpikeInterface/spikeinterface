@@ -13,6 +13,7 @@ from .filter import (
     causal_filter,
 )
 from .filter_gaussian import GaussianFilterRecording, gaussian_filter
+from .fir_filter import FIRFilterRecording, fir_filter
 from .normalize_scale import (
     NormalizeByQuantileRecording,
     normalize_by_quantile,
@@ -60,6 +61,7 @@ _all_preprocesser_dict = {
     HighpassFilterRecording: highpass_filter,
     NotchFilterRecording: notch_filter,
     GaussianFilterRecording: gaussian_filter,
+    FIRFilterRecording: fir_filter,
     # gain offset stuff
     NormalizeByQuantileRecording: normalize_by_quantile,
     ScaleRecording: scale,
