@@ -334,11 +334,11 @@ if __name__ == "__main__":
         test_SorterStudy(study_folder_simple)
 
         study_folder_very_simple = tmp_folder / "study_very_simple"
-        _create_very_simple_study(study_folder_very_simple, cache_folder)
+        _create_very_simple_study(study_folder_very_simple, cache_folder / "very_simple")
         test_add_remove_cases(study_folder_very_simple)
 
         study_folder_complex = tmp_folder / "study_complex"
-        _create_complex_study(study_folder_complex)
+        _create_complex_study(study_folder_complex, cache_folder / "complex")
         test_get_grouped_keys_mapping(study_folder_complex)
         test_add_remove_cases(study_folder_complex)
 
