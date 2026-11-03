@@ -695,7 +695,7 @@ class BaseSorting(BaseExtractor):
 
         if self._cached_unit_grouped is not None:
             # case 1
-            slices = self._cached_unit_grouped["slices"]
+            slices = self._cached_unit_grouped["unit_segment_slices"]
             # end of last segment minus start of first segment
             num_spikes = slices[keep_mask, -1, 1] - slices[keep_mask, 0, 0]
 
@@ -1207,17 +1207,17 @@ class BaseSorting(BaseExtractor):
             slices = np.stack([starts, stops], axis=-1).astype(np.int64, copy=False)
 
             self._cached_unit_grouped = {
-                "ordered_spikes": ordered_spikes,
+                "spikes": ordered_spikes,
                 "order": order,
-                "slices": slices,
+                "unit_segment_slices": slices,
             }
 
         cached = self._cached_unit_grouped
-        out = [cached["ordered_spikes"]]
+        out = [cached["spikes"]]
         if return_order:
             out.append(cached["order"])
         if return_slices:
-            out.append(cached["slices"])
+            out.append(cached["unit_segment_slices"])
         return tuple(out) if len(out) > 1 else out[0]
 
     def to_numpy_sorting(self, propagate_cache=True):
