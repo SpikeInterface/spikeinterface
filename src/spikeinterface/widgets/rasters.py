@@ -2,8 +2,13 @@ import numpy as np
 from warnings import warn
 
 from spikeinterface.core import SortingAnalyzer, BaseSorting
+from spikeinterface.core.sorting_tools import get_segment_durations
+
 from .base import BaseWidget, to_attr, default_backend_kwargs
-from .utils import get_some_colors, validate_segment_indices, get_segment_durations
+from .utils import (
+    get_some_colors,
+    validate_segment_indices,
+)
 
 
 class BaseRasterWidget(BaseWidget):
@@ -25,8 +30,10 @@ class BaseRasterWidget(BaseWidget):
     segment_indices : list | None, default: None
         For multi-segment data, specifies which segment(s) to plot. If None, uses all available segments.
         For single-segment data, this parameter is ignored.
-    durations : list | None, default: None
+    segment_start_stop_times : dict | None, default: None
         List of durations per segment of spike_train_data in seconds.
+    sampling_frequency : float | None, default: None
+        Sampling frequency in Hz, required to space multiple segments.
     plot_histograms : bool, default: False
         Plot histogram of y-axis data in another subplot
     bins : int | None, default: None
@@ -67,7 +74,7 @@ class BaseRasterWidget(BaseWidget):
         sort_by_depth: bool = False,
         unit_ids: list | None = None,
         segment_indices: list | None = None,
-        durations: list | None = None,
+        segment_start_stop_times: dict[int, tuple[float, float]] | None = None,
         plot_histograms: bool = False,
         bins: int | None = None,
         scatter_decimate: int = 1,
@@ -82,9 +89,9 @@ class BaseRasterWidget(BaseWidget):
         hide_unit_selector: bool = True,
         segment_boundary_kwargs: dict | None = None,
         backend: str | None = None,
+        sampling_frequency: float | None = None,
         **backend_kwargs,
     ):
-
         # Set default segment boundary kwargs if not provided
         if segment_boundary_kwargs is None:
             segment_boundary_kwargs = {"color": "gray", "linestyle": "--", "alpha": 0.7}
@@ -113,16 +120,27 @@ class BaseRasterWidget(BaseWidget):
                 all_units.update(spike_train_data[seg_idx].keys())
             unit_ids = list(all_units)
 
-        # Calculate cumulative durations for segment boundaries
-        segment_boundaries = np.cumsum(durations)
-        cumulative_durations = np.concatenate([[0], segment_boundaries])
+        segment_time_offsets = None
+        # Drop segment times we don't want to use
+        if segment_start_stop_times is not None:
+            segment_start_stop_times = {seg: segment_start_stop_times[seg] for seg in segments_to_use}
+
+            if len(segment_start_stop_times) > 1:
+                if sampling_frequency is None:
+                    raise ValueError("sampling_frequency is required when plotting multiple segments")
+                # Align the segment times such that consecutive segments appear directly next to each other
+                # on the plot, rather than at their true times (if true times are used, large inter-segment
+                # gaps can appear on the plot)
+                starts, stops = np.array(list(segment_start_stop_times.values())).T
+                ts = 1 / sampling_frequency
+                segment_time_offsets = np.r_[0, np.cumsum(starts[1:] - (stops[:-1] + ts))]
 
         # Concatenate data across segments with proper time offsets
         concatenated_spike_trains = {unit_id: np.array([]) for unit_id in unit_ids}
         concatenated_y_axis = {unit_id: np.array([]) for unit_id in unit_ids}
 
-        for offset, spike_train_segment, y_axis_segment in zip(
-            cumulative_durations,
+        for segment_index, spike_train_segment, y_axis_segment in zip(
+            range(len(segments_to_use)),
             [spike_train_data[idx] for idx in segments_to_use],
             [y_axis_data[idx] for idx in segments_to_use],
         ):
@@ -134,13 +152,11 @@ class BaseRasterWidget(BaseWidget):
                 # Get y-axis values for this unit
                 y_values = y_axis_segment[unit_id]
 
-                # Apply offset to spike times
-                adjusted_times = spike_times + offset
+                if segment_time_offsets is not None:
+                    spike_times = spike_times - segment_time_offsets[segment_index]
 
                 # Add to concatenated data
-                concatenated_spike_trains[unit_id] = np.concatenate(
-                    [concatenated_spike_trains[unit_id], adjusted_times]
-                )
+                concatenated_spike_trains[unit_id] = np.concatenate([concatenated_spike_trains[unit_id], spike_times])
                 concatenated_y_axis[unit_id] = np.concatenate([concatenated_y_axis[unit_id], y_values])
 
         plot_data = dict(
@@ -157,12 +173,12 @@ class BaseRasterWidget(BaseWidget):
             unit_colors=unit_colors,
             y_label=y_label,
             title=title,
-            durations=durations,
+            segment_start_stop_times=segment_start_stop_times,
+            segment_time_offsets=segment_time_offsets,
             plot_legend=plot_legend,
             bins=bins,
             y_ticks=y_ticks,
             hide_unit_selector=hide_unit_selector,
-            segment_boundaries=segment_boundaries,
             segment_boundary_kwargs=segment_boundary_kwargs,
         )
 
@@ -233,11 +249,6 @@ class BaseRasterWidget(BaseWidget):
                 count, bins = np.histogram(unit_y_data, bins=bins)
                 ax_hist.plot(count, bins[:-1], color=unit_colors[unit_id], alpha=0.8)
 
-        # Add segment boundary lines if provided
-        if getattr(dp, "segment_boundaries", None) is not None:
-            for boundary in dp.segment_boundaries:
-                scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
-
         if dp.plot_histograms:
             ax_hist = self.axes.flatten()[1]
             ax_hist.set_ylim(scatter_ax.get_ylim())
@@ -253,9 +264,23 @@ class BaseRasterWidget(BaseWidget):
         if dp.y_lim is not None:
             scatter_ax.set_ylim(*dp.y_lim)
         x_lim = dp.x_lim
-        if x_lim is None:
-            x_lim = [0, np.sum(dp.durations)]
-        scatter_ax.set_xlim(x_lim)
+
+        # Add segment boundary lines if provided and handle x limits
+        if dp.segment_start_stop_times is not None:
+
+            segment_times = np.array(list(dp.segment_start_stop_times.values()))
+            if len(segment_times) > 1:
+
+                segment_times = segment_times - dp.segment_time_offsets[:, None]
+                self._set_segment_time_ticks(scatter_ax, segment_times, dp.segment_time_offsets)
+
+                for boundary in segment_times[1:, 0]:
+                    scatter_ax.axvline(boundary, **dp.segment_boundary_kwargs)
+
+            if x_lim is None:
+                x_lim = (segment_times[0, 0], segment_times[-1, 1])
+        if x_lim is not None:
+            scatter_ax.set_xlim(x_lim)
 
         if dp.sort_by_depth and dp.depth_dict is not None:
             scatter_ax.set_yticks(ticks=list(range(len(dp.depth_dict))), labels=list(dp.depth_dict.keys()))
@@ -381,6 +406,24 @@ class BaseRasterWidget(BaseWidget):
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
 
+    @staticmethod
+    def _set_segment_time_ticks(ax, segment_times, segment_offsets):
+        """Label concatenated segments with original times, using default tick placement.
+
+        ``segment_times`` contains displayed bounds; ``segment_offsets`` restores
+        each segment's original timestamps after gaps have been removed.
+        """
+        from matplotlib.ticker import ScalarFormatter
+
+        time_formatter = ScalarFormatter()
+        time_formatter.set_axis(ax.xaxis)
+
+        def format_original_time(x, pos):
+            segment = np.searchsorted(segment_times[1:, 0], x, side="right")
+            return time_formatter.format_data_short(x + segment_offsets[segment])
+
+        ax.xaxis.set_major_formatter(format_original_time)
+
 
 class RasterWidget(BaseRasterWidget):
     """
@@ -443,20 +486,16 @@ class RasterWidget(BaseRasterWidget):
         # Create a lookup dictionary for unit indices
         unit_indices_map = {unit_id: i for i, unit_id in enumerate(unit_ids)}
 
-        # Estimate segment duration from max spike time in each segment
-        durations = get_segment_durations(sorting, segment_indices)
-
         # Extract spike data for all segments and units at once
         spike_train_data = {seg_idx: {} for seg_idx in segment_indices}
         y_axis_data = {seg_idx: {} for seg_idx in segment_indices}
 
+        _, segment_start_stop_times = get_segment_durations(sorting, segment_indices)
+
         for seg_idx in segment_indices:
             for unit_id in unit_ids:
                 # Get spikes for this segment and unit
-                spike_times = (
-                    sorting.get_unit_spike_train(unit_id=unit_id, segment_index=seg_idx) / sorting.sampling_frequency
-                )
-
+                spike_times = sorting.get_unit_spike_train_in_seconds(unit_id=unit_id, segment_index=seg_idx)
                 # Store data
                 spike_train_data[seg_idx][unit_id] = spike_times
                 y_axis_data[seg_idx][unit_id] = unit_indices_map[unit_id] * np.ones(len(spike_times))
@@ -486,7 +525,8 @@ class RasterWidget(BaseRasterWidget):
             unit_colors=unit_colors,
             plot_histograms=None,
             y_ticks=y_ticks,
-            durations=durations,
+            segment_start_stop_times=segment_start_stop_times,
+            sampling_frequency=sorting.get_sampling_frequency(),
         )
 
         BaseRasterWidget.__init__(self, **plot_data, backend=backend, **backend_kwargs)

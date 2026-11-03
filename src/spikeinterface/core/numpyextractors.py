@@ -112,7 +112,9 @@ class NumpyRecording(BaseRecording):
 class NumpyRecordingSegment(BaseRecordingSegment):
     def __init__(self, traces, sampling_frequency, t_start):
         BaseRecordingSegment.__init__(self, sampling_frequency=sampling_frequency, t_start=t_start)
-        self._traces = traces
+        # Read-only, so writing into get_traces() output raises instead of changing the recording.
+        self._traces = traces.view()
+        self._traces.flags.writeable = False
         self.num_samples = traces.shape[0]
 
     def get_num_samples(self) -> int:

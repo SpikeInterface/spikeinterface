@@ -595,6 +595,19 @@ def get_chunks(time_series: TimeSeries, concatenated=True, get_data_kwargs=None,
         return chunk_list
 
 
+def _taper_margins(traces, window):
+    """Taper traces in place using a one-dimensional window and its reverse.
+
+    The caller must own a writable floating-point buffer. When reading from a
+    segment, use ``get_time_series_chunk_with_margin(..., copy=True)`` first.
+    """
+    if window.size == 0:
+        return
+    taper = window.reshape((window.size,) + (1,) * (traces.ndim - 1))
+    traces[: window.size] *= taper
+    traces[-window.size :] *= taper[::-1]
+
+
 def get_time_series_chunk_with_margin(
     chunkable_segment: TimeSeriesSegment,
     start_frame,
@@ -605,6 +618,8 @@ def get_time_series_chunk_with_margin(
     add_reflect_padding=False,
     window_on_margin=False,
     dtype=None,
+    *,
+    copy=False,
 ):
     """
     Helper to get chunk with margin
@@ -614,6 +629,10 @@ def get_time_series_chunk_with_margin(
     of `add_zeros` or `add_reflect_padding` is True. In the first
     case zero padding is used, in the second case np.pad is called
     with mod="reflect".
+
+    With ``copy=True``, the returned chunk is a writable copy that does not
+    share memory with the segment, even when no padding or casting is needed.
+    With ``copy=False`` (the default), the chunk may be a view of parent data.
     """
     length = int(chunkable_segment.get_num_samples())
 
@@ -645,6 +664,8 @@ def get_time_series_chunk_with_margin(
             end_frame + right_margin,
             last_dimension_indices,
         )
+        if copy:
+            data_chunk = data_chunk.copy()
 
     else:
         # either add_zeros or reflect_padding
@@ -672,7 +693,7 @@ def get_time_series_chunk_with_margin(
 
         data_chunk = chunkable_segment.get_data(start_frame2, end_frame2, last_dimension_indices)
 
-        if dtype is not None or window_on_margin or left_pad > 0 or right_pad > 0:
+        if copy or dtype is not None or window_on_margin or left_pad > 0 or right_pad > 0:
             need_copy = True
         else:
             need_copy = False
@@ -696,11 +717,8 @@ def get_time_series_chunk_with_margin(
                 i1 = left_pad + data_chunk.shape[0]
                 data_chunk2[i0:i1, :] = data_chunk
                 if window_on_margin:
-                    # apply inplace taper on border
-                    taper = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
-                    taper = taper[:, np.newaxis]
-                    data_chunk2[:margin] *= taper
-                    data_chunk2[-margin:] *= taper[::-1]
+                    window = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
+                    _taper_margins(data_chunk2, window)
                 data_chunk = data_chunk2
             elif add_reflect_padding:
                 # in this case, we don't want to taper
