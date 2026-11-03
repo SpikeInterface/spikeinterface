@@ -374,6 +374,35 @@ def test_do_score_labels():
     )
 
 
+def test_do_score_labels_counts_spikes_once():
+    # checks that spikes in each sorting are only matched once across the spike trains by do_score_labels
+    # for posterity: right now, make_match_count_matrix() can still count a sorting2
+    # spike twice. it tries to fix that by capping each count to the total spike count,
+    # but that has edge cases.
+    # TODO: count each spike once in compute_matching_matrix()
+    delta_frames = 10
+
+    sorting1, sorting2 = make_sorting([100, 112, 500], [0, 0, 1], [101, 104, 900], [0, 0, 1])
+    unit_map12 = {0: 0, 1: 1}
+    labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, unit_map12)
+    assert_array_equal(labels_st1[0][0], ["TP", "TP"])
+    assert_array_equal(labels_st2[0][0], ["TP", "TP"])
+    assert_array_equal(labels_st1[1][0], ["FN"])
+    assert_array_equal(labels_st2[1][0], ["FP"])
+
+    # these sortings work now in make_match_count_matrix
+    counts = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames)
+    for u1, u2 in unit_map12.items():
+        assert np.sum(labels_st1[u1][0] == "TP") == counts.at[u1, u2]
+        assert np.sum(labels_st2[u2][0] == "TP") == counts.at[u1, u2]
+
+    # note: can't test make_match_count_matrix here, it over-counts this guy
+    sorting1, sorting2 = make_sorting([0, 1, 2], [0, 0, 0], [1, 5, 1000], [0, 0, 0])
+    labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, {0: 0})
+    assert_array_equal(labels_st1[0][0], ["TP", "TP", "FN"])
+    assert_array_equal(labels_st2[0][0], ["TP", "TP", "FP"])
+
+
 def test_compare_spike_trains():
     sorting1, sorting2 = make_sorting(
         [100, 200, 300, 400],
