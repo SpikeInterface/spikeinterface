@@ -389,9 +389,9 @@ class TimeSeriesChunkExecutor:
         Chunk duration in s if float or with units if str (e.g. "1s", "500ms")
     num_chunk_per_batch : int or None, default: None
         Number of chunks to process per batch.
-        Chunks (slice of traces) are distributed over a pool of  n_jobs workers one by one.
-        Optionally each worker can reeive a batch of continuous chunks to process at once.
-        This is usefull in the context of zarr v3 shards concept.
+        Chunks (slice of traces) are distributed over a pool of n_jobs workers one by one.
+        Optionally each worker can receive a batch of continuous chunks to process at once.
+        This is useful in the context of zarr v3 shards concept.
         Internally, instead of  sending slices to each worker it sends a list of slices.
     mp_context : "fork" | "spawn" | None, default: None
         "fork" or "spawn". If None, the context is taken by the recording.get_preferred_mp_context().
