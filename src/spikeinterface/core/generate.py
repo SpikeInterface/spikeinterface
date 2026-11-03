@@ -11,7 +11,6 @@ from .numpyextractors import NumpySorting
 from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
-from .snippets_tools import snippets_from_sorting
 from .core_tools import define_function_from_class, ms_to_samples, _ensure_seed
 
 
@@ -602,81 +601,7 @@ def create_sorting_npz(num_seg, file_path):
     np.savez(file_path, **d)
 
 
-def generate_snippets(
-    nbefore=20,
-    nafter=44,
-    num_channels=2,
-    wf_folder=None,
-    sampling_frequency=30000.0,
-    durations=[10.325, 3.5],  #  in s for 2 segments
-    set_probe=True,
-    ndim=2,
-    num_units=5,
-    empty_units=None,
-    **job_kwargs,
-):
-    """
-    Generates a synthetic Snippets object.
-
-    Parameters
-    ----------
-    nbefore : int, default: 20
-        Number of samples before the peak.
-    nafter : int, default: 44
-        Number of samples after the peak.
-    num_channels : int, default: 2
-        Number of channels.
-    wf_folder : str | Path | None, default: None
-        Optional folder to save the waveform snippets. If None, snippets are in memory.
-    sampling_frequency : float, default: 30000.0
-        The sampling frequency of the snippets in Hz.
-    ndim : int, default: 2
-        The number of dimensions of the probe.
-    num_units : int, default: 5
-        The number of units.
-    empty_units : list | None, default: None
-        A list of units that will have no spikes.
-    durations : List[float], default: [10.325, 3.5]
-        The duration in seconds of each segment in the recording.
-        The number of segments is determined by the length of this list.
-    set_probe : bool, default: True
-        If true, attaches probe to the returned snippets object
-    **job_kwargs : dict, default: None
-        Job keyword arguments for `snippets_from_sorting`
-
-    Returns
-    -------
-    snippets : NumpySnippets
-        The snippets object.
-    sorting : NumpySorting
-        The associated sorting object.
-    """
-    recording = generate_recording(
-        durations=durations,
-        num_channels=num_channels,
-        sampling_frequency=sampling_frequency,
-        ndim=ndim,
-        set_probe=set_probe,
-    )
-
-    sorting = generate_sorting(
-        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations, empty_units=empty_units
-    )
-
-    snippets = snippets_from_sorting(
-        recording=recording, sorting=sorting, nbefore=nbefore, nafter=nafter, wf_folder=wf_folder, **job_kwargs
-    )
-
-    if set_probe:
-        probe = recording.get_probe()
-        snippets.set_probe(probe)
-
-    return snippets, sorting
-
-
 ## spiketrain zone ##
-
-
 def _ensure_firing_rates(firing_rates, num_units, seed):
     if isinstance(firing_rates, tuple):
         rng = np.random.default_rng(seed=seed)

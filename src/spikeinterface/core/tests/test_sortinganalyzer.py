@@ -1181,10 +1181,10 @@ def test_select_channels_independent(dataset):
     assert np.all(sa_one.get_channel_locations() == sa_two.get_channel_locations()[shuffle_order])
 
 
-def test_main_channel_from_templates_dense_recordingless(tmp_path):
-    """When a dense analyzer has a `templates` extension but no attached recording, `get_main_channels`
-    recovers each unit's main channel from the templates (its peak channel) and reports it consistently
-    both as a positional index and as a channel id.
+def test_main_channel_from_templates_dense_no_sorting_main_channel_ids(tmp_path):
+    """When a dense analyzer has a `templates` extension but the sorting has no main channel
+    ids, `get_main_channels, recovers each unit's main channel from the templates (its peak
+    channel) and reports it consistently both as a positional index and as a channel id.
     """
     recording, sorting = generate_ground_truth_recording(
         num_channels=8,
@@ -1210,18 +1210,16 @@ def test_main_channel_from_templates_dense_recordingless(tmp_path):
     expected_main_channel_ids = [unit0_main_channel_id, unit1_main_channel_id]
 
     folder = tmp_path / "analyzer_recordingless"
-    analyzer = create_sorting_analyzer(sorting, recording, format="binary_folder", folder=folder, sparse=False)
+    analyzer = create_sorting_analyzer(sorting, recording, format="memory", folder=folder, sparse=False)
     analyzer.compute(["random_spikes", "templates"])
 
-    # simulate the recording being unavailable at load time by removing its serialized copy on disk
-    for file_ext in ("json", "pickle"):
-        recording_file = folder / f"recording.{file_ext}"
-        if recording_file.exists():
-            recording_file.unlink()
+    analyzer._recording = None
+    analyzer.sorting._properties.pop("main_channel_id")
+
+    analyzer.save_as(format="binary_folder", folder=folder)
 
     reloaded_analyzer = load_sorting_analyzer(folder)
-    assert not reloaded_analyzer.has_recording()
-    assert reloaded_analyzer.has_extension("templates")
+    assert "main_channel_id" not in reloaded_analyzer.get_sorting_property_keys()
 
     # craft a clear negative peak on each unit's main channel
     templates = reloaded_analyzer.get_extension("templates")
@@ -1238,8 +1236,8 @@ def test_main_channel_from_templates_dense_recordingless(tmp_path):
     assert np.array_equal(recovered_main_channel_ids, expected_main_channel_ids)
 
 
-def test_main_channel_from_templates_sparse_recordingless():
-    """When a sparse analyzer has a `templates` extension but no attached recording, `get_main_channels`
+def test_main_channel_from_templates_sparse_no_sorting_main_channel_ids():
+    """When a sparse analyzer has a `templates` extension but sorting has no main channel ids, `get_main_channels`
     reports each unit's main channel as its template peak channel, not the geometric centroid of the
     unit's sparse channel set.
     """
@@ -1293,8 +1291,8 @@ def test_main_channel_from_templates_sparse_recordingless():
     templates.data["average"] = average
 
     # recordingless, and force the backwards-compatibility recompute
-    analyzer._recording = None
     analyzer._main_channel_indices = None
+    analyzer.sorting._properties.pop("main_channel_id")
 
     # must be the template peak channels, not the geometric centroids ("c", "f" / indices [2, 5])
     recovered_main_channel_indices = np.asarray(analyzer.get_main_channels(outputs="index"))
