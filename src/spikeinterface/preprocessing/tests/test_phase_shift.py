@@ -97,7 +97,8 @@ def test_phase_shift():
     # ~ plt.show()
 
 
-def test_phase_shift_recovers_delayed_signal():
+@pytest.mark.parametrize("method", ["fft", "fir"])
+def test_phase_shift_recovers_delayed_signal(method):
     sampling_frequency = 1000.0
     times = np.arange(5000) / sampling_frequency
     inter_sample_shift = np.tile([0.0, 0.25, 0.5, 0.75], 8)
@@ -109,7 +110,7 @@ def test_phase_shift_recovers_delayed_signal():
     recording = NumpyRecording([traces], sampling_frequency)
     recording.set_property("inter_sample_shift", inter_sample_shift)
 
-    shifted_traces = phase_shift(recording).get_traces()
+    shifted_traces = phase_shift(recording, method=method).get_traces()
 
     interior = slice(100, -100)
     expected = np.broadcast_to(signal(times)[:, np.newaxis], traces.shape)
@@ -117,6 +118,11 @@ def test_phase_shift_recovers_delayed_signal():
 
 
 def test_phase_shift_taper_preserves_parent():
+    """FFT phase shift matches tapering and shifting each chunk by hand, and never writes into the parent's traces.
+
+    The parent is read-only, so any write into it raises. Chunks at both ends and in the middle cover the zero
+    padding and the read of real margins.
+    """
     rng = np.random.default_rng(0)
     shifts = np.array([0.0, 0.25, 0.5, 0.75])
     for dtype in ("int16", "float32", "float64"):
@@ -184,15 +190,29 @@ def test_phase_shift_fir_matches_fft_in_spike_band():
     assert err_rms / sig_rms < 0.01, f"FIR spike-band RMS error {err_rms / sig_rms:.2%} > 1%"
 
 
-def test_phase_shift_fir_int16_to_float32():
-    """method='fir' with dtype=float32 on an int16 parent yields float32 output."""
+@pytest.mark.parametrize("method, dtype", [("fir", "float32"), ("fft", "float64")])
+def test_phase_shift_int16_to_float(method, dtype):
+    """An int16 parent gives float output of the requested dtype."""
     traces, sampling_frequency, inter_sample_shift = create_shifted_channel()
     rec = NumpyRecording([traces.astype("int16")], sampling_frequency)
     rec.set_property("inter_sample_shift", inter_sample_shift)
-    fir_rec = phase_shift(rec, method="fir", dtype=np.float32)
-    assert fir_rec.get_dtype() == np.dtype("float32")
-    out = fir_rec.get_traces(start_frame=0, end_frame=100)
-    assert out.dtype == np.dtype("float32")
+    shifted_rec = phase_shift(rec, method=method, dtype=dtype)
+    assert shifted_rec.get_dtype() == np.dtype(dtype)
+    out = shifted_rec.get_traces(start_frame=0, end_frame=100)
+    assert out.dtype == np.dtype(dtype)
+
+
+@pytest.mark.parametrize("method", ["fft", "fir"])
+def test_phase_shift_clips_int16_output(method):
+    """A step between the int16 rails overshoots after filtering, and the output clips rather than wrapping."""
+    traces = np.full((2000, 2), np.iinfo("int16").max, dtype="int16")
+    traces[:1000] = np.iinfo("int16").min
+    rec = NumpyRecording([traces], 30000.0)
+    shifted_traces = phase_shift(rec, method=method, inter_sample_shift=[0.0, 0.5]).get_traces()
+    # Wrapping would put large values of the opposite sign on each side of the step. The half-sample shift puts a
+    # sample near zero at the step itself, so skip the samples next to it.
+    assert shifted_traces[900:998].max() < 0
+    assert shifted_traces[1002:1100].min() > 0
 
 
 @pytest.mark.parametrize("parent_dtype", ["int16", "float32"])
@@ -212,19 +232,24 @@ def test_phase_shift_fir_numpy_fallback_matches_numba(monkeypatch, parent_dtype,
     rec.set_property("inter_sample_shift", (np.arange(num_channels) // 2 % 13) / 13.0)
     fir_rec = phase_shift(rec, method="fir", dtype=dtype)
     channel_ids = rec.channel_ids[3:11]
-    windows = [dict(), dict(start_frame=0, end_frame=1000), dict(start_frame=2000, end_frame=4990)]
+    frame_ranges = [dict(), dict(start_frame=0, end_frame=1000), dict(start_frame=2000, end_frame=4990)]
 
-    expected = [fir_rec.get_traces(**w) for w in windows] + [fir_rec.get_traces(channel_ids=channel_ids)]
+    # Read the whole recording, a chunk at each end and a subset of channels, first with numba as the reference and
+    # then with the numpy fallback.
+    def read_all():
+        return [fir_rec.get_traces(**frames) for frames in frame_ranges] + [fir_rec.get_traces(channel_ids=channel_ids)]
+
+    numba_outputs = read_all()
     monkeypatch.setattr(phase_shift_module, "HAVE_NUMBA", False)
-    actual = [fir_rec.get_traces(**w) for w in windows] + [fir_rec.get_traces(channel_ids=channel_ids)]
+    numpy_outputs = read_all()
 
-    for a, e in zip(actual, expected):
-        assert a.dtype == e.dtype
-        if np.issubdtype(e.dtype, np.integer):
+    for numpy_traces, numba_traces in zip(numpy_outputs, numba_outputs):
+        assert numpy_traces.dtype == numba_traces.dtype
+        if np.issubdtype(numba_traces.dtype, np.integer):
             # values near .5 may round either way after float32 summation-order differences
-            assert np.abs(a.astype(np.int64) - e).max() <= 1
+            assert np.abs(numpy_traces.astype(np.int64) - numba_traces).max() <= 1
         else:
-            np.testing.assert_allclose(a, e, rtol=0, atol=1e-5 * np.abs(e).max())
+            np.testing.assert_allclose(numpy_traces, numba_traces, rtol=0, atol=1e-5 * np.abs(numba_traces).max())
 
 
 def test_phase_shift_fir_taps_are_in_convolution_order():

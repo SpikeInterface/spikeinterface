@@ -5,7 +5,6 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from spikeinterface.core import get_chunk_with_margin
-from spikeinterface.core.time_series_tools import _taper_margins
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
@@ -75,27 +74,20 @@ class PhaseShiftRecording(BasePreprocessor):
             ), "the 'inter_sample_shift' must be same size at the num_channels "
             sample_shifts = np.asarray(inter_sample_shift)
 
-        if dtype is None:
-            dtype = recording.get_dtype()
+        dtype = np.dtype(recording.get_dtype() if dtype is None else dtype)
 
         if method == "fft":
             margin = int(margin_ms * recording.get_sampling_frequency() / 1000.0)
-            # apply_frequency_shift computes in float64; other dtypes are cast back after it.
-            tmp_dtype = np.dtype("float64") if str(dtype) != "float64" else None
         else:
             margin = n_taps // 2
-            tmp_dtype = None
 
-        advertised_dtype = np.dtype(dtype)
-
-        BasePreprocessor.__init__(self, recording, dtype=advertised_dtype)
+        BasePreprocessor.__init__(self, recording, dtype=dtype)
         for parent_segment in recording.segments:
             rec_segment = PhaseShiftRecordingSegment(
                 parent_segment,
                 sample_shifts,
                 margin,
-                advertised_dtype,
-                tmp_dtype,
+                dtype,
                 method=method,
                 n_taps=n_taps,
             )
@@ -108,7 +100,7 @@ class PhaseShiftRecording(BasePreprocessor):
             recording=recording,
             margin_ms=float(margin_ms),
             inter_sample_shift=inter_sample_shift,
-            dtype=advertised_dtype.str,
+            dtype=dtype.str,
             method=method,
             n_taps=int(n_taps),
         )
@@ -121,7 +113,6 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         sample_shifts,
         margin,
         dtype,
-        tmp_dtype,
         method="fft",
         n_taps=_DEFAULT_FIR_TAPS,
     ):
@@ -129,16 +120,14 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         self.sample_shifts = np.asarray(sample_shifts)
         self.margin = margin
         self.dtype = np.dtype(dtype)
-        self.tmp_dtype = tmp_dtype
         self.method = method
         self.n_taps = int(n_taps)
         self._fir_kernels_kc = None
         if method == "fir":
-            # The kernels correlate, out[n] += kernels_kc[k] * x[n - half + k], in (K, C) so the channel loop is
-            # contiguous.
+            # The numba kernel indexes taps forward in time, the reverse of convolution order. Store them as (K, C)
+            # so its innermost loop, over channels, reads adjacent memory.
             taps = _build_fir_taps(self.sample_shifts, self.n_taps)
             self._fir_kernels_kc = np.ascontiguousarray(taps[:, ::-1].T, dtype=np.float32)
-        self._margin_window = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         if channel_indices is None:
@@ -148,28 +137,29 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         return self._get_traces_fft(start_frame, end_frame, channel_indices)
 
     def _get_traces_fft(self, start_frame, end_frame, channel_indices):
+        # The shift computes in float64 for every parent and output dtype. The chunk must be float in any case,
+        # since its margins are tapered in place.
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
             end_frame,
             channel_indices,
             self.margin,
-            dtype=self.tmp_dtype,
+            dtype=np.float64,
             add_zeros=True,
-            copy=True,
+            window_on_margin=True,
         )
-        _taper_margins(traces_chunk, self._margin_window)
         traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
-
-        traces_shift = traces_shift[left_margin:-right_margin, :]
-        if np.issubdtype(self.dtype, np.integer):
-            traces_shift = traces_shift.round()
-        if traces_shift.dtype != self.dtype:
-            traces_shift = traces_shift.astype(self.dtype)
-
-        return traces_shift
+        return _cast_owned_traces(traces_shift[left_margin:-right_margin, :], self.dtype)
 
     def _get_traces_fir(self, start_frame, end_frame, channel_indices):
+        """Shift each channel by filtering it with its own windowed-sinc kernel.
+
+        The kernel reaches ``n_taps // 2`` samples to each side, so the chunk is read with that margin and padded
+        with zeros past the ends of the recording. The kernel computes in float32: int16 and float32 traces go in as
+        they are and other dtypes are cast to float32 first. Without numba, a numpy version gives the same result
+        more slowly.
+        """
         half = self.n_taps // 2
         parent = self.parent_recording_segment
         length = int(parent.get_num_samples())
@@ -193,20 +183,27 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
         if not HAVE_NUMBA:
             shifted = _sinc_fir_numpy_tc(traces, kernels_kc)
-        elif traces.dtype == np.int16:
-            traces = np.ascontiguousarray(traces)
-            shifted = _sinc_fir_kernel_int16_tc(traces, kernels_kc)
         else:
-            sig_f32 = np.ascontiguousarray(traces, dtype=np.float32)
-            shifted = _sinc_fir_kernel_tc(sig_f32, kernels_kc)
+            if traces.dtype not in (np.int16, np.float32):
+                traces = traces.astype(np.float32)
+            shifted = _sinc_fir_kernel_tc(np.ascontiguousarray(traces), kernels_kc)
 
-        out = shifted[half : half + (end_frame - start_frame), :]
+        return _cast_owned_traces(shifted[half : half + (end_frame - start_frame), :], self.dtype)
 
-        if out.dtype == self.dtype:
-            return out
-        if np.issubdtype(self.dtype, np.integer):
-            return out.round().astype(self.dtype)
-        return out.astype(self.dtype)
+
+def _cast_owned_traces(traces, dtype):
+    """Cast filtered float traces to ``dtype``, rounding and clipping in place for an integer ``dtype``.
+
+    A filter can push a saturated signal past the integer range, and an unclipped cast would wrap it to the opposite
+    sign. ``traces`` must be a buffer the caller owns.
+    """
+    if traces.dtype == dtype:
+        return traces
+    if np.issubdtype(dtype, np.integer):
+        dtype_info = np.iinfo(dtype)
+        np.round(traces, out=traces)
+        np.clip(traces, dtype_info.min, dtype_info.max, out=traces)
+    return traces.astype(dtype)
 
 
 # function for API
@@ -318,17 +315,36 @@ def apply_fshift_ibl(w, s, axis=0, ns=None):
 
 
 def _build_fir_taps(shift_samples, n_taps, beta=8.6):
-    """Per-channel Kaiser-windowed sinc kernels that delay each channel by its fractional shift, as ``(C, K)``.
+    """Build one windowed-sinc kernel per channel that delays the channel by a fraction of a sample.
 
-    Rows are in ``fir_filter``'s tap order, ``y[n] = sum_j taps[j] * x[n + center - j]`` with its default
-    ``center = (K - 1) // 2``. A positive shift delays, ``y[n] = x[n - shift]``, as in ``apply_frequency_shift``.
-    ``beta=8.6`` gives about -80 dB sidelobes.
+    An ideal delay of ``d`` samples convolves the signal with ``sinc(t - d)``, which never ends. Each kernel keeps
+    ``n_taps`` samples of it around the centre and tapers them with a Kaiser window, the standard windowed-sinc
+    fractional delay (Laakso et al., 1996). Each kernel is then scaled to sum to 1, so a constant signal passes
+    unchanged; the windowed sinc's sum varies with ``d``, which would otherwise scale each ADC group differently.
+
+    Parameters
+    ----------
+    shift_samples : array of shape (C,)
+        Delay of each channel in samples. A positive delay gives ``y[n] = x[n - d]``, as in ``apply_frequency_shift``.
+    n_taps : int
+        Kernel length ``K``. Longer kernels stay accurate to higher frequencies.
+    beta : float, default: 8.6
+        Kaiser window shape; 8.6 gives sidelobes of about -80 dB.
+
+    Returns
+    -------
+    taps : array of shape (C, K)
+        Taps in convolution order: ``y[n] = sum_j taps[c, j] * x[n + center - j]`` with ``center = (K - 1) // 2``.
+
+    References
+    ----------
+    T. I. Laakso, V. Välimäki, M. Karjalainen and U. K. Laine, "Splitting the unit delay", IEEE Signal Processing
+    Magazine 13(1), 30-60, 1996.
     """
     # Tap j weighs x[n + center - j], an offset of t = center - j samples, so the ideal delay gives sinc(t + shift).
     offsets = (n_taps - 1) // 2 - np.arange(n_taps, dtype=np.float64)
     shifts = np.asarray(shift_samples, dtype=np.float64)[:, np.newaxis]
     taps = np.sinc(offsets + shifts) * np.kaiser(n_taps, beta=beta)
-    # Unit DC gain: the windowed sinc's sum varies with the shift, which would scale each ADC group differently.
     taps /= taps.sum(axis=1, keepdims=True)
     return taps
 
@@ -336,36 +352,20 @@ def _build_fir_taps(shift_samples, n_taps, beta=8.6):
 if HAVE_NUMBA:
     import numba
 
-    # Single-threaded: chunk workers supply the parallelism, and parallel=True crashes under numba's workqueue
-    # layer with the thread engine and under its omp layer with forked processes.
+    # Single-threaded: SpikeInterface already runs this inside parallel chunk workers, and numba's parallel=True
+    # crashes when called from worker threads or forked worker processes.
     @numba.njit(nogil=True, cache=False, boundscheck=False)
     def _sinc_fir_kernel_tc(signal_tc, kernels_kc):
-        """Per-channel FIR on a ``(T, C)`` float32 signal, treating samples outside it as zero."""
-        T, C = signal_tc.shape
-        K = kernels_kc.shape[0]
-        half = K // 2
-        interior_start = half
-        interior_end = T - (K - 1 - half)
-        # np.zeros would defer zeroing to page faults inside the loop; zeroing each row just before use keeps it in cache
-        out = np.empty((T, C), dtype=np.float32)
-        for n in range(T):
-            out[n] = 0.0
-            if interior_start <= n < interior_end:
-                base = n - half
-                for k in range(K):
-                    for c in range(C):
-                        out[n, c] += kernels_kc[k, c] * signal_tc[base + k, c]
-            else:
-                for k in range(K):
-                    idx = n + k - half
-                    if 0 <= idx < T:
-                        for c in range(C):
-                            out[n, c] += kernels_kc[k, c] * signal_tc[idx, c]
-        return out
+        """Apply each channel's FIR kernel to a ``(T, C)`` signal, treating samples outside it as zero.
 
-    @numba.njit(nogil=True, cache=False, boundscheck=False)
-    def _sinc_fir_kernel_int16_tc(signal_tc, kernels_kc):
-        """int16-input variant: reads int16 and writes float32, so an int16 parent needs no cast first."""
+        Computes ``out[n, c] = sum_k kernels_kc[k, c] * signal_tc[n + k - K // 2, c]``, the same as
+        ``scipy.ndimage.correlate1d(signal_tc[:, c], kernels_kc[:, c], mode="constant")`` for each channel. With a
+        few taps, summing directly in the time domain costs less than an FFT-based filter such as
+        ``scipy.signal.oaconvolve``. ``scipy.ndimage`` sums directly but takes one kernel per call, so it would loop
+        over channels; this covers all channels in one pass, with the innermost loop over adjacent channels.
+
+        Numba compiles a version per input dtype, so int16 and float32 signals need no cast; both return float32.
+        """
         T, C = signal_tc.shape
         K = kernels_kc.shape[0]
         half = K // 2
@@ -375,10 +375,12 @@ if HAVE_NUMBA:
         out = np.empty((T, C), dtype=np.float32)
         for n in range(T):
             out[n] = 0.0
+            # Away from the ends every tap lands inside the signal, so the bounds check is skipped.
             if interior_start <= n < interior_end:
                 base = n - half
                 for k in range(K):
                     for c in range(C):
+                        # Casting each sample keeps int16 input from promoting the sum to float64.
                         out[n, c] += kernels_kc[k, c] * np.float32(signal_tc[base + k, c])
             else:
                 for k in range(K):
@@ -390,9 +392,9 @@ if HAVE_NUMBA:
 
 
 def _sinc_fir_numpy_tc(signal_tc, kernels_kc):
-    """Numpy equivalent of the numba kernels, used when numba is not installed.
+    """Numpy equivalent of the numba kernel, used when numba is not installed.
 
-    Accumulates one tap at a time over the whole ``(T, C)`` block, in the same tap order as the numba kernels,
+    Accumulates one tap at a time over the whole ``(T, C)`` block, in the same tap order as the numba kernel,
     so the two agree to float32 rounding.
     """
     signal = np.asarray(signal_tc, dtype=np.float32)
