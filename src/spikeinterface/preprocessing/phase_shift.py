@@ -314,7 +314,7 @@ def apply_fshift_ibl(w, s, axis=0, ns=None):
     return W
 
 
-def _build_fir_taps(shift_samples, n_taps, beta=8.6):
+def _build_fir_taps(shift_samples, n_taps, beta=None):
     """Build one windowed-sinc kernel per channel that delays the channel by a fraction of a sample.
 
     An ideal delay of ``d`` samples convolves the signal with ``sinc(t - d)``, which never ends. Each kernel keeps
@@ -328,8 +328,9 @@ def _build_fir_taps(shift_samples, n_taps, beta=8.6):
         Delay of each channel in samples. A positive delay gives ``y[n] = x[n - d]``, as in ``apply_frequency_shift``.
     n_taps : int
         Kernel length ``K``. Longer kernels stay accurate to higher frequencies.
-    beta : float, default: 8.6
-        Kaiser window shape; 8.6 gives sidelobes of about -80 dB.
+    beta : float | None, default: None
+        Kaiser window shape. None uses ``(K + 1) / 2``, which minimises the error in 0.3-10 kHz at 30 kHz sampling
+        for each ``K``; a fixed value suits only one length.
 
     Returns
     -------
@@ -344,7 +345,13 @@ def _build_fir_taps(shift_samples, n_taps, beta=8.6):
     # Tap j weighs x[n + center - j], an offset of t = center - j samples, so the ideal delay gives sinc(t + shift).
     offsets = (n_taps - 1) // 2 - np.arange(n_taps, dtype=np.float64)
     shifts = np.asarray(shift_samples, dtype=np.float64)[:, np.newaxis]
-    taps = np.sinc(offsets + shifts) * np.kaiser(n_taps, beta=beta)
+    if beta is None:
+        beta = (n_taps + 1) / 2
+    # The window reaches half a tap past each end tap. np.kaiser(K) would end exactly on them, where it is near zero,
+    # and waste two taps.
+    window_positions = np.arange(n_taps) - (n_taps - 1) / 2
+    window = np.i0(beta * np.sqrt(1 - (window_positions / (n_taps / 2)) ** 2)) / np.i0(beta)
+    taps = np.sinc(offsets + shifts) * window
     taps /= taps.sum(axis=1, keepdims=True)
     return taps
 
