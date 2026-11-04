@@ -320,12 +320,12 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxRecordingExtractor
     downloads = ["neuralynx"]
     entities = [
-        "neuralynx/Cheetah_v1.1.0/original_data",
-        "neuralynx/Cheetah_v4.0.2/original_data",
-        "neuralynx/Cheetah_v5.4.0/original_data",
-        "neuralynx/Cheetah_v5.5.1/original_data",
-        "neuralynx/Cheetah_v5.6.3/original_data",
-        "neuralynx/Cheetah_v5.7.4/original_data",
+        ("neuralynx/Cheetah_v1.1.0/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v4.0.2/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.4.0/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.5.1/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.6.3/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.7.4/original_data", dict(gap_tolerance_ms=1.0)),
     ]
 
 
@@ -333,8 +333,8 @@ class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxSortingExtractor
     downloads = ["neuralynx"]
     entities = [
-        "neuralynx/Cheetah_v5.5.1/original_data",
-        "neuralynx/Cheetah_v5.6.3/original_data",
+        ("neuralynx/Cheetah_v5.5.1/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.6.3/original_data", dict(gap_tolerance_ms=1.0)),
     ]
 
 

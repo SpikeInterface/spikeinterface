@@ -222,7 +222,7 @@ class TimeSeries(ABC):
         segment_index = self._check_segment_index(segment_index)
         return self.segments[segment_index].has_time_vector()
 
-    def set_times(self, times, segment_index=None):
+    def set_times(self, times, segment_index=None, with_warning=None):
         """Set times for a recording segment.
 
         Parameters
@@ -233,6 +233,14 @@ class TimeSeries(ABC):
         segment_index : int or None, default: None
             The segment index (required for multi-segment)
         """
+        if with_warning is not None:
+            warnings.warn(
+                "The 'with_warning' parameter is deprecated and will be removed in 0.106.0. "
+                "Setting times in memory is now correctly propagated in preprocessing and saving operations, "
+                "so you can safely remove the 'with_warning' parameter.",
+                FutureWarning,
+                stacklevel=2,
+            )
         segment_index = self._check_segment_index(segment_index)
         rs = self.segments[segment_index]
 
