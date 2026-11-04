@@ -11,7 +11,6 @@ from spikeinterface.core.generate import (
 )
 from spikeinterface.preprocessing.motion import correct_motion
 from spikeinterface.generation.hybrid_tools import (
-    estimate_templates_from_recording,
     generate_hybrid_recording,
 )
 
@@ -74,16 +73,6 @@ def test_generate_hybrid_from_templates():
     assert sorting_hybrid.get_num_units() == num_units
 
 
-@pytest.mark.skip("Spykingcircus2 is not stable enought for estimating templates from recording")
-def test_estimate_templates_from_recording(create_cache_folder):
-    cache_folder = create_cache_folder
-    rec, _ = generate_ground_truth_recording(num_units=10, sampling_frequency=20000, seed=0)
-    templates = estimate_templates_from_recording(
-        rec, run_sorter_kwargs=dict(folder=cache_folder / "sc", remove_existing_folder=True)
-    )
-    assert len(templates.templates_array) > 0
-
-
 if __name__ == "__main__":
     from pathlib import Path
 
@@ -91,5 +80,4 @@ if __name__ == "__main__":
 
     # test_generate_hybrid_no_motion()
     # test_generate_hybrid_motion()
-    test_estimate_templates_from_recording(cache_folder)
     # test_generate_hybrid_with_sorting()

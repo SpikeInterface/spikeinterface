@@ -60,6 +60,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "seed": None,
         "save_array": True,
         "debug": False,
+        "_just_make_template_library": False,
     }
 
     _params_description = {
@@ -339,6 +340,10 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             max_jitter_ms=params["template_max_jitter_ms"],
             remove_empty=True,
         )
+
+        if params["_just_make_template_library"]:
+            templates.to_zarr(folder_path=sorter_output_folder / "templates_temp.zarr")
+            return
 
         ## peeler
         gather_mode = params["gather_mode"]

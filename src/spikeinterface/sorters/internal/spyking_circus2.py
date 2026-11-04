@@ -49,6 +49,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "seed": 42,
         "deterministic_peaks_detection": False,
         "debug": False,
+        "_just_make_template_library": False,
     }
 
     handle_multi_segment = True
@@ -430,6 +431,10 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             if debug:
                 templates.to_zarr(folder_path=clustering_folder / "templates")
+
+            if params["_just_make_template_library"]:
+                templates.to_zarr(folder_path=sorter_output_folder / "templates_temp.zarr")
+                return
 
             ## We launch a OMP matching pursuit by full convolution of the templates and the raw traces
 
