@@ -448,14 +448,26 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
     else:
         zarr_timestamps_dataset = None
 
-    # apply function
-    data = time_series.get_data(
-        start_frame=start_frame,
-        end_frame=end_frame,
-        segment_index=segment_index,
-    )
-    data = data.astype(dtype)
-    zarr_dataset[start_frame:end_frame, :] = data
+    # With shards, a job covers a whole shard so only one worker writes to it. The data is computed one
+    # zarr chunk at a time to keep the memory of the chain small, and written as many whole chunks at a time
+    # as fit in write_buffer_megabytes because zarr reads and rewrites the whole shard on every write.
+    write_buffer_megabytes = 500
+    num_samples_per_read = zarr_dataset.chunks[0]
+    num_values_per_sample = int(np.prod(zarr_dataset.shape[1:]))
+    bytes_per_read = num_samples_per_read * num_values_per_sample * dtype.itemsize
+    num_reads_per_write = max(1, write_buffer_megabytes * 1_000_000 // bytes_per_read)
+    num_samples_per_write = num_reads_per_write * num_samples_per_read
+    for write_start in range(start_frame, end_frame, num_samples_per_write):
+        write_end = min(write_start + num_samples_per_write, end_frame)
+        data = np.empty((write_end - write_start,) + zarr_dataset.shape[1:], dtype=dtype)
+        for read_start in range(write_start, write_end, num_samples_per_read):
+            read_end = min(read_start + num_samples_per_read, write_end)
+            data[read_start - write_start : read_end - write_start] = time_series.get_data(
+                start_frame=read_start,
+                end_frame=read_end,
+                segment_index=segment_index,
+            )
+        zarr_dataset[write_start:write_end, :] = data
 
     if zarr_timestamps_dataset is not None:
         timestamps = time_series.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)
