@@ -908,6 +908,13 @@ class BaseRecording(BaseExtractor, TimeSeries):
         """
         kwargs, job_kwargs = split_job_kwargs(save_kwargs)
 
+        recording = self
+        step_options = kwargs.pop("step_options", None)
+        if step_options is not None:
+            from .step_options import apply_step_options
+
+            recording = apply_step_options(self, step_options)
+
         if format == "binary":
             if "folder" not in kwargs:
                 raise ValueError("Missing folder in recording.save(folder='...')")
@@ -916,7 +923,7 @@ class BaseRecording(BaseExtractor, TimeSeries):
 
             folder = kwargs.pop("folder")
             cached = BinaryFolderRecording.write_recording(
-                self, folder_path=folder, verbose=verbose, **kwargs, **job_kwargs
+                recording, folder_path=folder, verbose=verbose, **kwargs, **job_kwargs
             )
 
         elif format == "memory":
@@ -924,12 +931,14 @@ class BaseRecording(BaseExtractor, TimeSeries):
                 from .numpyextractors import SharedMemoryRecording
 
                 cached = SharedMemoryRecording.from_recording(
-                    self, with_metadata=True, with_time_vector=True, **job_kwargs
+                    recording, with_metadata=True, with_time_vector=True, **job_kwargs
                 )
             else:
                 from spikeinterface.core import NumpyRecording
 
-                cached = NumpyRecording.from_recording(self, with_metadata=True, with_time_vector=True, **job_kwargs)
+                cached = NumpyRecording.from_recording(
+                    recording, with_metadata=True, with_time_vector=True, **job_kwargs
+                )
 
         elif format == "zarr":
             if "folder" not in kwargs:
@@ -939,7 +948,7 @@ class BaseRecording(BaseExtractor, TimeSeries):
             from .zarrextractors import ZarrRecordingExtractor
 
             cached = ZarrRecordingExtractor.write_recording(
-                self, folder_path=folder_path, verbose=verbose, **kwargs, **job_kwargs
+                recording, folder_path=folder_path, verbose=verbose, **kwargs, **job_kwargs
             )
 
         else:
