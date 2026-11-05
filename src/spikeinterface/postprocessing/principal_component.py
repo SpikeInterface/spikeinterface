@@ -171,16 +171,24 @@ class ComputePrincipalComponents(AnalyzerExtension):
             * if mode is "by_channel_local", "pca_model" is a list of PCA model by channel
             * if mode is "by_channel_global" or "concatenated", "pca_model" is a single PCA model
         """
-        if self.sorting_analyzer._lazy:
-            raise RuntimeError("PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode.")
         mode = self.params["mode"]
         if mode == "by_channel_local":
             pca_models = []
             for chan_id in self.sorting_analyzer.channel_ids:
-                pca_models.append(self.data[f"pca_model_{mode}_{chan_id}"])
+                pca_model = self.data.get(f"pca_model_{mode}_{chan_id}")
+                if pca_model is None and self._sorting_analyzer._lazy:
+                    raise RuntimeError(
+                        "PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode."
+                    )
+                pca_models.append(pca_model)
+            return pca_models
         else:
-            pca_models = self.data[f"pca_model_{mode}"]
-        return pca_models
+            pca_model = self.data.get(f"pca_model_{mode}")
+            if pca_model is None and self._sorting_analyzer._lazy:
+                raise RuntimeError(
+                    "PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode."
+                )
+            return pca_model
 
     def get_projections_one_unit(self, unit_id, sparse=False):
         """
@@ -330,8 +338,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
         Compute the PCs on waveforms extacted within the by ComputeWaveforms.
         Projections are computed only on the waveforms sampled by the SortingAnalyzer.
         """
-        if self.sorting_analyzer._lazy:
-            raise RuntimeError("PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode.")
         p = self.params
         mode = p["mode"]
 

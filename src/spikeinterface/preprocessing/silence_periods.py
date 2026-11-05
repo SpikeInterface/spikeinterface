@@ -79,6 +79,9 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 "list_periods is deprecated. Please specify periods, which should be a np.array with "
                 f"dtype {base_period_dtype}"
             )
+            if isinstance(periods, list):
+                # periods reloaded from json are a list of [segment_index, start_sample_index, end_sample_index]
+                periods = np.array([tuple(period) for period in periods], dtype=base_period_dtype)
             if not isinstance(periods, np.ndarray):
                 raise ValueError(f"periods must be a np.array with dtype {base_period_dtype}")
 
@@ -132,8 +135,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
             )
             self.add_recording_segment(rec_segment)
 
-        # the base_period_dtype is a structured dtype, which is not json serializable
-        self._serializability["json"] = False
+        self._periods = periods
 
         self._kwargs = dict(
             recording=recording,
@@ -143,6 +145,10 @@ class SilencedPeriodsRecording(BasePreprocessor):
             noise_levels=noise_levels,
             apodization_samples=apodization_samples,
         )
+
+    @property
+    def periods(self):
+        return self._periods
 
 
 def _all_period_list_to_periods_vec(list_periods, num_seg):

@@ -52,7 +52,6 @@ def job_list(create_cache_folder):
     return get_job_list(folder)
 
 
-@pytest.mark.requires_zarr_write
 def test_run_sorter_jobs_loop(job_list):
     sortings = run_sorter_jobs(job_list, engine="loop", return_output=True)
     print(sortings)
@@ -202,7 +201,6 @@ def test_run_sorter_jobs_slurm_kwargs(mocker, tmp_path, job_list):
     assert str(tmp_script_folder) in mock_subprocess_run.call_args_list[-1].args[0][5]
 
 
-@pytest.mark.requires_zarr_write
 def test_run_sorter_by_property(create_cache_folder):
     cache_folder = create_cache_folder
     working_folder1 = cache_folder / "test_run_sorter_by_property_1"
