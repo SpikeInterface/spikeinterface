@@ -6,6 +6,7 @@ from spikeinterface.core import get_chunk_with_margin
 from spikeinterface.core.time_series_tools import _taper_margins
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from .filter import NUM_CHANNELS_PER_BLOCK
 
 
 class PhaseShiftRecording(BasePreprocessor):
@@ -87,25 +88,35 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         if channel_indices is None:
             channel_indices = slice(None)
 
-        # The in-place taper requires an owned buffer, including for float64 parents.
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
             end_frame,
             channel_indices,
             self.margin,
-            dtype=self.tmp_dtype,
             add_zeros=True,
-            copy=True,
         )
-        _taper_margins(traces_chunk, self._margin_window)
-        traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
+        sample_shifts = self.sample_shifts[channel_indices]
+        work_dtype = self.tmp_dtype if self.tmp_dtype is not None else traces_chunk.dtype
 
-        traces_shift = traces_shift[left_margin:-right_margin, :]
-        if self.tmp_dtype is not None:
-            if np.issubdtype(self.dtype, np.integer):
-                traces_shift = traces_shift.round()
-            traces_shift = traces_shift.astype(self.dtype)
+        # Channels are shifted independently, so shifting in blocks gives the same result with a
+        # much lower peak memory (the float64 copy and its complex FFT scale with the block)
+        num_samples = traces_chunk.shape[0] - left_margin - right_margin
+        num_channels = traces_chunk.shape[1]
+        traces_shift = np.empty((num_samples, num_channels), dtype=self.dtype)
+
+        for channel_index in range(0, num_channels, NUM_CHANNELS_PER_BLOCK):
+            channel_slice = slice(channel_index, channel_index + NUM_CHANNELS_PER_BLOCK)
+            # astype copies, so the in-place taper does not touch the parent
+            block = traces_chunk[:, channel_slice].astype(work_dtype)
+            _taper_margins(block, self._margin_window)
+            block_shift = apply_frequency_shift(block, sample_shifts[channel_slice], axis=0)
+            block_shift = block_shift[left_margin:-right_margin, :]
+
+            if self.tmp_dtype is not None and np.issubdtype(self.dtype, np.integer):
+                block_shift = block_shift.round()
+
+            traces_shift[:, channel_slice] = block_shift
 
         return traces_shift
 
