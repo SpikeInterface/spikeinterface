@@ -1,4 +1,5 @@
 from .matched_filtering import MatchedFilteringPeakDetector
+from .iterative import IterativePeakDetector
 from .by_channel import ByChannelPeakDetector, ByChannelTorchPeakDetector
 from .locally_exclusive import (
     LocallyExclusivePeakDetector,

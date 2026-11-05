@@ -18,6 +18,9 @@ class HanningFilter(WaveformsNode):
         The parent nodes of this node
     """
 
+    name = "hanning_filter"
+    params_doc = ""
+
     def __init__(
         self,
         recording: BaseRecording,
