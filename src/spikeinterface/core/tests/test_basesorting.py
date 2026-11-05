@@ -17,6 +17,7 @@ from spikeinterface.core import (
     NpzFolderSorting,
     NumpyFolderSorting,
     generate_ground_truth_recording,
+    generate_recording,
     generate_sorting,
     create_sorting_npz,
     generate_sorting,
@@ -439,6 +440,96 @@ def test_select_periods():
     np.testing.assert_array_equal(sliced_sorting.to_spike_vector(), sliced_sorting_array.to_spike_vector())
 
 
+def _make_sorting_for_select_periods(register_recording=True):
+    """Two-segment sorting, with a property, an annotation and a recording that does not start at t = 0."""
+    sampling_frequency = 1000.0
+    sorting = NumpySorting.from_unit_dict(
+        [
+            {"a": np.array([10, 2000, 5000]), "b": np.array([30, 3000])},
+            {"a": np.array([100, 7000]), "b": np.array([40])},
+        ],
+        sampling_frequency=sampling_frequency,
+    )
+    sorting.set_property("quality", np.array(["good", "mua"]))
+    sorting.annotate(probe_name="NP2.0")
+    if register_recording:
+        recording = generate_recording(
+            num_channels=2, sampling_frequency=sampling_frequency, durations=[10.0, 10.0], seed=0
+        )
+        recording.shift_times(500.0, segment_index=0)
+        recording.shift_times(900.0, segment_index=1)
+        sorting.register_recording(recording)
+    return sorting
+
+
+def _spike_times_of_selection(sorting, segment_index):
+    """Spike times of unit "a" after selection, which keeps samples [10, 2000] and [100, 7000] of segments 0 and 1."""
+    periods = np.array([(0, 0, 4000, 0), (1, 0, 8000, 0)], dtype=unit_period_dtype)
+    selected = sorting.select_periods(periods)
+    return selected.get_unit_spike_train("a", segment_index=segment_index, return_times=True)
+
+
+def test_select_periods_keeps_metadata():
+    sorting = _make_sorting_for_select_periods()
+    periods = np.array([(0, 0, 4000, 0), (0, 0, 4000, 1), (1, 0, 8000, 0)], dtype=unit_period_dtype)
+
+    selected = sorting.select_periods(periods)
+
+    assert selected is not sorting
+    np.testing.assert_array_equal(selected.unit_ids, sorting.unit_ids)
+    np.testing.assert_array_equal(selected.get_property("quality"), ["good", "mua"])
+    assert selected.get_annotation("probe_name") == "NP2.0"
+    assert selected.has_recording()
+    assert selected._recording is sorting._recording
+
+
+def test_select_periods_keeps_times():
+    # start times of the recording
+    sorting = _make_sorting_for_select_periods()
+    np.testing.assert_allclose(_spike_times_of_selection(sorting, 0), [500.01, 502.0])
+    np.testing.assert_allclose(_spike_times_of_selection(sorting, 1), [900.1, 907.0])
+
+    # shift of the sorting, on top of the times of the recording
+    sorting.shift_times(2.0, segment_index=1)
+    np.testing.assert_allclose(_spike_times_of_selection(sorting, 0), [500.01, 502.0])
+    np.testing.assert_allclose(_spike_times_of_selection(sorting, 1), [902.1, 909.0])
+
+    # time vector of the recording: irregular, so that a start time cannot stand in for it
+    sorting = _make_sorting_for_select_periods()
+    times = 100.0 + (np.arange(10_000) / 1000.0) ** 2
+    recording = sorting._recording
+    recording.set_times(times, segment_index=0)
+    sorting.register_recording(recording)
+    np.testing.assert_allclose(_spike_times_of_selection(sorting, 0), times[[10, 2000]])
+
+    # shift of the sorting, without any recording
+    sorting = _make_sorting_for_select_periods(register_recording=False)
+    sorting.shift_times(7.0, segment_index=0)
+    np.testing.assert_allclose(_spike_times_of_selection(sorting, 0), [7.01, 9.0])
+    np.testing.assert_allclose(_spike_times_of_selection(sorting, 1), [0.1, 7.0])
+
+
+@pytest.mark.parametrize(
+    "periods, expected_num_spikes",
+    [
+        pytest.param([(0, 0, 4000, 0), (0, 0, 4000, 1)], 4, id="no_period_in_last_segment"),
+        pytest.param([(0, 0, 1, 0)], 0, id="no_spike_in_periods"),
+        pytest.param([], 0, id="no_period"),
+    ],
+)
+def test_select_periods_keeps_segments_without_spikes(periods, expected_num_spikes):
+    sorting = _make_sorting_for_select_periods()
+
+    selected = sorting.select_periods(np.array(periods, dtype=unit_period_dtype))
+
+    assert selected.to_spike_vector().size == expected_num_spikes
+    assert selected.get_num_segments() == sorting.get_num_segments()
+    assert selected.has_recording()
+    assert selected.get_start_time(segment_index=1) == 900.0
+    assert selected.get_unit_spike_train("a", segment_index=1).size == 0
+    assert selected.get_unit_spike_train("a", segment_index=1, return_times=True).size == 0
+
+
 if __name__ == "__main__":
     import tempfile
     from pathlib import Path
@@ -450,3 +541,5 @@ if __name__ == "__main__":
     test_npy_sorting()
     test_empty_sorting()
     test_select_periods()
+    test_select_periods_keeps_metadata()
+    test_select_periods_keeps_times()
