@@ -38,6 +38,7 @@ def test_global_job_kwargs():
         progress_bar=True,
         mp_context=None,
         max_threads_per_worker=1,
+        num_chunk_per_batch=1,
     )
     global_job_kwargs = get_global_job_kwargs()
 
@@ -48,6 +49,7 @@ def test_global_job_kwargs():
         progress_bar=True,
         mp_context=None,
         max_threads_per_worker=1,
+        num_chunk_per_batch=None,
     )
     set_global_job_kwargs(**job_kwargs)
     assert get_global_job_kwargs() == job_kwargs
@@ -63,6 +65,7 @@ def test_global_job_kwargs():
         progress_bar=True,
         mp_context=None,
         max_threads_per_worker=1,
+        num_chunk_per_batch=1,
     )
     # test that fix_job_kwargs grabs global kwargs
     new_job_kwargs = dict(n_jobs=get_usable_cpu_count())

@@ -64,9 +64,9 @@ def adjust_chunks_shards_and_job_kwargs(
             assert (
                 shards[dim] >= chunks[dim] and shards[dim] % chunks[dim] == 0
             ), "Shard size must be a multiple of chunk size"
-        # When sharding is used, chunk_size in job_kwargs is used to determine the number of samples per chunk to
-        # write in each job. Each process will write all chunks in a shard.
-        job_kwargs["chunk_size"] = shards[0]
+        # When sharding is used, we set the `num_chunk_per_batch` to match the number of chunks in
+        # the shard, so that each job writes one shard
+        job_kwargs["num_chunk_per_batch"] = int(shards[0] // chunks[0])
     elif shard_factor is not None:
         # If shard_factor is an integer, we only apply it to the first dimension. If it's an iterable,
         # we apply it to all dimensions.
@@ -76,7 +76,7 @@ def adjust_chunks_shards_and_job_kwargs(
             if len(shard_factor) != len(chunks):
                 raise ValueError("shard_factor must have the same length as chunks when it is an iterable")
             shards = tuple(chunks[dim] * shard_factor[dim] for dim in range(len(chunks)))
-        job_kwargs["chunk_size"] = shards[0]
+        job_kwargs["num_chunk_per_batch"] = int(shards[0] // chunks[0])
 
     return chunks, shards, job_kwargs
 

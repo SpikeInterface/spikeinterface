@@ -125,6 +125,26 @@ def test_sharding_options(tmp_path):
         )
 
 
+def test_sharding_num_chunk_per_batch(tmp_path):
+    from spikeinterface.core.zarr_tools import adjust_chunks_shards_and_job_kwargs
+
+    recording = generate_recording(durations=[10], num_channels=20)
+    _, _, job_kwargs = adjust_chunks_shards_and_job_kwargs(
+        chunks=(1000, 5), shards=(5000, 10), job_kwargs=dict(n_jobs=1), time_series=recording
+    )
+    assert job_kwargs["num_chunk_per_batch"] == 5
+    _, _, job_kwargs = adjust_chunks_shards_and_job_kwargs(
+        chunks=(1000, 2), shard_factor=(3, 2), job_kwargs=dict(n_jobs=1), time_series=recording
+    )
+    assert job_kwargs["num_chunk_per_batch"] == 3
+
+    # serial and parallel writing give the same result
+    for n_jobs in (1, 2):
+        folder = tmp_path / f"zarr_shards_{n_jobs}.zarr"
+        ZarrRecordingExtractor.write_recording(recording, folder, chunks=(1000, 5), shards=(5000, 10), n_jobs=n_jobs)
+        check_recordings_equal(recording, ZarrRecordingExtractor(folder))
+
+
 def test_ZarrSampleIndexSearch(tmp_path):
     rng = np.random.default_rng(0)
     # two "segments", each sorted, with long runs of equal values so that runs cross
