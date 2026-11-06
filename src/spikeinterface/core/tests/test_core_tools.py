@@ -37,6 +37,7 @@ def test_path_utils_functions():
     d = {
         "kwargs": {
             "path": "/yep/sub/path1",
+            "file_paths": ["/yep/sub/path3", None],
             "recording": {
                 "module": "mock_module",
                 "class": "mock_class",
@@ -49,6 +50,7 @@ def test_path_utils_functions():
 
     d2 = recursive_path_modifier(d, lambda p: p.replace("/yep", "/yop"))
     assert d2["kwargs"]["path"].startswith("/yop")
+    assert d2["kwargs"]["file_paths"] == ["/yop/sub/path3", None]
     assert d2["kwargs"]["recording"]["kwargs"]["path"].startswith("/yop")
 
 

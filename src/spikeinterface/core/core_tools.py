@@ -378,13 +378,13 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
     else:
         for k, v in d.items():
             if target in k:
-                # paths can be str or list of str or None
+                # paths can be str or list of str or None, and a list can contain None
                 if v is None:
                     continue
                 if isinstance(v, (str, Path)):
                     dc[k] = func(v)
                 elif isinstance(v, list):
-                    dc[k] = [func(e) for e in v]
+                    dc[k] = [None if e is None else func(e) for e in v]
                 else:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
