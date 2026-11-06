@@ -1,4 +1,5 @@
 import warnings
+import ast
 from pathlib import Path
 import numpy as np
 
@@ -324,7 +325,7 @@ def parse_sinaps_meta(meta_file: str | Path) -> dict:
                 except:
                     pass
                 try:
-                    val = eval(val)
+                    val = ast.literal_eval(val)
                     if isinstance(val, tuple):
                         val = float(str(val[0]) + "." + str(val[1]))
                 except:
