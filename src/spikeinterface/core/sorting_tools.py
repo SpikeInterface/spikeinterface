@@ -541,7 +541,8 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
     -------
     BaseSorting
         A new sorting object with only samples between start_sample_index and end_sample_index
-        for the given segment_index.
+        for the given segment_index. It has the same segments, properties, annotations, registered
+        recording and times as the input sorting.
     """
     from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -555,11 +556,21 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
         sliced_spike_vector = spike_vector[keep_mask]
 
         # important: we keep the original unit ids so the unit_index field in spike vector is still valid
-        sorting = NumpySorting(
-            sliced_spike_vector, sampling_frequency=sorting.sampling_frequency, unit_ids=sorting.unit_ids
+        # we also keep the number of segments, because the last ones can be left without spikes
+        new_sorting = NumpySorting(
+            sliced_spike_vector,
+            sampling_frequency=sorting.sampling_frequency,
+            unit_ids=sorting.unit_ids,
+            num_segments=sorting.get_num_segments(),
         )
-        sorting.copy_metadata(sorting)
-        return sorting
+        sorting.copy_metadata(new_sorting)
+        # not register_recording(): it resets the start times, which would discard a shift_times() of the sorting
+        if sorting.has_recording():
+            new_sorting._recording = sorting._recording
+        for segment, new_segment in zip(sorting.segments, new_sorting.segments):
+            new_segment._t_start = segment._t_start
+            new_segment._native_t_start = segment._native_t_start
+        return new_sorting
     else:
         return sorting
 
