@@ -419,17 +419,20 @@ def get_random_data_chunks(recording, return_in_uV=False, concatenated=True, **r
     )
 
 
-def get_channel_distances(recording):
+def get_channel_distances(recording, axes="xy"):
     """
-    Distance between channel pairs
+    Distance between channel pairs using the selected spatial axes.
+
+    ``axes`` defaults to ``"xy"`` for backward compatibility. Use ``"xyz"``
+    to measure physical distances on a 3-D probe.
     """
-    locations = recording.get_channel_locations()
+    locations = recording.get_channel_locations(axes=axes)
     channel_distances = np.linalg.norm(locations[:, np.newaxis] - locations[np.newaxis, :], axis=2)
 
     return channel_distances
 
 
-def get_closest_channels(recording, channel_ids=None, num_channels=None):
+def get_closest_channels(recording, channel_ids=None, num_channels=None, axes="xy"):
     """Get closest channels + distances
 
     Parameters
@@ -440,6 +443,8 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
         List of channels ids to compute there near neighborhood
     num_channels : int, default: None
         Maximum number of neighborhood channels to return
+    axes : str, default: "xy"
+        Spatial axes used to calculate distances. Use "xyz" for a 3-D probe.
 
     Returns
     -------
@@ -453,7 +458,7 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     if num_channels is None:
         num_channels = len(channel_ids) - 1
 
-    locations = recording.get_channel_locations(channel_ids=channel_ids)
+    locations = recording.get_channel_locations(channel_ids=channel_ids, axes=axes)
 
     closest_channels_inds = []
     dists = []

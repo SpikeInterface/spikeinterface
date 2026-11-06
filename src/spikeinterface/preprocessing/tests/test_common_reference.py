@@ -2,6 +2,7 @@ import operator
 import pytest
 
 from spikeinterface.core import generate_recording, NumpyRecording
+from probeinterface import Probe
 
 from spikeinterface.preprocessing import common_reference
 
@@ -247,6 +248,26 @@ def test_min_local_radius():
         recording_local_car = common_reference(
             recording, reference="local", local_radius=(60, 150), operator="average", min_local_neighbors=5
         )
+
+
+def test_local_reference_can_use_3d_probe_geometry():
+    traces = np.tile(np.array([[10, 2, 1]], dtype="float32"), (10, 1))
+    recording = NumpyRecording(traces, sampling_frequency=30_000)
+    probe = Probe(ndim=3, si_units="um")
+    probe.set_contacts(
+        positions=np.array([[0, 0, 0], [50, 0, 50], [100, 0, 0]]),
+        plane_axes=np.broadcast_to(np.eye(3)[:2], (3, 2, 3)),
+    )
+    probe.set_device_channel_indices(np.arange(3))
+    recording.set_probe(probe)
+
+    with pytest.warns(UserWarning, match="not have enough neighbors"):
+        reference_xy = common_reference(recording, reference="local", local_radius=(60, 80), min_local_neighbors=1)
+    reference_xyz = common_reference(
+        recording, reference="local", local_radius=(60, 80), min_local_neighbors=1, local_axes="xyz"
+    )
+    assert np.all(reference_xy.get_traces()[:, 0] == 9)
+    assert np.all(reference_xyz.get_traces()[:, 0] == 8)
 
 
 @pytest.mark.parametrize("operator", ["median", "average"])

@@ -82,6 +82,10 @@ class CommonReferenceRecording(BasePreprocessor):
         warning is raised at init.
     dtype : None or dtype, default: None
         If None the parent dtype is kept.
+    local_axes : str, default: "xy"
+        Spatial axes used to select neighbors for local referencing. Set to
+        "xyz" to use physical distances on a 3-D probe. The default retains
+        the existing 2-D behavior.
 
     Returns
     -------
@@ -100,6 +104,7 @@ class CommonReferenceRecording(BasePreprocessor):
         local_radius: tuple[float, float] = (30.0, 55.0),
         min_local_neighbors: int = 5,
         dtype: str | np.dtype | None = None,
+        local_axes: str = "xy",
     ):
         num_chans = recording.get_num_channels()
         local_kernel = None
@@ -148,7 +153,7 @@ class CommonReferenceRecording(BasePreprocessor):
                 ), "Some 'ref_channel_ids' are wrong!"
         elif reference == "local":
             assert groups is None, "With 'local' CAR, the group option should not be used."
-            closest_inds, dist = get_closest_channels(recording)
+            closest_inds, dist = get_closest_channels(recording, axes=local_axes)
             # The neighbor kernel is a matrix that will be used to calculate the local reference.
             # It has shape (num_chans, num_chans) and is filled with zeros except for the columns corresponding to the
             # neighbors of each channel, which are filled with 1 / number of neighbors. This way, when we do a dot
@@ -220,6 +225,7 @@ class CommonReferenceRecording(BasePreprocessor):
             ref_channel_ids=ref_channel_ids,
             local_radius=local_radius,
             min_local_neighbors=min_local_neighbors,
+            local_axes=local_axes,
             dtype=dtype_.str,
         )
 

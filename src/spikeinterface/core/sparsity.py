@@ -833,14 +833,17 @@ def estimate_sparsity(
 
     if method == "radius" and main_channel_indices is not None:
         assert len(main_channel_indices) == len(sorting.unit_ids)
-        chan_locs = recording.get_channel_locations()
+        # The recording accessor defaults to xy, even when the attached probe
+        # has physical 3-D contact positions.
+        axes = "xyz" if len(recording.get_probes()) == 1 and recording.get_probe().ndim == 3 else "xy"
+        chan_locs = recording.get_channel_locations(axes=axes)
         sparsity = ChannelSparsity.from_radius_and_main_channel(
             sorting.unit_ids, recording.channel_ids, main_channel_indices, chan_locs, radius_um
         )
 
     elif method != "by_property":
-        if recording.get_probes() == 1:
-            # standard case
+        if len(recording.get_probes()) == 1:
+            # Preserve the original probe geometry, including z coordinates.
             probe = recording.get_probe()
         else:
             all_locations = recording.get_channel_locations()
