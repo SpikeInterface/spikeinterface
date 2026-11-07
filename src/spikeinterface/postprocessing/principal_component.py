@@ -665,7 +665,7 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     end = int(spike_times[i1 - 1] + nafter)
     traces = recording.get_traces(
         start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
-    ) # IMPT: in the same units (uV) as the waveforms the PCA model was fitted on!
+    )  # IMPT: in the same units (uV) as the waveforms the PCA model was fitted on!
 
     nsamples = nbefore + nafter
 
