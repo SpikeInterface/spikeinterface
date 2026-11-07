@@ -247,6 +247,12 @@ def test_mahalanobis_metrics():
     assert isolation_distance1 < isolation_distance2
     assert l_ratio1 > l_ratio2
 
+    # isolation distance is undefined for a unit with more spikes than the other units together
+    all_pcs3, all_labels3 = create_ground_truth_pc_distributions([1, -2], [1000, 500])
+    isolation_distance3, l_ratio3 = mahalanobis_metrics(all_pcs3, all_labels3, 0)
+    assert np.isnan(isolation_distance3) and np.isfinite(l_ratio3)
+    assert np.isfinite(mahalanobis_metrics(all_pcs3, all_labels3, 1)[0])
+
 
 def test_d_prime_metrics():
     all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
