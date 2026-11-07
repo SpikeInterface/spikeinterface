@@ -114,6 +114,51 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
         # plt.show()
 
 
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_sparse_distance_preserves_rounding(dtype, monkeypatch):
+    import spikeinterface.sortingcomponents.matching.tdc_peeler as peeler
+
+    # Sequential additions lose the 2**-54 terms after the float32 midpoint;
+    # grouping the last channel first would round these candidates upwards.
+    waveform = np.array([[1, 2**-12], [0, 2**-27], [0, 2**-27], [0, 2**-27]], dtype=dtype)
+    templates = np.zeros((4, 4, 1), dtype=dtype)
+    templates[[0, 2], 0, 0] = 2
+    templates[[1, 3], :, 0] = waveform[:, 1]
+    sparsity = np.array([[True, False], [False, True], [True, False], [False, True]])
+    candidates = np.array([2, 3, 0, 1])
+    calls = []
+    original = peeler._numba_sparse_distance_reused_energy
+
+    def checked(*args):
+        calls.append(True)
+        return original(*args)
+
+    monkeypatch.setattr(peeler, "_numba_sparse_distance_reused_energy", checked)
+    cluster_index = peeler.get_most_probable_cluster(waveform, templates, candidates, 2, 2, 2, sparsity)
+    assert cluster_index == 2
+    assert len(calls) == 1
+
+
+def test_temporal_neighbors_preserve_order(monkeypatch):
+    import spikeinterface.sortingcomponents.matching.tdc_peeler as peeler
+
+    sample_indices = np.array([10, 0, 8, 10, 11, 9], dtype="int64")
+    channel_indices = np.array([1, 0, 1, 0, 1, 1], dtype="int64")
+    near_channels = np.array([[True, False], [True, True]])
+    original_samples = sample_indices.tobytes()
+    original_channels = channel_indices.tobytes()
+
+    def unexpected_full_scan(*args):
+        raise AssertionError("Full sample scan")
+
+    monkeypatch.setattr(peeler.np, "abs", unexpected_full_scan)
+    neighbors = peeler.get_neighbors_spikes(sample_indices, channel_indices, 2, near_channels)
+    assert neighbors == [[3, 4, 5], [], [5], [], [0, 3], [0, 2, 3]]
+    assert all(isinstance(index, np.integer) for row in neighbors for index in row)
+    assert sample_indices.tobytes() == original_samples
+    assert channel_indices.tobytes() == original_channels
+
+
 if __name__ == "__main__":
     sorting_analyzer = get_sorting_analyzer()
     # method = "nearest"

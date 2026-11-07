@@ -767,10 +767,21 @@ def get_most_probable_cluster(
     wf_short = traces[s0:s1, :]
 
     ## numba with cluster+channel spasity
-    union_channels = np.any(template_sparsity_mask[possible_clusters, :], axis=0)
-    distances = numba_sparse_distance(
-        wf_short, sparse_templates_array, template_sparsity_mask, union_channels, possible_clusters
-    )
+    selected_sparsity = template_sparsity_mask[possible_clusters, :]
+    union_channels = np.any(selected_sparsity, axis=0)
+    num_union_channels = np.count_nonzero(union_channels)
+    num_zero_channel_comparisons = possible_clusters.size * num_union_channels - np.count_nonzero(selected_sparsity)
+    if (
+        wf_short.dtype.kind == sparse_templates_array.dtype.kind == "f"
+        and num_zero_channel_comparisons * (wf_short.shape[0] - 1) > num_union_channels * wf_short.shape[0]
+    ):
+        distances = _numba_sparse_distance_reused_energy(
+            wf_short, sparse_templates_array, template_sparsity_mask, union_channels, possible_clusters
+        )
+    else:
+        distances = numba_sparse_distance(
+            wf_short, sparse_templates_array, template_sparsity_mask, union_channels, possible_clusters
+        )
 
     ind = np.argmin(distances)
     cluster_index = possible_clusters[ind]
@@ -779,6 +790,46 @@ def get_most_probable_cluster(
 
 
 def get_neighbors_spikes(sample_inds, chan_inds, delta_sample, near_chan_mask):
+    # Bound temporal candidates first, keeping the original index order for
+    # the joint amplitude fit. Other input types retain the existing behavior.
+    if (
+        type(sample_inds) is np.ndarray
+        and sample_inds.dtype == np.int64
+        and sample_inds.ndim == 1
+        and sample_inds.size > 1
+        and type(chan_inds) is np.ndarray
+        and chan_inds.dtype == np.int64
+        and chan_inds.shape == sample_inds.shape
+        and type(near_chan_mask) is np.ndarray
+        and near_chan_mask.dtype == bool
+        and near_chan_mask.ndim == 2
+        and isinstance(delta_sample, (int, np.signedinteger))
+        and delta_sample >= 0
+    ):
+        integer_delta = int(delta_sample)
+        first_sample = int(np.min(sample_inds))
+        last_sample = int(np.max(sample_inds))
+        limits = np.iinfo(np.int64)
+        if (
+            first_sample >= limits.min + integer_delta
+            and last_sample <= limits.max - integer_delta
+            and last_sample - first_sample <= limits.max
+            and np.min(chan_inds) >= 0
+            and np.max(chan_inds) < min(near_chan_mask.shape)
+        ):
+            sample_order = np.argsort(sample_inds)
+            samples_sorted = sample_inds[sample_order]
+            left_bounds = np.searchsorted(samples_sorted, sample_inds - integer_delta, side="right")
+            right_bounds = np.searchsorted(samples_sorted, sample_inds + integer_delta, side="left")
+            neighbors_spikes_indices = []
+            for spike_index in range(sample_inds.size):
+                candidate_indices = sample_order[left_bounds[spike_index] : right_bounds[spike_index]]
+                if candidate_indices.size:
+                    nearby = near_chan_mask[chan_inds[spike_index], chan_inds[candidate_indices]]
+                    nearby = nearby & (candidate_indices != spike_index)
+                    candidate_indices = np.sort(candidate_indices[nearby])
+                neighbors_spikes_indices.append(list(candidate_indices))
+            return neighbors_spikes_indices
 
     neighbors_spikes_inds = []
     for i in range(sample_inds.size):
@@ -963,6 +1014,70 @@ if HAVE_NUMBA:
                     if template_sparsity_mask[cluster_index, chan]:
                         chan_in_template += 1
             distances[i] = sum_dist
+        return distances
+
+    @jit(nopython=True, nogil=True)
+    def _numba_sparse_distance_reused_energy(
+        waveform, sparse_templates_array, template_sparsity_mask, wanted_channel_mask, possible_clusters
+    ):
+        """Compute distances with the union of all candidate support channels."""
+        width, total_channels = waveform.shape
+        channel_indices = np.flatnonzero(wanted_channel_mask)
+        zero_energy = np.zeros(total_channels, dtype=np.float64)
+        for channel_index in channel_indices:
+            for sample_index in range(width):
+                zero_value = np.float64(waveform[sample_index, channel_index])
+                zero_energy[channel_index] += zero_value**2
+
+        distances = np.zeros(possible_clusters.size, dtype=np.float32)
+        # Both nonnegative sums have at most 2N additions on any path.
+        # Bound their separation before float32 rounding; ambiguous cases keep
+        # the original summation order.
+        roundoff = 8.0 * waveform.size * np.finfo(np.float64).eps
+        for candidate_index in range(possible_clusters.size):
+            cluster_index = possible_clusters[candidate_index]
+            total = 0.0
+            sparse_channel_index = 0
+            for channel_index in channel_indices:
+                if template_sparsity_mask[cluster_index, channel_index]:
+                    # Independent accumulators shorten the reduction dependency chain.
+                    partial0 = partial1 = partial2 = partial3 = 0.0
+                    grouped_width = width // 4 * 4
+                    for sample_index in range(0, grouped_width, 4):
+                        value0 = waveform[sample_index + 0, channel_index]
+                        template0 = sparse_templates_array[cluster_index, sample_index + 0, sparse_channel_index]
+                        partial0 += (value0 - template0) ** 2
+                        value1 = waveform[sample_index + 1, channel_index]
+                        template1 = sparse_templates_array[cluster_index, sample_index + 1, sparse_channel_index]
+                        partial1 += (value1 - template1) ** 2
+                        value2 = waveform[sample_index + 2, channel_index]
+                        template2 = sparse_templates_array[cluster_index, sample_index + 2, sparse_channel_index]
+                        partial2 += (value2 - template2) ** 2
+                        value3 = waveform[sample_index + 3, channel_index]
+                        template3 = sparse_templates_array[cluster_index, sample_index + 3, sparse_channel_index]
+                        partial3 += (value3 - template3) ** 2
+                    total += (partial0 + partial1) + (partial2 + partial3)
+                    for sample_index in range(grouped_width, width):
+                        value = waveform[sample_index, channel_index]
+                        template_value = sparse_templates_array[cluster_index, sample_index, sparse_channel_index]
+                        total += (value - template_value) ** 2
+                    sparse_channel_index += 1
+                else:
+                    total += zero_energy[channel_index]
+
+            if np.isfinite(total) and roundoff < 0.5:
+                lower = np.float32(np.nextafter(total * (1.0 - roundoff), -np.inf))
+                upper = np.float32(np.nextafter(total * (1.0 + roundoff), np.inf))
+                if lower == upper and np.isfinite(lower):
+                    distances[candidate_index] = np.float32(total)
+                    continue
+            distances[candidate_index] = numba_sparse_distance(
+                waveform,
+                sparse_templates_array,
+                template_sparsity_mask,
+                wanted_channel_mask,
+                possible_clusters[candidate_index : candidate_index + 1],
+            )[0]
         return distances
 
     @jit(nopython=True, nogil=True)
