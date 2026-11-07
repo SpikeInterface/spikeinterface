@@ -33,6 +33,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         ensure_symmetry: bool = False,
         agreement_method: str = "count",
         verbose: bool = False,
+        n_jobs: int = 1,
     ):
         if sorting1_name is None:
             sorting1_name = "sorting1"
@@ -60,6 +61,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
 
         self.ensure_symmetry = ensure_symmetry
         self.agreement_method = agreement_method
+        self.n_jobs = n_jobs
 
         self._do_agreement()
         self._do_matching()
@@ -92,7 +94,11 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
 
             # matrix of  event match count for each pair
             self.match_event_count = make_match_count_matrix(
-                self.sorting1, self.sorting2, self.delta_frames, ensure_symmetry=self.ensure_symmetry
+                self.sorting1,
+                self.sorting2,
+                self.delta_frames,
+                ensure_symmetry=self.ensure_symmetry,
+                n_jobs=self.n_jobs,
             )
 
             # agreement matrix score for each pair
@@ -143,6 +149,9 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         The "distance" method computes agreement scores from spike time distance functions.
     verbose : bool, default: False
         If True, output is verbose
+    n_jobs : int, default: 1
+        Number of jobs used to compute the two directions concurrently with the "count" agreement method.
+        Only two jobs can be used because the symmetric comparison has two directions.
 
     Returns
     -------
@@ -161,6 +170,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
         chance_score: float = 0.1,
         agreement_method: str = "count",
         verbose: bool = False,
+        n_jobs: int = 1,
     ):
         BasePairSorterComparison.__init__(
             self,
@@ -174,6 +184,7 @@ class SymmetricSortingComparison(BasePairSorterComparison):
             ensure_symmetry=True,
             agreement_method=agreement_method,
             verbose=verbose,
+            n_jobs=n_jobs,
         )
 
     def get_matching(self):
