@@ -133,6 +133,11 @@ def set_global_job_kwargs(**job_kwargs):
         assert k in job_keys, (
             f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
         )
+    if "per_step_job_kwargs" in job_kwargs:
+        raise ValueError(
+            "per_step_job_kwargs describes the steps of one processing chain, pass it to the call that runs "
+            "the chain instead of setting it globally"
+        )
     global_job_kwargs.update(job_kwargs)
     global global_job_kwargs_set
     global_job_kwargs_set = True
