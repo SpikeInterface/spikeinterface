@@ -2268,13 +2268,6 @@ class SortingAnalyzer:
         indices = np.array([all_channel_ids.index(id) for id in channel_ids], dtype=int)
         return indices
 
-    def get_recording_property(self, key) -> np.ndarray:
-        values = np.array(self.rec_attributes["properties"].get(key, None))
-        return values
-
-    def get_sorting_property(self, key) -> np.ndarray:
-        return self.sorting.get_property(key)
-
     def get_dtype(self):
         return self.rec_attributes["dtype"]
 
