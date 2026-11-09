@@ -140,6 +140,8 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         return self._get_traces_fft(start_frame, end_frame, channel_indices)
 
     def _get_traces_fft(self, start_frame, end_frame, channel_indices):
+        from scipy.fft import irfft, next_fast_len, rfft
+
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
@@ -156,14 +158,24 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         num_channels = traces_chunk.shape[1]
         traces_shift = np.empty((num_samples, num_channels), dtype=self.dtype)
 
+        # Neuropixels channels reuse a small set of ADC sampling delays, so each rotation is computed once per
+        # chunk and every block looks up the columns of its channels
+        fft_length = next_fast_len(traces_chunk.shape[0], real=True)
+        angular_frequencies = 2 * np.pi * np.fft.rfftfreq(fft_length)
+        unique_shifts, shift_indices = np.unique(sample_shifts, return_inverse=True)
+        unique_rotations = np.exp(-1j * (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]))
+
         for channel_index in range(0, num_channels, NUM_CHANNELS_PER_BLOCK):
             channel_slice = slice(channel_index, channel_index + NUM_CHANNELS_PER_BLOCK)
             # The shift computes in float64 for every parent and output dtype. astype copies, so the
             # in-place taper does not touch the parent
             block = traces_chunk[:, channel_slice].astype(np.float64)
             _taper_margins(block, self._margin_window)
-            block_shift = apply_frequency_shift(block, sample_shifts[channel_slice], axis=0)
-            traces_shift[:, channel_slice] = _cast_owned_traces(block_shift[left_margin:-right_margin, :], self.dtype)
+            spectrum = rfft(block, n=fft_length, axis=0, overwrite_x=True)
+            spectrum *= unique_rotations[:, shift_indices[channel_slice]]
+            block_shift = irfft(spectrum, n=fft_length, axis=0, overwrite_x=True)
+            block_shift = block_shift[left_margin : left_margin + num_samples, :]
+            traces_shift[:, channel_slice] = _cast_owned_traces(block_shift, self.dtype)
 
         return traces_shift
 
