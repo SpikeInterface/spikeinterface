@@ -299,6 +299,7 @@ def _write_time_series_to_zarr(
     dtype=None,
     chunks=None,
     shards=None,
+    buffer_megabytes=500,
     compressor_data=None,
     filters_data=None,
     compressor_times=None,
@@ -320,12 +321,14 @@ def _write_time_series_to_zarr(
         List of paths to traces datasets in the zarr group
     dataset_timestamps_paths : list or None, default: None
         List of paths to timestamps datasets in the zarr group. If None, timestamps are not saved.
+    dtype : dtype, default: None
+        Type of the saved data
     chunks : tuple or None, default: None
         Chunking dimensions to use for the zarr dataset.
     shards : tuple or None, default: None
         Sharding configuration for the zarr dataset.
-    dtype : dtype, default: None
-        Type of the saved data
+    buffer_megabytes : int, default: 500
+        Buffer size in megabytes for writing data to zarr
     compressor_data : zarr compressor or None, default: None
         Zarr compressor for data
     filters_data : list, default: None
@@ -403,7 +406,7 @@ def _write_time_series_to_zarr(
     # use executor (loop or workers)
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
-    init_args = (time_series, zarr_datasets, dtype, zarr_timestamps_datasets)
+    init_args = (time_series, zarr_datasets, dtype, buffer_megabytes, zarr_timestamps_datasets)
     executor = TimeSeriesChunkExecutor(
         time_series, func, init_func, init_args, verbose=verbose, job_name="write_zarr", **job_kwargs
     )
@@ -420,7 +423,7 @@ def _write_time_series_to_zarr(
         zarr_group.create_array(name="t_starts", data=t_starts, compressors=None)
 
 
-def _init_zarr_worker(time_series, zarr_datasets, dtype, zarr_timestamps_datasets=None):
+def _init_zarr_worker(time_series, zarr_datasets, dtype, buffer_megabytes, zarr_timestamps_datasets=None):
     import zarr
 
     # create a local dict per worker
@@ -432,6 +435,7 @@ def _init_zarr_worker(time_series, zarr_datasets, dtype, zarr_timestamps_dataset
     else:
         worker_ctx["zarr_timestamps_datasets"] = None
     worker_ctx["dtype"] = np.dtype(dtype)
+    worker_ctx["buffer_megabytes"] = buffer_megabytes
 
     return worker_ctx
 
@@ -447,11 +451,11 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
         zarr_timestamps_dataset = worker_ctx["zarr_timestamps_datasets"][segment_index]
     else:
         zarr_timestamps_dataset = None
+    write_buffer_megabytes = worker_ctx["buffer_megabytes"]
 
     # With shards, a job covers a whole shard so only one worker writes to it. The data is computed one
     # zarr chunk at a time to keep the memory of the chain small, and written as many whole chunks at a time
     # as fit in write_buffer_megabytes because zarr reads and rewrites the whole shard on every write.
-    write_buffer_megabytes = 500
     num_samples_per_read = zarr_dataset.chunks[0]
     num_values_per_sample = int(np.prod(zarr_dataset.shape[1:]))
     bytes_per_read = num_samples_per_read * num_values_per_sample * dtype.itemsize
