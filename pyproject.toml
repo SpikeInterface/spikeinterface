@@ -61,6 +61,7 @@ ignore = ['E741', 'E731', 'F821']
 "**/__init__.py" = ['F401', 'F403']
 "src/spikeinterface/full.py" = ['F403']
 "src/spikeinterface/core/testing_tools.py" = ['E402', 'F403']
+"src/spikeinterface/extractors/extractor_classes.py" = ['F401', 'F403']
 
 [project.urls]
 homepage = "https://github.com/SpikeInterface/spikeinterface"
