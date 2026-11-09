@@ -489,7 +489,6 @@ def _read_header(path):
     f = open(path, "rb")
     try:
         dt_code = _read_int32(f)
-        num_bytes_per_entry = _read_int32(f)
         num_dims = _read_int32(f)
         uses64bitdims = False
         if num_dims < 0:
@@ -688,7 +687,7 @@ def _writemda(X, fname, dt):
         print(f"Unexpected data type: {dt}")
         return False
 
-    if type(fname) == str:
+    if type(fname) is str:
         f = open(fname, "wb")
     else:
         f = fname
@@ -705,13 +704,13 @@ def _writemda(X, fname, dt):
         bytes0 = X.astype(dt).tobytes(order="F")
         f.write(bytes0)
 
-        if type(fname) == str:
+        if type(fname) is str:
             f.close()
         return True
     except Exception as e:  # catch *all* exceptions
         traceback.print_exc()
         print(e)
-        if type(fname) == str:
+        if type(fname) is str:
             f.close()
         return False
 
@@ -790,7 +789,7 @@ def appendmda(X, path):
 
 
 def file_extension(fname):
-    if type(fname) == str:
+    if type(fname) is str:
         filename, ext = os.path.splitext(fname)
         return ext
     else:
@@ -816,7 +815,6 @@ def _write_int64(f, val):
 def _header_from_file(f):
     try:
         dt_code = _read_int32(f)
-        num_bytes_per_entry = _read_int32(f)
         num_dims = _read_int32(f)
         uses64bitdims = False
         if num_dims < 0:

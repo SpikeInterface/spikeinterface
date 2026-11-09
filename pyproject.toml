@@ -58,8 +58,8 @@ select = ['E4', 'E7', 'E9', 'F']
 exclude = ["**/tests/**", "**/test_*.py", "**/conftest.py"]
 ignore = ['E741', 'E731', 'F821']
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = ["F401"]
-"src/spikeinterface/core/testing_tools.py" = ["E402", "F403"]
+"**/__init__.py" = ['F401', 'F403']
+"src/spikeinterface/core/testing_tools.py" = ['E402', 'F403']
 
 [project.urls]
 homepage = "https://github.com/SpikeInterface/spikeinterface"

@@ -14,7 +14,7 @@ from spikeinterface.core.zarrextractors import (
 )
 
 # sorting/recording/event from neo
-from .neoextractors import *
+from .neoextractors import neo_recording_extractors_dict, neo_sorting_extractors_dict, neo_event_extractors_dict
 
 # non-NEO objects implemented in neo folder
 # keep for reference Currently pulling from neoextractor __init__
