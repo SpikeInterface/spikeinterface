@@ -1,7 +1,13 @@
 import pytest
 import numpy as np
 
-from spikeinterface import create_sorting_analyzer, compute_sparsity, get_noise_levels
+from spikeinterface import (
+    NumpyRecording,
+    Templates,
+    create_sorting_analyzer,
+    compute_sparsity,
+    get_noise_levels,
+)
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.sortingcomponents.matching.method_list import matching_methods
@@ -108,6 +114,34 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     #     si.plot_agreement_matrix(comp, ax=ax)
     #     ax.set_title(method)
     #     plt.show()
+
+
+def test_circus_omp_overlapping_spikes():
+    # noiseless overlapping spikes, spaced so that re-fits reach spikes whose neighbours lie outside them,
+    # where selecting a template twice at the same time loses or misfits a spike
+    sampling_frequency, nbefore, num_samples, num_channels = 30000.0, 20, 60, 4
+    t = np.arange(num_samples) - nbefore
+    templates_array = np.zeros((3, num_samples, num_channels), dtype=np.float32)
+    for unit in range(3):
+        width = 3 + 1.5 * unit
+        waveform = -np.exp(-0.5 * (t / width) ** 2) + 0.4 * np.exp(-0.5 * ((t - 2.5 * width) / (2 * width)) ** 2)
+        profile = np.exp(-0.5 * ((np.arange(num_channels) - 1.5 * unit) / 1.5) ** 2)
+        # rank 1, so the matcher's SVD keeps the templates exactly
+        templates_array[unit] = 10 * np.outer(waveform, profile)
+
+    units, times = [1, 0, 0, 1, 2], [120, 138, 178, 220, 240]
+    traces = np.zeros((420, num_channels), dtype=np.float32)
+    for unit, time in zip(units, times):
+        traces[time - nbefore : time - nbefore + num_samples] += templates_array[unit]
+    recording = NumpyRecording([traces], sampling_frequency)
+    templates = Templates(
+        templates_array, sampling_frequency, nbefore, channel_ids=recording.channel_ids, unit_ids=np.arange(3)
+    )
+
+    spikes = find_spikes_from_templates(recording, templates, method="circus-omp", job_kwargs=dict(n_jobs=1))
+    assert spikes["cluster_index"].tolist() == units
+    assert spikes["sample_index"].tolist() == times
+    assert np.allclose(spikes["amplitude"], 1, atol=0.01)
 
 
 if __name__ == "__main__":
