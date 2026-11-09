@@ -1,6 +1,6 @@
 import numpy as np
 
-from .method_list import *
+from .method_list import matching_methods
 
 from spikeinterface.core.node_pipeline import run_node_pipeline
 

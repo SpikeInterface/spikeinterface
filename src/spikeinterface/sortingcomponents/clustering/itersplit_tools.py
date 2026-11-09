@@ -352,7 +352,6 @@ class LocalFeatureClustering:
             if final_features.shape[1] == 1:
                 final_features = np.hstack((final_features, np.zeros_like(final_features)))
 
-            sl = slice(None, None, 100)
             for k in np.unique(possible_labels):
                 mask = possible_labels == k
                 ax = axs[0]

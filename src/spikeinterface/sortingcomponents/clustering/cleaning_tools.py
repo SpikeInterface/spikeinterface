@@ -120,7 +120,6 @@ def _split_waveforms_nested(
         # hdbscan on pca
         clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
         active_labels_with_noise = clustering[0]
-        cluster_probability = clustering[2]
         (persistent_clusters,) = np.nonzero(clustering[2] > probability_thr)
         active_labels_with_noise[~np.isin(active_labels_with_noise, persistent_clusters)] = -1
 
@@ -500,7 +499,6 @@ def remove_duplicates(
         idx = np.argsort(channel_norms)[::-1]
         explained_norms = np.cumsum(channel_norms[idx] / total_norm)
         channel = np.searchsorted(explained_norms, sparsify_threshold)
-        active_channels = np.sort(idx[:channel])
         templates[t, :, idx[channel:]] = 0
 
     from sklearn.metrics.pairwise import cosine_similarity

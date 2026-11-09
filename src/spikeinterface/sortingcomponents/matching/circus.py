@@ -3,6 +3,9 @@
 import numpy as np
 import importlib.util
 
+from .base import BaseTemplateMatching
+
+
 spike_dtype = [
     ("sample_index", "int64"),
     ("channel_index", "int64"),
@@ -22,8 +25,6 @@ if torch_spec is not None:
         HAVE_TORCH = False
 else:
     HAVE_TORCH = False
-
-from .base import BaseTemplateMatching
 
 
 def compress_templates(
