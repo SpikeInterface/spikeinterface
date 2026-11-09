@@ -107,8 +107,6 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
         else:
             cut_out_after = nafter
 
-        extremum_channels_indices = self.sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
-
         # collisions
         handle_collisions = self.params["handle_collisions"]
         delta_collision_ms = self.params["delta_collision_ms"]
@@ -722,7 +720,7 @@ def _plot_collisions(sorting_analyzer, sparsity=None, num_collisions=None):
 
     for i in range(num_collisions):
         overlapping_spikes = collisions[collision_keys[i]]
-        ax = _plot_one_collision(
+        _ = _plot_one_collision(
             sorting_analyzer, collision_keys[i], overlapping_spikes, spikes, scalings=scalings, sparsity=sparsity
         )
 

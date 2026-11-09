@@ -422,7 +422,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         num_spikes = sorting.to_spike_vector().size
         shape = (num_spikes, p["n_components"], max_channels_per_template)
-        all_pcs = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
+        _ = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
         all_pcs_args = dict(filename=file_path, mode="r+", dtype="float32", shape=shape)
 
         waveforms_ext = self.sorting_analyzer.get_extension("waveforms")
