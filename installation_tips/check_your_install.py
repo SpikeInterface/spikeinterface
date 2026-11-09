@@ -69,7 +69,7 @@ def open_sigui():
     folder = f"./analyzer_with_{sorter_name}"
     analyzer = si.load_sorting_analyzer(folder)
 
-    win = run_mainwindow(analyzer, start_app=True)
+    _ = run_mainwindow(analyzer, start_app=True)
 
 
 def _clean():
