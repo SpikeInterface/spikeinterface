@@ -294,7 +294,6 @@ class HDSortSorter(BaseSorter):
                     mapping[i] = (ch, x[i], y[i], i)
                 ephys.create_dataset("mapping", data=mapping)
                 # save traces
-                segment_index = 0
                 write_to_h5_dataset_format(
                     recording,
                     dataset_path="/ephys/signal",

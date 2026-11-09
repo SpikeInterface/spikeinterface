@@ -106,10 +106,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
 
-        if importlib.util.find_spec("torch") is not None:
-            HAVE_TORCH = True
-        else:
-            HAVE_TORCH = False
+        if importlib.util.find_spec("torch") is None:
             print("spykingcircus2 could benefit from using torch. Consider installing it")
 
         # this is imported only on demand because numba import are too heavy
@@ -406,7 +403,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             del more_outs
 
-            before_clean_ids = templates.unit_ids.copy()
             cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
             cleaning_kwargs["verbose"] = verbose
             templates = clean_templates(templates, noise_levels=noise_levels, **cleaning_kwargs)

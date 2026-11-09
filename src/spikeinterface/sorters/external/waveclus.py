@@ -290,7 +290,7 @@ class WaveClusSorter(BaseSorter):
         }
         par_input = {}
         for key, value in p.items():
-            if type(value) == bool:
+            if type(value) is bool:
                 value = f"{value}".lower()
             if key in par_renames:
                 key = par_renames[key]
