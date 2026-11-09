@@ -351,7 +351,7 @@ class MotionEstimationStudy(BenchmarkStudy):
                         parts[k].set_color(c)
             axes[2].plot(motion.spatial_bins_um, depth_error, label=label, color=c)
 
-        ax0 = ax = axes[0]
+        ax = axes[0]
         ax.set_xlabel("Time [s]")
         ax.set_ylabel("Error [μm]")
         if show_legend:

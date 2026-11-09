@@ -91,14 +91,12 @@ class PeakLocalizationStudy(BenchmarkStudy):
             metrics = analyzer.get_extension("quality_metrics").get_data()
             snrs = metrics["snr"].values
             result = self.get_result(key)
-            norms = np.linalg.norm(result["templates"].templates_array, axis=(1, 2))
 
             coordinates = self.benchmarks[key].gt_positions[:, :2].copy()
             coordinates[:, 0] -= coordinates[:, 0].mean()
             coordinates[:, 1] -= coordinates[:, 1].mean()
             distances_to_center = np.linalg.norm(coordinates, axis=1)
             zdx = np.argsort(distances_to_center)
-            idx = np.argsort(norms)
 
             wdx = np.argsort(snrs)
 
@@ -252,14 +250,12 @@ class UnitLocalizationStudy(BenchmarkStudy):
             metrics = analyzer.get_extension("quality_metrics").get_data()
             snrs = metrics["snr"].values
             result = self.get_result(key)
-            norms = np.linalg.norm(result["templates"].templates_array, axis=(1, 2))
 
             coordinates = self.benchmarks[key].gt_positions[:, :2].copy()
             coordinates[:, 0] -= coordinates[:, 0].mean()
             coordinates[:, 1] -= coordinates[:, 1].mean()
             distances_to_center = np.linalg.norm(coordinates, axis=1)
             zdx = np.argsort(distances_to_center)
-            idx = np.argsort(norms)
 
             wdx = np.argsort(snrs)
 

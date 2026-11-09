@@ -477,7 +477,6 @@ class BenchmarkStudy:
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        job_keys = []
         for key in case_keys:
             if verbose:
                 print("### Compute result", key, "###")
@@ -543,7 +542,7 @@ class BenchmarkStudy:
                 qm_ext = sorting_analyzer.compute("quality_metrics", metric_names=metric_names, **job_kwargs)
 
             # TODO remove this metics CSV file!!!!
-            metrics = qm_ext.get_data()
+            # _ = qm_ext.get_data()
             # metrics.to_csv(filename, sep="\t", index=True)
 
     def get_metrics(self, key):
