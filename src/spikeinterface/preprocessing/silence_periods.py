@@ -80,8 +80,14 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 f"dtype {base_period_dtype}"
             )
             if isinstance(periods, list):
-                # periods reloaded from json are a list of [segment_index, start_sample_index, end_sample_index]
-                periods = np.array([tuple(period) for period in periods], dtype=base_period_dtype)
+                # periods reloaded from json are a list of [segment_index, start_sample_index, end_sample_index(, sign)]
+                if len(periods) == 0 or len(periods[0]) == 3:
+                    artifact_dtype = base_period_dtype
+                elif len(periods[0]) == 4:
+                    artifact_dtype = np.dtype(base_period_dtype + [("sign", "U8")])
+                else:
+                    raise ValueError("Invalid period format. Each period should have 3 or 4 elements.")
+                periods = np.array([tuple(period) for period in periods], dtype=artifact_dtype)
             if not isinstance(periods, np.ndarray):
                 raise ValueError(f"periods must be a np.array with dtype {base_period_dtype}")
 
@@ -171,7 +177,8 @@ def _all_period_list_to_periods_vec(list_periods, num_seg):
 
 def _check_periods(periods, num_seg):
     # check dtype
-    if any(col not in np.dtype(base_period_dtype).fields for col in periods.dtype.fields):
+    # extra fields (e.g. "sign") are allowed, but the base fields are required
+    if any(col not in periods.dtype.fields for col in np.dtype(base_period_dtype).fields):
         raise ValueError(f"periods must be a np.array with dtype {base_period_dtype}")
 
     # check non overlap and non negative
