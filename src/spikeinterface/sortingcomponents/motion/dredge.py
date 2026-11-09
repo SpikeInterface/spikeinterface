@@ -296,7 +296,6 @@ def dredge_ap(
     threshold_kw = dict(bin_s=bin_s)
 
     if batching_mode == "full":
-
         displacement, extra = compute_displacement_full(
             raster,
             windows,
@@ -313,7 +312,6 @@ def dredge_ap(
         )
 
     elif batching_mode == "online":
-
         # T_total is number of bin_s in recording
         T_total = raster.shape[1]
         T_chunk = max(1, int(np.ceil(chunk_len_s / bin_s)))

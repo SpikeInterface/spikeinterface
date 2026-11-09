@@ -139,13 +139,13 @@ class CommonReferenceRecording(BasePreprocessor):
                 if np.isscalar(ref_channel_ids):
                     ref_channel_ids = [ref_channel_ids]
                 else:
-                    assert (
-                        len(ref_channel_ids) == 1
-                    ), "'ref_channel_ids' with no 'groups' must be a single channel id or a list of one element"
+                    assert len(ref_channel_ids) == 1, (
+                        "'ref_channel_ids' with no 'groups' must be a single channel id or a list of one element"
+                    )
                 ref_channel_ids = np.asarray(ref_channel_ids)
-                assert np.all(
-                    [ch in recording.channel_ids for ch in ref_channel_ids]
-                ), "Some 'ref_channel_ids' are wrong!"
+                assert np.all([ch in recording.channel_ids for ch in ref_channel_ids]), (
+                    "Some 'ref_channel_ids' are wrong!"
+                )
         elif reference == "local":
             assert groups is None, "With 'local' CAR, the group option should not be used."
             closest_inds, dist = get_closest_channels(recording)

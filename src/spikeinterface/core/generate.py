@@ -372,9 +372,9 @@ class TransformSorting(BaseSorting):
         self.added_spikes_from_new_mask = np.zeros(len(spikes), dtype=bool)
 
         if added_spikes_existing_units is not None and len(added_spikes_existing_units) > 0:
-            assert (
-                added_spikes_existing_units.dtype == minimum_spike_dtype
-            ), "added_spikes_existing_units should be a spike vector"
+            assert added_spikes_existing_units.dtype == minimum_spike_dtype, (
+                "added_spikes_existing_units should be a spike vector"
+            )
             spikes = np.concatenate((spikes, added_spikes_existing_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_existing_units), dtype=bool))
@@ -384,9 +384,9 @@ class TransformSorting(BaseSorting):
             )
 
         if added_spikes_new_units is not None and len(added_spikes_new_units) > 0:
-            assert (
-                added_spikes_new_units.dtype == minimum_spike_dtype
-            ), "added_spikes_new_units should be a spike vector"
+            assert added_spikes_new_units.dtype == minimum_spike_dtype, (
+                "added_spikes_new_units should be a spike vector"
+            )
             spikes = np.concatenate((spikes, added_spikes_new_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.zeros(len(added_spikes_new_units), dtype=bool))

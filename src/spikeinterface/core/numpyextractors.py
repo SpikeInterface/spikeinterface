@@ -36,9 +36,9 @@ class NumpyRecording(BaseRecording):
             all_elements_are_list = all(isinstance(e, list) for e in traces_list)
             if all_elements_are_list:
                 traces_list = [np.array(trace) for trace in traces_list]
-            assert all(
-                isinstance(e, np.ndarray) for e in traces_list
-            ), f"must give a list of numpy array but gave {traces_list[0]}"
+            assert all(isinstance(e, np.ndarray) for e in traces_list), (
+                f"must give a list of numpy array but gave {traces_list[0]}"
+            )
         else:
             assert isinstance(traces_list, np.ndarray), "must give a list of numpy array"
             traces_list = [traces_list]

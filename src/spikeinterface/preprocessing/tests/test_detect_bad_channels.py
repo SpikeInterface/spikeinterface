@@ -113,13 +113,13 @@ def test_detect_bad_channels_std_mad():
     # Check that the number of segments is maintained after preprocessor
     assert np.array_equal(rec2.get_num_segments(), rec.get_num_segments()), "wrong numbber of segments."
     # Check that the size of the segments os maintained after preprocessor
-    assert np.array_equal(
-        *([r.get_num_frames(x) for x in range(rec.get_num_segments())] for r in [rec, rec2])
-    ), "wrong length of resulting segments."
+    assert np.array_equal(*([r.get_num_frames(x) for x in range(rec.get_num_segments())] for r in [rec, rec2])), (
+        "wrong length of resulting segments."
+    )
     # Check that locations are mantained
-    assert np.array_equal(
-        rec.get_channel_locations()[[0, 2, 3]], rec2.get_channel_locations()
-    ), "wrong channels locations."
+    assert np.array_equal(rec.get_channel_locations()[[0, 2, 3]], rec2.get_channel_locations()), (
+        "wrong channels locations."
+    )
 
 
 @pytest.mark.parametrize("pool_engine", ["thread", "process"])

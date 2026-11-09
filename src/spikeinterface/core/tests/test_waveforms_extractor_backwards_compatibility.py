@@ -61,7 +61,6 @@ def test_extract_waveforms(create_cache_folder):
     print(we_mock)
 
     for we in (we_old, we_mock):
-
         selected_spikes = we.get_sampled_indices(unit_id=sorting.unit_ids[0])
         # print(selected_spikes.size, selected_spikes.dtype)
 

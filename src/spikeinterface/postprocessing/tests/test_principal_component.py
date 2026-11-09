@@ -8,7 +8,6 @@ from spikeinterface.core import create_sorting_analyzer
 
 
 class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
-
     @pytest.mark.parametrize(
         "params",
         [
@@ -223,7 +222,6 @@ def test_select_channels_sparse_pca():
     selected_pca = analyzer_selected.get_extension("principal_components")
 
     for unit_id in sorting_analyzer.unit_ids:
-
         original_units_to_channels = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
         selected_units_to_channels = analyzer_selected.sparsity.unit_id_to_channel_ids[unit_id]
 
@@ -232,7 +230,6 @@ def test_select_channels_sparse_pca():
 
         for channel_id in select_channel_ids:
             if channel_id in original_units_to_channels:
-
                 # Now check waveforms and PCs, which are sparse
                 channel_index_in_original = np.where(original_units_to_channels == channel_id)[0][0]
                 original_unit_pca = original_pca_one_unit[:, :, channel_index_in_original]
