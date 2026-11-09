@@ -186,7 +186,7 @@ class BaseMultiComparison(BaseComparison):
                         if edge_to_remove[0] in nodes_duplicate:
                             node_to_remove = edge_to_remove[0]
                         else:
-                            node_to_removed = edge_to_remove[1]
+                            node_to_remove = edge_to_remove[1]
                         if node_to_remove in sg.nodes:
                             sg.remove_node(node_to_remove)
                             print(f"Removed node: {node_to_remove}")

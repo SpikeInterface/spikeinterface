@@ -911,7 +911,6 @@ def make_matching_events(times1, times2, delta):
 
     mask2 = membership_sorted[inds] == 2
     inds2 = inds[mask2]
-    n2 = np.sum(mask2)
     matching_event[n1:]["index1"] = spike_index_sorted[inds2 + 1]
     matching_event[n1:]["index2"] = spike_index_sorted[inds2]
     matching_event[n1:]["delta_frame"] = times_concat_sorted[inds2] - times_concat_sorted[inds2 + 1]
