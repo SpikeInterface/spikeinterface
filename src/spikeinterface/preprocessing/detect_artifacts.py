@@ -695,7 +695,7 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
         Available methods:
 
         * ``"envelope"``: detects artifacts as threshold crossings of a low-pass-filtered, rectified
-          channel envelope.
+            channel envelope.
         * ``"saturation"``: detects amplifier saturation events by a voltage threshold and/or a derivative threshold.
 
 

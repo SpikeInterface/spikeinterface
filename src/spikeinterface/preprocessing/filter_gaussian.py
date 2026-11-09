@@ -5,6 +5,7 @@ import numpy as np
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, get_chunk_with_margin, normal_pdf
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from .filter import NUM_CHANNELS_PER_BLOCK
 
 
 class GaussianFilterRecording(BasePreprocessor):
@@ -103,8 +104,6 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
         # margin, so they reach the returned samples only through the kernel's tail past margin_sd.
         fft_length = next_fast_len(signal_length)
 
-        traces_fft = np.fft.fft(traces, n=fft_length, axis=0)
-
         if self.freq_max is not None:
             pos_factor = self._create_gaussian(fft_length, self.freq_max)
         else:
@@ -113,17 +112,26 @@ class GaussianFilterRecordingSegment(BasePreprocessorSegment):
             neg_factor = self._create_gaussian(fft_length, self.freq_min)
         else:
             neg_factor = np.zeros((fft_length,))
+        gaussian_factor = (pos_factor * (1 - neg_factor))[:, None]
 
-        filtered_fft = traces_fft * (pos_factor * (1 - neg_factor))[:, None]
-        filtered_traces = np.real(np.fft.ifft(filtered_fft, axis=0))[:signal_length]
+        # Channels are filtered independently, so filtering in blocks gives the same result with a
+        # much lower peak memory (the complex FFT takes 16 bytes per sample)
+        num_samples = signal_length - left_margin - right_margin
+        num_channels = traces.shape[1]
+        filtered_traces = np.empty((num_samples, num_channels), dtype=dtype)
 
-        if np.issubdtype(dtype, np.integer):
-            filtered_traces = filtered_traces.round()
+        for channel_index in range(0, num_channels, NUM_CHANNELS_PER_BLOCK):
+            channel_slice = slice(channel_index, channel_index + NUM_CHANNELS_PER_BLOCK)
+            block_fft = np.fft.fft(traces[:, channel_slice], n=fft_length, axis=0)
+            filtered_fft = block_fft * gaussian_factor
+            filtered_block = np.real(np.fft.ifft(filtered_fft, axis=0))[left_margin : signal_length - right_margin]
 
-        if right_margin > 0:
-            return filtered_traces[left_margin:-right_margin, :].astype(dtype)
-        else:
-            return filtered_traces[left_margin:, :].astype(dtype)
+            if np.issubdtype(dtype, np.integer):
+                filtered_block = filtered_block.round()
+
+            filtered_traces[:, channel_slice] = filtered_block
+
+        return filtered_traces
 
     def _create_gaussian(self, N: int, cutoff_f: float):
         if cutoff_f in self.cached_gaussian and N in self.cached_gaussian[cutoff_f]:

@@ -1338,6 +1338,7 @@ def compute_sd_ratio(
     censored_period_ms: float = 4.0,
     correct_for_drift: bool = True,
     correct_for_template_itself: bool = True,
+    seed: int | None = None,
     **job_kwargs,
 ):
     """
@@ -1363,6 +1364,9 @@ def compute_sd_ratio(
     correct_for_template_itself : bool, default:  True
         If true, will take into account that the template itself impacts the standard deviation of the noise,
         and will make a rough estimation of what that impact is (and remove it).
+    seed : int | None, default: None
+        Seed for the random chunks the noise SD is computed on. With a seed, the noise SD is always drawn
+        again, and replaces any value `get_noise_levels` has cached on the recording.
     **job_kwargs : dict, default: {}
         Keyword arguments sent to get_noise_levels.
 
@@ -1404,8 +1408,14 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
     job_kwargs["progress_bar"] = False
+    # with a seed, draw again rather than reuse a noise SD cached on the recording
+    seed_kwargs = {} if seed is None else dict(random_slices_kwargs=dict(seed=seed), force_recompute=True)
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
+        sorting_analyzer.recording,
+        return_in_uV=sorting_analyzer.return_in_uV,
+        method="std",
+        **seed_kwargs,
+        **job_kwargs,
     )
 
     main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
@@ -1473,6 +1483,7 @@ class SDRatio(BaseMetric):
         "censored_period_ms": 4.0,
         "correct_for_drift": True,
         "correct_for_template_itself": True,
+        "seed": None,
     }
     metric_columns = {"sd_ratio": float}
     metric_descriptions = {
