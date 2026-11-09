@@ -386,6 +386,7 @@ class CurationTrainer:
 
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_test, y_train, y_test):
         """Impute and scale the data using the specified techniques."""
+        from sklearn.experimental import enable_iterative_imputer  # noqa: F401  (side-effect import, required by IterativeImputer)
         from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
         from sklearn.ensemble import HistGradientBoostingRegressor
         from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
