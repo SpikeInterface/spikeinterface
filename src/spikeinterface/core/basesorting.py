@@ -590,8 +590,17 @@ class BaseSorting(BaseExtractor):
                 - storage_options: dict or None, default: None
                     Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
                     For cloud storage locations, this should not be None (in case of default values, use an empty dict)
-                - compressor: numcodecs.Codec or None, default: None
-                    Global compressor. If None, Blosc-zstd, level 5, with bit shuffle is used
+                - target_chunk_size_bytes: int or None, default: 10 * 1024 * 1024 (10 MB)
+                    The target chunk size for each spike field in the zarr arrays.
+                    If explicitly set to None, no chunking is used.
+                - compressors: zarr compressors or str or None, default: "default"
+                    The compressor used for each spike field in the zarr arrays.
+                    If "default", the SpikeInterface default zarr compressor is used (Blosc-zstd, level 5, bitshuffle).
+                - filters: list of zarr filters or None, default: None
+                    The list of zarr filters to apply to each spike field in the zarr arrays.
+                    If None, a Delta filter is applied.
+                - shard_factor: int or None, default: None
+                    If given, a shard will be shard_factor * chunk size.
             * "memory" format:
                 - sharedmem : bool, default: True
                     If True, the recording is saved in shared memory. If False, it is saved as
