@@ -71,9 +71,9 @@ class TestRunersorterDependencyChecks:
 
         try:
             if dep_name == "spython":
-                pass
+                import spython  # noqa: F401
             else:
-                pass
+                import docker  # noqa: F401
             dependency_installed = True
         except Exception:
             dependency_installed = False
