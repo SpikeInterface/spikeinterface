@@ -64,15 +64,15 @@ def find_spikes_from_templates(
     # if method_class.full_convolution:
     #   Maybe we need to automatically adjust the temporal chunks given templates and n_processes
 
-    if len(templates.unit_ids) == 0:
-        return np.zeros(0, dtype=node0.get_dtype())
-
     if method_class.need_noise_levels:
         if "noise_levels" not in method_kwargs:
             raise ValueError(f"find_spikes_from_templates() method {method} need noise_levels")
 
     node0 = method_class(recording, templates=templates, **method_kwargs)
     nodes = [node0]
+
+    if len(templates.unit_ids) == 0:
+        return np.zeros(0, dtype=node0.get_dtype())
 
     if pipeline_kwargs is None:
         pipeline_kwargs = dict()
