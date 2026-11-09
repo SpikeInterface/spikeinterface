@@ -234,7 +234,6 @@ def test_to_from_json_file(tmp_path):
     for curation_index, curation_dict in enumerate(
         [curation_ids_int, curation_ids_str, curation_ids_int_dict, curation_with_splits]
     ):
-
         temp_filepath = tmp_path / f"data_{curation_index}.json"
 
         with open(temp_filepath, "w") as f:

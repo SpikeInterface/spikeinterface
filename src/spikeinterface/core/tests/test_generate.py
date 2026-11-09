@@ -118,9 +118,9 @@ def test_memory_sorting_generator():
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
     ratio = memory_usage_MiB / before_instanciation_MiB
     expected_allocation_MiB = 0
-    assert (
-        ratio <= 1.0 + relative_tolerance
-    ), f"SortingGenerator wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    assert ratio <= 1.0 + relative_tolerance, (
+        f"SortingGenerator wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    )
 
 
 def test_sorting_generator_consisency_across_calls():
@@ -192,9 +192,9 @@ def test_noise_generator_memory():
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
     expected_allocation_MiB = dtype.itemsize * num_channels * noise_block_size / bytes_to_MiB_factor
     ratio = expected_allocation_MiB / expected_allocation_MiB
-    assert (
-        ratio <= 1.0 + relative_tolerance
-    ), f"MockRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    assert ratio <= 1.0 + relative_tolerance, (
+        f"MockRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    )
 
     # case 2: no preallocation very few memory (under 2 MiB)
     before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor

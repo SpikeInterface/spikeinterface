@@ -261,7 +261,6 @@ def test_quality_metrics_with_periods():
 
 
 if __name__ == "__main__":
-
     sorting_analyzer = get_sorting_analyzer()
     print(sorting_analyzer)
 

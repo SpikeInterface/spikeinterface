@@ -18,7 +18,8 @@ else:
 
 class MatlabHelper:
     installation_mesg = (
-        "To use the MATSortingExtractor install h5py and scipy: " "\n\n pip install h5py scipy\n\n"
+        "To use the MATSortingExtractor install h5py and scipy: "
+        "\n\n pip install h5py scipy\n\n"
     )  # error message when not installed
 
     def __init__(self, file_path):

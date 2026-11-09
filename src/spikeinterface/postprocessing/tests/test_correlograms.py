@@ -647,9 +647,9 @@ def test_acgs_3d_original_implementation(window_ms, bin_ms, num_firing_rate_quan
     )
 
     assert np.allclose(npyx_3dacg, acg_3d, rtol=1e-2, atol=1e-2), "3D-ACG result does not match original implementation"
-    assert np.allclose(
-        npyx_quantiles, firing_rate_quantiles, rtol=1e-5, atol=1e-5
-    ), "3D-ACG quantiles do not match original implementation"
+    assert np.allclose(npyx_quantiles, firing_rate_quantiles, rtol=1e-5, atol=1e-5), (
+        "3D-ACG quantiles do not match original implementation"
+    )
 
 
 # Check in the case where we have segments
@@ -693,6 +693,6 @@ def test_acgs_3d_original_implementation_with_segments(window_ms, bin_ms, num_fi
     )
 
     # Use a less strict tolerance here as we are only simulating a single segment
-    assert np.allclose(
-        npyx_3dacg, acg_3d, rtol=5e-2, atol=5e-2
-    ), f"3D-ACG result for {segments} segments does not match original implementation with concatenated times"
+    assert np.allclose(npyx_3dacg, acg_3d, rtol=5e-2, atol=5e-2), (
+        f"3D-ACG result for {segments} segments does not match original implementation with concatenated times"
+    )

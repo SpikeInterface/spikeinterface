@@ -40,7 +40,6 @@ def test_channelsaggregationrecording():
     ]
 
     for recordings_list in recordings_list_possibilities:
-
         # test num channels
         recording_agg = aggregate_channels(recordings_list)
         assert len(recording_agg.get_channel_ids()) == 3 * num_channels
