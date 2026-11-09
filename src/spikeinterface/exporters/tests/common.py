@@ -1,5 +1,4 @@
 import pytest
-from pathlib import Path
 
 from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer, compute_sparsity
 
@@ -23,7 +22,6 @@ def make_sorting_analyzer(sparse=True, with_group=False):
     )
 
     if with_group:
-
         # this is a bit painful. We need to figure out which units belong to which group
         initial_sorting_analyzer = create_sorting_analyzer(
             sorting=sorting, recording=recording, format="memory", sparse=True

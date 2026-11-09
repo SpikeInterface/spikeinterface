@@ -1,5 +1,4 @@
 import warnings
-import numpy as np
 
 
 from spikeinterface.sortingcomponents.tools import make_multi_method_doc

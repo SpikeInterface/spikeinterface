@@ -5,7 +5,6 @@ This gather some function useful for some clustering algos.
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
-from spikeinterface.core import NumpySorting
 
 
 def _split_waveforms(
@@ -50,7 +49,6 @@ def _split_waveforms(
 
     if debug:
         import matplotlib.pyplot as plt
-        import umap
 
         fig, ax = plt.subplots()
 
@@ -228,9 +226,6 @@ def auto_split_clustering(
     Loop over sparse waveform and try to over split.
     Internally used by PositionAndPCAClustering for the second step.
     """
-
-    import sklearn.decomposition
-    import hdbscan
 
     split_peak_labels = -1 * np.ones(peak_labels.size, dtype=np.int64)
     nb_clusters = 0
@@ -589,11 +584,9 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
     DEBUG = False
     sub_recording = None  # we only do a sub recording if we have data to iterate through
     while keep_searching:
-
         keep_searching = False
 
         for i in list(set(range(nb_templates)).difference(ignore_inds)):
-
             ## Could be speed up by only computing the values for templates that are
             ## nearby
 
@@ -642,7 +635,6 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
                         import matplotlib.pyplot as plt
 
                         fig, axes = plt.subplots(1, 2)
-                        from spikeinterface.widgets import plot_traces
 
                         # plot_traces(sub_recording, ax=axes[0])
                         axes[1].plot(templates_array[i].flatten(), label=f"{ref_norm}")

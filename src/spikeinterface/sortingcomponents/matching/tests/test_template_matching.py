@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-from pathlib import Path
 
 from spikeinterface import NumpySorting, create_sorting_analyzer, compute_sparsity, get_noise_levels
 
@@ -93,9 +92,6 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     DEBUG = False
 
     if DEBUG:
-        import matplotlib.pyplot as plt
-        import spikeinterface.full as si
-
         sorting_analyzer.compute("waveforms")
         sorting_analyzer.compute("templates")
 

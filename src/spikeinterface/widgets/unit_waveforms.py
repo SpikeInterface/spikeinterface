@@ -6,7 +6,6 @@ from .base import BaseWidget, to_attr
 from .utils import get_unit_colors
 
 from spikeinterface.core import ChannelSparsity, SortingAnalyzer, Templates
-from spikeinterface.core.basesorting import BaseSorting
 
 
 class UnitWaveformsWidget(BaseWidget):
@@ -236,7 +235,6 @@ class UnitWaveformsWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -548,12 +546,12 @@ class UnitWaveformsWidget(BaseWidget):
             if isinstance(templates_percentile_shading, (int, float)):
                 templates_percentile_shading = [templates_percentile_shading, 100 - templates_percentile_shading]
             else:
-                assert isinstance(
-                    templates_percentile_shading, (list, tuple)
-                ), "'templates_percentile_shading' should be a float, a list/tuple of floats, or None!"
-                assert (
-                    np.mod(len(templates_percentile_shading), 2) == 0
-                ), "'templates_percentile_shading' should be a have an even number of elements."
+                assert isinstance(templates_percentile_shading, (list, tuple)), (
+                    "'templates_percentile_shading' should be a float, a list/tuple of floats, or None!"
+                )
+                assert np.mod(len(templates_percentile_shading), 2) == 0, (
+                    "'templates_percentile_shading' should be a have an even number of elements."
+                )
             templates_shading = []
             for percentile in templates_percentile_shading:
                 template_percentile = self.templates_ext.get_templates(

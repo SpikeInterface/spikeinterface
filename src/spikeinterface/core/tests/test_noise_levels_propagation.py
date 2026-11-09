@@ -1,11 +1,7 @@
-import pytest
 from pathlib import Path
-import shutil
 
-from spikeinterface import set_global_tmp_folder, get_noise_levels
-from spikeinterface.core import generate_recording, concatenate_recordings, aggregate_channels
-
-import numpy as np
+from spikeinterface import get_noise_levels
+from spikeinterface.core import generate_recording, concatenate_recordings
 
 
 def test_skip_noise_levels_propagation(create_cache_folder):

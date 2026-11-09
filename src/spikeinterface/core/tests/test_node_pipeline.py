@@ -1,6 +1,5 @@
 import pytest
 import numpy as np
-from pathlib import Path
 import shutil
 
 from spikeinterface import create_sorting_analyzer, generate_ground_truth_recording

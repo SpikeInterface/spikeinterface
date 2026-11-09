@@ -7,7 +7,6 @@ from probeinterface import Probe, ProbeGroup, select_axes
 
 from .base import BaseExtractor
 from .time_series import TimeSeriesSegment, TimeSeries
-from .base import BaseExtractor
 from .core_tools import convert_bytes_to_str, convert_seconds_to_str
 from .job_tools import split_job_kwargs
 from .recording_tools import _set_group_property_based_on_probegroup, check_probe_do_not_overlap
@@ -111,7 +110,7 @@ class BaseRecording(BaseExtractor, TimeSeries):
             sampling_frequency_repr = f"{sf_hz:f} Hz"
         else:
             # Khz for high sampling rate and Hz for LFP
-            sampling_frequency_repr = f"{(sf_hz/1000.0):0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
+            sampling_frequency_repr = f"{(sf_hz / 1000.0):0.1f}kHz" if sf_hz > 10_000.0 else f"{sf_hz:0.1f}Hz"
 
         if display_name and self.name != self.__class__.__name__:
             name = f"{self.name} ({self.__class__.__name__})"
@@ -591,9 +590,9 @@ class BaseRecording(BaseExtractor, TimeSeries):
         if not isinstance(probegroup, ProbeGroup):
             raise ValueError("The input must be a ProbeGroup or dict")
 
-        assert all(
-            probe.device_channel_indices is not None for probe in probegroup.probes
-        ), "Probe must have device_channel_indices"
+        assert all(probe.device_channel_indices is not None for probe in probegroup.probes), (
+            "Probe must have device_channel_indices"
+        )
 
         # Remove unconnected contacts and slice the probe group accordingly
         device_channel_indices = probegroup.get_global_device_channel_indices()["device_channel_indices"]
@@ -1098,7 +1097,7 @@ class BaseRecording(BaseExtractor, TimeSeries):
         from .channelslice import ChannelSliceRecording
 
         assert len(new_channel_ids) == self.get_num_channels(), (
-            "new_channel_ids must have the same length as the " "number of channels in the recording"
+            "new_channel_ids must have the same length as the number of channels in the recording"
         )
 
         return ChannelSliceRecording(self, renamed_channel_ids=new_channel_ids)
@@ -1142,9 +1141,9 @@ class BaseRecording(BaseExtractor, TimeSeries):
             A new recording object with only samples between start_time and end_time
         """
         num_segments = self.get_num_segments()
-        assert (
-            num_segments == 1
-        ), f"Time slicing is only supported for single segment recordings. Found {num_segments} segments."
+        assert num_segments == 1, (
+            f"Time slicing is only supported for single segment recordings. Found {num_segments} segments."
+        )
 
         t_start = self.get_start_time()
         t_end = self.get_end_time()

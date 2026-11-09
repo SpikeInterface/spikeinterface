@@ -4,7 +4,6 @@ from copy import deepcopy
 
 import numpy as np
 
-from pathlib import Path
 
 from .base import BaseExtractor, BaseSegment, minimum_spike_dtype
 from .waveform_tools import has_exceeding_spikes
@@ -118,9 +117,9 @@ class BaseSorting(BaseExtractor):
         int
             The number of samples
         """
-        assert (
-            self.has_recording()
-        ), "This methods requires an associated recording. Call self.register_recording() first."
+        assert self.has_recording(), (
+            "This methods requires an associated recording. Call self.register_recording() first."
+        )
         return self._recording.get_num_samples(segment_index=segment_index)
 
     def get_total_samples(self) -> int:
@@ -144,9 +143,9 @@ class BaseSorting(BaseExtractor):
         float
             The duration in seconds
         """
-        assert (
-            self.has_recording()
-        ), "This methods requires an associated recording. Call self.register_recording() first."
+        assert self.has_recording(), (
+            "This methods requires an associated recording. Call self.register_recording() first."
+        )
         return self._recording.get_total_duration()
 
     def search_cached_spikes_sorted(
@@ -316,7 +315,6 @@ class BaseSorting(BaseExtractor):
         # If sorting has a registered recording, get the frames and get the times from the recording
         # Note that this take into account the segment start time of the recording
         if self.has_recording():
-
             # Get all the spike times and then slice them
             start_frame = None
             end_frame = None
@@ -385,12 +383,12 @@ class BaseSorting(BaseExtractor):
         check_spike_frames : bool, default: True
             If True, assert for each segment that all spikes are within the recording's range.
         """
-        assert np.isclose(
-            self.get_sampling_frequency(), recording.get_sampling_frequency(), atol=0.1
-        ), "The recording has a different sampling frequency than the sorting!"
-        assert (
-            self.get_num_segments() == recording.get_num_segments()
-        ), "The recording has a different number of segments than the sorting!"
+        assert np.isclose(self.get_sampling_frequency(), recording.get_sampling_frequency(), atol=0.1), (
+            "The recording has a different sampling frequency than the sorting!"
+        )
+        assert self.get_num_segments() == recording.get_num_segments(), (
+            "The recording has a different number of segments than the sorting!"
+        )
         if check_spike_frames:
             if has_exceeding_spikes(self, recording):
                 warnings.warn(

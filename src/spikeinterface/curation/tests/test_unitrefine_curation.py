@@ -1,6 +1,5 @@
 import pytest
 
-from spikeinterface.curation.tests.common import sorting_analyzer_for_unitrefine_curation, trained_pipeline_path
 from spikeinterface.curation import unitrefine_label_units
 
 

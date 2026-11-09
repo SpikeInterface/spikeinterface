@@ -1,7 +1,6 @@
 from pathlib import Path
 import json
 import warnings
-import re
 from packaging.version import parse
 from copy import deepcopy
 
@@ -141,7 +140,7 @@ class ModelBasedClassification:
                 label_conversion = {}
                 for key, value in string_label_conversion.items():
                     label_conversion[int(key)] = value
-            except:
+            except Exception:
                 warnings.warn("Could not find `label_conversion` key in `model_info.json` file")
 
         metrics = _format_metric_dataframe(metrics)
@@ -190,13 +189,11 @@ class ModelBasedClassification:
         metric_extensions = [self.sorting_analyzer.get_extension(extension_name) for extension_name in extension_names]
 
         for metric_extension, extension_name in zip(metric_extensions, extension_names):
-
             # remove the 's' at the end of the extension name
             extension_name = extension_name[:-1]
             model_extension_params = model_info["metric_params"].get(extension_name + "_params")
 
             if metric_extension is not None and model_extension_params is not None:
-
                 metric_params = metric_extension.params["metric_params"]
 
                 inconsistent_metrics = []
@@ -450,7 +447,6 @@ def _load_model_from_folder(model_folder=None, model_name=None, trust_model=Fals
     """
 
     import skops.io as skio
-    from skops.io.exceptions import UntrustedTypesFoundException
 
     folder = Path(model_folder)
     assert folder.is_dir(), f"The folder {folder}, does not exist."

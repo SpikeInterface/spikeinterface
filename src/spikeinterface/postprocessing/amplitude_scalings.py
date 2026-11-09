@@ -93,17 +93,17 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
         # if ms_before / ms_after are set in params then the original templates are shorten
         if self.params["ms_before"] is not None:
             cut_out_before = ms_to_samples(self.params["ms_before"], self.sorting_analyzer.sampling_frequency)
-            assert (
-                cut_out_before <= nbefore
-            ), f"`ms_before` must be smaller than `ms_before` used in ComputeTemplates: {nbefore}"
+            assert cut_out_before <= nbefore, (
+                f"`ms_before` must be smaller than `ms_before` used in ComputeTemplates: {nbefore}"
+            )
         else:
             cut_out_before = nbefore
 
         if self.params["ms_after"] is not None:
             cut_out_after = ms_to_samples(self.params["ms_after"], self.sorting_analyzer.sampling_frequency)
-            assert (
-                cut_out_after <= nafter
-            ), f"`ms_after` must be smaller than `ms_after` used in templates: {templates_ext.params['ms_after']}"
+            assert cut_out_after <= nafter, (
+                f"`ms_after` must be smaller than `ms_after` used in templates: {templates_ext.params['ms_after']}"
+            )
         else:
             cut_out_after = nafter
 
@@ -120,9 +120,9 @@ class ComputeAmplitudeScalings(BaseSpikeVectorExtension):
             sparsity = self.params["sparsity"]
             # assert provided sparsity is sparser than the one in the waveform extractor
             waveform_sparsity = self.sorting_analyzer.sparsity
-            assert np.all(
-                np.sum(waveform_sparsity.mask, 1) - np.sum(sparsity.mask, 1) > 0
-            ), "The provided sparsity needs to be sparser than the one in the waveform extractor!"
+            assert np.all(np.sum(waveform_sparsity.mask, 1) - np.sum(sparsity.mask, 1) > 0), (
+                "The provided sparsity needs to be sparser than the one in the waveform extractor!"
+            )
         elif not self.sorting_analyzer.is_sparse() and self.params["sparsity"] is not None:
             sparsity = self.params["sparsity"]
         else:
@@ -189,9 +189,9 @@ class AmplitudeScalingNode(PipelineNode):
             self._offsets = None
         self._dtype = np.float32
         spike_retriever = find_parent_of_type(parents, SpikeRetriever)
-        assert isinstance(
-            spike_retriever, SpikeRetriever
-        ), "SpikeAmplitudeNode needs a single SpikeRetriever as a parent"
+        assert isinstance(spike_retriever, SpikeRetriever), (
+            "SpikeAmplitudeNode needs a single SpikeRetriever as a parent"
+        )
         assert spike_retriever.include_spikes_in_margin, "Need SpikeRetriever with include_spikes_in_margin=True"
         if not handle_collisions:
             self._margin = max(nbefore, nafter)
@@ -659,7 +659,6 @@ def fit_collision(
     y = local_waveform.T.flatten()
     X = np.zeros((len(y), len(collision)))
     for i, spike in enumerate(collision):
-
         # float64 like X, so templates are not truncated to the dtype of unscaled integer or float16 traces
         full_template = np.zeros(local_waveform.shape)
 
@@ -716,7 +715,7 @@ def _plot_collisions(sorting_analyzer, sparsity=None, num_collisions=None):
 
     # TODO: this is broken, sac no longer (06/06/2024)
     # has _extension_data and its collisions attribute is unused
-    collisions = sac._extension_data[f"collisions"]
+    collisions = sac._extension_data["collisions"]
     collision_keys = list(collisions.keys())
     num_collisions = num_collisions or len(collisions)
     num_collisions = min(num_collisions, len(collisions))

@@ -1,9 +1,5 @@
-import pytest
-
-from pathlib import Path
 import shutil
 
-import numpy as np
 
 from spikeinterface.core import load
 from spikeinterface.core import generate_recording

@@ -1,6 +1,5 @@
 import unittest
 
-import pytest
 
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 

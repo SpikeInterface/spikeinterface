@@ -348,9 +348,9 @@ def _write_time_series_to_zarr(
 
     assert dataset_paths is not None, "Provide 'dataset_paths' to save data in zarr format"
     if dataset_timestamps_paths is not None:
-        assert (
-            len(dataset_timestamps_paths) == time_series.get_num_segments()
-        ), "dataset_timestamps_paths should have the same length as the number of segments in the time_series"
+        assert len(dataset_timestamps_paths) == time_series.get_num_segments(), (
+            "dataset_timestamps_paths should have the same length as the number of segments in the time_series"
+        )
     else:
         dataset_timestamps_paths = [None] * time_series.get_num_segments()
 
@@ -421,7 +421,6 @@ def _write_time_series_to_zarr(
 
 
 def _init_zarr_worker(time_series, zarr_datasets, dtype, zarr_timestamps_datasets=None):
-    import zarr
 
     # create a local dict per worker
     worker_ctx = {}

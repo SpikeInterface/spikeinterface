@@ -14,7 +14,6 @@ from spikeinterface.core.sorting_tools import (
     _get_ids_after_merging,
     generate_unit_ids_for_merge_group,
     remap_unit_indices_in_vector,
-    set_properties_after_merging,
     set_properties_after_splits,
     reorder_spike_vector_by_unit_and_segment,
     get_segment_durations,

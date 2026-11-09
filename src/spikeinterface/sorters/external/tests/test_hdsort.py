@@ -1,6 +1,6 @@
 from spikeinterface.sorters import HDSortSorter
 
-import os, getpass
+import getpass
 
 if getpass.getuser() == "samuel":
     hdsort_path = "/home/samuel/Documents/SpikeInterface/HDsort/"

@@ -1,16 +1,13 @@
 """Sorting components: template matching."""
 
 import numpy as np
-from spikeinterface.core.template_tools import get_template_extremum_channel
-from spikeinterface.core import get_noise_levels, get_channel_distances
-from spikeinterface.core.sparsity import compute_sparsity
+from spikeinterface.core import get_channel_distances
 
 
 from .base import BaseTemplateMatching, _base_matching_dtype
 
 
 class NearestTemplatesPeeler(BaseTemplateMatching):
-
     name = "nearest"
     need_noise_levels = True
     # this is because numba
@@ -153,16 +150,18 @@ class NearestTemplatesPeeler(BaseTemplateMatching):
 
 
 class NearestTemplatesSVDPeeler(NearestTemplatesPeeler):
-
     name = "nearest-svd"
     need_noise_levels = True
-    params_doc = NearestTemplatesPeeler.params_doc + """
+    params_doc = (
+        NearestTemplatesPeeler.params_doc
+        + """
     svd_model : The svd model used to project the waveforms
         The radius to use to select neighbour channels for locally exclusive detection.
     svd_radius_um : float
         The radius in um of the local neighboorhood used, centered on every detected peaks, to compute
         the distances with all the templates in the SVD space
     """
+    )
 
     def __init__(
         self,

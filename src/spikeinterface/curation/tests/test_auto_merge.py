@@ -8,9 +8,6 @@ from spikeinterface.generation import split_sorting_by_times
 
 from spikeinterface.curation.tests.common import (
     make_sorting_analyzer,
-    sorting_analyzer_for_curation,
-    sorting_analyzer_with_splits,
-    sorting_analyzer_multi_segment_for_curation,
 )
 
 

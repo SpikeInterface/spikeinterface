@@ -2,7 +2,6 @@ import pytest
 
 import numpy as np
 from spikeinterface.core import generate_recording
-from spikeinterface import NumpyRecording, set_global_tmp_folder
 
 from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter, causal_filter
 

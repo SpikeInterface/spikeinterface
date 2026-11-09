@@ -1,5 +1,4 @@
 import numpy as np
-import warnings
 
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 

@@ -436,14 +436,14 @@ def random_spikes_selection(
 
             elif method == "percentage":
                 if percentage is None or not (0 < percentage <= 1):
-                    raise ValueError(f"percentage must be in the interval (0, 1]")
+                    raise ValueError("percentage must be in the interval (0, 1]")
 
                 rng_size = min(max_spikes_per_unit, int(all_unit_indices.size * percentage))
                 selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
             elif method == "maximum_rate":
                 if maximum_rate is None:
-                    raise ValueError(f"maximum_rate must be defined")
+                    raise ValueError("maximum_rate must be defined")
 
                 t_duration = np.sum(get_segment_durations(sorting)[0])
                 rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
@@ -699,7 +699,6 @@ def set_properties_after_merging(
     default_missing_values = BaseExtractor.default_missing_property_values
 
     for key in prop_keys:
-
         parent_values = sorting_pre_merge.get_property(key)
 
         # propagate keep values
@@ -1042,9 +1041,9 @@ def generate_unit_ids_for_split(old_unit_ids, unit_splits, new_unit_ids=None, ne
             # then only doing a consistency check
             assert len(split_unit) == len(new_split_ids), "new_unit_ids should have the same len as unit_splits.values"
             # new_unit_ids can also be part of old_unit_ids only inside the same group:
-            assert all(
-                new_split_id not in old_unit_ids for new_split_id in new_split_ids
-            ), "new_unit_ids already exists but outside the split groups"
+            assert all(new_split_id not in old_unit_ids for new_split_id in new_split_ids), (
+                "new_unit_ids already exists but outside the split groups"
+            )
     else:
         dtype = old_unit_ids.dtype
         if np.issubdtype(dtype, np.integer) and new_id_strategy == "split":
@@ -1145,9 +1144,9 @@ def _get_ids_after_splitting(old_unit_ids, split_units, new_unit_ids):
 
     assert len(new_unit_ids) == len(split_units), "new_unit_ids should have the same len as merge_unit_groups"
     for new_unit_in_split, unit_to_split in zip(new_unit_ids, split_units.keys()):
-        assert len(new_unit_in_split) == len(
-            split_units[unit_to_split]
-        ), "new_unit_ids should have the same len as split_units values"
+        assert len(new_unit_in_split) == len(split_units[unit_to_split]), (
+            "new_unit_ids should have the same len as split_units values"
+        )
 
     all_unit_ids = list(old_unit_ids.copy())
     for split_unit, split_new_units in zip(split_units, new_unit_ids):
@@ -1181,12 +1180,12 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
     """
     all_old_unit_ids = np.asarray(all_old_unit_ids)
     all_new_unit_ids = np.asarray(all_new_unit_ids)
-    assert (
-        all_old_unit_ids.size == np.unique(all_old_unit_ids).size
-    ), "remap_unit_indices_in_vector: all_old_unit_ids not unique"
-    assert (
-        all_new_unit_ids.size == np.unique(all_new_unit_ids).size
-    ), "remap_unit_indices_in_vector: all_new_unit_ids not unique"
+    assert all_old_unit_ids.size == np.unique(all_old_unit_ids).size, (
+        "remap_unit_indices_in_vector: all_old_unit_ids not unique"
+    )
+    assert all_new_unit_ids.size == np.unique(all_new_unit_ids).size, (
+        "remap_unit_indices_in_vector: all_new_unit_ids not unique"
+    )
 
     if keep_old_unit_ids is None:
         keep_old_unit_ids = all_old_unit_ids
@@ -1272,7 +1271,6 @@ def estimate_segment_durations_from_spike_vector(
     durations = []
     ts = 1 / sampling_frequency
     for i, seg_idx in enumerate(segment_indices):
-
         if segment_t_starts is None:
             segment_start = 0.0
         else:

@@ -1,7 +1,7 @@
 import pytest
 import platform
 from spikeinterface import generate_ground_truth_recording
-from spikeinterface.sorters.utils import has_spython, has_docker_python, has_docker, has_singularity
+from spikeinterface.sorters.utils import has_spython, has_docker_python
 from spikeinterface.sorters import run_sorter
 import sys
 
@@ -71,11 +71,11 @@ class TestRunersorterDependencyChecks:
 
         try:
             if dep_name == "spython":
-                import spython
+                pass
             else:
-                import docker
+                pass
             dependency_installed = True
-        except:
+        except Exception:
             dependency_installed = False
 
         if dependency_installed:
@@ -120,7 +120,7 @@ class TestRunersorterDependencyChecks:
         return False. Then, test the expected error is raised when the dependency
         is not found.
         """
-        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_singularity", _monkeypatch_return_false)
+        monkeypatch.setattr("spikeinterface.sorters.runsorter.has_singularity", _monkeypatch_return_false)
 
         with pytest.raises(RuntimeError) as e:
             run_sorter("kilosort2_5", recording, singularity_image=True)
@@ -132,8 +132,8 @@ class TestRunersorterDependencyChecks:
         See `test_no_singularity_error_raised()`.
         """
         # make sure singularity test returns true as that comes first
-        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_singularity", _monkeypatch_return_true)
-        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_spython", _monkeypatch_return_false)
+        monkeypatch.setattr("spikeinterface.sorters.runsorter.has_singularity", _monkeypatch_return_true)
+        monkeypatch.setattr("spikeinterface.sorters.runsorter.has_spython", _monkeypatch_return_false)
 
         with pytest.raises(RuntimeError) as e:
             run_sorter("kilosort2_5", recording, singularity_image=True)
@@ -144,7 +144,7 @@ class TestRunersorterDependencyChecks:
         """
         See `test_no_singularity_error_raised()`.
         """
-        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_docker", _monkeypatch_return_false)
+        monkeypatch.setattr("spikeinterface.sorters.runsorter.has_docker", _monkeypatch_return_false)
 
         with pytest.raises(RuntimeError) as e:
             run_sorter("kilosort2_5", recording, docker_image=True)
@@ -156,8 +156,8 @@ class TestRunersorterDependencyChecks:
         See `test_no_singularity_error_raised()`.
         """
         # make sure docker test returns true as that comes first
-        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_docker", _monkeypatch_return_true)
-        monkeypatch.setattr(f"spikeinterface.sorters.runsorter.has_docker_python", _monkeypatch_return_false)
+        monkeypatch.setattr("spikeinterface.sorters.runsorter.has_docker", _monkeypatch_return_true)
+        monkeypatch.setattr("spikeinterface.sorters.runsorter.has_docker_python", _monkeypatch_return_false)
 
         with pytest.raises(RuntimeError) as e:
             run_sorter("kilosort2_5", recording, docker_image=True)

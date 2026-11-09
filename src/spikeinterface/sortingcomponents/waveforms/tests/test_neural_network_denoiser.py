@@ -83,7 +83,7 @@ def test_single_channel_yass_denoiser_wrong_shape(generated_recording_30khz, det
         recording, parents=[peak_retriever], nbefore=nbefore, nafter=nafter, return_output=True
     )
     with pytest.raises(ValueError):
-        yass_denoiser = SingleChannelDenoiser(
+        _ = SingleChannelDenoiser(
             recording,
             parents=[peak_retriever, waveform_extraction],
             repo_id="spikeinterface/waveform_denoiser",
@@ -96,4 +96,4 @@ def test_single_channel_yass_denoiser_wrong_shape(generated_recording_30khz, det
         model_name="yass_ibl",
     )
     with pytest.raises(ValueError):
-        yass_denoiser = SingleChannelDenoiser(recording, parents=[peak_retriever, waveform_extraction], model=model)
+        _ = SingleChannelDenoiser(recording, parents=[peak_retriever, waveform_extraction], model=model)

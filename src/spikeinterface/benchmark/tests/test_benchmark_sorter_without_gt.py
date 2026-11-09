@@ -3,7 +3,6 @@ import pytest
 from pathlib import Path
 
 from spikeinterface import generate_ground_truth_recording
-from spikeinterface.preprocessing import bandpass_filter
 from spikeinterface.benchmark import SorterStudyWithoutGroundTruth
 
 

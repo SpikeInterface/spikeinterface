@@ -627,7 +627,7 @@ def test_sorting_extraction_start_time(tmp_path, use_pynwb):
 def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
     from pynwb import NWBHDF5IO
     from pynwb.testing.mock.file import mock_NWBFile
-    from pynwb.ecephys import ElectricalSeries, LFP, FilteredEphys
+    from pynwb.ecephys import ElectricalSeries
 
     from pynwb.testing.mock.ecephys import mock_electrodes
 
@@ -860,7 +860,7 @@ def test_sorting_electrical_series_path_and_time_base_are_mutually_exclusive(tmp
             **extra_kwarg,
         )
     expected_error = (
-        "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and " "'t_start'), not both."
+        "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and 't_start'), not both."
     )
     assert str(exc_info.value) == expected_error
 

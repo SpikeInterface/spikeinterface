@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
-import tempfile, csv
+import tempfile
+import csv
 from pathlib import Path
 
 from spikeinterface.curation.tests.common import make_sorting_analyzer

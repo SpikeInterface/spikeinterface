@@ -40,7 +40,7 @@ def get_sorting_analyzer(cache_folder, format="memory", sparse=True):
     elif format == "binary_folder":
         folder = cache_folder / f"test_ComputeWaveforms_{format}"
     elif format == "zarr":
-        folder = cache_folder / f"test_ComputeWaveforms.zarr"
+        folder = cache_folder / "test_ComputeWaveforms.zarr"
     if folder and folder.exists():
         shutil.rmtree(folder)
 

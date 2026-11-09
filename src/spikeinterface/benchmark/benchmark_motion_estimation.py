@@ -1,6 +1,3 @@
-import json
-from pathlib import Path
-import pickle
 import time
 
 import numpy as np
@@ -183,7 +180,6 @@ class MotionEstimationStudy(BenchmarkStudy):
             case_keys = list(self.cases.keys())
 
         for key in case_keys:
-
             bench = self.benchmarks[key]
 
             fig = plt.figure(figsize=figsize)
@@ -258,7 +254,6 @@ class MotionEstimationStudy(BenchmarkStudy):
             case_keys = list(self.cases.keys())
 
         for key in case_keys:
-
             bench = self.benchmarks[key]
             label = self.cases[key]["label"]
 
@@ -329,7 +324,6 @@ class MotionEstimationStudy(BenchmarkStudy):
         colors = self.get_colors()
 
         for count, key in enumerate(case_keys):
-
             bench = self.benchmarks[key]
             label = self.cases[key]["label"]
 

@@ -1,5 +1,3 @@
-from pathlib import Path
-import platform
 import numpy as np
 
 from spikeinterface.core import NumpyRecording, generate_recording, MockRecording

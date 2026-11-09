@@ -4,9 +4,7 @@ import numpy as np
 
 from .basesorting import BaseSorting
 from .baserecording import BaseRecording
-from .sorting_tools import random_spikes_selection
 from .job_tools import _shared_job_kwargs_doc
-from .waveform_tools import estimate_templates_with_accumulator
 from .core_tools import ms_to_samples
 
 _sparsity_doc = """
@@ -475,9 +473,9 @@ class ChannelSparsity:
         from .sortinganalyzer import SortingAnalyzer
         from .template import Templates
 
-        assert (
-            templates_or_sorting_analyzer.sparsity is None
-        ), "To compute sparsity you need a dense SortingAnalyzer or Templates"
+        assert templates_or_sorting_analyzer.sparsity is None, (
+            "To compute sparsity you need a dense SortingAnalyzer or Templates"
+        )
 
         unit_ids = templates_or_sorting_analyzer.unit_ids
         channel_ids = templates_or_sorting_analyzer.channel_ids
@@ -526,9 +524,9 @@ class ChannelSparsity:
         from .sortinganalyzer import SortingAnalyzer
         from .template import Templates
 
-        assert (
-            templates_or_sorting_analyzer.sparsity is None
-        ), "To compute sparsity you need a dense SortingAnalyzer or Templates"
+        assert templates_or_sorting_analyzer.sparsity is None, (
+            "To compute sparsity you need a dense SortingAnalyzer or Templates"
+        )
 
         unit_ids = templates_or_sorting_analyzer.unit_ids
         channel_ids = templates_or_sorting_analyzer.channel_ids
@@ -625,9 +623,9 @@ class ChannelSparsity:
         rec_by = recording.split_by(by_property)
         for unit_ind, unit_id in enumerate(sorting.unit_ids):
             unit_property = sorting.get_property(by_property)[unit_ind]
-            assert (
-                unit_property in rec_by.keys()
-            ), f"Unit property {unit_property} cannot be found in the recording properties"
+            assert unit_property in rec_by.keys(), (
+                f"Unit property {unit_property} cannot be found in the recording properties"
+            )
             chan_inds = recording.ids_to_indices(rec_by[unit_property].get_channel_ids())
             mask[unit_ind, chan_inds] = True
         return cls(mask, sorting.unit_ids, recording.channel_ids)
@@ -698,26 +696,26 @@ def compute_sparsity(
         "snr",
         "amplitude",
     ):
-        assert isinstance(
-            templates_or_sorting_analyzer, (Templates, SortingAnalyzer)
-        ), f"compute_sparsity(method='{method}') need Templates or SortingAnalyzer"
+        assert isinstance(templates_or_sorting_analyzer, (Templates, SortingAnalyzer)), (
+            f"compute_sparsity(method='{method}') need Templates or SortingAnalyzer"
+        )
         if isinstance(templates_or_sorting_analyzer, Templates):
-            assert (
-                peak_sign is not None
-            ), "When using `compute_sparsity` with a Templates object, `peak_sign` must be specified."
-            assert (
-                amplitude_mode is not None
-            ), "When using `compute_sparsity` with a Templates object, `amplitude_mode` must be specified."
+            assert peak_sign is not None, (
+                "When using `compute_sparsity` with a Templates object, `peak_sign` must be specified."
+            )
+            assert amplitude_mode is not None, (
+                "When using `compute_sparsity` with a Templates object, `amplitude_mode` must be specified."
+            )
     else:
-        assert isinstance(
-            templates_or_sorting_analyzer, SortingAnalyzer
-        ), f"compute_sparsity(method='{method}') need SortingAnalyzer"
-        assert (
-            peak_sign is None
-        ), "When using `compute_sparsity` with an analyzer, `peak_sign` must be None. The `peak_sign is set when you create the analyzer."
-        assert (
-            amplitude_mode is None
-        ), "When using `compute_sparsity` with an analyzer, `amplitude_mode` must be None. The `peak_mode` is set when you create the analyzer."
+        assert isinstance(templates_or_sorting_analyzer, SortingAnalyzer), (
+            f"compute_sparsity(method='{method}') need SortingAnalyzer"
+        )
+        assert peak_sign is None, (
+            "When using `compute_sparsity` with an analyzer, `peak_sign` must be None. The `peak_sign is set when you create the analyzer."
+        )
+        assert amplitude_mode is None, (
+            "When using `compute_sparsity` with an analyzer, `amplitude_mode` must be None. The `peak_mode` is set when you create the analyzer."
+        )
 
     if method == "best_channels":
         assert num_channels is not None, "For the 'best_channels' method, 'num_channels' needs to be given"

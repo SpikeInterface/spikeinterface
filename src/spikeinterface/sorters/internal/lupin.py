@@ -12,7 +12,7 @@ from spikeinterface.core import (
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 
-from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
+from spikeinterface.preprocessing import bandpass_filter, common_reference, whiten
 from spikeinterface.core.base import minimum_spike_dtype
 
 from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_cache_preprocessing
@@ -177,7 +177,6 @@ class LupinSorter(ComponentsBasedSorter):
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
-
                 rec_for_motion = recording_raw
                 if params["preprocessing_dict"] is None:
                     rec_for_motion = bandpass_filter(

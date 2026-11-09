@@ -226,8 +226,8 @@ def array_to_image(
                 font = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeMono.ttf", fontsize)
             else:
                 font = ImageFont.truetype("arial.ttf", fontsize)
-        except:
-            print(f"Could not load font to use in scalebar. Scalebar will not be drawn.")
+        except Exception:
+            print("Could not load font to use in scalebar. Scalebar will not be drawn.")
             font = None
 
         if font is not None:

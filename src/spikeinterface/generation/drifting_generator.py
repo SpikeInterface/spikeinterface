@@ -124,8 +124,8 @@ def make_one_displacement_vector(
 
     t_start_drift = 0.0 if t_start_drift is None else t_start_drift
     t_end_drift = duration if t_end_drift is None else t_end_drift
-    assert t_start_drift < duration, f"'t_start_drift' must preceed 'duration'!"
-    assert t_end_drift <= duration, f"'t_end_drift' must preceed 'duration'!"
+    assert t_start_drift < duration, "'t_start_drift' must preceed 'duration'!"
+    assert t_end_drift <= duration, "'t_end_drift' must preceed 'duration'!"
     start_drift_index = int(t_start_drift * displacement_sampling_frequency)
     end_drift_index = int(t_end_drift * displacement_sampling_frequency)
 
@@ -133,7 +133,6 @@ def make_one_displacement_vector(
     displacement_vector = np.zeros(num_samples, dtype="float32")
 
     if drift_mode == "zigzag":
-
         times = np.arange(end_drift_index - start_drift_index) / displacement_sampling_frequency
 
         freq = 1.0 / period_s
@@ -455,9 +454,9 @@ def generate_drifting_recording(
         num_units = sorting.get_num_units()
         sampling_frequency = sorting.sampling_frequency
         if sorting._recording is not None:
-            assert (
-                sorting.get_total_duration() == duration
-            ), "Sorting should have the same duration as the generated data"
+            assert sorting.get_total_duration() == duration, (
+                "Sorting should have the same duration as the generated data"
+            )
 
     # probe
     if probe is None:

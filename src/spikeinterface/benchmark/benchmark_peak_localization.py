@@ -9,7 +9,6 @@ from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
 
 class PeakLocalizationBenchmark(Benchmark):
-
     def __init__(self, recording, gt_sorting, params, gt_positions, channel_from_template=False):
         self.recording = recording
         self.gt_sorting = gt_sorting
@@ -69,7 +68,6 @@ class PeakLocalizationBenchmark(Benchmark):
 
 
 class PeakLocalizationStudy(BenchmarkStudy):
-
     benchmark_class = PeakLocalizationBenchmark
 
     def create_benchmark(self, key):
@@ -152,7 +150,6 @@ class PeakLocalizationStudy(BenchmarkStudy):
 
 
 class UnitLocalizationBenchmark(Benchmark):
-
     def __init__(self, recording, gt_sorting, params, gt_positions):
         self.recording = recording
         self.gt_sorting = gt_sorting
@@ -263,8 +260,6 @@ class UnitLocalizationStudy(BenchmarkStudy):
             distances_to_center = np.linalg.norm(coordinates, axis=1)
             zdx = np.argsort(distances_to_center)
             idx = np.argsort(norms)
-
-            from scipy.signal import savgol_filter
 
             wdx = np.argsort(snrs)
 

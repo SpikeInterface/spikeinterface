@@ -194,7 +194,7 @@ class WaveClusSorter(BaseSorter):
             """
         else:
             source_dir = Path(__file__).parent
-            shutil.copy(str(source_dir / f"waveclus_master.m"), str(sorter_output_folder))
+            shutil.copy(str(source_dir / "waveclus_master.m"), str(sorter_output_folder))
 
             sorter_path = Path(cls.waveclus_path).absolute()
             if "win" in sys.platform and sys.platform != "darwin":

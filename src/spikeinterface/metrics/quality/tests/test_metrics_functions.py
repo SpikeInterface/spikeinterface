@@ -780,7 +780,7 @@ def test_unit_structure_in_output(small_sorting_analyzer):
         metric_fun = metric.metric_function
         try:
             qm_param = qm_params[metric_name]
-        except:
+        except Exception:
             qm_param = {}
 
         result_all = metric_fun(sorting_analyzer=small_sorting_analyzer, **qm_param)
@@ -796,7 +796,6 @@ def test_unit_structure_in_output(small_sorting_analyzer):
 
         else:
             for result_ind, result in enumerate(result_sub):
-
                 assert list(result_all[result_ind].keys()) == ["#3", "#9", "#4"], error
                 assert result_sub[result_ind].keys() == set(["#4", "#9"]), error
 

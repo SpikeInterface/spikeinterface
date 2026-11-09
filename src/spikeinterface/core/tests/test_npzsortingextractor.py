@@ -1,6 +1,3 @@
-import pytest
-from pathlib import Path
-
 from spikeinterface.core import NpzSortingExtractor
 from spikeinterface.core import create_sorting_npz
 

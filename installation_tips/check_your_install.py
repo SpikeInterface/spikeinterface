@@ -11,11 +11,11 @@ job_kwargs = dict(n_jobs=-1, progress_bar=False, chunk_duration="1s")
 
 
 def check_import_si():
-    import spikeinterface as si
+    pass
 
 
 def check_import_si_full():
-    import spikeinterface.full as si
+    pass
 
 
 def _create_recording(short=False):

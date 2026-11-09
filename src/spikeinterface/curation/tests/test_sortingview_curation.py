@@ -4,16 +4,8 @@ import os
 import importlib.util
 import numpy as np
 
-import spikeinterface as si
 from spikeinterface.core import generate_sorting
 import spikeinterface.extractors as se
-from spikeinterface import set_global_tmp_folder
-from spikeinterface.postprocessing import (
-    compute_correlograms,
-    compute_unit_locations,
-    compute_template_similarity,
-    compute_spike_amplitudes,
-)
 from spikeinterface.curation import apply_sortingview_curation
 
 parent_folder = Path(__file__).parent

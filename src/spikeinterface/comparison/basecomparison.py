@@ -28,7 +28,6 @@ class BaseMultiComparison(BaseComparison):
     """
 
     def __init__(self, object_list, name_list, match_score=0.5, chance_score=0.1, verbose=False, n_jobs=1):
-        import networkx as nx
 
         BaseComparison.__init__(
             self,

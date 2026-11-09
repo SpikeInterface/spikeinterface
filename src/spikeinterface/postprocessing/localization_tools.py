@@ -1,5 +1,3 @@
-from typing import Literal
-
 import warnings
 import importlib.util
 

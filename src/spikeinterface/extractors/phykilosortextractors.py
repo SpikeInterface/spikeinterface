@@ -17,7 +17,7 @@ from spikeinterface.core import (
 from spikeinterface.core.core_tools import define_function_from_class
 from spikeinterface.core.base import minimum_spike_dtype
 
-from spikeinterface.postprocessing import ComputeSpikeAmplitudes, ComputeSpikeLocations
+from spikeinterface.postprocessing import ComputeSpikeLocations
 from probeinterface import read_prb, Probe, ProbeGroup
 
 
@@ -164,7 +164,6 @@ class BasePhyKilosortSortingExtractor(BaseSorting):
             del cluster_info["id"]
 
         if remove_empty_units:
-
             unique_unit_ids_list = [int(clust) for clust in unique_unit_ids]
             cluster_info = cluster_info.query(f"cluster_id in {unique_unit_ids_list}")
 
@@ -573,7 +572,6 @@ def _make_templates(
 
     # Used for kilosort 2, 2.5 and 3
     else:
-
         warnings.warn("Can't extract `ms_before` and `ms_after` from Kilosort output. Guessing a sensible value.")
 
         samples_in_templates = np.shape(new_templates)[1]

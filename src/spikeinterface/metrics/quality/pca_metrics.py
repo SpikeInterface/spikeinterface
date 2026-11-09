@@ -31,7 +31,7 @@ def _mahalanobis_metrics_function(sorting_analyzer, unit_ids, tmp_data, **metric
 
         try:
             isolation_distance, l_ratio = mahalanobis_metrics(pcs_flat, labels, unit_id)
-        except:
+        except Exception:
             isolation_distance = np.nan
             l_ratio = np.nan
 
@@ -71,7 +71,7 @@ def _d_prime_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_para
 
         try:
             d_prime = d_prime_metric(pcs_flat, labels, unit_id)
-        except:
+        except Exception:
             d_prime = np.nan
 
         d_prime_dict[unit_id] = d_prime
@@ -94,7 +94,7 @@ def _nn_one_unit(args):
 
     try:
         nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, **metric_params)
-    except:
+    except Exception:
         nn_hit_rate = np.nan
         nn_miss_rate = np.nan
 
@@ -116,7 +116,7 @@ def _nearest_neighbor_metric_function(sorting_analyzer, unit_ids, tmp_data, **me
 
         try:
             nn_hit_rate, nn_miss_rate = nearest_neighbors_metrics(pcs_flat, labels, unit_id, **metric_params)
-        except:
+        except Exception:
             nn_hit_rate = np.nan
             nn_miss_rate = np.nan
 
@@ -176,7 +176,7 @@ def _nn_advanced_one_unit(args):
             seed=seed,
             **nn_isolation_params,
         )
-    except:
+    except Exception:
         nn_isolation, nn_unit_id = np.nan, np.nan
 
     # NN Noise Overlap
@@ -189,7 +189,7 @@ def _nn_advanced_one_unit(args):
             seed=seed,
             **nn_noise_params,
         )
-    except:
+    except Exception:
         nn_noise_overlap = np.nan
 
     return unit_id, nn_isolation, nn_unit_id, nn_noise_overlap
@@ -321,7 +321,7 @@ def _silhouette_metric_function(sorting_analyzer, unit_ids, tmp_data, **metric_p
                 silhouette_value = simplified_silhouette_score(pcs_flat, labels, unit_id)
             else:  # method == "full"
                 silhouette_value = silhouette_score(pcs_flat, labels, unit_id)
-        except:
+        except Exception:
             silhouette_value = np.nan
 
         silhouette_dict[unit_id] = silhouette_value

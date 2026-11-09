@@ -17,13 +17,11 @@ from spikeinterface.core import (
     NpzFolderSorting,
     NumpyFolderSorting,
     generate_ground_truth_recording,
-    generate_sorting,
     create_sorting_npz,
     generate_sorting,
     load,
 )
 from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
-from spikeinterface.core.basesorting import LEXSORT_UNIT_COMPACT
 from spikeinterface.core.testing import check_sorted_arrays_equal, check_sortings_equal
 
 

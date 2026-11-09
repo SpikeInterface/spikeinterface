@@ -406,7 +406,6 @@ class CircusOMPPeeler(BaseTemplateMatching):
         do_loop = True
 
         while do_loop:
-
             best_cluster_inds = np.argmax(scalar_products, axis=0, keepdims=True)
             products = np.take_along_axis(scalar_products, best_cluster_inds, axis=0)
 
@@ -419,7 +418,6 @@ class CircusOMPPeeler(BaseTemplateMatching):
                 break
 
             for peak_index in peak_indices:
-
                 best_cluster_ind = best_cluster_inds[0, peak_index]
 
                 if num_selection > 0:
@@ -640,9 +638,9 @@ class CircusPeeler(BaseTemplateMatching):
 
         assert HAVE_SKLEARN, "CircusPeeler needs sklearn to work"
 
-        assert (use_sparse_matrix_threshold >= 0) and (
-            use_sparse_matrix_threshold <= 1
-        ), f"use_sparse_matrix_threshold should be in [0, 1]"
+        assert (use_sparse_matrix_threshold >= 0) and (use_sparse_matrix_threshold <= 1), (
+            "use_sparse_matrix_threshold should be in [0, 1]"
+        )
 
         self.num_channels = recording.get_num_channels()
         self.num_samples = templates.num_samples
@@ -770,7 +768,7 @@ class CircusPeeler(BaseTemplateMatching):
             is_valid_nn = np.searchsorted(peak_data, [-neighbor_window, neighbor_window + 1])
             idx_neighbor = peak_data[is_valid_nn[0] : is_valid_nn[1]] + neighbor_window
 
-            if not best_cluster_ind in cached_overlaps.keys():
+            if best_cluster_ind not in cached_overlaps.keys():
                 cached_overlaps[best_cluster_ind] = self.overlaps[best_cluster_ind].toarray()
 
             to_add = -best_amplitude * cached_overlaps[best_cluster_ind][:, idx_neighbor]

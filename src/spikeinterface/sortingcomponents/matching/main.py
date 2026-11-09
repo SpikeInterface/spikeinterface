@@ -1,5 +1,4 @@
 import numpy as np
-import warnings
 
 from .method_list import *
 

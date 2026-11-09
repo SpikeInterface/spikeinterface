@@ -5,21 +5,16 @@ from spikeinterface.core import (
     NumpyRecording,
     NpzSortingExtractor,
     NumpySorting,
-    read_binary,
-    read_zarr,
     read_npz_sorting,
 )
 
 from spikeinterface.core.zarrextractors import (
     ZarrRecordingExtractor,
     ZarrSortingExtractor,
-    read_zarr_array,
 )
 
 # sorting/recording/event from neo
 from .neoextractors import *
-from .neoextractors import read_neuroscope
-from .neoextractors.intan import read_split_intan_files, IntanSplitFilesRecordingExtractor
 
 # non-NEO objects implemented in neo folder
 # keep for reference Currently pulling from neoextractor __init__
@@ -30,7 +25,6 @@ from .nwbextractors import (
     NwbRecordingExtractor,
     NwbSortingExtractor,
     NwbTimeSeriesExtractor,
-    read_nwb,
     read_nwb_recording,
     read_nwb_sorting,
     read_nwb_timeseries,

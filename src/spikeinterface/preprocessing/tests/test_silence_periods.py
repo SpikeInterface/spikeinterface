@@ -1,5 +1,3 @@
-import pytest
-
 from spikeinterface.core import generate_recording
 from spikeinterface.core import get_noise_levels
 from spikeinterface.core.base import base_period_dtype

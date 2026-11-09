@@ -281,7 +281,7 @@ class BinaryRecordingSegment(BaseRecordingSegment):
             try:
                 self._time_vector._mmap.close()  # Close the underlying mmap object
                 del self._time_vector
-            except Exception as e:
+            except Exception:
                 pass
 
 

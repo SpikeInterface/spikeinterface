@@ -1,6 +1,5 @@
 import pytest
 
-import time
 import numpy as np
 
 from spikeinterface import (

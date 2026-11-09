@@ -11,7 +11,7 @@ from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 from .tools import aggregate_sparse_features, FeaturesLoader
 
 if importlib.util.find_spec("numba") is not None:
-    import numba
+    pass
 else:
     pass
 # isocut requires numba
@@ -364,7 +364,7 @@ class LocalFeatureClustering:
                 ax.plot(flatten_wfs[mask].T, color=colors[k], alpha=0.1)
                 if k > -1:
                     ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
-                ax.set_xlabel(f"PCA features")
+                ax.set_xlabel("PCA features")
 
                 ax = axs[3]
                 if n_pca_features == 1:

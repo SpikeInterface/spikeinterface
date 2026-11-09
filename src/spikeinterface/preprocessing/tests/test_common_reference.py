@@ -1,4 +1,3 @@
-import operator
 import pytest
 
 from spikeinterface.core import generate_recording, NumpyRecording
@@ -6,7 +5,6 @@ from spikeinterface.core import generate_recording, NumpyRecording
 from spikeinterface.preprocessing import common_reference
 
 import numpy as np
-from tqdm import trange
 
 
 def _generate_test_recording():

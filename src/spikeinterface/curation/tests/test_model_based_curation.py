@@ -1,7 +1,6 @@
 import pytest
 from pathlib import Path
 
-from spikeinterface.curation.tests.common import sorting_analyzer_for_unitrefine_curation, trained_pipeline_path
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
 from spikeinterface.curation import (
     model_based_label_units,

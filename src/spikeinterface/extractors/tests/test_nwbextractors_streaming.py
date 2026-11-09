@@ -10,7 +10,7 @@ import numpy as np
 
 from spikeinterface import load
 from spikeinterface.core.testing import check_recordings_equal
-from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
+from spikeinterface.core.testing import check_sortings_equal
 from spikeinterface.extractors.extractor_classes import NwbRecordingExtractor, NwbSortingExtractor
 
 py_version = sys.version_info

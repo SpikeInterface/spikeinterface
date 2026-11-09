@@ -11,7 +11,6 @@ from spikeinterface import generate_recording, append_recordings
 from spikeinterface.preprocessing import depth_order, zscore
 
 from spikeinterface.preprocessing.deepinterpolation import train_deepinterpolation, deepinterpolate
-from spikeinterface.preprocessing.deepinterpolation.train import train_deepinterpolation_process
 
 tensorflow_spec = importlib.util.find_spec("tensorflow")
 deepinter_spec = importlib.util.find_spec("deepinterpolation")
