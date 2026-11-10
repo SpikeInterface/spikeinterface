@@ -33,17 +33,16 @@ def test_save_time_vector_on_one_segment(tmp_path, monkeypatch, other_segment_t_
     if other_segment_t_start is not None:
         recording.shift_times(other_segment_t_start, segment_index=1)
 
-    monkeypatch.chdir(tmp_path)
-    recording.save(format="binary", folder="saved")
+    recording.save(format="binary", folder=tmp_path / "saved")
 
-    with open(Path("saved") / "binary.json", "r") as f:
+    with open(tmp_path / "saved" / "binary.json", "r") as f:
         binary_dict = json.load(f)
     assert binary_dict["relative_paths"]
     assert binary_dict["kwargs"]["file_timestamps_paths"] == ["times_cached_seg0.raw", None]
-    assert not (Path("saved") / "times_cached_seg1.raw").exists()
+    assert not (tmp_path / "saved" / "times_cached_seg1.raw").exists()
 
     # In a copy, the time vector is only found if the paths are relative to the folder
-    shutil.copytree("saved", "copied")
+    shutil.copytree(tmp_path / "saved", tmp_path / "copied")
     copied_folder = tmp_path / "copied"
     # A folder gives a BinaryFolderRecording and the json file gives a BinaryRecordingExtractor
     for loaded_rec in (load(copied_folder), load(copied_folder / "binary.json", base_folder=True)):
