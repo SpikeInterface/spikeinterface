@@ -49,7 +49,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "seed": 42,
         "deterministic_peaks_detection": False,
         "debug": False,
-        "_just_make_template_library": False,
+        "_templates_only": False,
     }
 
     handle_multi_segment = True
@@ -80,6 +80,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         "seed": "An int to control how chunks are shuffled while detecting peaks",
         "deterministic_peaks_detection": "A boolean to specify if the peak detection should be deterministic or not. If True, then the seed will be used to shuffle the chunks",
         "debug": "Boolean to specify if internal data structures made during the sorting should be kept for debugging",
+        "_templates_only": "Halts spike sorting once the template library has been built.",
     }
 
     sorter_description = """Spyking Circus 2 is a rewriting of Spyking Circus, within the SpikeInterface framework
@@ -432,7 +433,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
             if debug:
                 templates.to_zarr(folder_path=clustering_folder / "templates")
 
-            if params["_just_make_template_library"]:
+            if params["_templates_only"]:
                 templates.to_zarr(folder_path=sorter_output_folder / "templates_temp.zarr")
                 return
 

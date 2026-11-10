@@ -26,7 +26,7 @@ from spikeinterface.core.core_tools import ms_to_samples
 
 def estimate_templates_from_recording(
     recording: BaseRecording,
-    sorter_name: Literal["spykingcircus2", "tridesclous2", "lupin"] = "spykingcircus2",
+    sorter_name: Literal["spykingcircus2", "tridesclous2", "lupin"] = "lupin",
     sorter_params: dict | None = None,
     temp_folder: str | Path | None = None,
     verbose: bool = False,
@@ -39,7 +39,7 @@ def estimate_templates_from_recording(
     ----------
     recording : BaseRecording
         The recording to get templates from.
-    sorter_name : "spykingcircus2" | "tridesclous2" | "lupin", default: "spykingcircus2"
+    sorter_name : "lupin" | "spykingcircus2" | "tridesclous2", default: "lupin"
         The sorter to be used to create the template library.
     sorter_params : dict
         The parameters provided to the run_sorter_local function of spikeinterface.
@@ -57,7 +57,7 @@ def estimate_templates_from_recording(
     if sorter_params is None:
         sorter_params = {}
 
-    sorter_params["_just_make_template_library"] = True
+    sorter_params["_templates_only"] = True
 
     if temp_folder is None:
         temp_folder = f"{sorter_name}_template_temporary_output"
@@ -71,7 +71,7 @@ def estimate_templates_from_recording(
         sorter_name,
         recording,
         folder=temp_folder,
-        remove_existing_folder=False,
+        remove_existing_folder=True,
         delete_output_folder=False,
         verbose=verbose,
         raise_error=True,

@@ -60,7 +60,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "seed": None,
         "save_array": True,
         "debug": False,
-        "_just_make_template_library": False,
+        "_templates_only": False,
     }
 
     _params_description = {
@@ -94,6 +94,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         "seed": "Seed for random number",
         "save_array": "Save or not intermediate arrays in the folder",
         "debug": "Save debug files",
+        "_templates_only": "Halts spike sorting once the template library has been built.",
     }
 
     handle_multi_segment = True
@@ -341,7 +342,7 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
             remove_empty=True,
         )
 
-        if params["_just_make_template_library"]:
+        if params["_templates_only"]:
             templates.to_zarr(folder_path=sorter_output_folder / "templates_temp.zarr")
             return
 
