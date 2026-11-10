@@ -1,5 +1,4 @@
 import warnings
-import importlib.util
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
@@ -10,11 +9,6 @@ from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 from .tools import aggregate_sparse_features, FeaturesLoader
 
-if importlib.util.find_spec("numba") is not None:
-    pass
-else:
-    pass
-# isocut requires numba
 
 # important all DEBUG and matplotlib are left in the code intentionally
 
