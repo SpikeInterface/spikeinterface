@@ -378,6 +378,35 @@ def test_detect_and_remove_artifacts():
     assert np.array_equal(cleaned.get_traces(), cleaned_with_detect.get_traces())
 
 
+def test_detect_and_remove_artifacts_json_roundtrip(tmp_path):
+    from spikeinterface.core import load
+
+    num_chans = 8
+    data = np.zeros((30000, num_chans), dtype="float32")
+    data[100:110, :] = 2000
+    data[5000:5003, :] = -2000
+    recording = NumpyRecording(data, 30000.0)
+    recording.set_channel_gains(1.0)
+    recording.set_channel_offsets(0.0)
+    # save to binary so that the recording is JSON-serializable
+    recording = recording.save(folder=tmp_path / "raw")
+
+    # signed periods (with events) and empty periods (no events) must survive a JSON round-trip
+    for name, threshold in [("signed", 1000.0), ("empty", 5000.0)]:
+        cleaned = detect_and_remove_artifacts(
+            recording, method="saturation", method_kwargs=dict(saturation_threshold_uV=threshold, signed=True)
+        )
+        cleaned.dump_to_json(tmp_path / f"{name}.json")
+        reloaded = load(tmp_path / f"{name}.json")
+        # compare values: empty signed periods reload with the base dtype (no "sign" field to infer)
+        assert reloaded.periods.tolist() == cleaned.periods.tolist()
+        assert np.array_equal(reloaded.get_traces(), cleaned.get_traces())
+        if name == "signed":
+            assert list(reloaded.periods["sign"]) == ["positive", "negative"]
+        else:
+            assert len(reloaded.periods) == 0
+
+
 if __name__ == "__main__":
     # test_detect_artifact_by_envelope(True)
     test_detect_saturation_periods(False)

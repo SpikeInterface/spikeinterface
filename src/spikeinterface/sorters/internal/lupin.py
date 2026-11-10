@@ -305,6 +305,7 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["clean_templates"]["sparsify_threshold"] = params["template_sparsify_threshold"]
         clustering_kwargs["clean_templates"]["min_snr"] = params["template_min_snr_ptp"]
         clustering_kwargs["clean_templates"]["max_jitter_ms"] = params["template_max_jitter_ms"]
+        clustering_kwargs["clean_templates"]["peak_sign"] = params["peak_sign"]
         clustering_kwargs["merge_from_templates"]["use_lags"] = True
         clustering_kwargs["merge_from_templates"]["num_shifts"] = num_shifts_merging
         clustering_kwargs["noise_levels"] = noise_levels
@@ -377,6 +378,7 @@ class LupinSorter(ComponentsBasedSorter):
             noise_levels=noise_levels,
             min_snr=params["template_min_snr_ptp"],
             max_jitter_ms=params["template_max_jitter_ms"],
+            peak_sign=params["peak_sign"],
             remove_empty=True,
         )
 

@@ -83,7 +83,7 @@ class ProxyAppendRecordingSegment(BaseRecordingSegment):
         return self.parent_segment.get_traces(*args, **kwargs)
 
 
-append_recordings = define_function_from_class(source_class=AppendSegmentRecording, name="append_segment_recording")
+append_recordings = define_function_from_class(source_class=AppendSegmentRecording, name="append_recordings")
 
 
 class ConcatenateSegmentRecording(BaseRecording):
