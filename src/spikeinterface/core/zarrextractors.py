@@ -978,6 +978,7 @@ def add_recording_to_zarr_group(
         job_kwargs=job_kwargs,
         time_series=recording,
     )
+    buffer_megabytes = zarr_kwargs.get("buffer_megabytes", 500)
 
     _write_time_series_to_zarr(
         time_series=recording,
@@ -992,6 +993,7 @@ def add_recording_to_zarr_group(
         compressor_times=compressor_times,
         filters_times=filters_times,
         verbose=verbose,
+        buffer_megabytes=buffer_megabytes,
         **job_kwargs,
     )
 
