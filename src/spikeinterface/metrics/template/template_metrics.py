@@ -228,7 +228,7 @@ class ComputeTemplateMetrics(BaseMetricExtension):
             min_extremum_distance_samples=min_extremum_distance_samples,
         )
 
-    def _prepare_data(self, sorting_analyzer, unit_ids):
+    def _prepare_data(self, sorting_analyzer, unit_ids, periods=None):
         import warnings
         import pandas as pd
         from scipy.signal import resample_poly
