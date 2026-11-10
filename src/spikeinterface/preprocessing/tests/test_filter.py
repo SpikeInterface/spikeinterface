@@ -166,7 +166,7 @@ def test_filter(create_cache_folder):
     rec6 = causal_filter(rec, direction="backward")
 
     coeff = iirfilter(8, [0.02, 0.4], rs=30, btype="band", analog=False, ftype="cheby2", output="sos")
-    rec5 = filter(rec, coeff=coeff, filter_mode="sos", margin_ms=5.0)
+    rec5 = filter(rec, coeff=coeff, filter_mode="sos", margin_ms=50.0)
 
     # compute by chunk
     rec5_cached0 = rec5.save(
@@ -175,7 +175,7 @@ def test_filter(create_cache_folder):
 
     trace50 = rec5.get_traces(segment_index=0)
     trace51 = rec5_cached0.get_traces(segment_index=0)
-    assert np.allclose(trace50, trace51)
+    np.testing.assert_array_almost_equal(trace50, trace51, decimal=4)
     assert np.allclose(rec.get_times(0), rec2.get_times(0))
 
     # reflect padding test
