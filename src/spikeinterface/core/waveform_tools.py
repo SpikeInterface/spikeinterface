@@ -725,12 +725,12 @@ def _create_empty_zarr_waveforms(file_path, shape, dtype, zarr_target_chunk_byte
     row_nbytes = int(np.prod(shape[1:])) * dtype.itemsize
     chunk0 = max(1, zarr_target_chunk_bytes // max(1, row_nbytes))
     zarr_root = zarr.open(str(store_path), mode="a")
-    return zarr_root.create_dataset(
+    return zarr_root.create_array(
         name=dataset_path,
         shape=shape,
         chunks=(chunk0,) + shape[1:],
         dtype=dtype,
-        compressor=get_default_zarr_compressor(),
+        compressors=get_default_zarr_compressor(),
         overwrite=True,
     )
 

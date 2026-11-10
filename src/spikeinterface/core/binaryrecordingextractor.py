@@ -26,8 +26,9 @@ class BinaryRecordingExtractor(BaseRecording):
         The dtype of the binary file
     time_axis : int, default: 0
         The axis of the time dimension
-    t_starts : None or list of float, default: None
-        Times in seconds of the first sample for each segment
+    t_starts : None or list of float or None, default: None
+        Times in seconds of the first sample for each segment. An entry is None for a segment
+        without a start time.
     channel_ids : list, default: None
         A list of channel ids
     file_offset : int, default: 0
@@ -57,7 +58,7 @@ class BinaryRecordingExtractor(BaseRecording):
         sampling_frequency: float,
         dtype: str | np.dtype,
         num_channels: int | None = None,
-        t_starts: list[float] | None = None,
+        t_starts: list[float | None] | None = None,
         channel_ids: list[str | int] | None = None,
         time_axis: int = 0,
         file_offset: int = 0,
@@ -83,7 +84,7 @@ class BinaryRecordingExtractor(BaseRecording):
 
         if t_starts is not None:
             assert len(t_starts) == len(file_path_list), "t_starts must be a list of the same size as file_paths"
-            t_starts = [float(t_start) for t_start in t_starts]
+            t_starts = [None if t_start is None else float(t_start) for t_start in t_starts]
 
         if file_timestamps_paths is not None:
             if isinstance(file_timestamps_paths, list):

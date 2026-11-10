@@ -615,6 +615,7 @@ def clean_templates(
     remove_empty=True,
     mean_sd_ratio_threshold=3.0,
     max_std_per_channel=None,
+    peak_sign="neg",
     verbose=False,
 ):
     """
@@ -650,7 +651,7 @@ def clean_templates(
     if max_jitter_ms is not None:
         max_jitter = int(max_jitter_ms * templates.sampling_frequency / 1000.0)
         n_before = len(templates.unit_ids)
-        shifts = get_template_peak_shift_on_main_channel(templates, with_dict=True)
+        shifts = get_template_peak_shift_on_main_channel(templates, peak_sign=peak_sign, with_dict=True)
         to_select = []
         for unit_id in templates.unit_ids:
             if np.abs(shifts[unit_id]) <= max_jitter:

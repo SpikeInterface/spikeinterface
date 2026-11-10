@@ -81,6 +81,7 @@ class BiocamRecordingExtractor(NeoBaseRecordingExtractor):
                 "file_path": str(Path(file_path).absolute()),
                 "mea_pitch": mea_pitch,
                 "electrode_width": electrode_width,
+                "fill_gaps_strategy": fill_gaps_strategy,
             }
         )
 

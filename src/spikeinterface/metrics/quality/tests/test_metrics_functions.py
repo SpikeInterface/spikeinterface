@@ -628,6 +628,11 @@ def test_calculate_sd_ratio(sorting_analyzer_simple, periods_simple):
     sd_ratio_periods = compute_sd_ratio(sorting_analyzer_simple, periods=periods)
     assert sd_ratio == sd_ratio_periods
 
+    # a seed fixes the noise draw, even with another draw cached on the recording
+    sd_ratio_seed0 = compute_sd_ratio(sorting_analyzer_simple, seed=0)
+    assert sd_ratio_seed0 != compute_sd_ratio(sorting_analyzer_simple, seed=1)
+    assert sd_ratio_seed0 == compute_sd_ratio(sorting_analyzer_simple, seed=0)
+
     assert np.all(list(sd_ratio.keys()) == sorting_analyzer_simple.unit_ids)
 
     # calculate num spikes with empty periods

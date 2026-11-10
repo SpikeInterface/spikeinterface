@@ -24,7 +24,6 @@ from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.core import generate_recording
-from spikeinterface.core.core_tools import _is_zarr_write_supported
 
 
 def test_BaseRecording(create_cache_folder):
@@ -365,34 +364,32 @@ def test_BaseRecording(create_cache_folder):
     rec_2d = rec_3d.planarize(axes="zy")
     assert np.allclose(rec_2d.get_channel_locations(), locations_3d[:, [2, 1]])
 
-    # TODO: remove once writing to zarr is supported with zarr>=3
-    if _is_zarr_write_supported():
-        # test save to zarr
-        compressor = get_default_zarr_compressor()
-        rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
-        rec_zarr_loaded = load(cache_folder / "recording.zarr")
-        # annotations is False because Zarr adds compression ratios
-        check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
-        check_recordings_equal(
-            rec_zarr, rec_zarr_loaded, return_in_uV=False, check_annotations=False, check_properties=True
-        )
-        for annotation_name in rec2.get_annotation_keys():
-            assert rec2.get_annotation(annotation_name) == rec_zarr.get_annotation(annotation_name)
-            assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
+    # test save to zarr
+    compressor = get_default_zarr_compressor()
+    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressors=compressor)
+    rec_zarr_loaded = load(cache_folder / "recording.zarr")
+    # annotations is False because Zarr adds compression ratios
+    check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
+    check_recordings_equal(
+        rec_zarr, rec_zarr_loaded, return_in_uV=False, check_annotations=False, check_properties=True
+    )
+    for annotation_name in rec2.get_annotation_keys():
+        assert rec2.get_annotation(annotation_name) == rec_zarr.get_annotation(annotation_name)
+        assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
 
-        rec_zarr2 = rec2.save(
-            format="zarr", folder=cache_folder / "recording_channel_chunk", compressor=compressor, channel_chunk_size=2
-        )
-        rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
+    rec_zarr2 = rec2.save(
+        format="zarr", folder=cache_folder / "recording_channel_chunk", compressors=compressor, channel_chunk_size=2
+    )
+    rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
 
-        # annotations is False because Zarr adds compression ratios
-        check_recordings_equal(rec2, rec_zarr2, return_in_uV=False, check_annotations=False, check_properties=True)
-        check_recordings_equal(
-            rec_zarr2, rec_zarr2_loaded, return_in_uV=False, check_annotations=False, check_properties=True
-        )
-        for annotation_name in rec2.get_annotation_keys():
-            assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
-            assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
+    # annotations is False because Zarr adds compression ratios
+    check_recordings_equal(rec2, rec_zarr2, return_in_uV=False, check_annotations=False, check_properties=True)
+    check_recordings_equal(
+        rec_zarr2, rec_zarr2_loaded, return_in_uV=False, check_annotations=False, check_properties=True
+    )
+    for annotation_name in rec2.get_annotation_keys():
+        assert rec2.get_annotation(annotation_name) == rec_zarr2.get_annotation(annotation_name)
+        assert rec2.get_annotation(annotation_name) == rec_zarr2_loaded.get_annotation(annotation_name)
 
 
 def test_json_pickle_equivalence(create_cache_folder):
@@ -537,6 +534,39 @@ def test_save_load_binary_with_time_vector(create_cache_folder, mp_context):
         mp_context=mp_context,
     )
     assert not rec_saved_no_time_vector_par.has_time_vector(segment_index=0)
+
+
+@pytest.mark.parametrize(
+    "save_kwargs",
+    [
+        dict(format="binary"),
+        dict(format="memory", sharedmem=False),
+        dict(format="memory", sharedmem=True),
+        dict(format="zarr"),
+    ],
+    ids=["binary", "numpy", "sharedmem", "zarr"],
+)
+def test_save_with_t_start_on_some_segments(tmp_path, save_kwargs):
+    rec = generate_recording(num_channels=2, durations=[0.5, 0.2, 0.1], sampling_frequency=1000.0)
+    rec.shift_times(100.0, segment_index=1)
+    assert rec.get_segment_t_starts() == [None, 100.0, None]
+
+    if save_kwargs["format"] == "binary":
+        save_kwargs = dict(save_kwargs, folder=tmp_path / "saved")
+    elif save_kwargs["format"] == "zarr":
+        save_kwargs = dict(save_kwargs, folder=tmp_path / "saved.zarr")
+    saved = rec.save(**save_kwargs)
+
+    # load() builds the recording again from what was saved, e.g. from binary.json for the binary format
+    for rec_to_check in (saved, load(saved.to_dict())):
+        assert rec_to_check.get_segment_t_starts() == [None, 100.0, None]
+        for segment_index in range(rec.get_num_segments()):
+            assert type(rec_to_check.get_start_time(segment_index)) is float
+            assert rec_to_check.get_start_time(segment_index) == rec.get_start_time(segment_index)
+            assert np.array_equal(rec_to_check.get_times(segment_index), rec.get_times(segment_index))
+            assert np.array_equal(
+                rec_to_check.get_traces(segment_index=segment_index), rec.get_traces(segment_index=segment_index)
+            )
 
 
 if __name__ == "__main__":
