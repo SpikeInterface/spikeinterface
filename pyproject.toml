@@ -58,6 +58,8 @@ force-exclude = true
 select = ['E4', 'E7', 'E9', 'F']
 exclude = ["**/tests/**", "**/test_*.py", "**/conftest.py", "examples/**", "doc/conf.py", "installation_tips/**"]
 ignore = ['E741', 'E731', 'F821']
+# report but never auto-remove unused imports/variables: they may be side-effect imports, re-exports, or calls that advance state
+unfixable = ['F401', 'F841']
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ['F401', 'F403']
 "src/spikeinterface/full.py" = ['F403']

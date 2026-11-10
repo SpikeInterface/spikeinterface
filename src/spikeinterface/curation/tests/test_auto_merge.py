@@ -6,11 +6,6 @@ from spikeinterface.curation import compute_merge_unit_groups, auto_merge_units
 from spikeinterface.generation import split_sorting_by_times
 
 
-from spikeinterface.curation.tests.common import (
-    make_sorting_analyzer,
-)
-
-
 @pytest.mark.parametrize(
     "preset", ["x_contaminations", "feature_neighbors", "temporal_splits", "similarity_correlograms", "slay", None]
 )

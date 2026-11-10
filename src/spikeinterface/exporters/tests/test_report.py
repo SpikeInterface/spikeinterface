@@ -1,9 +1,6 @@
 import shutil
 
 from spikeinterface.exporters import export_report
-from spikeinterface.exporters.tests.common import (
-    make_sorting_analyzer,
-)
 
 
 def test_export_report(sorting_analyzer_sparse_for_export, create_cache_folder):
@@ -16,8 +13,3 @@ def test_export_report(sorting_analyzer_sparse_for_export, create_cache_folder):
 
     job_kwargs = dict(n_jobs=1, chunk_size=30000, progress_bar=True)
     export_report(sorting_analyzer, report_folder, force_computation=True, **job_kwargs)
-
-
-if __name__ == "__main__":
-    sorting_analyzer = make_sorting_analyzer(sparse=True)
-    test_export_report(sorting_analyzer)
