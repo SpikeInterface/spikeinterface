@@ -725,16 +725,12 @@ def _init_work_all_pc_extractor(
     worker_ctx["recording"] = recording
     worker_ctx["sorting"] = sorting
 
-    spikes = sorting.to_spike_vector()
+    spikes, segment_slices = sorting.to_spike_vector(return_slices=True)
 
     worker_ctx["all_pcs"] = np.lib.format.open_memmap(**all_pcs_args)
     worker_ctx["spike_times"] = spikes["sample_index"]
     worker_ctx["spike_labels"] = spikes["unit_index"]
-    # the spike vector is ordered by segment, so each segment is one slice of it
-    worker_ctx["segment_slices"] = [
-        np.searchsorted(spikes["segment_index"], [segment_index, segment_index + 1])
-        for segment_index in range(sorting.get_num_segments())
-    ]
+    worker_ctx["segment_slices"] = segment_slices
     worker_ctx["nbefore"] = nbefore
     worker_ctx["nafter"] = nafter
     worker_ctx["unit_channels"] = unit_channels
