@@ -41,7 +41,7 @@ def _create_simple_study_no_gt(study_folder):
         },
     }
 
-    study = SorterStudyWithoutGroundTruth.create(study_folder, datasets=datasets, cases=cases)
+    _ = SorterStudyWithoutGroundTruth.create(study_folder, datasets=datasets, cases=cases)
     # print(study)
 
 

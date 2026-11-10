@@ -11,7 +11,6 @@ from spikeinterface.core.recording_tools import (
     get_random_data_chunks,
     get_chunk_with_margin,
     get_closest_channels,
-    get_channel_distances,
     get_noise_levels,
     order_channels_by_depth,
     do_recording_attributes_match,
@@ -174,8 +173,6 @@ def test_get_closest_channels():
     closest_channels_inds, distances = get_closest_channels(rec)
     closest_channels_inds, distances = get_closest_channels(rec, num_channels=4)
 
-    dist = get_channel_distances(rec)
-
 
 def test_get_noise_levels():
     job_kwargs = dict(n_jobs=1, progress_bar=True)
@@ -186,9 +183,8 @@ def test_get_noise_levels():
 
     rec.set_channel_gains(0.1)
     rec.set_channel_offsets(0)
-    noise_levels = get_noise_levels(rec, return_in_uV=True, force_recompute=True, **job_kwargs)
-
-    noise_levels = get_noise_levels(rec, return_in_uV=True, method="std", **job_kwargs)
+    _ = get_noise_levels(rec, return_in_uV=True, force_recompute=True, **job_kwargs)
+    _ = get_noise_levels(rec, return_in_uV=True, method="std", **job_kwargs)
 
     # Generate a recording following a gaussian distribution to check the result of get_noise.
     std = 6.0
@@ -300,10 +296,9 @@ def test_order_channels_by_depth():
     locations_copy = locations_copy[::-1]
     rec.set_channel_locations(locations_copy)
 
-    order_1d, order_r1d = order_channels_by_depth(rec, dimensions="y")
+    order_1d, _ = order_channels_by_depth(rec, dimensions="y")
     order_2d, order_r2d = order_channels_by_depth(rec, dimensions=("x", "y"))
-    locations_rev = locations_copy[order_1d][order_r1d]
-    order_2d_fliped, order_r2d_fliped = order_channels_by_depth(rec, dimensions=("x", "y"), flip=True)
+    order_2d_fliped, _ = order_channels_by_depth(rec, dimensions=("x", "y"), flip=True)
 
     assert np.array_equal(locations[:, 1], locations_copy[order_1d][:, 1])
     assert np.array_equal(locations_copy[order_1d][:, 1], locations_copy[order_2d][:, 1])

@@ -641,10 +641,12 @@ def test_extension_params():
         assert ext in computable_extension
         if mod == "spikeinterface.core":
             default_params = get_default_analyzer_extension_params(ext)
+            assert default_params is not None
             # print(ext, default_params)
         else:
             try:
                 default_params = get_default_analyzer_extension_params(ext)
+                assert default_params is not None
                 # print(ext, default_params)
             except Exception:
                 print(f"Failed to import {ext}")

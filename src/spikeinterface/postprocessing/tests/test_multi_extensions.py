@@ -139,7 +139,7 @@ def test_SortingAnalyzer_merge_all_extensions(dataset_to_merge, lazy, sparse, fo
 
     set_global_job_kwargs(n_jobs=1)
 
-    rng = np.random.default_rng(seed=2308)
+    _ = np.random.default_rng(seed=2308)
 
     recording, sorting, other_ids = dataset_to_merge
 

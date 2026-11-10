@@ -8,7 +8,7 @@ def test_skip_noise_levels_propagation(create_cache_folder):
     rec = generate_recording(durations=[5.0], num_channels=4)
     rec.set_property("test", ["1", "2", "3", "4"])
     rec = rec.save(folder=create_cache_folder / "rec_saved_noise")
-    noise_level_raw = get_noise_levels(rec, return_in_uV=False, method="mad")
+    _ = get_noise_levels(rec, return_in_uV=False, method="mad")
     assert "noise_level_mad_raw" in rec.get_property_keys()
 
     rec_frame_slice = rec.frame_slice(start_frame=0, end_frame=1000)
@@ -18,7 +18,7 @@ def test_skip_noise_levels_propagation(create_cache_folder):
     # make scaled
     rec.set_channel_gains([100] * 4)
     rec.set_channel_offsets([0] * 4)
-    noise_level_scaled = get_noise_levels(rec, return_in_uV=True, method="std")
+    _ = get_noise_levels(rec, return_in_uV=True, method="std")
     assert "noise_level_std_scaled" in rec.get_property_keys()
 
     rec_frame_slice = rec.frame_slice(start_frame=0, end_frame=1000)

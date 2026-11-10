@@ -97,12 +97,8 @@ def deepinterpolation_model(recording_and_shape_fixture, create_cache_folder):
 
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
-def test_deepinterpolation_transfer(
-    recording_and_shape_fixture, tmp_path, create_cache_folder, deepinterpolation_model
-):
+def test_deepinterpolation_transfer(recording_and_shape_fixture, tmp_path, deepinterpolation_model):
     recording, desired_shape = recording_and_shape_fixture
-    cache_folder = create_cache_folder
-
     existing_model_path = deepinterpolation_model
     model_folder = Path(tmp_path) / "transfer"
 
@@ -127,10 +123,9 @@ def test_deepinterpolation_transfer(
 
 
 @pytest.mark.skipif(not HAVE_DEEPINTERPOLATION, reason="requires deepinterpolation")
-def test_deepinterpolation_inference(recording_and_shape_fixture, create_cache_folder, deepinterpolation_model):
+def test_deepinterpolation_inference(recording_and_shape_fixture, deepinterpolation_model):
     recording, _ = recording_and_shape_fixture
     pre_frame = post_frame = 20
-    cache_folder = create_cache_folder
     existing_model_path = deepinterpolation_model
     recording_di = deepinterpolate(
         recording, model_path=existing_model_path, pre_frame=pre_frame, post_frame=post_frame, pre_post_omission=1

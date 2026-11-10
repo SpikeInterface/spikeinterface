@@ -95,7 +95,6 @@ def test_sha1_curation():
     assert "accept" in sorting_curated_sha1.get_property_keys()
     assert "mua" in sorting_curated_sha1.get_property_keys()
     assert "artifact" in sorting_curated_sha1.get_property_keys()
-    unit_ids = sorting_curated_sha1.unit_ids
     sorting_curated_sha1_accepted = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, include_labels=["accept"])
     sorting_curated_sha1_mua = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, exclude_labels=["mua"])
     sorting_curated_sha1_art_mua = apply_sortingview_curation(
@@ -255,7 +254,7 @@ def test_json_no_merge_curation():
     sorting = sorting.rename_units(new_unit_ids=unit_ids_as_int)
 
     json_file = parent_folder / "sv-sorting-curation-no-merge.json"
-    sorting_curated = apply_sortingview_curation(sorting, uri_or_json=json_file)
+    _ = apply_sortingview_curation(sorting, uri_or_json=json_file)
 
 
 if __name__ == "__main__":

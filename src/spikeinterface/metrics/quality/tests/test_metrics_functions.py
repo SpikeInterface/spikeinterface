@@ -309,7 +309,7 @@ def test_calculate_firing_range(sorting_analyzer_simple):
     firing_ranges_empty = compute_firing_ranges(sorting_analyzer, periods=empty_periods)
     assert np.all(np.isnan(np.array(list(firing_ranges_empty.values()))))
 
-    with pytest.warns(UserWarning) as w:
+    with pytest.warns(UserWarning):
         firing_ranges_nan = compute_firing_ranges(
             sorting_analyzer, bin_size_s=sorting_analyzer.get_total_duration() + 1
         )
@@ -394,6 +394,7 @@ def test_calculate_amplitude_cv_metrics(sorting_analyzer_simple, periods_simple)
 def test_calculate_snrs(sorting_analyzer_simple, periods_simple):
     sorting_analyzer = sorting_analyzer_simple
     snrs = compute_snrs(sorting_analyzer)
+    assert isinstance(snrs, dict)
     # SNR doesn't support periods
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.

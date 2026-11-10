@@ -330,7 +330,6 @@ def test_apply_curation_with_split():
 def test_apply_curation_with_split_multi_segment():
     recording, sorting = generate_ground_truth_recording(durations=[10.0, 10.0], num_units=9, seed=2205)
     sorting = sorting.rename_units(np.array([1, 2, 3, 6, 10, 14, 20, 31, 42]))
-    analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
     num_segments = sorting.get_num_segments()
 
     curation_with_splits_multi_segment = curation_with_splits.copy()

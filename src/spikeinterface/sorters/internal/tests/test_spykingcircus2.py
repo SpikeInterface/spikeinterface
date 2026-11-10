@@ -18,7 +18,7 @@ class SpykingCircus2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCa
 
         sorter_params["matching"]["gather_mode"] = "npy"
 
-        sorting = run_sorter(
+        _ = run_sorter(
             sorter_name,
             recording,
             folder=output_folder,

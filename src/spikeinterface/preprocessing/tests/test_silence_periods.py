@@ -9,10 +9,7 @@ import numpy as np
 from pathlib import Path
 
 
-def test_silence(create_cache_folder):
-
-    cache_folder = create_cache_folder
-
+def test_silence():
     rec = generate_recording()
 
     periods = np.array([(0, 0, 1000), (0, 5000, 6000)], dtype=base_period_dtype)
@@ -46,10 +43,7 @@ def test_silence(create_cache_folder):
     assert not np.all(traces_mix[:-200] == 0)
 
 
-def test_silence_with_apodization(create_cache_folder):
-
-    cache_folder = create_cache_folder
-
+def test_silence_with_apodization():
     rec = generate_recording()
 
     periods = np.array([(0, 0, 1000), (0, 5000, 6000)], dtype=base_period_dtype)

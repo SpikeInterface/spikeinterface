@@ -447,7 +447,7 @@ def test_failure_with_wrong_electrical_series_path(generate_nwbfile, use_pynwb):
     """Test that the extractor raises an error if the electrical series name is not found."""
     path_to_nwbfile, _ = generate_nwbfile
     with pytest.raises(ValueError):
-        recording_extractor = NwbRecordingExtractor(
+        _ = NwbRecordingExtractor(
             path_to_nwbfile,
             electrical_series_path="acquisition/ElectricalSeries3",
             use_pynwb=use_pynwb,
@@ -1097,7 +1097,7 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
 
     # passing a non existing unit table name should raise an error
     with pytest.raises(ValueError):
-        sorting_extractor = NwbSortingExtractor(
+        _ = NwbSortingExtractor(
             file_path=file_path, sampling_frequency=10.0, t_start=0, use_pynwb=use_pynwb, unit_table_path="units2"
         )
 

@@ -191,7 +191,6 @@ def test_random_spikes_selection():
     random_spikes_indices = random_spikes_selection(
         sorting, num_samples, method="uniform", max_spikes_per_unit=max_spikes_per_unit, margin_size=None, seed=2205
     )
-    random_spikes_indices1 = random_spikes_indices
     spikes = sorting.to_spike_vector()
     some_spikes = spikes[random_spikes_indices]
     for unit_index, unit_id in enumerate(sorting.unit_ids):

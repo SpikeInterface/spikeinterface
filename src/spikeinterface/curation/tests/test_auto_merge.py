@@ -54,7 +54,7 @@ def test_compute_merge_unit_groups_multi_segment(sorting_analyzer_multi_segment_
     sorting_analyzer = sorting_analyzer_multi_segment_for_curation
     print(sorting_analyzer)
 
-    merge_unit_groups = compute_merge_unit_groups(
+    _ = compute_merge_unit_groups(
         sorting_analyzer,
         preset=preset,
     )

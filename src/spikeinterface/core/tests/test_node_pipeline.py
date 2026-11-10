@@ -74,8 +74,6 @@ def test_run_node_pipeline(cache_folder_creation):
     # job_kwargs = dict(chunk_duration="0.5s", n_jobs=2, progress_bar=False)
     job_kwargs = dict(chunk_duration="0.5s", n_jobs=1, progress_bar=False)
 
-    spikes = sorting.to_spike_vector()
-
     # create peaks from spikes
     sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory")
     sorting_analyzer.compute(["random_spikes", "templates"], **job_kwargs)
@@ -268,6 +266,7 @@ def test_run_node_pipeline(cache_folder_creation):
 
             pickled_node = pickle.dumps(node)
             unpickled_node = pickle.loads(pickled_node)
+            assert isinstance(unpickled_node, type(node))
 
 
 def test_gather_to_zarr_chunking(tmp_path):
