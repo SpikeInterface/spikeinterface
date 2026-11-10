@@ -122,6 +122,7 @@ def write_recording_to_zarr(
     dataset_timestamps_paths=None,
     extra_chunks=None,
     dtype=None,
+    buffer_megabytes=500,
     compressor_data=None,
     filters_data=None,
     compressor_times=None,
@@ -147,6 +148,8 @@ def write_recording_to_zarr(
         controlled by the job_kwargs. Useful to chunk by channel, with ``extra_chunks=(channel_chunk_size,)``.
     dtype : dtype, default: None
         Type of the saved data.
+    buffer_megabytes : int, default: 500
+        Buffer size in megabytes for writing data to zarr.
     compressor_data : zarr compressor or None, default: None
         Zarr compressor for data.
     filters_data : list, default: None
@@ -166,6 +169,7 @@ def write_recording_to_zarr(
         dataset_timestamps_paths=dataset_timestamps_paths,
         extra_chunks=extra_chunks,
         dtype=dtype,
+        buffer_megabytes=buffer_megabytes,
         compressor_data=compressor_data,
         filters_data=filters_data,
         compressor_times=compressor_times,
