@@ -52,9 +52,8 @@ def test_split_merge():
 
     merged = MergeUnitsSorting(splitted, units_to_merge=[[8, 10]], new_unit_ids=[4], properties_policy="keep")
     for i in range(len(spikestimes)):
-        assert (
-            all(parent_sort.get_unit_spike_train(4, segment_index=i) == merged.get_unit_spike_train(4, segment_index=i))
-            == True
+        assert all(
+            parent_sort.get_unit_spike_train(4, segment_index=i) == merged.get_unit_spike_train(4, segment_index=i)
         ), "splir or merge error"
     assert parent_sort.get_unit_property(4, "someprop") == merged.get_unit_property(4, "someprop"), (
         "property wasn't kept"

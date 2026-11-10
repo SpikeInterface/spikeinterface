@@ -33,16 +33,6 @@ from spikeinterface.core.testing import check_recordings_equal
 strategy_list = ["tile_pregenerated", "on_the_fly"]
 
 
-def test_generate_recording():
-    # TODO even this is extensively tested in all other functions
-    pass
-
-
-def test_generate_sorting():
-    # TODO even this is extensively tested in all other functions
-    pass
-
-
 def test_generate_sorting_with_spikes_on_borders():
     num_spikes_on_borders = 10
     border_size_samples = 10

@@ -3,12 +3,9 @@ import numpy as np
 import importlib.util
 
 
-from spikeinterface import NumpyRecording, get_random_data_chunks
 from probeinterface import generate_linear_probe
 
-from spikeinterface.generation import generate_recording
-
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, get_random_data_chunks, NumpyRecording
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.preprocessing import detect_bad_channels, highpass_filter, detect_and_remove_bad_channels
