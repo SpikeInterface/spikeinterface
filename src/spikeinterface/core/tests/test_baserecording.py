@@ -551,8 +551,10 @@ def test_save_with_t_start_on_some_segments(tmp_path, save_kwargs):
     rec.shift_times(100.0, segment_index=1)
     assert rec.get_segment_t_starts() == [None, 100.0, None]
 
-    if save_kwargs["format"] in ("binary", "zarr"):
+    if save_kwargs["format"] == "binary":
         save_kwargs = dict(save_kwargs, folder=tmp_path / "saved")
+    elif save_kwargs["format"] == "zarr":
+        save_kwargs = dict(save_kwargs, folder=tmp_path / "saved.zarr")
     saved = rec.save(**save_kwargs)
 
     # load() builds the recording again from what was saved, e.g. from binary.json for the binary format
