@@ -271,9 +271,12 @@ class NumpySorting(BaseSorting):
         The sampling frequency in Hz
     channel_ids : list
         A list of unit_ids.
+    num_segments : int | None, default: None
+        The number of segments. If None, it is inferred from the last spike, which misses
+        trailing segments without spikes.
     """
 
-    def __init__(self, spikes, sampling_frequency, unit_ids):
+    def __init__(self, spikes, sampling_frequency, unit_ids, num_segments=None):
         """ """
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
@@ -286,13 +289,20 @@ class NumpySorting(BaseSorting):
         else:
             nseg = spikes[-1]["segment_index"] + 1
 
+        if num_segments is not None:
+            if spikes.size > 0 and num_segments < nseg:
+                raise ValueError(f"num_segments is {num_segments} but the spikes span {nseg} segments")
+            nseg = num_segments
+
         for segment_index in range(nseg):
             self.add_sorting_segment(SpikeVectorSortingSegment(spikes, segment_index, unit_ids))
 
         # important trick : the cache is already spikes vector
         self._cached_time_ordered = {"spikes": spikes, "segment_slices": None}
 
-        self._kwargs = dict(spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids)
+        self._kwargs = dict(
+            spikes=spikes, sampling_frequency=sampling_frequency, unit_ids=unit_ids, num_segments=num_segments
+        )
 
     @staticmethod
     def from_sorting(source_sorting: BaseSorting, with_metadata=False, copy_spike_vector=False) -> "NumpySorting":
@@ -303,7 +313,12 @@ class NumpySorting(BaseSorting):
         spike_vector = source_sorting.to_spike_vector()
         if copy_spike_vector:
             spike_vector = spike_vector.copy()
-        sorting = NumpySorting(spike_vector, source_sorting.get_sampling_frequency(), source_sorting.unit_ids.copy())
+        sorting = NumpySorting(
+            spike_vector,
+            source_sorting.get_sampling_frequency(),
+            source_sorting.unit_ids.copy(),
+            num_segments=source_sorting.get_num_segments(),
+        )
         if source_sorting.has_recording():
             sorting._recording = source_sorting._recording
         for source_segment, target_segment in zip(source_sorting._sorting_segments, sorting._sorting_segments):
