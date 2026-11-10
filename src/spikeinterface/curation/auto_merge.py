@@ -13,10 +13,10 @@ else:
     HAVE_NUMBA = False
 
 from spikeinterface.core import SortingAnalyzer
+from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 from spikeinterface.metrics.quality.misc_metrics import compute_refrac_period_violations
 from spikeinterface.metrics.spiketrain.metrics import compute_firing_rates
 
-from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
 
 _compute_merge_presets = {
@@ -959,8 +959,8 @@ def check_improve_contaminations_score(
 
         # make a merged sorting and tale one unit (unit_id1 is used)
         unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
-        sorting_merged = MergeUnitsSorting(
-            sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1], delta_time_ms=censored_period_ms
+        sorting_merged = apply_merges_to_sorting(
+            sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1], censor_ms=censored_period_ms
         ).select_units([unit_id1])
 
         # create recordingless analyzer
