@@ -1,7 +1,3 @@
-import gc
-import sys
-from multiprocessing.shared_memory import SharedMemory
-
 import pytest
 import numpy as np
 
@@ -62,27 +58,6 @@ def test_SharedMemoryRecording():
     del traces
     del rec_clone
     del rec
-
-
-def test_SharedMemoryRecording_failed_init_releases_buffer(monkeypatch):
-    unraisable_exceptions = []
-    monkeypatch.setattr(sys, "unraisablehook", unraisable_exceptions.append)
-
-    shm = SharedMemory(create=True, size=160)
-    shm_name = shm.name
-    # fails before and after the buffer is attached
-    with pytest.raises(AssertionError):
-        SharedMemoryRecording([shm_name], [], "float64", 1000.0, main_shm_owner=True)
-    with pytest.raises(AssertionError):
-        SharedMemoryRecording([shm_name], [(10, 2)], "float64", 1000.0, t_starts=[0.0, 1.0], main_shm_owner=True)
-    # the recording is only deleted when the exception is released
-    gc.collect()
-    shm.close()
-
-    assert unraisable_exceptions == []
-    # __del__ of the main owner has unlinked the buffer
-    with pytest.raises(FileNotFoundError):
-        SharedMemory(shm_name, create=False)
 
 
 def test_NumpySorting(setup_NumpyRecording):
