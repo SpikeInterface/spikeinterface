@@ -1,7 +1,7 @@
 import numpy as np
 
 
-from spikeinterface.core.sorting_tools import apply_merge_units
+from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 from spikeinterface.sorters import run_sorter
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.sortingcomponents.motion.motion_interpolation import InterpolateMotionRecording
