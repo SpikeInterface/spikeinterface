@@ -177,7 +177,7 @@ class ZarrRecordingExtractor(BaseRecording):
                 if t_starts is None:
                     t_start = None
                 else:
-                    t_start = t_starts[segment_index]
+                    t_start = float(t_starts[segment_index])
                     if np.isnan(t_start):
                         t_start = None
                 time_kwargs["t_start"] = t_start

@@ -25,8 +25,9 @@ class NumpyRecording(BaseRecording):
         The traces to instantiate a mono or multisegment Recording
     sampling_frequency : float
         The sampling frequency in Hz
-    t_starts : None or list of float
-        Times in seconds of the first sample for each segment
+    t_starts : None or list of float or None
+        Times in seconds of the first sample for each segment. An entry is None for a segment
+        without a start time.
     channel_ids : list
         An optional list of channel_ids. If None, linear channels are assumed
     """
@@ -55,7 +56,7 @@ class NumpyRecording(BaseRecording):
 
         if t_starts is not None:
             assert len(t_starts) == len(traces_list), "t_starts must be a list of same size than traces_list"
-            t_starts = [float(t_start) for t_start in t_starts]
+            t_starts = [None if t_start is None else float(t_start) for t_start in t_starts]
 
         self._serializability["json"] = False
         self._serializability["pickle"] = False
@@ -142,8 +143,9 @@ class SharedMemoryRecording(BaseRecording):
         Note that the number of channels must be the same for all segments
     sampling_frequency : float
         The sampling frequency in Hz
-    t_starts : None or list of float
-        Times in seconds of the first sample for each segment
+    t_starts : None or list of float or None
+        Times in seconds of the first sample for each segment. An entry is None for a segment
+        without a start time.
     channel_ids : list
         An optional list of channel_ids. If None, linear channels are assumed
     main_shm_owner : bool, default: True
@@ -153,11 +155,15 @@ class SharedMemoryRecording(BaseRecording):
     def __init__(
         self, shm_names, shape_list, dtype, sampling_frequency, channel_ids=None, t_starts=None, main_shm_owner=True
     ):
+        # Set these first: __del__ reads them, even when the constructor raises.
+        self.shms = []
+        # this is important so that the main owner can unlink the share mem buffer :
+        self.main_shm_owner = main_shm_owner
+
         assert len(shape_list) == len(shm_names), "Each shm_name in `shm_names` must have a shape in `shape_list`"
         assert all(shape_list[0][1] == shape[1] for shape in shape_list)
 
         # create traces from sharedmem names
-        self.shms = []
         traces_list = []
         for shm_name, shape in zip(shm_names, shape_list):
             shm = SharedMemory(shm_name, create=False)
@@ -176,14 +182,11 @@ class SharedMemoryRecording(BaseRecording):
 
         if t_starts is not None:
             assert len(t_starts) == len(traces_list), "t_starts must be a list of same size as traces_list"
-            t_starts = [float(t_start) for t_start in t_starts]
+            t_starts = [None if t_start is None else float(t_start) for t_start in t_starts]
 
         self._serializability["memory"] = True
         self._serializability["json"] = False
         self._serializability["pickle"] = False
-
-        # this is important so that the main owner can unlink the share mem buffer :
-        self.main_shm_owner = main_shm_owner
 
         for (
             i,

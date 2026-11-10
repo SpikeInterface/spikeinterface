@@ -536,6 +536,39 @@ def test_save_load_binary_with_time_vector(create_cache_folder, mp_context):
     assert not rec_saved_no_time_vector_par.has_time_vector(segment_index=0)
 
 
+@pytest.mark.parametrize(
+    "save_kwargs",
+    [
+        dict(format="binary"),
+        dict(format="memory", sharedmem=False),
+        dict(format="memory", sharedmem=True),
+        dict(format="zarr"),
+    ],
+    ids=["binary", "numpy", "sharedmem", "zarr"],
+)
+def test_save_with_t_start_on_some_segments(tmp_path, save_kwargs):
+    rec = generate_recording(num_channels=2, durations=[0.5, 0.2, 0.1], sampling_frequency=1000.0)
+    rec.shift_times(100.0, segment_index=1)
+    assert rec.get_segment_t_starts() == [None, 100.0, None]
+
+    if save_kwargs["format"] == "binary":
+        save_kwargs = dict(save_kwargs, folder=tmp_path / "saved")
+    elif save_kwargs["format"] == "zarr":
+        save_kwargs = dict(save_kwargs, folder=tmp_path / "saved.zarr")
+    saved = rec.save(**save_kwargs)
+
+    # load() builds the recording again from what was saved, e.g. from binary.json for the binary format
+    for rec_to_check in (saved, load(saved.to_dict())):
+        assert rec_to_check.get_segment_t_starts() == [None, 100.0, None]
+        for segment_index in range(rec.get_num_segments()):
+            assert type(rec_to_check.get_start_time(segment_index)) is float
+            assert rec_to_check.get_start_time(segment_index) == rec.get_start_time(segment_index)
+            assert np.array_equal(rec_to_check.get_times(segment_index), rec.get_times(segment_index))
+            assert np.array_equal(
+                rec_to_check.get_traces(segment_index=segment_index), rec.get_traces(segment_index=segment_index)
+            )
+
+
 if __name__ == "__main__":
     import tempfile
 
