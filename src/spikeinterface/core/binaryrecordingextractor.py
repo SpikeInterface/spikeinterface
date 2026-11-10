@@ -40,7 +40,8 @@ class BinaryRecordingExtractor(BaseRecording):
     is_filtered : bool or None, default: None
         If True, the recording is assumed to be filtered. If None, is_filtered is not set.
     file_timestamps_paths : str or Path or list, default: None
-        Path to the binary file containing timestamps for each segment. If None, timestamps are not loaded
+        Path to the binary file containing timestamps for each segment. If None, timestamps are not loaded.
+        In a list, an entry is None for a segment without timestamps.
 
     Notes
     -----
@@ -65,7 +66,7 @@ class BinaryRecordingExtractor(BaseRecording):
         gain_to_uV: float | np.ndarray | None = None,
         offset_to_uV: float | np.ndarray | None = None,
         is_filtered: bool | None = None,
-        file_timestamps_paths: str | Path | list[str | Path] | None = None,
+        file_timestamps_paths: str | Path | list[str | Path | None] | None = None,
     ):
 
         if channel_ids is None:
@@ -88,7 +89,7 @@ class BinaryRecordingExtractor(BaseRecording):
 
         if file_timestamps_paths is not None:
             if isinstance(file_timestamps_paths, list):
-                file_timestamps_paths = [Path(p) for p in file_timestamps_paths]
+                file_timestamps_paths = [None if p is None else Path(p) for p in file_timestamps_paths]
             else:
                 file_timestamps_paths = [Path(file_timestamps_paths)]
 
@@ -138,7 +139,9 @@ class BinaryRecordingExtractor(BaseRecording):
             "offset_to_uV": offset_to_uV,
             "is_filtered": is_filtered,
             "file_timestamps_paths": (
-                [str(Path(e).absolute()) for e in file_timestamps_paths] if file_timestamps_paths is not None else None
+                [None if e is None else str(Path(e).absolute()) for e in file_timestamps_paths]
+                if file_timestamps_paths is not None
+                else None
             ),
         }
 

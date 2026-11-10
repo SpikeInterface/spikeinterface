@@ -17,7 +17,7 @@ from .time_series import TimeSeries, TimeSeriesSegment
 def write_binary(
     time_series: TimeSeries,
     file_paths: list[Path | str] | Path | str,
-    file_timestamps_paths: list[Path | str] | Path | str | None = None,
+    file_timestamps_paths: list[Path | str | None] | Path | str | None = None,
     dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
@@ -37,8 +37,9 @@ def write_binary(
         The time_series object to be saved to binary file
     file_paths : list[Path | str] | Path | str
         The path to the files to save data for each segment.
-    file_timestamps_paths : list[Path | str] | Path | str | None, default: None
-        The path to the timestamps file. If None, timestamps are not saved.
+    file_timestamps_paths : list[Path | str | None] | Path | str | None, default: None
+        The path to the timestamps file. If None, timestamps are not saved. In a list, an entry
+        is None for a segment without timestamps.
     dtype : dtype or None, default: None
         Type of the saved data
     add_file_extension, bool, default: True
