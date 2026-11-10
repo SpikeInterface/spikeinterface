@@ -118,6 +118,31 @@ def test_NumpySorting(setup_NumpyRecording):
     assert np.shares_memory(sorting2._cached_time_ordered["spikes"], sorting._cached_time_ordered["spikes"])
 
 
+def test_NumpySorting_num_segments():
+    sampling_frequency = 30000
+    spikes = np.zeros(2, dtype=minimum_spike_dtype)
+    spikes["sample_index"] = [10, 20]
+
+    # by default, the number of segments is inferred from the last spike
+    assert NumpySorting(spikes, sampling_frequency, ["a"]).get_num_segments() == 1
+
+    # trailing segments without spikes, which must also survive a round trip through the kwargs
+    sorting = NumpySorting(spikes, sampling_frequency, ["a"], num_segments=3)
+    assert sorting.get_num_segments() == 3
+    assert sorting.get_unit_spike_train("a", segment_index=2).size == 0
+    assert load(sorting.to_dict()).get_num_segments() == 3
+    assert NumpySorting.from_sorting(sorting).get_num_segments() == 3
+
+    # no spikes at all
+    no_spikes = np.zeros(0, dtype=minimum_spike_dtype)
+    assert NumpySorting(no_spikes, sampling_frequency, ["a"], num_segments=2).get_num_segments() == 2
+
+    # fewer segments than the spikes span
+    spikes["segment_index"] = [0, 1]
+    with pytest.raises(ValueError, match="num_segments"):
+        NumpySorting(spikes, sampling_frequency, ["a"], num_segments=1)
+
+
 def test_SharedMemorySorting():
     sampling_frequency = 30000
     unit_ids = ["a", "b", "c"]

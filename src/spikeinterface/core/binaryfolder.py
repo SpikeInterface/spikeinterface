@@ -144,7 +144,8 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         t_starts = recording.get_segment_t_starts()
         if recording.has_any_time_vector():
             file_timestamps_paths = [
-                folder_path / f"times_cached_seg{i}.raw" for i in range(recording.get_num_segments())
+                folder_path / f"times_cached_seg{i}.raw" if recording.has_time_vector(segment_index=i) else None
+                for i in range(recording.get_num_segments())
             ]
         else:
             file_timestamps_paths = None

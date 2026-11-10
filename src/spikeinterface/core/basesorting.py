@@ -880,7 +880,8 @@ class BaseSorting(BaseExtractor):
         -------
         BaseSorting
             A new sorting object with only samples between start_sample_index and end_sample_index
-            for the given segment_index.
+            for the given segment_index. It has the same segments, properties, annotations, registered
+            recording and times as this sorting.
         """
         from spikeinterface.core.sorting_tools import select_sorting_periods
 

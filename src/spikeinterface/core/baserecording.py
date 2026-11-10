@@ -875,6 +875,8 @@ class BaseRecording(BaseExtractor, TimeSeries):
                 - shards: tuple | None, default: None
                     Number of shard size. If None, no sharding is done. Note that shards dimensions need to be larger than
                     chunk dimensions (if chunks is not None) and that sharding is only done on the first dimension.
+                - buffer_megabytes: int, default: 500
+                    Buffer size in megabytes for writing data to zarr.
                 - compressors: BytesBytesCodec | ArrayBytesCodec | list of them, or None, default: None
                     Global compressors. Only one ArrayBytesCodec (serializer) is supported.
                     If None, Blosc-zstd, level 5, with bit shuffle is used.

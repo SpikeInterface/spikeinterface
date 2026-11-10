@@ -26,8 +26,9 @@ class BinaryRecordingExtractor(BaseRecording):
         The dtype of the binary file
     time_axis : int, default: 0
         The axis of the time dimension
-    t_starts : None or list of float, default: None
-        Times in seconds of the first sample for each segment
+    t_starts : None or list of float or None, default: None
+        Times in seconds of the first sample for each segment. An entry is None for a segment
+        without a start time.
     channel_ids : list, default: None
         A list of channel ids
     file_offset : int, default: 0
@@ -39,7 +40,8 @@ class BinaryRecordingExtractor(BaseRecording):
     is_filtered : bool or None, default: None
         If True, the recording is assumed to be filtered. If None, is_filtered is not set.
     file_timestamps_paths : str or Path or list, default: None
-        Path to the binary file containing timestamps for each segment. If None, timestamps are not loaded
+        Path to the binary file containing timestamps for each segment. If None, timestamps are not loaded.
+        In a list, an entry is None for a segment without timestamps.
 
     Notes
     -----
@@ -57,14 +59,14 @@ class BinaryRecordingExtractor(BaseRecording):
         sampling_frequency: float,
         dtype: str | np.dtype,
         num_channels: int | None = None,
-        t_starts: list[float] | None = None,
+        t_starts: list[float | None] | None = None,
         channel_ids: list[str | int] | None = None,
         time_axis: int = 0,
         file_offset: int = 0,
         gain_to_uV: float | np.ndarray | None = None,
         offset_to_uV: float | np.ndarray | None = None,
         is_filtered: bool | None = None,
-        file_timestamps_paths: str | Path | list[str | Path] | None = None,
+        file_timestamps_paths: str | Path | list[str | Path | None] | None = None,
     ):
 
         if channel_ids is None:
@@ -83,11 +85,11 @@ class BinaryRecordingExtractor(BaseRecording):
 
         if t_starts is not None:
             assert len(t_starts) == len(file_path_list), "t_starts must be a list of the same size as file_paths"
-            t_starts = [float(t_start) for t_start in t_starts]
+            t_starts = [None if t_start is None else float(t_start) for t_start in t_starts]
 
         if file_timestamps_paths is not None:
             if isinstance(file_timestamps_paths, list):
-                file_timestamps_paths = [Path(p) for p in file_timestamps_paths]
+                file_timestamps_paths = [None if p is None else Path(p) for p in file_timestamps_paths]
             else:
                 file_timestamps_paths = [Path(file_timestamps_paths)]
 
@@ -137,7 +139,9 @@ class BinaryRecordingExtractor(BaseRecording):
             "offset_to_uV": offset_to_uV,
             "is_filtered": is_filtered,
             "file_timestamps_paths": (
-                [str(Path(e).absolute()) for e in file_timestamps_paths] if file_timestamps_paths is not None else None
+                [None if e is None else str(Path(e).absolute()) for e in file_timestamps_paths]
+                if file_timestamps_paths is not None
+                else None
             ),
         }
 

@@ -366,7 +366,8 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     Returns
     -------
     isolation_distance : float
-        Isolation distance of this unit.
+        Isolation distance of this unit. NaN when the unit has more spikes than the other units together,
+        where it is undefined.
     l_ratio : float
         L-ratio for this unit.
 
@@ -398,7 +399,8 @@ def mahalanobis_metrics(all_pcs, all_labels, this_unit_id):
     if n >= 2:
         dof = pcs_for_this_unit.shape[1]  # number of features
         l_ratio = np.sum(1 - scipy.stats.chi2.cdf(pow(mahalanobis_other, 2), dof)) / num_spikes_self
-        isolation_distance = pow(mahalanobis_other[n - 1], 2)
+        # undefined when the unit has more spikes than the other units together
+        isolation_distance = pow(mahalanobis_other[n - 1], 2) if num_spikes_self <= num_spikes_other else np.nan
         # if math.isnan(l_ratio):
         #     print("NaN detected", mahalanobis_other, VI)
     else:
