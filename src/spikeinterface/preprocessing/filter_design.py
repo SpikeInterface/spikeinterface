@@ -1,7 +1,5 @@
 """Filter design, separate from filter application, so kernels can be inspected and composed before use."""
 
-from __future__ import annotations
-
 import numpy as np
 
 
