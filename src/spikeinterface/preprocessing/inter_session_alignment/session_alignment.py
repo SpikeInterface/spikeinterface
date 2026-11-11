@@ -757,6 +757,8 @@ def _add_displacement_to_interpolate_recording(
 
             motion_ref.displacement = shifts_to_add
             motion_ref.spatial_bins_um = new_non_rigid_window_centers
+            # Cached interpolators still reference the original rigid array and grid.
+            motion_ref.interpolators = None
         else:
             # Otherwise, if both the motion and new displacement are
             # nonrigid, we need to make sure the nonrigid windows

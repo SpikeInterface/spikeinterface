@@ -404,6 +404,33 @@ class TestInterSessionAlignment:
 
         self.assert_interpolate_recording_not_duplicate(corrected_recordings[0])
 
+    def test_nonrigid_displacement_rebuilds_cached_interpolators(self):
+        from spikeinterface.core import Motion, NumpyRecording
+
+        traces = np.random.default_rng(0).normal(size=(300, 4)).astype("float32")
+        recording = NumpyRecording([traces], sampling_frequency=1000)
+        recording.set_channel_locations(np.c_[np.zeros(4), np.arange(4) * 20])
+        temporal_bins = np.array([0.05, 0.15, 0.25])
+        rigid_motion = Motion(np.array([[1.0], [2.0], [3.0]]), temporal_bins, np.array([30.0]))
+        original = InterpolateMotionRecording(recording, rigid_motion, border_mode="force_zeros")
+
+        # Reading traces initializes the interpolators before adding session displacement.
+        original_traces = original.get_traces()
+        session_motion = Motion(np.array([[10.0, 20.0]]), np.array([0.15]), np.array([0.0, 60.0]))
+        corrected = session_alignment._add_displacement_to_interpolate_recording(original, session_motion)
+
+        corrected_motion = corrected.segments[0].motion
+        np.testing.assert_allclose(
+            corrected_motion.get_displacement_at_time_and_depth(np.full(3, 0.15), np.array([0.0, 30.0, 60.0])),
+            [12.0, 17.0, 22.0],
+        )
+        expected_motion = Motion(
+            np.array([[11.0, 21.0], [12.0, 22.0], [13.0, 23.0]]), temporal_bins, np.array([0.0, 60.0])
+        )
+        expected = InterpolateMotionRecording(recording, expected_motion, border_mode="force_zeros")
+        np.testing.assert_allclose(corrected.get_traces(), expected.get_traces())
+        np.testing.assert_array_equal(original.get_traces(), original_traces)
+
     @pytest.mark.parametrize("rigid_intersession", [True, False])
     def test_nonrigid_motion(self, rigid_intersession, recording_1, recording_2):
         """
