@@ -8,11 +8,6 @@ from .auto_merge import (
     auto_merge_units,
 )
 
-# manual sorting,
-from .curationsorting import CurationSorting, curation_sorting
-from .mergeunitssorting import MergeUnitsSorting, merge_units_sorting
-from .splitunitsorting import SplitUnitSorting, split_unit_sorting
-
 # curation format
 from .curation_format import validate_curation_dict, curation_label_to_dataframe, apply_curation, load_curation
 
