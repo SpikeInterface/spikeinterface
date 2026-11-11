@@ -116,7 +116,7 @@ def estimate_chunk_size(scaled_activity_histogram):
         f"for firing rate (25% of histogram peak) of {lambda_hat_s}"
     )
 
-    return 10
+    return t
 
 
 # #############################################################################

@@ -584,6 +584,16 @@ class TestInterSessionAlignment:
     # Unit Tests
     ###########################################################################
 
+    def test_estimate_chunk_size(self):
+        histogram = np.array([1.0, 4.0, 2.0])
+        # The representative firing rate is 25% of the maximum: 1 Hz.
+        # A 10% error tolerance at 90% confidence requires 270.6025 seconds.
+        chunk_size = alignment_utils.estimate_chunk_size(histogram)
+        doubled_rate_chunk_size = alignment_utils.estimate_chunk_size(2 * histogram)
+
+        assert chunk_size == pytest.approx(270.6025)
+        assert doubled_rate_chunk_size == pytest.approx(chunk_size / 2)
+
     def test_shift_array_fill_zeros(self):
         """
         The tested function shifts a 1d array or 2d array (along a certain axis)
