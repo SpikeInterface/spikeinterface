@@ -167,8 +167,9 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
 
         for channel_index in range(0, num_channels, NUM_CHANNELS_PER_BLOCK):
             channel_slice = slice(channel_index, channel_index + NUM_CHANNELS_PER_BLOCK)
-            # The shift computes in float64 for every parent and output dtype. astype copies, so the
-            # in-place taper does not touch the parent
+            # Tapering needs floating point before the FFT to preserve fractional values.
+            # Keep float64 precision, but cast only this block to limit peak memory.
+            # astype copies, so tapering in place does not modify the parent.
             block = traces_chunk[:, channel_slice].astype(np.float64)
             _taper_margins(block, self._margin_window)
             spectrum = rfft(block, n=fft_length, axis=0, overwrite_x=True)
