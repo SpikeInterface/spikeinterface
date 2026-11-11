@@ -96,7 +96,10 @@ def generate_session_displacement_recordings(
         when the probe shifts new units from outside the original recorded
         region are shifted into the recording. When `True`, new units
         are shifted into the generated recording.
-        Extra units extend only in the y-direction and by a maximum shift of one probe length.
+        To allow this, `num_units * 3` units are created: `num_units` in the
+        original region and `num_units` in each of two additional regions,
+        shifted one probe height above and below it. Each sorting therefore
+        contains `num_units * 3` units.
     generate_sorting_kwargs : dict
         Only `firing_rates` and `refractory_period_ms` are expected if passed.
 
@@ -163,8 +166,8 @@ def generate_session_displacement_recordings(
     fixed_generate_sorting_kwargs["firing_rates"] = fixed_firing_rates
 
     if shift_units_outside_probe:
-        # Create a new set of templates one probe-width above and
-        # one probe-width below the original templates. The number of
+        # Create a new set of templates one probe-height above and
+        # one probe-height below the original templates. The number of
         # units is duplicated for each section, so the new num units
         # is 3x the old num units.
         num_units, unit_locations, fixed_generate_templates_kwargs, fixed_generate_sorting_kwargs = (
@@ -457,7 +460,7 @@ def _update_kwargs_for_extended_units(
     # the `unit_locations` array.
     probe_height = np.ptp(channel_locations[:, 1])
     channel_locations_extend_top = channel_locations.copy()
-    channel_locations_extend_top[:, 1] -= probe_height
+    channel_locations_extend_top[:, 1] += probe_height
 
     extend_top_locations = generate_unit_locations(
         num_units,
@@ -467,7 +470,7 @@ def _update_kwargs_for_extended_units(
     )
 
     channel_locations_extend_bottom = channel_locations.copy()
-    channel_locations_extend_bottom[:, 1] += probe_height
+    channel_locations_extend_bottom[:, 1] -= probe_height
 
     extend_bottom_locations = generate_unit_locations(
         num_units,
@@ -476,7 +479,7 @@ def _update_kwargs_for_extended_units(
         **generate_unit_locations_kwargs,
     )
 
-    unit_locations = np.r_[extend_bottom_locations, unit_locations, extend_top_locations]
+    unit_locations = np.r_[extend_top_locations, unit_locations, extend_bottom_locations]
 
     # For the new units located above and below the probe, generate a set of
     # firing rates and template kwargs.
