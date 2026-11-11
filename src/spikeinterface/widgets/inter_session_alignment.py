@@ -1,5 +1,3 @@
-import itertools
-
 from spikeinterface.core import BaseRecording
 import numpy as np
 from spikeinterface.widgets.base import BaseWidget
@@ -133,16 +131,15 @@ class SessionAlignmentWidget(BaseWidget):
             # uncorrected raster maps. If there are more than 4 sessions, move
             # onto the second row (usually reserved for the corrected peak raster).
 
-            num_cols = np.min([4, len(dp.peak_locations_list)])
-            num_rows = 1 if num_cols <= 4 else 2
-
-            ordered_row_col = list(itertools.product(range(num_rows), range(num_cols)))
+            num_sessions = len(dp.peak_locations_list)
+            num_cols = min(4, num_sessions)
+            num_rows = (num_sessions + num_cols - 1) // num_cols
 
             gs = fig.add_gridspec(num_rows + 1, num_cols, wspace=0.3, hspace=0.5)
 
-            for i, row_col in enumerate(ordered_row_col):
-
-                ax = fig.add_subplot(gs[row_col])
+            for i in range(num_sessions):
+                row, col = divmod(i, num_cols)
+                ax = fig.add_subplot(gs[row, col])
 
                 DriftRasterMapWidget(
                     dp.peaks_list[i],
