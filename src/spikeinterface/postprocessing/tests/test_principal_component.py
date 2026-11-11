@@ -146,11 +146,18 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         Compute the principal component scores, checking the shape
         matches the number of spikes as expected. This is re-run
         with n_jobs=2 and output projection score matrices
-        checked against n_jobs=1.
+        checked against n_jobs=1. The projections of the random spikes
+        must equal the stored ones, on both segments of a recording
+        whose gain is not 1.
         """
-        sorting_analyzer = self._prepare_sorting_analyzer(
-            format="memory", sparse=sparse, extension_class=ComputePrincipalComponents
-        )
+        recording = self.recording.clone()
+        recording.set_channel_gains(0.195)  # so traces in uV differ from raw traces
+        recording.set_channel_offsets(-100.0)
+        sparsity = self.sparsity if sparse else None
+        sorting_analyzer = self.get_sorting_analyzer(recording, self.sorting, sparsity=sparsity, name="pca_all_spikes")
+        # waveforms zero pad spikes at segment borders but run_for_all_spikes skips them
+        sorting_analyzer.compute("random_spikes", max_spikes_per_unit=20, margin_size=100, seed=2205)
+        sorting_analyzer.compute("waveforms")
 
         num_spikes = sorting_analyzer.sorting.to_spike_vector().size
 
@@ -168,6 +175,9 @@ class TestPrincipalComponentsExtension(AnalyzerExtensionCommonTestSuite):
         all_pc2 = np.load(pc_file2)
 
         np.testing.assert_almost_equal(all_pc1, all_pc2, decimal=3)
+
+        random_spikes_indices = sorting_analyzer.get_extension("random_spikes").get_data()
+        np.testing.assert_allclose(all_pc1[random_spikes_indices], ext.data["pca_projection"], rtol=1e-5, atol=1e-3)
 
     def test_project_new(self):
         """

@@ -30,7 +30,9 @@ class MedicineRegistration:
     activity_network_hidden_features : tuple, default: (256, 256)
         Hidden layer sizes for MEDiCINe's activity network.
     amplitude_threshold_quantile : float, default: 0.0
-        Cutoff quantile in [-1, 1] for peak amplitudes. See MEDiCINe's documentation for details.
+        Fraction in [0, 1) of peaks with the smallest absolute amplitude to ignore. If 0, all peaks are used.
+        Requires medicine-neuro >= 1.7 (earlier versions thresholded signed amplitudes and accepted values in
+        [-1, 1]). See MEDiCINe's documentation for details.
     batch_size : int, default: 4096
         Batch size used for training.
     training_steps : int, default: 10000

@@ -11,7 +11,6 @@ from .numpyextractors import NumpySorting
 from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
-from .snippets_tools import snippets_from_sorting
 from .core_tools import define_function_from_class, ms_to_samples, _ensure_seed
 
 
@@ -366,18 +365,18 @@ class TransformSorting(BaseSorting):
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
         self.parent_unit_ids = sorting.unit_ids
-        self._cached_spike_vector = sorting.to_spike_vector().copy()
+        spikes = sorting.to_spike_vector().copy()
         self.refractory_period_ms = refractory_period_ms
 
-        self.added_spikes_from_existing_mask = np.zeros(len(self._cached_spike_vector), dtype=bool)
-        self.added_spikes_from_new_mask = np.zeros(len(self._cached_spike_vector), dtype=bool)
+        self.added_spikes_from_existing_mask = np.zeros(len(spikes), dtype=bool)
+        self.added_spikes_from_new_mask = np.zeros(len(spikes), dtype=bool)
 
         if added_spikes_existing_units is not None and len(added_spikes_existing_units) > 0:
             assert (
                 added_spikes_existing_units.dtype == minimum_spike_dtype
             ), "added_spikes_existing_units should be a spike vector"
             added_unit_indices = np.arange(len(self.parent_unit_ids))
-            self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
+            spikes = np.concatenate((spikes, added_spikes_existing_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_existing_units), dtype=bool))
             )
@@ -389,7 +388,7 @@ class TransformSorting(BaseSorting):
             assert (
                 added_spikes_new_units.dtype == minimum_spike_dtype
             ), "added_spikes_new_units should be a spike vector"
-            self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_new_units))
+            spikes = np.concatenate((spikes, added_spikes_new_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.zeros(len(added_spikes_new_units), dtype=bool))
             )
@@ -397,14 +396,20 @@ class TransformSorting(BaseSorting):
                 (self.added_spikes_from_new_mask, np.ones(len(added_spikes_new_units), dtype=bool))
             )
 
-        sort_idxs = np.lexsort([self._cached_spike_vector["sample_index"], self._cached_spike_vector["segment_index"]])
-        self._cached_spike_vector = self._cached_spike_vector[sort_idxs]
+        sort_idxs = np.lexsort(
+            [
+                spikes["sample_index"],
+                spikes["segment_index"],
+            ]
+        )
+        spikes = spikes[sort_idxs]
+        self._cached_time_ordered = {"spikes": spikes, "segment_slices": None}
         self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[sort_idxs]
         self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[sort_idxs]
 
         # We need to add the sorting segments
         for segment_index in range(sorting.get_num_segments()):
-            segment = SpikeVectorSortingSegment(self._cached_spike_vector, segment_index, unit_ids=self.unit_ids)
+            segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids=self.unit_ids)
             self.add_sorting_segment(segment)
 
         if self.refractory_period_ms is not None:
@@ -557,20 +562,18 @@ class TransformSorting(BaseSorting):
         ## This function will remove the added spikes that will violate RPV, but does not affect the
         ## spikes in the original sorting. So if some RPV violation are present in this sorting,
         ## they will be left untouched
-        unit_indices = np.unique(self._cached_spike_vector["unit_index"])
+        spikes = self._cached_time_ordered["spikes"]
+        unit_indices = np.unique(spikes["unit_index"])
         rpv = int(self.get_sampling_frequency() * self.refractory_period_ms / 1000)
         to_keep = ~self.added_spikes_from_existing_mask.copy()
         for segment_index in range(self.get_num_segments()):
             for unit_ind in unit_indices:
-                (indices,) = np.nonzero(
-                    (self._cached_spike_vector["unit_index"] == unit_ind)
-                    * (self._cached_spike_vector["segment_index"] == segment_index)
-                )
+                (indices,) = np.nonzero((spikes["unit_index"] == unit_ind) * (spikes["segment_index"] == segment_index))
                 to_keep[indices[1:]] = np.logical_or(
-                    to_keep[indices[1:]], np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv
+                    to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
                 )
 
-        self._cached_spike_vector = self._cached_spike_vector[to_keep]
+        self._cached_time_ordered = {"spikes": spikes[to_keep], "segment_slices": None}
         self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[to_keep]
         self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[to_keep]
 
@@ -602,81 +605,7 @@ def create_sorting_npz(num_seg, file_path):
     np.savez(file_path, **d)
 
 
-def generate_snippets(
-    nbefore=20,
-    nafter=44,
-    num_channels=2,
-    wf_folder=None,
-    sampling_frequency=30000.0,
-    durations=[10.325, 3.5],  #  in s for 2 segments
-    set_probe=True,
-    ndim=2,
-    num_units=5,
-    empty_units=None,
-    **job_kwargs,
-):
-    """
-    Generates a synthetic Snippets object.
-
-    Parameters
-    ----------
-    nbefore : int, default: 20
-        Number of samples before the peak.
-    nafter : int, default: 44
-        Number of samples after the peak.
-    num_channels : int, default: 2
-        Number of channels.
-    wf_folder : str | Path | None, default: None
-        Optional folder to save the waveform snippets. If None, snippets are in memory.
-    sampling_frequency : float, default: 30000.0
-        The sampling frequency of the snippets in Hz.
-    ndim : int, default: 2
-        The number of dimensions of the probe.
-    num_units : int, default: 5
-        The number of units.
-    empty_units : list | None, default: None
-        A list of units that will have no spikes.
-    durations : List[float], default: [10.325, 3.5]
-        The duration in seconds of each segment in the recording.
-        The number of segments is determined by the length of this list.
-    set_probe : bool, default: True
-        If true, attaches probe to the returned snippets object
-    **job_kwargs : dict, default: None
-        Job keyword arguments for `snippets_from_sorting`
-
-    Returns
-    -------
-    snippets : NumpySnippets
-        The snippets object.
-    sorting : NumpySorting
-        The associated sorting object.
-    """
-    recording = generate_recording(
-        durations=durations,
-        num_channels=num_channels,
-        sampling_frequency=sampling_frequency,
-        ndim=ndim,
-        set_probe=set_probe,
-    )
-
-    sorting = generate_sorting(
-        num_units=num_units, sampling_frequency=sampling_frequency, durations=durations, empty_units=empty_units
-    )
-
-    snippets = snippets_from_sorting(
-        recording=recording, sorting=sorting, nbefore=nbefore, nafter=nafter, wf_folder=wf_folder, **job_kwargs
-    )
-
-    if set_probe:
-        probe = recording.get_probe()
-        snippets.set_probe(probe)
-
-    return snippets, sorting
-
-
 ## spiketrain zone ##
-
-
 def _ensure_firing_rates(firing_rates, num_units, seed):
     if isinstance(firing_rates, tuple):
         rng = np.random.default_rng(seed=seed)

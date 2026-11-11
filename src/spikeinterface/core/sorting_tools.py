@@ -400,8 +400,6 @@ def random_spikes_selection(
         random_spikes_indices = np.arange(spikes.size)
 
     elif method in rng_methods:
-        from spikeinterface.widgets.utils import get_segment_durations
-
         rng = np.random.default_rng(seed=seed)
 
         # since un concatenated
@@ -447,7 +445,7 @@ def random_spikes_selection(
                 if maximum_rate is None:
                     raise ValueError(f"maximum_rate must be defined")
 
-                t_duration = np.sum(get_segment_durations(sorting))
+                t_duration = np.sum(get_segment_durations(sorting)[0])
                 rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
                 selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
@@ -543,7 +541,8 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
     -------
     BaseSorting
         A new sorting object with only samples between start_sample_index and end_sample_index
-        for the given segment_index.
+        for the given segment_index. It has the same segments, properties, annotations, registered
+        recording and times as the input sorting.
     """
     from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -557,11 +556,21 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
         sliced_spike_vector = spike_vector[keep_mask]
 
         # important: we keep the original unit ids so the unit_index field in spike vector is still valid
-        sorting = NumpySorting(
-            sliced_spike_vector, sampling_frequency=sorting.sampling_frequency, unit_ids=sorting.unit_ids
+        # we also keep the number of segments, because the last ones can be left without spikes
+        new_sorting = NumpySorting(
+            sliced_spike_vector,
+            sampling_frequency=sorting.sampling_frequency,
+            unit_ids=sorting.unit_ids,
+            num_segments=sorting.get_num_segments(),
         )
-        sorting.copy_metadata(sorting)
-        return sorting
+        sorting.copy_metadata(new_sorting)
+        # not register_recording(): it resets the start times, which would discard a shift_times() of the sorting
+        if sorting.has_recording():
+            new_sorting._recording = sorting._recording
+        for segment, new_segment in zip(sorting.segments, new_sorting.segments):
+            new_segment._t_start = segment._t_start
+            new_segment._native_t_start = segment._native_t_start
+        return new_sorting
     else:
         return sorting
 
@@ -1213,3 +1222,85 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
     new_vector["unit_index"] = mapping[new_vector["unit_index"]]
 
     return new_vector, keep_mask_vector
+
+
+def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = None):
+    """
+    Calculate the duration and start, stop times of each segment in a sorting object.
+
+    Use first/last sample timestamps when a recording is available; otherwise
+    estimate from spikes.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object containing spike data
+    segment_indices : list[int] | None
+        List of the segment indices to process. Default to None.
+
+    Returns
+    -------
+    durations : np.ndarray
+        Segment durations in seconds, ordered like ``segment_indices``.
+    segment_start_stop_times : dict[int, tuple[float, float]]
+        Start and stop times of each segment, where the dict key is segment index.
+    """
+    if segment_indices is None:
+        segment_indices = range(sorting.get_num_segments())
+
+    if sorting.has_recording():
+        segment_start_stop_times = {
+            seg: (sorting.get_start_time(seg), sorting.get_end_time(seg)) for seg in segment_indices
+        }
+        ts = 1 / sorting.get_sampling_frequency()
+        durations = np.array([stop - start + ts for start, stop in segment_start_stop_times.values()])
+
+        return durations, segment_start_stop_times
+
+    spikes = sorting.to_spike_vector()
+
+    segment_t_starts = [sorting.get_start_time(seg_idx) for seg_idx in segment_indices]
+
+    return estimate_segment_durations_from_spike_vector(
+        spikes, segment_indices, sorting.get_sampling_frequency(), segment_t_starts
+    )
+
+
+def estimate_segment_durations_from_spike_vector(
+    spike_vector: np.ndarray,
+    segment_indices: list[int],
+    sampling_frequency: float,
+    segment_t_starts: list[float] | None = None,
+):
+    """
+    When we don't have the true segment times, we can estimate the
+    start and stop times for each segment from the spike times.
+
+    Starts are supplied or default to zero. Durations include the final sample interval.
+    Empty segments have zero duration and placeholder bounds from their start to one sample interval later.
+    """
+    segment_start_stop_times = {}
+    durations = []
+    ts = 1 / sampling_frequency
+    for i, seg_idx in enumerate(segment_indices):
+
+        if segment_t_starts is None:
+            segment_start = 0.0
+        else:
+            segment_start = segment_t_starts[i]
+
+        seg_end_idx = np.searchsorted(spike_vector["segment_index"], seg_idx + 1)
+
+        if seg_end_idx == 0 or spike_vector["segment_index"][seg_end_idx - 1] != seg_idx:
+            segment_start_stop_times[seg_idx] = (segment_start, segment_start + ts)
+            durations.append(0.0)
+            continue
+
+        segment_end = spike_vector["sample_index"][seg_end_idx - 1] / sampling_frequency + segment_start
+
+        segment_start_stop_times[seg_idx] = (segment_start, segment_end)
+        durations.append(segment_end - segment_start + ts)
+
+    durations = np.array(durations)
+
+    return durations, segment_start_stop_times
