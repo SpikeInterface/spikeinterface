@@ -430,7 +430,9 @@ def compute_motion(
         return motion
 
 
-def run_peak_detection_pipeline_node(recording, noise_levels, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs):
+def run_peak_detection_pipeline_node(
+    recording, noise_levels, gather_mode, detect_kwargs, localize_peaks_kwargs, job_kwargs
+):
 
     from spikeinterface.sortingcomponents.peak_detection import detect_peak_methods
     from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
@@ -438,9 +440,7 @@ def run_peak_detection_pipeline_node(recording, noise_levels, gather_mode, detec
 
     detect_peaks_method = detect_kwargs["method"]
     method_class = detect_peak_methods[detect_peaks_method]
-    detect_kwargs_without_method = {
-        key: detect_kwarg for key, detect_kwarg in detect_kwargs.items() if key != "method"
-    }
+    detect_kwargs_without_method = {key: detect_kwarg for key, detect_kwarg in detect_kwargs.items() if key != "method"}
     if method_class.need_noise_levels:
         detect_kwargs_without_method["noise_levels"] = noise_levels
 
@@ -454,9 +454,7 @@ def run_peak_detection_pipeline_node(recording, noise_levels, gather_mode, detec
     localize_peaks_kwargs_without_method = {
         key: localize_peaks_kwarg for key, localize_peaks_kwarg in localize_peaks_kwargs.items() if key != "method"
     }
-    node2 = method_class(
-        recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs_without_method
-    )
+    node2 = method_class(recording, parents=[node0, node1], return_output=True, **localize_peaks_kwargs_without_method)
     pipeline_nodes = [node0, node1, node2]
     t0 = time.perf_counter()
     peaks, peak_locations = run_node_pipeline(
