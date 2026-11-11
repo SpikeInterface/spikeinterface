@@ -273,6 +273,48 @@ class TestInterSessionAlignment:
                 )
 
     @pytest.mark.parametrize("histogram_type", ["1d", "2d"])
+    @pytest.mark.parametrize("log_transform", [False, True])
+    def test_entire_session_histogram(self, histogram_type, log_transform, monkeypatch):
+        from spikeinterface.core import NumpyRecording
+
+        recording = NumpyRecording([np.zeros((2500, 2), dtype="float32")], sampling_frequency=1000)
+        peaks = np.array(
+            [(100, 1.0), (200, 10.0), (1700, 100.0), (2400, 1000.0)],
+            dtype=[("sample_index", "int64"), ("amplitude", "float64")],
+        )
+        locations = np.array([(0.5,), (0.5,), (0.5,), (1.5,)], dtype=[("y", "float64")])
+        if histogram_type == "1d":
+            expected = np.array([3.0, 1.0])
+        else:
+            expected = np.zeros((2, 20))
+            expected[0, [0, 6, 13]] = 1
+            expected[1, 19] = 1
+
+        monkeypatch.setattr(
+            alignment_utils,
+            "estimate_chunk_size",
+            lambda _: pytest.fail("Entire-session mode must not estimate chunks"),
+        )
+        for chunk_size in ["estimate", 0.6]:
+            histogram, _, info = session_alignment._get_single_session_activity_histogram(
+                recording,
+                peaks,
+                locations,
+                histogram_type=histogram_type,
+                spatial_bin_edges=np.array([0.0, 1.0, 2.0]),
+                method="entire_session",
+                log_transform=log_transform,
+                chunked_bin_size_s=chunk_size,
+                depth_smooth_um=None,
+                weight_with_amplitude=False,
+                avg_in_bin=False,
+            )
+            np.testing.assert_allclose(histogram, np.log2(1 + expected) if log_transform else expected)
+            np.testing.assert_allclose(info["chunked_histograms"], expected[None, ...])
+            np.testing.assert_allclose(info["chunked_temporal_bin_centers"], [1.25])
+            assert info["chunked_bin_size_s"] == 2.5
+
+    @pytest.mark.parametrize("histogram_type", ["1d", "2d"])
     @pytest.mark.parametrize("operator", ["mean", "median"])
     def test_histogram_log_tranform(self, recording_1, histogram_type, operator):
         """ """

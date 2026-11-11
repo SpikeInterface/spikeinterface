@@ -33,9 +33,10 @@ def get_estimate_histogram_kwargs() -> dict:
     "bin_um" : number of spatial histogram bins. As the estimated peak
         locations are continuous (i.e. real numbers) this is not constrained
         by the number of channels.
-    "method" : may be "chunked_mean", "chunked_median"
-        "chunked_poisson". Determines the summary statistic used over
-        the histograms computed across a session. See `alignment_utils.py
+    "method" : may be "entire_session", "chunked_mean", "chunked_median".
+        "entire_session" pools all peaks into one histogram of counts over the
+        full recording, ignoring "chunked_bin_size_s". The other methods take
+        the mean or median of chunked histograms. See `alignment_utils.py`
         for details on each method.
     "chunked_bin_size_s" : The length in seconds (float) to chunk the recording
         for estimating the chunked histograms. Can be set to "estimate" (str),
@@ -568,9 +569,10 @@ def _get_single_session_activity_histogram(
     times = recording.get_times()
     temporal_bin_centers = np.atleast_1d((times[-1] + times[0]) / 2)
 
-    # Estimate an entire session histogram if requested or doing
-    # full estimation for chunked bin size
-    if chunked_bin_size_s == "estimate":
+    # Entire-session histograms use one temporal bin and need no chunk-size estimation.
+    if method == "entire_session":
+        chunked_bin_size_s = recording.get_duration()
+    elif chunked_bin_size_s == "estimate":
 
         scaled_hist, _, _ = alignment_utils.get_2d_activity_histogram(
             recording,
@@ -599,7 +601,7 @@ def _get_single_session_activity_histogram(
             depth_smooth_um=depth_smooth_um,
             weight_with_amplitude=weight_with_amplitude,
             avg_in_bin=avg_in_bin,
-            scale_to_hz=True,
+            scale_to_hz=method != "entire_session",
         )
 
     elif histogram_type in ["2d"]:
@@ -621,7 +623,10 @@ def _get_single_session_activity_histogram(
 
         chunked_temporal_bin_centers = alignment_utils.get_bin_centers(chunked_temporal_bin_edges)
 
-    if method == "chunked_mean":
+    if method == "entire_session":
+        session_histogram = chunked_histograms[0]
+
+    elif method == "chunked_mean":
         session_histogram = alignment_utils.get_chunked_hist_mean(chunked_histograms)
 
     elif method == "chunked_median":
