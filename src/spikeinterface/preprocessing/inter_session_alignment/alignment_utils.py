@@ -329,7 +329,9 @@ def compute_histogram_crosscorrelation(
             # Upsample the cross-correlation
             if interpolate:
 
-                shifts_upsampled = np.linspace(shifts_array[0], shifts_array[-1], shifts_array.size * interp_factor)
+                # Subdivide intervals to retain every original lag, including zero.
+                num_points = (shifts_array.size - 1) * interp_factor + 1
+                shifts_upsampled = np.linspace(shifts_array[0], shifts_array[-1], num_points)
 
                 K = kriging_kernel(
                     np.c_[np.ones_like(shifts_array), shifts_array],

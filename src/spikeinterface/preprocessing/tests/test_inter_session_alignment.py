@@ -726,7 +726,7 @@ class TestInterSessionAlignment:
 
         num_shifts = hist.size * 2 - 1
         if interpolate:
-            assert xcorr_matrix_unsmoothed.shape[1] == num_shifts * interp_factor
+            assert xcorr_matrix_unsmoothed.shape[1] == (num_shifts - 1) * interp_factor + 1
         else:
             assert xcorr_matrix_unsmoothed.shape[1] == num_shifts
 
