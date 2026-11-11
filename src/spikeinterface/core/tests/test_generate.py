@@ -3,13 +3,14 @@ import psutil
 
 import numpy as np
 
-from spikeinterface.core import load_extractor
+from spikeinterface.core import load
 
 from probeinterface import generate_multi_columns_probe
 from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
-    NoiseGeneratorRecording,
+    MockRecording,
+    SortingGenerator,
     TransformSorting,
     generate_recording_by_size,
     InjectTemplatesRecording,
@@ -21,6 +22,7 @@ from spikeinterface.core.generate import (
     generate_sorting_to_inject,
     synthesize_random_firings,
 )
+from spikeinterface.generation import NoiseGeneratorRecording
 
 from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -80,7 +82,7 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
     Parameters
     ----------
     measure_in_process : bool, True by default
-        Mesure memory allocation in the current process only, if false then measures at the system
+        Measure memory allocation in the current process only, if false then measures at the system
         level.
     """
 
@@ -92,6 +94,73 @@ def measure_memory_allocation(measure_in_process: bool = True) -> float:
         memory = mem_info.total - mem_info.available
 
     return memory
+
+
+def test_memory_sorting_generator():
+    # Test that get_traces does not consume more memory than allocated.
+
+    bytes_to_MiB_factor = 1024**2
+    relative_tolerance = 0.05  # relative tolerance of 5 per cent
+
+    sampling_frequency = 30000  # Hz
+    durations = [60.0]
+    num_units = 1000
+    seed = 0
+
+    before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    sorting = SortingGenerator(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        seed=seed,
+    )
+    after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
+    memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
+    ratio = memory_usage_MiB / before_instanciation_MiB
+    expected_allocation_MiB = 0
+    assert (
+        ratio <= 1.0 + relative_tolerance
+    ), f"SortingGenerator wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+
+
+def test_sorting_generator_consisency_across_calls():
+    sampling_frequency = 30000  # Hz
+    durations = [1.0]
+    num_units = 3
+    seed = 0
+
+    sorting = SortingGenerator(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        seed=seed,
+    )
+
+    for unit_id in sorting.get_unit_ids():
+        spike_train = sorting.get_unit_spike_train(unit_id=unit_id)
+        spike_train_again = sorting.get_unit_spike_train(unit_id=unit_id)
+
+        assert np.allclose(spike_train, spike_train_again)
+
+
+def test_sorting_generator_consisency_within_trains():
+    sampling_frequency = 30000  # Hz
+    durations = [1.0]
+    num_units = 3
+    seed = 0
+
+    sorting = SortingGenerator(
+        num_units=num_units,
+        sampling_frequency=sampling_frequency,
+        durations=durations,
+        seed=seed,
+    )
+
+    for unit_id in sorting.get_unit_ids():
+        spike_train = sorting.get_unit_spike_train(unit_id=unit_id, start_frame=0, end_frame=1000)
+        spike_train_again = sorting.get_unit_spike_train(unit_id=unit_id, start_frame=0, end_frame=1000)
+
+        assert np.allclose(spike_train, spike_train_again)
 
 
 def test_noise_generator_memory():
@@ -110,7 +179,7 @@ def test_noise_generator_memory():
 
     # case 1 preallocation of noise use one noise block 88M for 60000 sample of 384
     before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    rec1 = NoiseGeneratorRecording(
+    rec1 = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -125,11 +194,11 @@ def test_noise_generator_memory():
     ratio = expected_allocation_MiB / expected_allocation_MiB
     assert (
         ratio <= 1.0 + relative_tolerance
-    ), f"NoiseGeneratorRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    ), f"MockRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
 
     # case 2: no preallocation very few memory (under 2 MiB)
     before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    rec2 = NoiseGeneratorRecording(
+    rec2 = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -140,7 +209,7 @@ def test_noise_generator_memory():
     )
     after_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
-    assert memory_usage_MiB < 2, f"NoiseGeneratorRecording with 'on_the_fly wrong memory  {memory_usage_MiB}MiB"
+    assert memory_usage_MiB < 2, f"MockRecording with 'on_the_fly wrong memory  {memory_usage_MiB}MiB"
 
 
 def test_noise_generator_several_noise_levels():
@@ -194,7 +263,7 @@ def test_noise_generator_correct_shape(strategy):
     num_channels = 2
     seed = 0
 
-    lazy_recording = NoiseGeneratorRecording(
+    lazy_recording = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -230,7 +299,7 @@ def test_noise_generator_consistency_across_calls(strategy, start_frame, end_fra
     num_channels = 2
     seed = 0
 
-    lazy_recording = NoiseGeneratorRecording(
+    lazy_recording = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -265,7 +334,7 @@ def test_noise_generator_consistency_across_traces(strategy, start_frame, end_fr
     num_channels = 2
     seed = start_frame + end_frame + extra_samples  # To make sure that the seed is different for each test
 
-    lazy_recording = NoiseGeneratorRecording(
+    lazy_recording = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -285,7 +354,7 @@ def test_noise_generator_consistency_across_traces(strategy, start_frame, end_fr
 @pytest.mark.parametrize("seed", [None, 42])
 def test_noise_generator_consistency_after_dump(strategy, seed):
     # test same noise after dump even with seed=None
-    rec0 = NoiseGeneratorRecording(
+    rec0 = MockRecording(
         num_channels=2,
         sampling_frequency=30000.0,
         durations=[2.0],
@@ -295,7 +364,7 @@ def test_noise_generator_consistency_after_dump(strategy, seed):
     )
     traces0 = rec0.get_traces()
 
-    rec1 = load_extractor(rec0.to_dict())
+    rec1 = load(rec0.to_dict())
     traces1 = rec1.get_traces()
 
     assert np.allclose(traces0, traces1)
@@ -395,6 +464,26 @@ def test_generate_templates():
         dtype="float32",
         unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
     )
+    assert templates.ndim == 3
+    assert templates.shape[2] == num_chans
+    assert templates.shape[0] == num_units
+
+    # power case
+    templates = generate_templates(
+        channel_locations,
+        unit_locations,
+        sampling_frequency,
+        ms_before,
+        ms_after,
+        upsample_factor=None,
+        seed=42,
+        dtype="float32",
+        spatial_profile="power",
+        unit_params=dict(alpha=np.ones(num_units) * 500.0, smooth_ms=(0.04, 0.05)),
+    )
+    assert templates.ndim == 3
+    assert templates.shape[2] == num_chans
+    assert templates.shape[0] == num_units
 
     # upsampling case
     templates = generate_templates(
@@ -477,8 +566,8 @@ def test_inject_templates():
         assert rec.get_traces(start_frame=rec_noise.get_num_frames(0) - 200, segment_index=0).shape == (200, 4)
 
         # Check dumpability
-        saved_loaded = load_extractor(rec.to_dict())
-        check_recordings_equal(rec, saved_loaded, return_scaled=False)
+        saved_loaded = load(rec.to_dict())
+        check_recordings_equal(rec, saved_loaded, return_in_uV=False)
 
 
 def test_transformsorting():
@@ -545,9 +634,9 @@ def test_generate_ground_truth_recording():
 
 def test_generate_sorting_to_inject():
     durations = [10.0, 20.0]
-    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0)
+    sorting = generate_sorting(num_units=10, durations=durations, sampling_frequency=30000, firing_rates=1.0, seed=2205)
     injected_sorting = generate_sorting_to_inject(
-        sorting, [int(duration * sorting.sampling_frequency) for duration in durations]
+        sorting, [int(duration * sorting.sampling_frequency) for duration in durations], seed=2308
     )
     num_spikes = sorting.count_num_spikes_per_unit()
     num_injected_spikes = injected_sorting.count_num_spikes_per_unit()
@@ -586,7 +675,8 @@ if __name__ == "__main__":
     # test_generate_recording()
     # test_generate_single_fake_waveform()
     # test_transformsorting()
-    test_generate_templates()
+    # test_generate_unit_locations()
+    # test_generate_templates()
     # test_inject_templates()
     # test_generate_ground_truth_recording()
-    # test_generate_sorting_with_spikes_on_borders()
+    test_generate_sorting_with_spikes_on_borders()

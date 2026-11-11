@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 import numpy as np
 
@@ -15,9 +13,6 @@ class NpzSortingExtractor(BaseSorting):
     It is in fact an archive of several .npy format.
     All spike are store in two columns maner index+labels
     """
-
-    mode = "file"
-    name = "npz"
 
     def __init__(self, file_path):
         self.npz_filename = file_path
@@ -58,7 +53,7 @@ class NpzSortingExtractor(BaseSorting):
             if len(spike_indexes) > 0:
                 spike_indexes = np.concatenate(spike_indexes)
                 spike_labels = np.concatenate(spike_labels)
-                order = np.argsort(spike_indexes)
+                order = np.argsort(spike_indexes, stable=True)
                 spike_indexes = spike_indexes[order]
                 spike_labels = spike_labels[order]
             else:

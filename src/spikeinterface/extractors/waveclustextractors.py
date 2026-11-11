@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 import numpy as np
@@ -24,8 +22,6 @@ class WaveClusSortingExtractor(MatlabHelper, BaseSorting):
     extractor : WaveClusSortingExtractor
         Loaded data.
     """
-
-    name = "waveclus"
 
     def __init__(self, file_path, keep_good_only=True):
         MatlabHelper.__init__(self, file_path)

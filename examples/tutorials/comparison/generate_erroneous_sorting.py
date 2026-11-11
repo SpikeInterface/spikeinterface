@@ -44,7 +44,8 @@ def generate_erroneous_sorting():
     units_err = {}
 
     # sorting_true have 10 units
-    np.random.seed(0)
+    # np.random.seed(0)
+    rng = np.random.default_rng(seed=0)
 
     # unit 1 2 are perfect
     for u in [1, 2]:
@@ -54,14 +55,14 @@ def generate_erroneous_sorting():
     # unit 3 4 (medium) 10 (low) have medium to low agreement
     for u, score in [(3, 0.8), (4, 0.75), (10, 0.3)]:
         st = sorting_true.get_unit_spike_train(u)
-        st = np.sort(np.random.choice(st, size=int(st.size * score), replace=False))
+        st = np.sort(rng.choice(st, size=int(st.size * score), replace=False))
         units_err[u] = st
 
     # unit 5 6 are over merge
     st5 = sorting_true.get_unit_spike_train(5)
     st6 = sorting_true.get_unit_spike_train(6)
     st = np.unique(np.concatenate([st5, st6]))
-    st = np.sort(np.random.choice(st, size=int(st.size * 0.7), replace=False))
+    st = np.sort(rng.choice(st, size=int(st.size * 0.7), replace=False))
     units_err[56] = st
 
     # unit 7 is over split in 2 part
@@ -69,14 +70,14 @@ def generate_erroneous_sorting():
     st70 = st7[::2]
     units_err[70] = st70
     st71 = st7[1::2]
-    st71 = np.sort(np.random.choice(st71, size=int(st71.size * 0.9), replace=False))
+    st71 = np.sort(rng.choice(st71, size=int(st71.size * 0.9), replace=False))
     units_err[71] = st71
 
     # unit 8 is redundant 3 times
     st8 = sorting_true.get_unit_spike_train(8)
-    st80 = np.sort(np.random.choice(st8, size=int(st8.size * 0.65), replace=False))
-    st81 = np.sort(np.random.choice(st8, size=int(st8.size * 0.6), replace=False))
-    st82 = np.sort(np.random.choice(st8, size=int(st8.size * 0.55), replace=False))
+    st80 = np.sort(rng.choice(st8, size=int(st8.size * 0.65), replace=False))
+    st81 = np.sort(rng.choice(st8, size=int(st8.size * 0.6), replace=False))
+    st82 = np.sort(rng.choice(st8, size=int(st8.size * 0.55), replace=False))
     units_err[80] = st80
     units_err[81] = st81
     units_err[82] = st82

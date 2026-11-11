@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from pathlib import Path
 
@@ -30,18 +28,19 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         If there are several streams, specify the stream name you want to load.
     all_annotations : bool, default: False
         Load exhaustively all annotations from neo.
+    use_names_as_ids : bool, default: False
+        Determines the format of the channel IDs used by the extractor. If set to True, the channel IDs will be the
+        names from NeoRawIO. If set to False, the channel IDs will be the ids provided by NeoRawIO.
     rec_name : str, default: None
         When the file contains several recordings you need to specify the one
         you want to extract. (rec_name='rec0000').
-    install_maxwell_plugin : bool, default: False
+    install_maxwell_plugin : bool, default: True
         If True, install the maxwell plugin for neo.
     block_index : int, default: None
         If there are several blocks (experiments), specify the block index you want to load
     """
 
-    mode = "file"
     NeoRawIOClass = "MaxwellRawIO"
-    name = "maxwell"
 
     def __init__(
         self,
@@ -51,7 +50,8 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         block_index=None,
         all_annotations=False,
         rec_name=None,
-        install_maxwell_plugin=False,
+        install_maxwell_plugin=True,
+        use_names_as_ids: bool = False,
     ):
         if install_maxwell_plugin:
             self.install_maxwell_plugin()
@@ -63,6 +63,7 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
             stream_name=stream_name,
             block_index=block_index,
             all_annotations=all_annotations,
+            use_names_as_ids=use_names_as_ids,
             **neo_kwargs,
         )
 
@@ -73,8 +74,9 @@ class MaxwellRecordingExtractor(NeoBaseRecordingExtractor):
         # rec_name auto set by neo
         rec_name = self.neo_reader.rec_name
         probe = probeinterface.read_maxwell(file_path, well_name=well_name, rec_name=rec_name)
-        self.set_probe(probe, in_place=True)
-        self.set_property("electrode", self.get_property("contact_vector")["electrode"])
+        electrodes = probe.contact_annotations["electrode"]
+        self.set_probe(probe)
+        self.set_property("electrode", electrodes)
         self._kwargs.update(dict(file_path=str(Path(file_path).absolute()), rec_name=rec_name))
 
     @classmethod
@@ -95,8 +97,6 @@ class MaxwellEventExtractor(BaseEvent):
     """
     Class for reading TTL events from Maxwell files.
     """
-
-    name = "maxwell"
 
     def __init__(self, file_path):
         import h5py

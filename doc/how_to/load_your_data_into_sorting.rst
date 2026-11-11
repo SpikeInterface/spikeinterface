@@ -1,5 +1,5 @@
-Load Your Own Data into a Sorting
-=================================
+Load your own data into a ``Sorting`` object
+============================================
 
 Why make a :code:`Sorting`?
 
@@ -18,7 +18,7 @@ to take your existing data and load it as a SpikeInterface :code:`Sorting` objec
 
 
 Reading a standard spike sorting format into a :code:`Sorting`
--------------------------------------------------------------
+--------------------------------------------------------------
 
 For most spike sorting output formats the :code:`Sorting` is automatically generated. For example one could do
 
@@ -36,7 +36,7 @@ current formats see :ref:`compatible_formats`.
 
 
 Loading your own data into a :code:`Sorting`
--------------------------------------------
+--------------------------------------------
 
 
 This :code:`Sorting` contains important information about your spike trains including:
@@ -65,8 +65,8 @@ the requested unit_ids).
 
     # in this case we are making a monosegment sorting
     # we have four spikes that are spread among two neurons
-    my_sorting = NumpySorting.from_times_labels(
-        times_list=[
+    my_sorting = NumpySorting.from_samples_and_labels(
+        samples_list=[
             np.array([1000,12000,15000,22000])   # Note these are samples/frames not times in seconds
             ],
         labels_list=[
@@ -115,12 +115,12 @@ using :code:`Neo.SpikeTrain`'s.
 
 
 Loading multisegment data into a :code:`Sorting`
------------------------------------------------
+------------------------------------------------
 
 One of the great advantages of SpikeInterface :code:`Sorting` objects is that they can also handle
 multisegment recordings and sortings (e.g. you have a baseline, stimulus, post-stimulus). The
 exact same machinery can be used to generate your sorting, but in this case we do a list of arrays instead of
-a single list. Let's go through one example for using :code:`from_times_labels`:
+a single list. Let's go through one example for using :code:`from_samples_and_labels`:
 
 .. code-block:: python
 
@@ -130,8 +130,8 @@ a single list. Let's go through one example for using :code:`from_times_labels`:
     # in this case we are making three-segment sorting
     # we have four spikes that are spread among two neurons
     # in each segment
-    my_sorting = NumpySorting.from_times_labels(
-        times_list=[
+    my_sorting = NumpySorting.from_samples_and_labels(
+        samples_list=[
             np.array([1000,12000,15000,22000]),
             np.array([30000,33000, 41000, 47000]),
             np.array([50000,53000,64000,70000]),

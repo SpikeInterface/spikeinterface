@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 
@@ -22,13 +20,13 @@ class PeaksOnProbeWidget(BaseWidget):
     ----------
     recording : Recording
         A SpikeInterface recording object.
-    peaks : np.array | list[np.ndarray]
+    peaks : np.ndarray | list[np.ndarray]
         SpikeInterface 'peaks' array created with `detect_peaks()`,
         an array of length num_peaks with entries:
             (sample_index, channel_index, amplitude, segment_index)
         To plot different sets of peaks in subplots, pass a list of peaks, each
         with a corresponding entry in a list passed to `peak_locations`.
-    peak_locations : np.array | list[np.ndarray]
+    peak_locations : np.ndarray | list[np.ndarray]
         A SpikeInterface 'peak_locations' array created with `localize_peaks()`.
         an array of length num_peaks with entries: (x, y)
         To plot multiple peaks in subplots, pass a list of `peak_locations`
@@ -133,7 +131,7 @@ class PeaksOnProbeWidget(BaseWidget):
             )
 
             if dp.ylim is None:
-                padding = 25  # arbitary padding just to give some space around highests and lowest peaks on the plot
+                padding = 25  # arbitrary padding just to give some space around highest and lowest peaks on the plot
                 ylim = (np.min(peak_locs_to_plot["y"]) - padding, np.max(peak_locs_to_plot["y"]) + padding)
             else:
                 ylim = dp.ylim
@@ -190,7 +188,7 @@ class PeaksOnProbeWidget(BaseWidget):
 
     def _check_and_format_inputs(self, peaks, peak_locations):
         """
-        Check that the inpust are in expected form. Corresponding peaks
+        Check that the inputs are in expected form. Corresponding peaks
         and peak_locations of same size and format must be provided.
         """
         types_are_list = [isinstance(peaks, list), isinstance(peak_locations, list)]

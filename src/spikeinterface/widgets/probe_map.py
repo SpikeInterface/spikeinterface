@@ -1,10 +1,6 @@
-from __future__ import annotations
-
 import numpy as np
-from warnings import warn
 
 from .base import BaseWidget, to_attr, default_backend_kwargs
-from .utils import get_unit_colors
 
 
 class ProbeMapWidget(BaseWidget):

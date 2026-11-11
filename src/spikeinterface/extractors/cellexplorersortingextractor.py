@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 import numpy as np
 from pathlib import Path
 
 
-from ..core import BaseSorting, BaseSortingSegment
-from ..core.core_tools import define_function_from_class
+from spikeinterface.core import BaseSorting, BaseSortingSegment
+from spikeinterface.core.core_tools import define_function_from_class
 
 
 class CellExplorerSortingExtractor(BaseSorting):
@@ -29,7 +27,6 @@ class CellExplorerSortingExtractor(BaseSorting):
         Path to the `sessionInfo.mat` file. If None, it will be inferred from the file_path.
     """
 
-    mode = "file"
     installation_mesg = "To use the CellExplorerSortingExtractor install pymatreader"
 
     def __init__(

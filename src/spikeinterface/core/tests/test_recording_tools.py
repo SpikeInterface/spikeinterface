@@ -2,10 +2,9 @@ from pathlib import Path
 import platform
 import numpy as np
 
-from spikeinterface.core import NumpyRecording, generate_recording
+from spikeinterface.core import NumpyRecording, generate_recording, MockRecording
 
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
-from spikeinterface.core.generate import NoiseGeneratorRecording
 
 
 from spikeinterface.core.recording_tools import (
@@ -17,6 +16,8 @@ from spikeinterface.core.recording_tools import (
     get_channel_distances,
     get_noise_levels,
     order_channels_by_depth,
+    do_recording_attributes_match,
+    get_rec_attributes,
 )
 
 
@@ -28,7 +29,7 @@ def test_write_binary_recording(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -55,7 +56,7 @@ def test_write_binary_recording_offset(tmp_path):
     dtype = "float32"
 
     durations = [10.0]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -89,7 +90,7 @@ def test_write_binary_recording_parallel(tmp_path):
     num_channels = 2
     dtype = "float32"
     durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -120,7 +121,7 @@ def test_write_binary_recording_multiple_segment(tmp_path):
     dtype = "float32"
 
     durations = [10.30, 3.5]
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         durations=durations,
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
@@ -145,10 +146,9 @@ def test_write_binary_recording_multiple_segment(tmp_path):
 
 def test_write_memory_recording():
     # 2 segments
-    recording = NoiseGeneratorRecording(
+    recording = MockRecording(
         num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
     )
-    recording = recording.save()
 
     # write with loop
     traces_list, shms = write_memory_recording(recording, dtype=None, verbose=True, n_jobs=1)
@@ -180,16 +180,17 @@ def test_get_closest_channels():
 
 
 def test_get_noise_levels():
+    job_kwargs = dict(n_jobs=1, progress_bar=True)
     rec = generate_recording(num_channels=2, sampling_frequency=1000.0, durations=[60.0])
 
-    noise_levels_1 = get_noise_levels(rec, return_scaled=False)
-    noise_levels_2 = get_noise_levels(rec, return_scaled=False)
+    noise_levels_1 = get_noise_levels(rec, return_in_uV=False, **job_kwargs)
+    noise_levels_2 = get_noise_levels(rec, return_in_uV=False, **job_kwargs)
 
     rec.set_channel_gains(0.1)
     rec.set_channel_offsets(0)
-    noise_levels = get_noise_levels(rec, return_scaled=True, force_recompute=True)
+    noise_levels = get_noise_levels(rec, return_in_uV=True, force_recompute=True, **job_kwargs)
 
-    noise_levels = get_noise_levels(rec, return_scaled=True, method="std")
+    noise_levels = get_noise_levels(rec, return_in_uV=True, method="std", **job_kwargs)
 
     # Generate a recording following a gaussian distribution to check the result of get_noise.
     std = 6.0
@@ -199,8 +200,10 @@ def test_get_noise_levels():
     recording = NumpyRecording(traces, 30000)
 
     assert np.all(noise_levels_1 == noise_levels_2)
-    assert np.allclose(get_noise_levels(recording, return_scaled=False), [std, std], rtol=1e-2, atol=1e-3)
-    assert np.allclose(get_noise_levels(recording, method="std", return_scaled=False), [std, std], rtol=1e-2, atol=1e-3)
+    assert np.allclose(get_noise_levels(recording, return_in_uV=False, **job_kwargs), [std, std], rtol=1e-2, atol=1e-3)
+    assert np.allclose(
+        get_noise_levels(recording, method="std", return_in_uV=False, **job_kwargs), [std, std], rtol=1e-2, atol=1e-3
+    )
 
 
 def test_get_noise_levels_output():
@@ -214,16 +217,27 @@ def test_get_noise_levels_output():
     traces = rng.normal(loc=10.0, scale=std, size=(num_samples, num_channels))
     recording = NumpyRecording(traces_list=traces, sampling_frequency=sampling_frequency)
 
-    std_estimated_with_mad = get_noise_levels(recording, method="mad", return_scaled=False, chunk_size=1_000)
+    std_estimated_with_mad = get_noise_levels(
+        recording,
+        method="mad",
+        return_in_uV=False,
+        random_slices_kwargs=dict(num_chunks_per_segment=40, chunk_size=1_000, seed=seed),
+    )
+    print(std_estimated_with_mad)
     assert np.allclose(std_estimated_with_mad, [std, std], rtol=1e-2, atol=1e-3)
 
-    std_estimated_with_std = get_noise_levels(recording, method="std", return_scaled=False, chunk_size=1_000)
+    std_estimated_with_std = get_noise_levels(
+        recording,
+        method="std",
+        return_in_uV=False,
+        random_slices_kwargs=dict(num_chunks_per_segment=40, chunk_size=1_000, seed=seed),
+    )
     assert np.allclose(std_estimated_with_std, [std, std], rtol=1e-2, atol=1e-3)
 
 
 def test_get_chunk_with_margin():
     rec = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[10.0])
-    rec_seg = rec._recording_segments[0]
+    rec_seg = rec.segments[0]
     length = rec_seg.get_num_samples()
 
     #  rec_segment, start_frame, end_frame, channel_indices, sample_margin
@@ -300,16 +314,46 @@ def test_order_channels_by_depth():
     assert np.array_equal(order_2d[::-1], order_2d_fliped)
 
 
+def test_do_recording_attributes_match():
+    recording = MockRecording(
+        num_channels=2, durations=[10.325, 3.5], sampling_frequency=30_000, strategy="tile_pregenerated"
+    )
+    rec_attributes = get_rec_attributes(recording)
+    do_match, _ = do_recording_attributes_match(recording, rec_attributes)
+    assert do_match
+
+    rec_attributes = get_rec_attributes(recording)
+    rec_attributes["sampling_frequency"] = 1.0
+    do_match, exc = do_recording_attributes_match(recording, rec_attributes)
+    assert not do_match
+    assert "sampling_frequency" in exc
+
+    # check dtype options
+    rec_attributes = get_rec_attributes(recording)
+    rec_attributes["dtype"] = "int16"
+    do_match, exc = do_recording_attributes_match(recording, rec_attributes)
+    assert not do_match
+    assert "dtype" in exc
+    do_match, exc = do_recording_attributes_match(recording, rec_attributes, check_dtype=False)
+    assert do_match
+
+    # check missing dtype
+    rec_attributes.pop("dtype")
+    do_match, exc = do_recording_attributes_match(recording, rec_attributes)
+    assert do_match
+
+
 if __name__ == "__main__":
     # Create a temporary folder using the standard library
-    import tempfile
+    # import tempfile
 
-    with tempfile.TemporaryDirectory() as tmpdirname:
-        tmp_path = Path(tmpdirname)
-        test_write_binary_recording(tmp_path)
-    test_write_memory_recording()
+    # with tempfile.TemporaryDirectory() as tmpdirname:
+    #     tmp_path = Path(tmpdirname)
+    #     test_write_binary_recording(tmp_path)
+    # test_write_memory_recording()
 
-    test_get_random_data_chunks()
-    test_get_closest_channels()
-    test_get_noise_levels()
+    # test_get_random_data_chunks()
+    # test_get_closest_channels()
+    # test_get_noise_levels()
+    # test_get_noise_levels_output()
     test_order_channels_by_depth()

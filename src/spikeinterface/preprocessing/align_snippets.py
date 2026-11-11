@@ -1,16 +1,10 @@
-from __future__ import annotations
-
-from typing import List, Union
-
 import numpy as np
 
 from spikeinterface.core import BaseSnippets, BaseSnippetsSegment
 
 
 class AlignSnippets(BaseSnippets):
-    installed = True  # check at class level if installed or not
     installation_mesg = ""  # err
-    name = "align_snippets"
 
     def __init__(self, snippets, new_nbefore, new_nafter, mode="main_peak", interpolate=1, det_sign=0):
         assert isinstance(snippets, BaseSnippets), "'snippets' must be a SnippetsExtractor"
@@ -81,8 +75,8 @@ class AlignSnippetsSegment(BaseSnippetsSegment):
     def get_snippets(
         self,
         indices=None,
-        end_frame: Union[int, None] = None,
-        channel_indices: Union[List, None] = None,
+        end_frame: int | None = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         snippets = self.parent_snippets_segment.get_snippets(indices=indices, channel_indices=channel_indices)
         if self._interpolate > 1:
@@ -115,5 +109,5 @@ class AlignSnippetsSegment(BaseSnippetsSegment):
     def get_frames(self, indices):
         return self.parent_snippets_segment.get_num_snippets(indices)
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         return self.parent_snippets_segment.frames_to_indices(start_frame, end_frame)

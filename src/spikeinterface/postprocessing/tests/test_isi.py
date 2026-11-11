@@ -1,5 +1,6 @@
 import numpy as np
 from typing import List
+import importlib.util
 
 
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
@@ -7,11 +8,9 @@ from spikeinterface.postprocessing import ComputeISIHistograms
 from spikeinterface.postprocessing.isi import _compute_isi_histograms
 import pytest
 
-try:
-    import numba
-
+if importlib.util.find_spec("numba") is not None:
     HAVE_NUMBA = True
-except ModuleNotFoundError as err:
+else:
     HAVE_NUMBA = False
 
 

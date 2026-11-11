@@ -1,10 +1,12 @@
-from __future__ import annotations
+from typing import Literal
 
-import numpy as np
 import json
 from dataclasses import dataclass, field, astuple, replace
-from probeinterface import Probe
 from pathlib import Path
+
+import numpy as np
+
+from probeinterface import Probe
 from .sparsity import ChannelSparsity
 
 
@@ -30,7 +32,7 @@ class Templates:
         Array of unit IDs. If `None`, defaults to an array of increasing integers.
     probe: Probe, default: None
         A `probeinterface.Probe` object
-    is_scaled : bool, optional default: True
+    is_in_uV : bool, optional default: True
         If True, it means that the templates are in uV, otherwise they are in raw ADC values.
     check_for_consistent_sparsity : bool, optional default: None
         When passing a sparsity_mask, this checks that the templates array is also sparse and that it matches the
@@ -60,7 +62,7 @@ class Templates:
     templates_array: np.ndarray
     sampling_frequency: float
     nbefore: int
-    is_scaled: bool = True
+    is_in_uV: bool = True
 
     sparsity_mask: np.ndarray = None
     channel_ids: np.ndarray = None
@@ -140,7 +142,7 @@ class Templates:
 
         return repr_str
 
-    def select_units(self, unit_ids) -> Templates:
+    def select_units(self, unit_ids) -> "Templates":
         """
         Return a new Templates object with only the selected units.
 
@@ -162,7 +164,7 @@ class Templates:
             check_for_consistent_sparsity=False,
         )
 
-    def select_channels(self, channel_ids) -> Templates:
+    def select_channels(self, channel_ids) -> "Templates":
         """
         Return a new Templates object with only the selected channels.
         This operation can be useful to remove bad channels for hybrid recording
@@ -189,8 +191,16 @@ class Templates:
 
     def to_sparse(self, sparsity):
         # Turn a dense representation of templates into a sparse one, given some sparsity.
-        # Note that nothing prevent Templates tobe empty after sparsification if the sparse mask have no channels for some units
+        # Note that nothing prevent Templates to be empty after sparsification if the sparse mask have no channels for some units
+        if isinstance(sparsity, np.ndarray):
+            sparsity = ChannelSparsity(
+                mask=sparsity,
+                unit_ids=self.unit_ids,
+                channel_ids=self.channel_ids,
+            )
+
         assert isinstance(sparsity, ChannelSparsity), "sparsity should be of type ChannelSparsity"
+
         assert self.sparsity_mask is None, "Templates should be dense"
 
         # if np.any(sparsity.mask.sum(axis=1) == 0):
@@ -205,7 +215,24 @@ class Templates:
             unit_ids=self.unit_ids,
             probe=self.probe,
             check_for_consistent_sparsity=self.check_for_consistent_sparsity,
+            is_in_uV=self.is_in_uV,
         )
+
+    def to_dense(self):
+        if not self.are_templates_sparse():
+            return self
+        else:
+            return Templates(
+                templates_array=self.get_dense_templates(),
+                sampling_frequency=self.sampling_frequency,
+                nbefore=self.nbefore,
+                sparsity_mask=None,
+                channel_ids=self.channel_ids,
+                unit_ids=self.unit_ids,
+                probe=self.probe,
+                check_for_consistent_sparsity=False,
+                is_in_uV=self.is_in_uV,
+            )
 
     def get_one_template_dense(self, unit_index):
         if self.sparsity is None:
@@ -255,7 +282,7 @@ class Templates:
             "unit_ids": self.unit_ids,
             "sampling_frequency": self.sampling_frequency,
             "nbefore": self.nbefore,
-            "is_scaled": self.is_scaled,
+            "is_in_uV": self.is_in_uV,
             "probe": self.probe.to_dict() if self.probe is not None else None,
         }
 
@@ -268,7 +295,7 @@ class Templates:
             unit_ids=np.asarray(data["unit_ids"]),
             sampling_frequency=data["sampling_frequency"],
             nbefore=data["nbefore"],
-            is_scaled=data["is_scaled"],
+            is_in_uV=data["is_in_uV"],
             probe=data["probe"] if data["probe"] is None else Probe.from_dict(data["probe"]),
         )
 
@@ -294,6 +321,10 @@ class Templates:
         to optimize read/write operations for individual units.
         """
 
+        from .core_tools import _check_zarr_write_is_supported
+
+        _check_zarr_write_is_supported()
+
         # Saves one chunk per unit
         arrays_chunk = (1, None, None)
         zarr_group.create_dataset("templates_array", data=self.templates_array, chunks=arrays_chunk)
@@ -302,7 +333,7 @@ class Templates:
 
         zarr_group.attrs["sampling_frequency"] = self.sampling_frequency
         zarr_group.attrs["nbefore"] = self.nbefore
-        zarr_group.attrs["is_scaled"] = self.is_scaled
+        zarr_group.attrs["is_in_uV"] = self.is_in_uV
 
         if self.sparsity_mask is not None:
             zarr_group.create_dataset("sparsity_mask", data=self.sparsity_mask)
@@ -326,6 +357,9 @@ class Templates:
         """
         import zarr
 
+        from .core_tools import _check_zarr_write_is_supported
+
+        _check_zarr_write_is_supported()
         zarr_group = zarr.open_group(folder_path, mode="w")
 
         self.add_templates_to_zarr_group(zarr_group)
@@ -359,8 +393,12 @@ class Templates:
         sampling_frequency = zarr_group.attrs["sampling_frequency"]
         nbefore = zarr_group.attrs["nbefore"]
 
-        # TODO: Consider eliminating the True and make it required
-        is_scaled = zarr_group.attrs.get("is_scaled", True)
+        if "is_scaled" in zarr_group.attrs:
+            # prior to 0.103.0 "is_in_uV" was named "is_scaled", so for backward compatibility:
+            is_in_uV = zarr_group.attrs["is_scaled"]
+        else:
+            # TODO: Consider eliminating the True and make it required
+            is_in_uV = zarr_group.attrs.get("is_in_uV", True)
 
         sparsity_mask = None
         if "sparsity_mask" in zarr_group:
@@ -378,7 +416,7 @@ class Templates:
             channel_ids=channel_ids,
             unit_ids=unit_ids,
             probe=probe,
-            is_scaled=is_scaled,
+            is_in_uV=is_in_uV,
         )
 
     @staticmethod
@@ -453,3 +491,47 @@ class Templates:
         assert self.probe is not None, "Templates.get_channel_locations() needs a probe to be set"
         channel_locations = self.probe.contact_positions
         return channel_locations
+
+    def get_main_channels(
+        self,
+        peak_sign: Literal["neg", "both", "pos"] = "both",
+        peak_mode: Literal["extremum", "at_index", "peak_to_peak"] = "extremum",
+        outputs: Literal["index", "id"] = "index",
+        with_dict=False,
+    ):
+        """
+        Returns the main_channels of the Templates object.
+
+        Parameters
+        ----------
+        peak_sign :  "neg" | "pos" | "both", default: "both
+            Sign of the template to find extremum channels
+        peak_mode : "extremum" | "at_index" | "peak_to_peak", default: "extremum"
+            Where the amplitude is computed
+            * "extremum": take the peak value (max or min depending on `peak_sign`)
+            * "at_index": take value at `nbefore` index
+            * "peak_to_peak": take the peak-to-peak amplitude
+        outputs = "index" | "id", default: "index"
+            Return either the channel indices, or the channel ids
+        with_dict: bool, default: False
+            If False, returns just the channel informatiom. If True, returns a dict
+            with keys equal to the unit ids and values their channel information
+        """
+        from .template_tools import _get_main_channel_from_template_array
+
+        templates_array = self.get_dense_templates()
+        main_channel_indices = _get_main_channel_from_template_array(
+            templates_array, peak_mode, peak_sign, self.nbefore
+        )
+
+        if outputs == "index":
+            main_chans = main_channel_indices
+        elif outputs == "id":
+            main_chans = self.channel_ids[main_channel_indices]
+        else:
+            raise ValueError("wrong outputs")
+
+        if with_dict:
+            return dict(zip(self.unit_ids, main_chans))
+        else:
+            return main_chans

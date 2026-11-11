@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 from spikeinterface.core import BaseSorting, BaseSortingSegment
@@ -22,9 +20,7 @@ class TridesclousSortingExtractor(BaseSorting):
         Loaded data.
     """
 
-    mode = "folder"
     installation_mesg = "To use the TridesclousSortingExtractor install tridesclous: \n\n pip install tridesclous\n\n"  # error message when not installed
-    name = "tridesclous"
 
     def __init__(self, folder_path, chan_grp=None):
         try:
@@ -32,7 +28,6 @@ class TridesclousSortingExtractor(BaseSorting):
         except ImportError:
             raise ImportError(self.installation_mesg)
 
-        assert self.installed, self.installation_mesg
         tdc_folder = Path(folder_path)
 
         dataio = tdc.DataIO(str(tdc_folder))

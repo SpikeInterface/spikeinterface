@@ -1,7 +1,4 @@
-"""
-
-
-"""
+""" """
 
 import importlib.metadata
 

@@ -1,6 +1,6 @@
 from spikeinterface.core import NumpyRecording
 
-from spikeinterface.preprocessing import DirectionalDerivativeRecording, directional_derivative
+from spikeinterface.preprocessing import directional_derivative
 
 import numpy as np
 

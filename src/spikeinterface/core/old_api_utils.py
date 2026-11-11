@@ -1,9 +1,7 @@
-from __future__ import annotations
-
-from typing import Union
+import warnings
 
 import numpy as np
-import warnings
+
 from spikeinterface.core import BaseRecording, BaseSorting, BaseRecordingSegment, BaseSortingSegment
 
 
@@ -88,7 +86,7 @@ class NewToOldSorting:
         """
         return list(self._unit_map.keys())
 
-    def get_unit_spike_train(self, unit_id, start_frame=None, end_frame=None):
+    def get_unit_spike_train(self, unit_id, start_frame=None, end_frame=None) -> np.ndarray:
         """This function extracts spike frames from the specified unit.
         It will return spike frames from within three ranges:
 
@@ -122,7 +120,7 @@ class NewToOldSorting:
             unit_id=self._unit_map[unit_id], segment_index=0, start_frame=start_frame, end_frame=end_frame
         )
 
-    def get_units_spike_train(self, unit_ids=None, start_frame=None, end_frame=None):
+    def get_units_spike_train(self, unit_ids=None, start_frame=None, end_frame=None) -> list[np.ndarray]:
         """This function extracts spike frames from the specified units.
 
         Parameters
@@ -137,7 +135,7 @@ class NewToOldSorting:
 
         Returns
         -------
-        spike_train: numpy.ndarray
+        spike_train: list[numpy.ndarray]
             An 2D array containing all the frames for each spike in the
             specified units given the range of start and end frames
         """
@@ -146,7 +144,7 @@ class NewToOldSorting:
         spike_trains = [self.get_unit_spike_train(uid, start_frame, end_frame) for uid in unit_ids]
         return spike_trains
 
-    def get_sampling_frequency(self):
+    def get_sampling_frequency(self) -> float:
         """
         It returns the sampling frequency.
 
@@ -298,8 +296,8 @@ class OldToNewSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         return self._oldapi_sorting_extractor.get_unit_spike_train(
             unit_id=unit_id, start_frame=start_frame, end_frame=end_frame

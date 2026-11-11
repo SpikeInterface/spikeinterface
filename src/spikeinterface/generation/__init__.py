@@ -13,7 +13,10 @@ from .hybrid_tools import (
     scale_template_to_range,
     relocate_templates,
 )
-from .noise_tools import generate_noise
+from .noise_tools import generate_noise, NoiseGeneratorRecording, noise_generator_recording
+
+from .splitting_tools import split_sorting_by_amplitudes, split_sorting_by_times
+
 from .drifting_generator import (
     make_one_displacement_vector,
     generate_displacement_vector,
@@ -25,4 +28,22 @@ from .template_database import (
     fetch_templates_database_info,
     list_available_datasets_in_template_database,
     query_templates_from_database,
+)
+
+# expose the core generate functions
+from spikeinterface.core.generate import (
+    generate_recording,
+    generate_sorting,
+    generate_snippets,
+    generate_templates,
+    generate_recording_by_size,
+    generate_ground_truth_recording,
+    add_synchrony_to_sorting,
+    synthesize_random_firings,
+    inject_some_duplicate_units,
+    inject_some_split_units,
+    synthetize_spike_train_bad_isi,
+    MockRecording,
+    InjectTemplatesRecording,
+    inject_templates,
 )

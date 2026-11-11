@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +11,7 @@ class ALFSortingExtractor(BaseSorting):
 
     Parameters
     ----------
+
     folder_path : str or Path
         Path to the ALF folder.
     sampling_frequency : int, default: 30000
@@ -25,12 +24,11 @@ class ALFSortingExtractor(BaseSorting):
     """
 
     installation_mesg = "To use the ALF extractors, install ONE-api: \n\n pip install ONE-api\n\n"
-    name = "alf"
 
     def __init__(self, folder_path, sampling_frequency=30000):
         try:
             import one.alf.io as alfio
-        except ImportError as e:
+        except ImportError:
             raise ImportError(self.installation_mesg)
 
         self._folder_path = Path(folder_path)
@@ -43,7 +41,7 @@ class ALFSortingExtractor(BaseSorting):
         sorting_segment = ALFSortingSegment(spikes["clusters"], spikes["samples"])
         self.add_sorting_segment(sorting_segment)
         self.extra_requirements.append("ONE-api")
-        self._kwargs = {"folder_path": str(Path(folder_path).resolve()), "sampling_frequency": sampling_frequency}
+        self._kwargs = {"folder_path": str(Path(folder_path).absolute()), "sampling_frequency": sampling_frequency}
 
 
 class ALFSortingSegment(BaseSortingSegment):

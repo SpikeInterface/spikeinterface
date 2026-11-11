@@ -1,21 +1,84 @@
 import pytest
 import numpy as np
+import importlib.util
+
 
 from spikeinterface import NumpyRecording, get_random_data_chunks
 from probeinterface import generate_linear_probe
 
+from spikeinterface.generation import generate_recording
+
 from spikeinterface.core import generate_recording
-from spikeinterface.preprocessing import detect_bad_channels, highpass_filter
+from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.testing import check_recordings_equal
+from spikeinterface.preprocessing import detect_bad_channels, highpass_filter, detect_and_remove_bad_channels
+from spikeinterface.preprocessing.detect_bad_channels import DetectAndRemoveBadChannelsRecording
 
-try:
-    # WARNING : this is not this package https://pypi.org/project/neurodsp/
-    # BUT this one https://github.com/int-brain-lab/ibl-neuropixel
-    # pip install ibl-neuropixel
-    import neurodsp.voltage
-
+# WARNING : this is not this package https://pypi.org/project/neurodsp/
+# BUT this one https://github.com/int-brain-lab/ibl-neuropixel
+# pip install ibl-neuropixel
+# note the check needs to find package first before submodule otherwise the check will fail if the library
+# does not exist
+if importlib.util.find_spec("ibldsp") is not None and importlib.util.find_spec("ibldsp.voltage") is not None:
     HAVE_NPIX = True
-except:  # Catch relevant exception
+else:
     HAVE_NPIX = False
+
+
+def test_remove_bad_channel():
+    """
+    Generate a recording, then remove bad channels with a low noise threshold,
+    so that some units are removed. Then check that the new recording has none
+    of the bad channels still in it and that the one changed kwarg is successfully
+    propogated to the new recording.
+    """
+
+    recording = generate_recording(durations=[5, 6], seed=1205, num_channels=8)
+    recording.set_channel_offsets(0)
+    recording.set_channel_gains(1)
+
+    # set noisy_channel_threshold so that we do detect some bad channels
+    new_rec = detect_and_remove_bad_channels(recording=recording, noisy_channel_threshold=0, seed=1205)
+
+    # make sure they are removed
+    bad_channel_ids = new_rec._kwargs["bad_channel_ids"]
+    assert len(set(bad_channel_ids).intersection(new_rec.channel_ids)) == 0
+    # and the good ones are kept
+    good_channel_ids = recording.channel_ids[~np.isin(recording.channel_ids, bad_channel_ids)]
+    assert set(good_channel_ids) == set(new_rec.channel_ids)
+
+    # and that the kwarg is propagated to the kwargs of new_rec.
+    assert new_rec._kwargs["noisy_channel_threshold"] == 0
+
+    # now apply `detect_bad_channels` directly and see that the outputs matches
+    bad_channel_ids_from_function, channel_labels_from_function = detect_bad_channels(
+        recording, noisy_channel_threshold=0, seed=1205
+    )
+
+    assert np.all(new_rec._kwargs["bad_channel_ids"] == bad_channel_ids_from_function)
+    assert np.all(new_rec._kwargs["channel_labels"] == channel_labels_from_function)
+
+    new_rec_from_function = recording.remove_channels(remove_channel_ids=bad_channel_ids_from_function)
+
+    assert np.all(new_rec_from_function.channel_ids == new_rec.channel_ids)
+
+
+def test_detect_and_remove_bad_channels_parent_recording_from_dict():
+    """
+    `DetectAndRemoveBadChannelsRecording` inherits `ChannelSliceRecording.__init__`, which always
+    serializes the wrapped recording under the legacy `parent_recording` key in `_kwargs`.
+    `BaseExtractor.from_dict` must keep reconstructing it from that key even though `__init__`'s
+    first parameter is now named `recording`.
+    """
+    recording = generate_recording(durations=[5], seed=1205, num_channels=8)
+    recording.set_channel_offsets(0)
+    recording.set_channel_gains(1)
+
+    new_rec = DetectAndRemoveBadChannelsRecording(recording=recording, bad_channel_ids=[])
+    # We artificially rename 'recording' to 'parent_recording' in the kwargs to simulate legacy behavior
+    new_rec._kwargs["parent_recording"] = new_rec._kwargs.pop("recording")
+    reloaded = BaseExtractor.from_dict(new_rec.to_dict())
+    check_recordings_equal(new_rec, reloaded)
 
 
 def test_detect_bad_channels_std_mad():
@@ -38,7 +101,7 @@ def test_detect_bad_channels_std_mad():
 
     probe = generate_linear_probe(num_elec=num_channels)
     probe.set_device_channel_indices(np.arange(num_channels))
-    rec.set_probe(probe, in_place=True)
+    rec.set_probe(probe)
 
     bad_channels_std, bad_labels_std = detect_bad_channels(rec, method="std")
     bad_channels_mad, bad_labels_mad = detect_bad_channels(rec, method="std")
@@ -52,11 +115,102 @@ def test_detect_bad_channels_std_mad():
     # Check that the size of the segments os maintained after preprocessor
     assert np.array_equal(
         *([r.get_num_frames(x) for x in range(rec.get_num_segments())] for r in [rec, rec2])
-    ), "wrong lenght of resulting segments."
+    ), "wrong length of resulting segments."
     # Check that locations are mantained
     assert np.array_equal(
         rec.get_channel_locations()[[0, 2, 3]], rec2.get_channel_locations()
     ), "wrong channels locations."
+
+
+@pytest.mark.parametrize("pool_engine", ["thread", "process"])
+def test_detect_bad_channels_parallel(pool_engine):
+    num_channels = 16
+    sampling_frequency = 30000.0
+    rng = np.random.default_rng(0)
+    traces_list = [rng.standard_normal((int(sampling_frequency), num_channels)).astype("float32") for _ in range(2)]
+
+    # Inject dead channels: near-zero amplitude makes xcorr_neighbors << dead_channel_threshold (-0.5)
+    dead_channel_indices = [2, 7]
+    for traces in traces_list:
+        traces[:, dead_channel_indices] *= 1e-4
+
+    recording = NumpyRecording(traces_list, sampling_frequency)
+    recording.set_channel_gains(1)
+    recording.set_channel_offsets(0)
+    probe = generate_linear_probe(num_elec=num_channels)
+    probe.set_device_channel_indices(np.arange(num_channels))
+    recording.set_probe(probe)
+    recording.annotate(is_filtered=True)
+
+    method_kwargs = dict(
+        method="coherence+psd",
+        num_random_chunks=4,
+        chunk_duration_s=0.05,
+        seed=0,
+    )
+
+    expected_bad_channel_ids, expected_channel_labels = detect_bad_channels(recording, **method_kwargs)
+    assert np.any(expected_channel_labels != "good"), "Injected dead channels were not detected; test is not meaningful"
+
+    job_kwargs = dict(n_jobs=2, pool_engine=pool_engine, max_threads_per_worker=1)
+    if pool_engine == "process":
+        job_kwargs["mp_context"] = "spawn"
+
+    bad_channel_ids, channel_labels = detect_bad_channels(
+        recording,
+        **method_kwargs,
+        job_kwargs=job_kwargs,
+    )
+
+    np.testing.assert_array_equal(bad_channel_ids, expected_bad_channel_ids)
+    np.testing.assert_array_equal(channel_labels, expected_channel_labels)
+
+
+def test_detect_bad_channels_parallel_unfiltered_spawn():
+    """
+    generate_recording() marks its output as already filtered, so the parallel test above never
+    exercises the highpass_filter() wrapper that detect_bad_channels builds internally for an
+    unfiltered recording. Use a plain NumpyRecording (is_filtered() defaults to False) with a
+    spawned process pool, so that wrapper has to survive cross-process serialization.
+    Dead channels are injected (near-zero amplitude) so that the test exercises non-good-channel
+    paths, not just an all-good result.
+    """
+    num_channels = 16
+    sampling_frequency = 30000.0
+    rng = np.random.default_rng(0)
+    traces_list = [rng.standard_normal((int(sampling_frequency), num_channels)).astype("float32") for _ in range(2)]
+
+    # Inject dead channels: near-zero amplitude makes xcorr_neighbors << dead_channel_threshold (-0.5)
+    dead_channel_indices = [3, 10]
+    for traces in traces_list:
+        traces[:, dead_channel_indices] *= 1e-4
+
+    recording = NumpyRecording(traces_list, sampling_frequency)
+    recording.set_channel_gains(1)
+    recording.set_channel_offsets(0)
+    probe = generate_linear_probe(num_elec=num_channels)
+    probe.set_device_channel_indices(np.arange(num_channels))
+    recording.set_probe(probe)
+    assert not recording.is_filtered()
+
+    method_kwargs = dict(
+        method="coherence+psd",
+        num_random_chunks=4,
+        chunk_duration_s=0.05,
+        seed=0,
+    )
+
+    expected_bad_channel_ids, expected_channel_labels = detect_bad_channels(recording, **method_kwargs)
+    assert np.any(expected_channel_labels != "good"), "Injected dead channels were not detected; test is not meaningful"
+
+    bad_channel_ids, channel_labels = detect_bad_channels(
+        recording,
+        **method_kwargs,
+        job_kwargs=dict(n_jobs=2, pool_engine="process", mp_context="spawn", max_threads_per_worker=1),
+    )
+
+    np.testing.assert_array_equal(bad_channel_ids, expected_bad_channel_ids)
+    np.testing.assert_array_equal(channel_labels, expected_channel_labels)
 
 
 @pytest.mark.parametrize("outside_channels_location", ["bottom", "top", "both"])
@@ -83,7 +237,7 @@ def test_detect_bad_channels_extremes(outside_channels_location):
 
     probe = generate_linear_probe(num_elec=num_channels)
     probe.set_device_channel_indices(np.arange(num_channels))
-    rec.set_probe(probe, in_place=True)
+    rec.set_probe(probe)
 
     bad_channel_ids, bad_labels = detect_bad_channels(
         rec, method="coherence+psd", outside_channels_location=outside_channels_location
@@ -115,6 +269,8 @@ def test_detect_bad_channels_ibl(num_channels):
     however for testing it is necssary. So before calling the IBL function
     we need to rescale the traces to Volts.
     """
+    import ibldsp.voltage
+
     # download_path = si.download_dataset(remote_path='spikeglx/Noise4Sam_g0')
     # recording = se.read_spikeglx(download_path, stream_id="imec0.ap")
     recording = generate_recording(num_channels=num_channels, durations=[1])
@@ -124,9 +280,8 @@ def test_detect_bad_channels_ibl(num_channels):
     recording.set_channel_offsets(0)
 
     # Generate random channels to be dead / noisy
-    is_bad = np.random.choice(
-        np.arange(num_channels - 3), size=np.random.randint(5, int(num_channels * 0.25)), replace=False
-    )
+    rng = np.random.default_rng(seed=None)
+    is_bad = rng.choice(np.arange(num_channels - 3), size=np.random.randint(5, int(num_channels * 0.25)), replace=False)
     is_noisy, is_dead = np.array_split(is_bad, 2)
     not_noisy = np.delete(np.arange(num_channels), is_noisy)
 
@@ -150,7 +305,7 @@ def test_detect_bad_channels_ibl(num_channels):
         chunk_size=int(0.3 * recording.sampling_frequency),
         seed=0,
         concatenated=False,
-        return_scaled=True,
+        return_in_uV=True,
     )
 
     random_data = get_random_data_chunks(recording, **random_chunk_kwargs)
@@ -158,7 +313,7 @@ def test_detect_bad_channels_ibl(num_channels):
     for i, random_chunk in enumerate(random_data):
         traces_uV = random_chunk.T
         traces_V = traces_uV * 1e-6
-        channel_flags, _ = neurodsp.voltage.detect_bad_channels(
+        channel_flags, _ = ibldsp.voltage.detect_bad_channels(
             traces_V,
             recording.get_sampling_frequency(),
             psd_hf_threshold=psd_cutoff,
@@ -166,9 +321,9 @@ def test_detect_bad_channels_ibl(num_channels):
         channel_flags_ibl[:, i] = channel_flags
 
     # Take the mode of the chunk estimates as final result. Convert to binary good / bad channel output.
-    import scipy.stats
+    from scipy.stats import mode
 
-    bad_channel_labels_ibl, _ = scipy.stats.mode(channel_flags_ibl, axis=1, keepdims=False)
+    bad_channel_labels_ibl, _ = mode(channel_flags_ibl, axis=1, keepdims=False)
 
     # Compare
     channels_labeled_as_good = bad_channel_labels_si == "good"
@@ -186,8 +341,9 @@ def test_detect_bad_channels_ibl(num_channels):
     assert np.array_equal(recording.ids_to_indices(bad_channel_ids), np.where(bad_channel_labels_ibl != 0)[0])
 
     # Test on randomly sorted channels
-    recording_scrambled = recording.channel_slice(
-        np.random.choice(recording.channel_ids, len(recording.channel_ids), replace=False)
+    rng = np.random.default_rng(seed=None)
+    recording_scrambled = recording.select_channels(
+        rng.choice(recording.channel_ids, len(recording.channel_ids), replace=False)
     )
     bad_channel_ids_scrambled, bad_channel_label_scrambled = detect_bad_channels(
         recording_scrambled,
@@ -206,7 +362,7 @@ def add_noisy_and_dead_channels(recording, is_dead, is_noisy, not_noisy):
     psd_cutoff = reduce_high_freq_power_in_non_noisy_channels(recording, is_noisy, not_noisy)
     recording = add_dead_channels(recording, is_dead)
     # Note this will reduce the PSD for these channels but
-    # as noisy have higher freq > 80% nyqist this does not matter
+    # as noisy have higher freq > 80% nyquist this does not matter
 
     return psd_cutoff
 
@@ -216,9 +372,9 @@ def reduce_high_freq_power_in_non_noisy_channels(recording, is_noisy, not_noisy)
     Reduce power in >80% Nyquist for all channels except noisy channels to 20% of original.
     Return the psd_cutoff in uV^2/Hz that separates the good at noisy channels.
     """
-    import scipy.signal
+    from scipy.signal import welch
 
-    for iseg, __ in enumerate(recording._recording_segments):
+    for iseg, __ in enumerate(recording.segments):
         data = recording.get_traces(iseg).T
         num_samples = recording.get_num_samples(iseg)
 
@@ -230,7 +386,7 @@ def reduce_high_freq_power_in_non_noisy_channels(recording, is_noisy, not_noisy)
         data[not_noisy] = np.fft.ifft(np.fft.ifftshift(D))
 
     # calculate the psd_cutoff (which separates noisy and non-noisy) ad-hoc from the last segment
-    fscale, psd = scipy.signal.welch(data, fs=recording.get_sampling_frequency())
+    fscale, psd = welch(data, fs=recording.get_sampling_frequency())
     psd_cutoff = np.mean([np.mean(psd[not_noisy, -50:]), np.mean(psd[is_noisy, -50:])])
     return psd_cutoff
 
@@ -247,7 +403,7 @@ def add_dead_channels(recording, is_dead):
         data[:, is_dead] = np.random.normal(
             mean, std * 0.1, size=(is_dead.size, recording.get_num_samples(segment_index))
         ).T
-        recording._recording_segments[segment_index]._traces = data
+        recording.segments[segment_index]._traces = data
 
 
 if __name__ == "__main__":

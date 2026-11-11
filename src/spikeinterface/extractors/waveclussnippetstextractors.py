@@ -1,16 +1,12 @@
-from __future__ import annotations
-
 from pathlib import Path
 import numpy as np
 
 from spikeinterface.core import BaseSnippets, BaseSnippetsSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from .matlabhelpers import MatlabHelper
-from typing import List, Union
 
 
 class WaveClusSnippetsExtractor(MatlabHelper, BaseSnippets):
-    name = "waveclus"
 
     def __init__(self, file_path):
         file_path = Path(file_path) if isinstance(file_path, str) else file_path
@@ -91,7 +87,7 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
     def get_snippets(
         self,
         indices,
-        channel_indices: Union[List, None] = None,
+        channel_indices: list | None = None,
     ) -> np.ndarray:
         """
         Return the snippets, optionally for a subset of samples and/or channels
@@ -100,7 +96,7 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
         ----------
         indices: list[int]
             Indices of the snippets to return
-        channel_indices: Union[list, None], default: None
+        channel_indices: list | None, default: None
             Indices of channels to return, or all channels if None
 
         Returns
@@ -115,15 +111,15 @@ class WaveClustSnippetsSegment(BaseSnippetsSegment):
     def get_num_snippets(self):
         return self._spikestimes.shape[0]
 
-    def frames_to_indices(self, start_frame: Union[int, None] = None, end_frame: Union[int, None] = None):
+    def frames_to_indices(self, start_frame: int | None = None, end_frame: int | None = None):
         """
         Return the slice of snippets
 
         Parameters
         ----------
-        start_frame: Union[int, None], default: None
+        start_frame: int | None, default: None
             start sample index, or zero if Non
-        end_frame: Union[int, None], default: None
+        end_frame: int | None, default: None
             end_sample, or number of samples if None
 
         Returns

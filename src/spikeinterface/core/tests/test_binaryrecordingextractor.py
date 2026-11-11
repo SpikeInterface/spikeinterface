@@ -1,8 +1,12 @@
 import pytest
 import numpy as np
+from pathlib import Path
 
-from spikeinterface.core import BinaryRecordingExtractor
+import spikeinterface
+from spikeinterface.core import BinaryRecordingExtractor, MockRecording
+from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
+from spikeinterface.core.core_tools import measure_memory_allocation
 
 
 def test_BinaryRecordingExtractor(create_cache_folder):
@@ -51,14 +55,100 @@ def test_round_trip(tmp_path):
         dtype=dtype,
     )
 
+    # Test for full traces
     assert np.allclose(recording.get_traces(), binary_recorder.get_traces())
 
-    start_frame = 200
-    end_frame = 500
+    # Ttest for a sub-set of the traces
+    start_frame = 20
+    end_frame = 40
     smaller_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
     binary_smaller_traces = binary_recorder.get_traces(start_frame=start_frame, end_frame=end_frame)
 
     np.allclose(smaller_traces, binary_smaller_traces)
+
+
+@pytest.fixture(scope="module")
+def folder_with_binary_files(tmpdir_factory):
+    tmp_path = Path(tmpdir_factory.mktemp("spike_interface_test"))
+    folder = tmp_path / "test_binary_recording"
+    num_channels = 32
+    sampling_frequency = 30_000.0
+    dtype = "float32"
+    recording = MockRecording(
+        durations=[1.0],
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+        dtype=dtype,
+    )
+    dtype = recording.get_dtype()
+    recording.save(folder=folder, overwrite=True)
+
+    return folder
+
+
+def test_sequential_reading_of_small_traces(folder_with_binary_files):
+    # Test that memmap is read correctly when pointing to specific frames
+    folder = folder_with_binary_files
+    num_channels = 32
+    sampling_frequency = 30_000.0
+    dtype = "float32"
+
+    file_paths = [folder / "traces_cached_seg0.raw"]
+    recording = BinaryRecordingExtractor(
+        num_channels=num_channels,
+        file_paths=file_paths,
+        sampling_frequency=sampling_frequency,
+        dtype=dtype,
+    )
+
+    full_traces = recording.get_traces()
+
+    # Test for a sub-set of the traces
+    start_frame = 10
+    end_frame = 15
+    small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = full_traces[start_frame:end_frame, :]
+    assert np.allclose(small_traces, expected_traces)
+
+    # Test for a sub-set of the traces
+    start_frame = 1000
+    end_frame = 1100
+    small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = full_traces[start_frame:end_frame, :]
+    assert np.allclose(small_traces, expected_traces)
+
+    # Test for a sub-set of the traces
+    start_frame = 10_000
+    end_frame = 11_000
+    small_traces = recording.get_traces(start_frame=start_frame, end_frame=end_frame)
+    expected_traces = full_traces[start_frame:end_frame, :]
+    assert np.allclose(small_traces, expected_traces)
+
+
+def test_num_chan_backward_compatibility_within_same_version(tmp_path):
+    # A dict written by the same major.minor can still carry a kwarg that the current
+    # constructor no longer accepts, so the repair hook must run whatever version it records.
+    num_channels = 3
+    num_samples = 30
+    sampling_frequency = 10_000.0
+    dtype = "int16"
+
+    file_path = tmp_path / "test_num_chan_backward_compatibility.raw"
+    np.memmap(file_path, dtype=dtype, mode="w+", shape=(num_samples, num_channels))
+
+    recording = BinaryRecordingExtractor(
+        file_paths=file_path,
+        sampling_frequency=sampling_frequency,
+        num_channels=num_channels,
+        dtype=dtype,
+    )
+
+    dictionary = recording.to_dict()
+    assert dictionary["version"] == spikeinterface.__version__
+    dictionary["kwargs"]["num_chan"] = dictionary["kwargs"].pop("num_channels")
+
+    loaded_recording = BaseExtractor.from_dict(dictionary)
+    assert loaded_recording.get_num_channels() == num_channels
 
 
 if __name__ == "__main__":

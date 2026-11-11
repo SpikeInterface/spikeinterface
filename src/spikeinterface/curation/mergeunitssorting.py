@@ -1,9 +1,10 @@
-from __future__ import annotations
-from typing import Union
+from copy import deepcopy
+
 import numpy as np
+
 from spikeinterface.core.basesorting import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
-from copy import deepcopy
+from spikeinterface.core.sorting_tools import generate_unit_ids_for_merge_group
 
 
 class MergeUnitsSorting(BaseSorting):
@@ -12,7 +13,7 @@ class MergeUnitsSorting(BaseSorting):
 
     Parameters
     ----------
-    sorting: BaseSorting
+    sorting : BaseSorting
         The sorting object
     units_to_merge : list/tuple of lists/tuples
         A list of lists for every merge group. Each element needs to have at least two elements (two units to merge),
@@ -44,34 +45,14 @@ class MergeUnitsSorting(BaseSorting):
         parents_unit_ids = sorting.unit_ids
         sampling_frequency = sorting.get_sampling_frequency()
 
+        new_unit_ids = generate_unit_ids_for_merge_group(
+            sorting.unit_ids, units_to_merge, new_unit_ids=new_unit_ids, new_id_strategy="append"
+        )
+
         all_removed_ids = []
         for ids in units_to_merge:
             all_removed_ids.extend(ids)
         keep_unit_ids = [u for u in parents_unit_ids if u not in all_removed_ids]
-
-        if new_unit_ids is None:
-            dtype = parents_unit_ids.dtype
-            # select new_unit_ids greater that the max id, event greater than the numerical str ids
-            if np.issubdtype(dtype, np.character):
-                # dtype str
-                if all(p.isdigit() for p in parents_unit_ids):
-                    # All str are digit : we can generate a max
-                    m = max(int(p) for p in parents_unit_ids) + 1
-                    new_unit_ids = [str(m + i) for i in range(num_merge)]
-                else:
-                    # we cannot automatically find new names
-                    new_unit_ids = [f"merge{i}" for i in range(num_merge)]
-                    if np.any(np.isin(new_unit_ids, keep_unit_ids)):
-                        raise ValueError(
-                            "Unable to find 'new_unit_ids' because it is a string and parents "
-                            "already contain merges. Pass a list of 'new_unit_ids' as an argument."
-                        )
-            else:
-                # dtype int
-                new_unit_ids = list(max(parents_unit_ids) + 1 + np.arange(num_merge, dtype=dtype))
-        else:
-            if np.any(np.isin(new_unit_ids, keep_unit_ids)):
-                raise ValueError("'new_unit_ids' already exist in the sorting.unit_ids. Provide new ones")
 
         assert len(new_unit_ids) == num_merge, "new_unit_ids must have the same size as units_to_merge"
 
@@ -81,7 +62,7 @@ class MergeUnitsSorting(BaseSorting):
         assert properties_policy in ("keep", "remove"), "properties_policy must be " "keep" " or " "remove" ""
 
         # new units are put at the end
-        unit_ids = keep_unit_ids + new_unit_ids
+        unit_ids = keep_unit_ids + list(new_unit_ids)
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
         # assert all(np.isin(keep_unit_ids, self.unit_ids)), 'new_unit_id should have a compatible format with the parent ids'
 
@@ -89,7 +70,7 @@ class MergeUnitsSorting(BaseSorting):
             rm_dup_delta = None
         else:
             rm_dup_delta = int(delta_time_ms / 1000 * sampling_frequency)
-        for parent_segment in self._parent_sorting._sorting_segments:
+        for parent_segment in self._parent_sorting.segments:
             sub_segment = MergeUnitsSortingSegment(parent_segment, units_to_merge, new_unit_ids, rm_dup_delta)
             self.add_sorting_segment(sub_segment)
 
@@ -168,8 +149,8 @@ class MergeUnitsSortingSegment(BaseSortingSegment):
     def get_unit_spike_train(
         self,
         unit_id,
-        start_frame: Union[int, None] = None,
-        end_frame: Union[int, None] = None,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
     ) -> np.ndarray:
         if unit_id in self.new_unit_ids:
             ind = self.new_unit_ids.index(unit_id)
@@ -180,7 +161,7 @@ class MergeUnitsSortingSegment(BaseSortingSegment):
             else:
                 start_i = 0
             if end_frame is not None:
-                end_i = np.searchsorted(spike_times, start_frame, side="right")
+                end_i = np.searchsorted(spike_times, end_frame, side="right")
             else:
                 end_i = len(spike_times)
             return spike_times[start_i:end_i]

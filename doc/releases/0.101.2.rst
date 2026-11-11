@@ -1,0 +1,66 @@
+.. _release0.101.2:
+
+SpikeInterface 0.101.2 release notes
+------------------------------------
+
+4th October 2024
+
+Minor release with bug fixes
+
+core:
+
+* Fix `random_spikes_selection()` (#3456)
+* Expose `backend_options` at the analyzer level to set `storage_options` and `saving_options` (#3446)
+* Avoid warnings in `SortingAnalyzer` (#3455)
+* Fix `reset_global_job_kwargs` (#3452)
+* Allow to save recordingless analyzer as (#3443)
+* Fix compute analyzer pipeline with tmp recording (#3433)
+* Fix bug in saving zarr recordings (#3432)
+* Set `run_info` to `None` for `load_waveforms` (#3430)
+* Fix integer overflow in parallel computing (#3426)
+* Refactor `pandas` save load and `convert_dtypes` (#3412)
+* Add spike-train based lazy `SortingGenerator` (#2227)
+
+
+extractors:
+
+* Improve IBL recording extractors by PID (#3449)
+
+sorters:
+
+* Get default encoding for `Popen` (#3439)
+
+postprocessing:
+
+* Add `max_threads_per_process` and `mp_context` to pca by channel computation and PCA metrics (#3434)
+
+widgets:
+
+* Fix metrics widgets for convert_dtypes (#3417)
+* Fix plot motion for multi-segment (#3414)
+
+motion correction:
+
+* Auto-cast recording to float prior to interpolation (#3415)
+
+documentation:
+
+* Add docstring for `generate_unit_locations`  (#3418)
+* Add `get_channel_locations` to the base recording API (#3403)
+
+continuous integration:
+
+* Enable testing arm64 Mac architecture in the CI (#3422)
+* Add kachery_zone secret (#3416)
+
+testing:
+
+* Relax causal filter tests (#3445)
+
+Contributors:
+
+* @alejoe91
+* @h-mayorquin
+* @jiumao2
+* @samuelgarcia
+* @zm711

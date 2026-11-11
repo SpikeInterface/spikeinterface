@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from warnings import warn
 
@@ -11,7 +9,7 @@ from .unit_templates import UnitTemplatesWidget
 
 from .utils import get_some_colors
 
-from ..core.sortinganalyzer import SortingAnalyzer
+from spikeinterface.core.sortinganalyzer import SortingAnalyzer
 
 
 class PotentialMergesWidget(BaseWidget):
@@ -23,7 +21,7 @@ class PotentialMergesWidget(BaseWidget):
     sorting_analyzer : SortingAnalyzer
         The input sorting analyzer
     potential_merges : list of lists or tuples
-        List of potential merges (see `spikeinterface.curation.get_potential_auto_merges`)
+        List of potential merges (see `spikeinterface.curation.compute_merge_unit_groups`)
     segment_index : int
         The segment index to display
     max_spike_samples : int or None, default: None

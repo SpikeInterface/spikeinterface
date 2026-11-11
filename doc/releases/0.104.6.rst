@@ -1,0 +1,16 @@
+.. _release0.104.6:
+
+SpikeInterface 0.104.6 release notes
+------------------------------------
+
+June 25th 2026
+
+Minor release with bug fixes to make release compatible with NEO 0.14.5
+
+extractors:
+
+* Remove load sync channel (#4466)
+
+Contributors:
+
+* @h-mayorquin

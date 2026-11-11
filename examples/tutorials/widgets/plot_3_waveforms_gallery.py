@@ -1,23 +1,20 @@
 """
-Waveforms Widgets Gallery
-=========================
+SortingAnalyzer Widgets Gallery
+===============================
 
-Here is a gallery of all the available widgets using a pair of RecordingExtractor-SortingExtractor objects.
+Here is a gallery of all the available widgets using SortingAnalyzer objects.
 """
 
 import matplotlib.pyplot as plt
 
 import spikeinterface as si
 import spikeinterface.extractors as se
-import spikeinterface.postprocessing as spost
 import spikeinterface.widgets as sw
 
 ##############################################################################
-# First, let's download a simulated dataset
-#  from the repo 'https://gin.g-node.org/NeuralEnsemble/ephy_testing_data'
+# First, let's generate a simulated dataset
 
-local_path = si.download_dataset(remote_path="mearec/mearec_test_10s.h5")
-recording, sorting = se.read_mearec(local_path)
+recording, sorting = si.generate_ground_truth_recording()
 print(recording)
 print(sorting)
 

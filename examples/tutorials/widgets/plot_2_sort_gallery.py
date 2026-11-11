@@ -31,14 +31,14 @@ w_isi = sw.plot_isi_distribution(sorting, window_ms=150.0, bin_ms=5.0, figsize=(
 # plot_autocorrelograms()
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 
-w_ach = sw.plot_autocorrelograms(sorting, window_ms=150.0, bin_ms=5.0, unit_ids=[1, 2, 5])
+w_ach = sw.plot_autocorrelograms(sorting, window_ms=150.0, bin_ms=5.0, unit_ids=['1', '2', '5'])
 
 ##############################################################################
 # plot_crosscorrelograms()
 # ~~~~~~~~~~~~~~~~~~~~~~~~
 
 
-w_cch = sw.plot_crosscorrelograms(sorting, window_ms=150.0, bin_ms=5.0, unit_ids=[1, 2, 5])
+w_cch = sw.plot_crosscorrelograms(sorting, window_ms=150.0, bin_ms=5.0, unit_ids=['1', '2', '5'])
 
 plt.show()
 

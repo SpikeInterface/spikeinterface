@@ -1,22 +1,16 @@
-import pytest
-from pathlib import Path
-import shutil
-
-from spikeinterface import set_global_tmp_folder, NumpyRecording
-from spikeinterface.core import generate_recording
-
-from spikeinterface.preprocessing import unsigned_to_signed
-
 import numpy as np
+
+from spikeinterface import NumpyRecording
+from spikeinterface.preprocessing import unsigned_to_signed
 
 
 def test_unsigned_to_signed():
-    rng = np.random.RandomState(0)
-    traces = rng.rand(10000, 4) * 100 + 2**15
+    rng = np.random.default_rng(0)
+    traces = rng.uniform(size=(10000, 4)) * 100 + 2**15
     traces_uint16 = traces.astype("uint16")
-    traces = rng.rand(10000, 4) * 100 + 2**31
+    traces = rng.uniform(size=(10000, 4)) * 100 + 2**31
     traces_uint32 = traces.astype("uint32")
-    traces = rng.rand(10000, 4) * 100 + 2**11
+    traces = rng.uniform(size=(10000, 4)) * 100 + 2**11
     traces_uint16_12bits = traces.astype("uint16")
     rec_uint16 = NumpyRecording(traces_uint16, sampling_frequency=30000)
     rec_uint32 = NumpyRecording(traces_uint32, sampling_frequency=30000)

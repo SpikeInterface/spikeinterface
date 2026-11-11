@@ -1,22 +1,26 @@
-from __future__ import annotations
-
 from pathlib import Path
 import platform
 import os
 import random
 import string
+import warnings
 
 # TODO move this inside functions
 
 
-from spikeinterface.core.core_tools import recursive_path_modifier, _get_paths_list
+from spikeinterface.core.core_tools import recursive_path_modifier, _get_paths_list, is_path_remote
 
 
 def find_recording_folders(d):
     """Finds all recording folders 'paths' in a dict"""
 
     path_list = _get_paths_list(d=d)
-    folders_to_mount = [Path(p).resolve().parent for p in path_list]
+    # Remote paths (URLs) are read over the network from inside the container, so there is nothing
+    # to mount for them.
+    local_path_list = [p for p in path_list if not is_path_remote(p)]
+    folders_to_mount = [Path(p).resolve().parent for p in local_path_list]
+    if len(folders_to_mount) == 0:
+        return []
 
     try:  # this will fail if on different drives (Windows)
         base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
@@ -55,16 +59,16 @@ class ContainerClient:
         """
         Parameters
         ----------
-        mode: "docker" | "singularity"
+        mode : "docker" | "singularity"
             The container mode
-        container_image: str
+        container_image : str
             container image name and tag
-        volumes: dict
+        volumes : dict
             dict of volumes to bind
-        py_user_base: str
+        py_user_base : str
             Python user base folder to set as PYTHONUSERBASE env var in Singularity mode
             Prevents from overwriting user's packages when running pip install
-        extra_kwargs: dict
+        extra_kwargs : dict
             Extra kwargs to start container
         """
         assert mode in ("docker", "singularity")
@@ -99,13 +103,13 @@ class ContainerClient:
                 singularity_image = sif_file
             else:
 
-                docker_image = self._get_docker_image(container_image)
+                docker_image = Client.load("docker://" + container_image)
                 if docker_image and len(docker_image.tags) > 0:
                     tag = docker_image.tags[0]
-                    print(f"Building singularity image from local docker image: {tag}")
+                    warnings.warn(f"Building singularity image from local docker image: {tag}")
                     singularity_image = Client.build(f"docker-daemon://{tag}", sif_file, sudo=False)
                 if not singularity_image:
-                    print(f"Singularity: pulling image {container_image}")
+                    warnings.warn(f"Singularity: pulling image {container_image}")
                     singularity_image = Client.pull(f"docker://{container_image}")
 
             if not Path(singularity_image).exists():
@@ -175,33 +179,33 @@ def install_package_in_container(
     Install a package in a container with different modes:
 
     * pypi: pip install package_name
-    * github: pip install {github_url}/archive/{tag/version}.tar.gz#egg=package_name
+    * github: pip install "package_name @ {github_url}/archive/{tag/version}.tar.gz"
     * folder: pip install folder
 
     Parameters
     ----------
-    container_client: ContainerClient
+    container_client : ContainerClient
         The container client
-    package_name: str
+    package_name : str
         The package name
-    installation_mode: str
+    installation_mode : str
         The installation mode
-    extra: str
+    extra : str
         Extra pip install arguments, e.g. [full]
-    version: str
+    version : str
         The package version to install
-    tag: str
+    tag : str
         The github tag to install
-    github_url: str
+    github_url : str
         The github url to install (needed for github mode)
-    container_folder_source: str
+    container_folder_source : str
         The container folder source (needed for folder mode)
-    verbose: bool
+    verbose : bool
         If True, print output of pip install command
 
     Returns
     -------
-    res_output: str
+    res_output : str
         The output of the pip install command
     """
     assert installation_mode in ("pypi", "github", "folder")
@@ -236,9 +240,17 @@ def install_package_in_container(
         if github_url is None:
             github_url = "https://github.com/SpikeInterface/spikeinterface"
 
-        cmd = f"pip install --user --upgrade --no-input {github_url}/archive/{tag_or_version}.tar.gz#egg={package_name}"
+        pkg = package_name
         if extra is not None:
-            cmd += f"{extra}"
+            pkg += extra
+        cmd = [
+            "pip",
+            "install",
+            "--user",
+            "--upgrade",
+            "--no-input",
+            f"{pkg} @ {github_url}/archive/{tag_or_version}.tar.gz",
+        ]
         res_output = container_client.run_command(cmd)
 
     elif installation_mode == "folder":
@@ -262,8 +274,10 @@ def install_package_in_container(
         if extra is not None:
             cmd += f"{extra}"
         res_output = container_client.run_command(cmd)
-
     else:
         raise ValueError(f"install_package_incontainer, wrong installation_mode={installation_mode}")
+
+    if isinstance(res_output, str) and "ERROR" in res_output.upper():
+        warnings.warn(f"pip install of {package_name} in container may have failed. " f"pip output:\n{res_output}")
 
     return res_output
