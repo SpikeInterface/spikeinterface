@@ -331,6 +331,7 @@ def align_sessions_after_motion_correction(
     if align_sessions_kwargs is None:
         align_sessions_kwargs = {}
     else:
+        align_sessions_kwargs = copy.deepcopy(align_sessions_kwargs)
         # If motion correction was nonrigid, we must use the same settings for
         # inter-session alignment, or we will not be able to add the nonrigid
         # shifts together.
@@ -353,7 +354,6 @@ def align_sessions_after_motion_correction(
                     if key in non_rigid_window_kwargs:
                         non_rigid_window_kwargs[key] = value
 
-                align_sessions_kwargs = copy.deepcopy(align_sessions_kwargs)
                 align_sessions_kwargs["non_rigid_window_kwargs"] = non_rigid_window_kwargs
 
     if "interpolate_motion_kwargs" in align_sessions_kwargs:

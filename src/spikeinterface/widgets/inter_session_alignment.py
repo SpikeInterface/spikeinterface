@@ -278,6 +278,7 @@ class ActivityHistogram1DWidget(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         from spikeinterface.widgets.utils_matplotlib import make_mpl_figure
+        from matplotlib.colors import is_color_like
 
         dp = to_attr(data_plot)
 
@@ -294,7 +295,7 @@ class ActivityHistogram1DWidget(BaseWidget):
 
         # If passed parameters are not unique across plots, then
         # create as lists to set them for all plots
-        if isinstance(colors, int) or colors is None:
+        if colors is None or is_color_like(colors):
             colors = [colors] * num_histograms
 
         if not isinstance(linewidths, (list, tuple)):
