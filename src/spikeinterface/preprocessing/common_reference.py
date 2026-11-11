@@ -9,6 +9,7 @@ from spikeinterface.core import get_closest_channels
 from spikeinterface.core.baserecording import BaseRecording
 
 from .filter import fix_dtype
+from ._row_median import row_median
 
 
 class CommonReferenceRecording(BasePreprocessor):
@@ -244,7 +245,7 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.local_kernel = local_kernel
         self.temp = None
         self.dtype = dtype
-        self.operator_func = np.mean if self.operator == "average" else np.median
+        self.operator_func = np.mean if self.operator == "average" else _median
 
     def get_traces(self, start_frame, end_frame, channel_indices):
         # Let's do the case with group_indices equal None as that is easy
@@ -341,6 +342,12 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
                 selected_channels.append(selected_indices)
                 group_indices.append(group_index)
         return zip(group_indices, selected_channels, group_channels)
+
+
+def _median(traces, axis, keepdims=False):
+    assert axis == 1
+    median = row_median(traces)
+    return median if keepdims else median[:, 0]
 
 
 common_reference = define_function_handling_dict_from_class(
