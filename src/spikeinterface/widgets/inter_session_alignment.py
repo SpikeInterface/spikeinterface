@@ -385,7 +385,8 @@ class ActivityHistogram2DWidget(BaseWidget):
 
         # Show 8 (arbitrary numbers) ticks on the spatial bin axis
         bin_centers = dp.spatial_bin_centers
-        divisor = int(bin_centers.size // 8)
+        # Histograms with fewer than eight bins still need a nonzero slice step.
+        divisor = max(1, bin_centers.size // 8)
         xlabels = bin_centers[::divisor]
 
         for idx in range(num_sessions):
