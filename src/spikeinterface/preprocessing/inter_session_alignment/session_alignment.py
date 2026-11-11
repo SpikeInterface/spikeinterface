@@ -688,12 +688,10 @@ def _create_motion_recordings(
                 recording,
                 motion,
                 interpolation_time_bin_centers_s=motion.temporal_bins_s,
-                interpolation_time_bin_edges_s=[np.array(recording.get_times()[0], recording.get_times()[-1])],
+                interpolation_time_bin_edges_s=[np.array([recording.get_times()[0], recording.get_times()[-1]])],
                 **interpolate_motion_kwargs,
             )
-            corrected_recording = corrected_recording.set_probe(
-                recording.get_probe()
-            )  # TODO: if this works, might need to do above
+            corrected_recording.set_probe(recording.get_probe())
 
         corrected_recordings_list.append(corrected_recording)
 
