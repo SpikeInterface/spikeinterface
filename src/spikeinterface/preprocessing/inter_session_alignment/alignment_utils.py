@@ -354,12 +354,10 @@ def compute_histogram_crosscorrelation(
 
             shift_matrix[i, j, :] = shift
 
-    # As xcorr shifts are symmetric, the shift matrix is skew symmetric, so fill
-    # the (empty) lower triangular with the negative (already computed) upper triangular to save computation
-    for k in range(shift_matrix.shape[2]):
-        lower_i, lower_j = np.tril_indices_from(shift_matrix[:, :, k], k=-1)
-        upper_i, upper_j = np.triu_indices_from(shift_matrix[:, :, k], k=1)
-        shift_matrix[lower_i, lower_j, k] = shift_matrix[upper_i, upper_j, k] * -1
+    # Reversing a session pair reverses its shift, so fill the lower triangle
+    # from the transposed upper triangle for every spatial window.
+    i, j = np.tril_indices(shift_matrix.shape[0], k=-1)
+    shift_matrix[i, j, :] = -shift_matrix[j, i, :]
 
     return shift_matrix, xcorr_matrix
 

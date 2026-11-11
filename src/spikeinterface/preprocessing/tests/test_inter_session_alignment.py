@@ -651,6 +651,33 @@ class TestInterSessionAlignment:
         else:
             assert xcorr_matrix_unsmoothed.shape[1] == num_shifts
 
+    def test_compute_histogram_crosscorrelation_multiple_sessions(self):
+        # Distinct offsets expose incorrect pairing of upper/lower triangular indices.
+        offsets = np.array([0, 1, 4, 9, 16, 25])
+        histograms = np.zeros((offsets.size, 128))
+        histograms[np.arange(offsets.size), 32 + offsets] = 1
+        histograms[np.arange(offsets.size), 96 + offsets] = 1
+        windows = np.zeros((2, 128))
+        windows[0, :64] = 1
+        windows[1, 64:] = 1
+
+        shifts_matrix, _ = alignment_utils.compute_histogram_crosscorrelation(
+            histograms,
+            non_rigid_windows=windows,
+            num_shifts=30,
+            interpolate=False,
+            interp_factor=1,
+            kriging_sigma=0.2,
+            kriging_p=2,
+            kriging_d=2,
+            smoothing_sigma_bin=None,
+            smoothing_sigma_window=None,
+            min_crosscorr_threshold=0.001,
+        )
+
+        expected = offsets[:, None] - offsets[None, :]
+        np.testing.assert_array_equal(shifts_matrix, np.repeat(expected[:, :, None], 2, axis=2))
+
     @pytest.mark.parametrize("histogram_mode", ["1d", "2d"])
     def test_compute_histogram_crosscorrelation_nonrigid(self, histogram_mode):
         """ """
