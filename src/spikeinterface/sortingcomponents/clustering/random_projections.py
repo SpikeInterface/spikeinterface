@@ -15,7 +15,7 @@ from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.waveform_tools import estimate_templates
 from spikeinterface.sortingcomponents.clustering.merging_tools import merge_peak_labels_from_templates
-from spikeinterface.sortingcomponents.waveforms.savgol_denoiser import SavGolDenoiser
+from spikeinterface.sortingcomponents.waveforms.denoising.savgol_denoiser import SavGolDenoiser
 from spikeinterface.sortingcomponents.waveforms.features_from_peaks import RandomProjectionsFeature
 from spikeinterface.core.template import Templates
 from spikeinterface.core.node_pipeline import (
