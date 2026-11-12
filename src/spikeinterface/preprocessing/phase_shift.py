@@ -5,8 +5,10 @@ import numpy as np
 from spikeinterface.core.core_tools import define_function_handling_dict_from_class
 
 from spikeinterface.core import get_chunk_with_margin
+from spikeinterface.core.time_series_tools import _taper_margins
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from .filter import NUM_CHANNELS_PER_BLOCK
 
 HAVE_NUMBA = importlib.util.find_spec("numba") is not None
 
@@ -119,6 +121,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
         self.sample_shifts = np.asarray(sample_shifts)
         self.margin = margin
+        self._margin_window = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
         self.dtype = np.dtype(dtype)
         self.method = method
         self.n_taps = int(n_taps)
@@ -137,20 +140,45 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         return self._get_traces_fft(start_frame, end_frame, channel_indices)
 
     def _get_traces_fft(self, start_frame, end_frame, channel_indices):
-        # The shift computes in float64 for every parent and output dtype. The chunk must be float in any case,
-        # since its margins are tapered in place.
+        from scipy.fft import irfft, next_fast_len, rfft
+
         traces_chunk, left_margin, right_margin = get_chunk_with_margin(
             self.parent_recording_segment,
             start_frame,
             end_frame,
             channel_indices,
             self.margin,
-            dtype=np.float64,
             add_zeros=True,
-            window_on_margin=True,
         )
-        traces_shift = apply_frequency_shift(traces_chunk, self.sample_shifts[channel_indices], axis=0)
-        return _cast_owned_traces(traces_shift[left_margin:-right_margin, :], self.dtype)
+        sample_shifts = self.sample_shifts[channel_indices]
+
+        # Channels are shifted independently, so shifting in blocks gives the same result with a
+        # much lower peak memory (the float64 copy and its complex FFT scale with the block)
+        num_samples = traces_chunk.shape[0] - left_margin - right_margin
+        num_channels = traces_chunk.shape[1]
+        traces_shift = np.empty((num_samples, num_channels), dtype=self.dtype)
+
+        # Neuropixels channels reuse a small set of ADC sampling delays, so each rotation is computed once per
+        # chunk and every block looks up the columns of its channels
+        fft_length = next_fast_len(traces_chunk.shape[0], real=True)
+        angular_frequencies = 2 * np.pi * np.fft.rfftfreq(fft_length)
+        unique_shifts, shift_indices = np.unique(sample_shifts, return_inverse=True)
+        unique_rotations = np.exp(-1j * (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]))
+
+        for channel_index in range(0, num_channels, NUM_CHANNELS_PER_BLOCK):
+            channel_slice = slice(channel_index, channel_index + NUM_CHANNELS_PER_BLOCK)
+            # Tapering needs floating point before the FFT to preserve fractional values.
+            # Keep float64 precision, but cast only this block to limit peak memory.
+            # astype copies, so tapering in place does not modify the parent.
+            block = traces_chunk[:, channel_slice].astype(np.float64)
+            _taper_margins(block, self._margin_window)
+            spectrum = rfft(block, n=fft_length, axis=0, overwrite_x=True)
+            spectrum *= unique_rotations[:, shift_indices[channel_slice]]
+            block_shift = irfft(spectrum, n=fft_length, axis=0, overwrite_x=True)
+            block_shift = block_shift[left_margin : left_margin + num_samples, :]
+            traces_shift[:, channel_slice] = _cast_owned_traces(block_shift, self.dtype)
+
+        return traces_shift
 
     def _get_traces_fir(self, start_frame, end_frame, channel_indices):
         """Shift each channel by filtering it with its own windowed-sinc kernel.
