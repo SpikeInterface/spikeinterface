@@ -179,6 +179,7 @@ widgets = [
     "matplotlib>=3.6",
     "ipympl",
     "ipywidgets",
+    "seaborn>=0.13.0",
     "figpack",
     "figpack-spike-sorting",
     "distinctipy",

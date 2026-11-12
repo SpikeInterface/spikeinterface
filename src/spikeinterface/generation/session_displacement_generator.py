@@ -196,7 +196,6 @@ def generate_session_displacement_recordings(
     amplitude_scaling_order = None
 
     for rec_idx, (shift, duration) in enumerate(zip(recording_shifts, recording_durations)):
-
         displacement_vector, displacement_unit_factor = _get_inter_session_displacements(
             shift,
             non_rigid_gradient[rec_idx] if isinstance(non_rigid_gradient, list) else non_rigid_gradient,
@@ -238,7 +237,6 @@ def generate_session_displacement_recordings(
         )
 
         if recording_amplitude_scalings is not None:
-
             if rec_idx == 0:
                 amplitude_scaling_order = _get_amplitude_scaling_order(
                     templates_array_moved,
@@ -399,13 +397,12 @@ def _check_generate_session_displacement_arguments(
         raise ValueError("Each record entry for `recording_shifts` must have two elements, the x and y shift.")
 
     if recording_amplitude_scalings is not None:
-
         keys = recording_amplitude_scalings.keys()
-        if not "method" in keys or not "scalings" in keys:
+        if "method" not in keys or "scalings" not in keys:
             raise ValueError("`recording_amplitude_scalings` must be a dict with keys `method` and `scalings`.")
 
         allowed_methods = ["by_passed_order", "by_amplitude_and_firing_rate", "by_firing_rate"]
-        if not recording_amplitude_scalings["method"] in allowed_methods:
+        if recording_amplitude_scalings["method"] not in allowed_methods:
             raise ValueError(f"`recording_amplitude_scalings` must be one of {allowed_methods}")
 
         rec_scalings = recording_amplitude_scalings["scalings"]
@@ -420,7 +417,7 @@ def _check_generate_session_displacement_arguments(
 
     if isinstance(non_rigid_gradient, list):
         if not len(non_rigid_gradient) == expected_num_recs:
-            raise ValueError("If `non_rigid_gradient` is a list, it must " "contain one value for each recording.")
+            raise ValueError("If `non_rigid_gradient` is a list, it must contain one value for each recording.")
 
 
 def _update_kwargs_for_extended_units(
