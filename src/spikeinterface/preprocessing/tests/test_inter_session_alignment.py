@@ -12,7 +12,6 @@ DEBUG = False
 
 
 class TestInterSessionAlignment:
-
     @pytest.fixture(scope="session")
     def recording_1(self):
         """
@@ -238,7 +237,6 @@ class TestInterSessionAlignment:
             assert temporal_bin_center == centers
 
         for ses_idx, (recording, chunked_histogram_info) in enumerate(zip(recordings_list, histogram_info_list)):
-
             # TODO: this is direct copy from above, can merge
             times = recording.get_times()
 
@@ -252,7 +250,6 @@ class TestInterSessionAlignment:
             assert np.array_equal(chunked_histogram_info["chunked_temporal_bin_centers"], centers)
 
             for edge_idx in range(len(temp_bin_edges) - 1):
-
                 lower = temp_bin_edges[edge_idx]
                 upper = temp_bin_edges[edge_idx + 1]
 
@@ -802,6 +799,9 @@ class TestInterSessionAlignment:
         np.testing.assert_array_equal(shifts_matrix[:, :, 0], expected)
 
     @pytest.mark.parametrize("histogram_mode", ["1d", "2d"])
+    @pytest.mark.filterwarnings(
+        "error:Conversion of an array with ndim > 0 to a scalar is deprecated:DeprecationWarning"
+    )
     def test_compute_histogram_crosscorrelation_nonrigid(self, histogram_mode):
         """ """
         # fmt: off
@@ -859,9 +859,9 @@ class TestInterSessionAlignment:
             "avg_in_bin": False,
         }
 
-        assert (
-            default_kwargs == session_alignment.get_estimate_histogram_kwargs()
-        ), "Default `get_estimate_histogram_kwargs` were changed."
+        assert default_kwargs == session_alignment.get_estimate_histogram_kwargs(), (
+            "Default `get_estimate_histogram_kwargs` were changed."
+        )
 
         different_kwargs = session_alignment.get_estimate_histogram_kwargs()
         different_kwargs.update(
@@ -874,9 +874,7 @@ class TestInterSessionAlignment:
             }
         )
 
-        spy_2d_histogram = mocker.spy(
-            spikeinterface.preprocessing.inter_session_alignment.alignment_utils, "make_2d_motion_histogram"
-        )
+        spy_2d_histogram = mocker.spy(spikeinterface.sortingcomponents.motion.motion_utils, "make_2d_motion_histogram")
         session_alignment.align_sessions(
             [recordings_list[0]], [peaks_list[0]], [peak_locations_list[0]], estimate_histogram_kwargs=different_kwargs
         )
@@ -907,9 +905,9 @@ class TestInterSessionAlignment:
             "akima_interp_nonrigid": False,
             "min_crosscorr_threshold": 0.001,
         }
-        assert (
-            session_alignment.get_compute_alignment_kwargs() == default_kwargs
-        ), "Default `get_compute_alignment_kwargs` were changed."
+        assert session_alignment.get_compute_alignment_kwargs() == default_kwargs, (
+            "Default `get_compute_alignment_kwargs` were changed."
+        )
 
         different_kwargs = session_alignment.get_compute_alignment_kwargs()
         different_kwargs.update(
@@ -924,7 +922,7 @@ class TestInterSessionAlignment:
         )
         import scipy
 
-        spy_kriging = mocker.spy(spikeinterface.preprocessing.inter_session_alignment.alignment_utils, "kriging_kernel")
+        spy_kriging = mocker.spy(spikeinterface.sortingcomponents.motion.iterative_template, "kriging_kernel")
         spy_gaussian_filter = mocker.spy(scipy.ndimage, "gaussian_filter")
         non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
         non_rigid_window_kwargs["rigid"] = False
@@ -961,9 +959,9 @@ class TestInterSessionAlignment:
             "win_margin_um": None,
             "zero_threshold": None,
         }
-        assert (
-            session_alignment.get_non_rigid_window_kwargs() == default_kwargs
-        ), "Default `get_non_rigid_window_kwargs` were changed."
+        assert session_alignment.get_non_rigid_window_kwargs() == default_kwargs, (
+            "Default `get_non_rigid_window_kwargs` were changed."
+        )
 
         different_kwargs = {
             "rigid": False,
@@ -977,7 +975,7 @@ class TestInterSessionAlignment:
         recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         spy_get_spatial_windows = mocker.spy(
-            spikeinterface.preprocessing.inter_session_alignment.session_alignment, "get_spatial_windows"
+            spikeinterface.sortingcomponents.motion.motion_utils, "get_spatial_windows"
         )
         session_alignment.align_sessions(
             [recordings_list[0]], [peaks_list[0]], [peak_locations_list[0]], non_rigid_window_kwargs=different_kwargs
@@ -999,9 +997,9 @@ class TestInterSessionAlignment:
             "sigma_um": 20.0,
             "p": 2,
         }
-        assert (
-            session_alignment.get_interpolate_motion_kwargs() == default_kwargs
-        ), "Default `get_non_rigid_window_kwargs` were changed."
+        assert session_alignment.get_interpolate_motion_kwargs() == default_kwargs, (
+            "Default `get_non_rigid_window_kwargs` were changed."
+        )
 
         different_kwargs = {
             "border_mode": "force_zeros",
@@ -1013,7 +1011,7 @@ class TestInterSessionAlignment:
         recordings_list, _, peaks_list, peak_locations_list = recording_1
 
         spy_get_2d_activity_histogram = mocker.spy(
-            spikeinterface.preprocessing.inter_session_alignment.session_alignment.InterpolateMotionRecording,
+            InterpolateMotionRecording,
             "__init__",
         )
         session_alignment.align_sessions(

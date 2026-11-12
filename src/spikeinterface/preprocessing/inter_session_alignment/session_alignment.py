@@ -7,10 +7,6 @@ if TYPE_CHECKING:
 import warnings
 import numpy as np
 from spikeinterface.core import get_noise_levels
-from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
-from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_windows, get_spatial_bins
-from spikeinterface.sortingcomponents.motion.motion_interpolation import correct_motion_on_peaks
-from spikeinterface.sortingcomponents.motion.motion_utils import make_3d_motion_histograms
 from spikeinterface.core.motion import Motion
 from spikeinterface.preprocessing.motion import run_peak_detection_pipeline_node
 from spikeinterface.preprocessing.inter_session_alignment import alignment_utils
@@ -92,10 +88,6 @@ def get_non_rigid_window_kwargs():
     """
     see get_spatial_windows() for parameters.
 
-    TODO
-    ----
-    merge with motion correction kwargs which are
-    defined in the function signature.
     """
     return {
         "rigid": True,
@@ -311,6 +303,10 @@ def align_sessions_after_motion_correction(
         A dictionary of keyword arguments passed to `align_sessions`.
 
     """
+    # avoid circular imports
+    from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
+    from spikeinterface.sortingcomponents.motion.motion_interpolation import correct_motion_on_peaks
+
     # Check motion kwargs are the same across all recordings
     if not all(isinstance(rec, InterpolateMotionRecording) for rec in recordings_list):
         raise ValueError(
@@ -429,7 +425,7 @@ def _compute_session_histograms(
     recordings_list: list[BaseRecording],
     peaks_list: list[np.ndarray],
     peak_locations_list: list[np.ndarray],
-    histogram_type,  # TODO think up better names
+    histogram_type,
     bin_um: float,
     method: str,
     chunked_bin_size_s: float | "estimate",
@@ -477,6 +473,9 @@ def _compute_session_histograms(
         (e.g. chunked histograms). One per session. See
         `_get_single_session_activity_histogram()` for details.
     """
+    # avoid circular imports
+    from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_bins
+
     # Get spatial windows (shared across all histograms)
     # and estimate the session histograms
     temporal_bin_centers_list = []
@@ -489,7 +488,6 @@ def _compute_session_histograms(
     histogram_info_list = []
 
     for recording, peaks, peak_locations in zip(recordings_list, peaks_list, peak_locations_list):
-
         session_hist, temporal_bin_centers, histogram_info = _get_single_session_activity_histogram(
             recording,
             peaks,
@@ -575,7 +573,6 @@ def _get_single_session_activity_histogram(
     if method == "entire_session":
         chunked_bin_size_s = recording.get_duration()
     elif chunked_bin_size_s == "estimate":
-
         scaled_hist, _, _ = alignment_utils.get_2d_activity_histogram(
             recording,
             peaks,
@@ -593,7 +590,6 @@ def _get_single_session_activity_histogram(
         chunked_bin_size_s = np.min([chunked_bin_size_s, recording.get_duration()])
 
     if histogram_type == "1d":
-
         chunked_histograms, chunked_temporal_bin_centers, _ = alignment_utils.get_2d_activity_histogram(
             recording,
             peaks,
@@ -607,8 +603,9 @@ def _get_single_session_activity_histogram(
         )
 
     elif histogram_type in ["2d"]:
-
         if histogram_type == "2d":
+            # avoid circular imports
+            from spikeinterface.sortingcomponents.motion.motion_utils import make_3d_motion_histograms
 
             chunked_histograms, chunked_temporal_bin_edges, _ = make_3d_motion_histograms(
                 recording,
@@ -674,19 +671,20 @@ def _create_motion_recordings(
         is already an InterpolateMotionRecording, this will be `None`, as
         no motion object is created (the existing motion object is added to)
     """
+    # avoid circular imports
+    from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
+
     assert all(array.ndim == 1 for array in shifts_array), "time dimension should be 1 for session displacement"
 
     corrected_recordings_list = []
     motion_objects_list = []
     for ses_idx, recording in enumerate(recordings_list):
-
         session_shift = shifts_array[ses_idx][np.newaxis, :]
 
         motion = Motion([session_shift], [temporal_bin_centers_list[ses_idx]], non_rigid_window_centers, direction="y")
         motion_objects_list.append(motion)
 
         if isinstance(recording, InterpolateMotionRecording):
-
             print("Recording is already an `InterpolateMotionRecording. Adding shifts directly the recording object.")
 
             corrected_recording = _add_displacement_to_interpolate_recording(recording, motion)
@@ -731,11 +729,6 @@ def _add_displacement_to_interpolate_recording(
     corrected_recording : InterpolateMotionRecording
         A copy of the `recording` with new shifts added.
 
-    TODO
-    ----
-    Check + ask Sam if any other fields need to be changed. This is a little
-    hairy (4 possible combinations of new and old displacement shapes,
-    rigid or nonrigid, so test thoroughly.
     """
     # Everything is done in place, so keep a short variable
     # name reference to the new recordings `motion` object
@@ -804,12 +797,14 @@ def _correct_session_displacement(
     corrected_session_histogram_list : list[np.ndarray]
         A list of histograms calculated from the corrected peaks (one per session).
     """
+    # avoid circular imports
+    from spikeinterface.sortingcomponents.motion.motion_interpolation import correct_motion_on_peaks
+
     corrected_peak_locations_list = []
 
     for recording, peaks, peak_locations, motion in zip(
         recordings_list, peaks_list, peak_locations_list, motion_objects_list
     ):
-
         # Note this `motion` is not necessarily the same as the motion on the recording. If the recording
         # is an `InterpolateMotionRecording`, it will contain correction for both motion and inter-session displacement.
         # Here we want to correct only the motion associated with inter-session displacement.
@@ -879,6 +874,9 @@ def _compute_session_alignment(
     non_rigid_window_centers : np.ndarray
         The centers (spatial, in um) of each non-rigid window.
     """
+    # avoid circular imports
+    from spikeinterface.sortingcomponents.motion.motion_utils import get_spatial_windows
+
     session_histogram_array = np.array(session_histogram_list)
 
     akima_interp_nonrigid = compute_alignment_kwargs.pop("akima_interp_nonrigid")
@@ -902,7 +900,6 @@ def _compute_session_alignment(
     # For non-rigid, first shift the histograms according to the rigid shift
     shifted_histograms = np.zeros_like(session_histogram_array)
     for ses_idx, orig_histogram in enumerate(session_histogram_array):
-
         shifted_histogram = alignment_utils.shift_array_fill_zeros(
             array=orig_histogram, shift=int(rigid_shifts[ses_idx, 0])
         )
@@ -1017,7 +1014,6 @@ def _check_align_sessions_inputs(
         raise ValueError(f"`method` option must be one of: {accepted_hist_methods}")
 
     if alignment_order != "to_middle":
-
         split_name = alignment_order.split("_")
         if not "_".join(split_name[:2]) == "to_session":
             raise ValueError(

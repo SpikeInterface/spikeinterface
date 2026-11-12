@@ -1,8 +1,6 @@
 from spikeinterface import BaseRecording
 import numpy as np
 
-from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram
-from spikeinterface.sortingcomponents.motion.iterative_template import kriging_kernel
 from packaging.version import Version
 
 # #############################################################################
@@ -45,10 +43,10 @@ def get_2d_activity_histogram(
         If not `None`, smooth the histogram across the spatial
         axis. see `make_2d_motion_histogram()` for details.
 
-    TODO
-    ----
-    - ask Sam whether it makes sense to integrate this function with `make_2d_motion_histogram`.
     """
+    # avoid circular imports
+    from spikeinterface.sortingcomponents.motion.motion_utils import make_2d_motion_histogram
+
     activity_histogram, temporal_bin_edges, generated_spatial_bin_edges = make_2d_motion_histogram(
         recording,
         peaks,
@@ -137,12 +135,6 @@ def get_chunked_hist_median(chunked_session_histograms):
     return median_hist
 
 
-# #############################################################################
-# TODO: MOVE creating recordings
-# #############################################################################
-
-
-# TODO: a good test here is to give zero shift for even and off numbered hist and check the output is zero!
 def compute_histogram_crosscorrelation(
     session_histogram_list: np.ndarray,
     non_rigid_windows: np.ndarray,
@@ -243,6 +235,9 @@ def compute_histogram_crosscorrelation(
     # scipy is not a core dependency
     from scipy.ndimage import gaussian_filter
 
+    # avoid circular imports
+    from spikeinterface.sortingcomponents.motion.iterative_template import kriging_kernel
+
     num_sessions = session_histogram_list.shape[0]
     num_bins = session_histogram_list.shape[1]  # all hists are same length
     num_windows = non_rigid_windows.shape[0]
@@ -285,7 +280,7 @@ def compute_histogram_crosscorrelation(
                         shifted_i = shift_array_fill_zeros(windowed_histogram_i, shift)
                         flatten_i = shifted_i.flatten()
 
-                        xcorr[idx] = np.correlate(flatten_i, windowed_histogram_j.flatten()) / flatten_i.size
+                        xcorr[idx] = np.correlate(flatten_i, windowed_histogram_j.flatten()).item() / flatten_i.size
 
                 else:
                     # For a 1D histogram, compute the full cross-correlation and

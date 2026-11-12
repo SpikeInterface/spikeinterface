@@ -28,7 +28,6 @@ First, we will import all required packages and functions:
 """
 
 import spikeinterface.full as si
-from spikeinterface.generation.session_displacement_generator import generate_session_displacement_recordings
 from spikeinterface.preprocessing.inter_session_alignment import session_alignment
 from spikeinterface.widgets import plot_session_alignment, plot_activity_histogram_2d
 import matplotlib.pyplot as plt
@@ -37,7 +36,7 @@ import matplotlib.pyplot as plt
 # %%
 # and then generate the test recordings:
 
-recordings_list, _ = generate_session_displacement_recordings(  # TODO: add to spikeinterface.full ?
+recordings_list, _ = si.generate_session_displacement_recordings(
     num_units=8,
     recording_durations=[10, 10],
     recording_shifts=((0, 0), (0, 200)),  # (x offset, y offset) pairs
@@ -197,8 +196,6 @@ corrected_recordings_list_motion, _ = session_alignment.align_sessions_after_mot
 # are explored. These configs can be accessed by the getter functions
 # ``get_estimate_histogram_kwargs``, ``get_compute_alignment_kwargs``,
 # ``get_non_rigid_window_kwargs``, ``get_interpolate_motion_kwargs``.
-#
-# TODO: cannot add inter-session alignment to imports due to circular import error
 #
 # Estimate Histogram Kwargs
 # ~~~~~~~~~~~~~~~~~~~~~~~~~
