@@ -7,7 +7,7 @@ from .external.kilosort import KilosortSorter
 from .external.kilosort2 import Kilosort2Sorter
 from .external.kilosort2_5 import Kilosort2_5Sorter
 from .external.kilosort3 import Kilosort3Sorter
-from .external.kilosort4 import Kilosort4Sorter, read_kilosort4_motion
+from .external.kilosort4 import Kilosort4Sorter
 from .external.pykilosort import PyKilosortSorter
 from .external.klusta import KlustaSorter
 from .external.mountainsort4 import Mountainsort4Sorter
@@ -15,8 +15,8 @@ from .external.mountainsort5 import Mountainsort5Sorter
 from .external.rt_sort import RTSortSorter
 from .external.spyking_circus import SpykingcircusSorter
 from .external.tridesclous import TridesclousSorter
+from .external.vanillasort import VanillaSortSorter
 from .external.waveclus import WaveClusSorter
-from .external.waveclus_snippets import WaveClusSnippetsSorter
 from .external.yass import YassSorter
 
 # based on spikeinterface.sortingcomponents
@@ -43,8 +43,8 @@ sorter_full_list = [
     RTSortSorter,
     SpykingcircusSorter,
     TridesclousSorter,
+    VanillaSortSorter,
     WaveClusSorter,
-    WaveClusSnippetsSorter,
     YassSorter,
     # internal
     Spykingcircus2Sorter,

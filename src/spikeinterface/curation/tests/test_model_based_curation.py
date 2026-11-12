@@ -1,7 +1,6 @@
 import pytest
 from pathlib import Path
 
-from spikeinterface.curation.tests.common import sorting_analyzer_for_unitrefine_curation, trained_pipeline_path
 from spikeinterface.curation.model_based_curation import ModelBasedClassification
 from spikeinterface.curation import (
     model_based_label_units,
@@ -97,9 +96,7 @@ def test_model_based_classification_get_metrics_for_classification(
 
     all_metric_names, all_metric_columns, qm_names, tm_names = required_metrics
 
-    model_based_classification = ModelBasedClassification(
-        sorting_analyzer=sorting_analyzer_for_unitrefine_curation, pipeline=model[0]
-    )
+    _ = ModelBasedClassification(sorting_analyzer=sorting_analyzer_for_unitrefine_curation, pipeline=model[0])
 
     # Compute some (but not all) of the required metrics in sorting_analyzer, should still error
     sorting_analyzer_for_unitrefine_curation.compute("quality_metrics", metric_names=[all_metric_names[0]])
@@ -158,7 +155,7 @@ def test_predict_labels_with_phy_export(sorting_analyzer_for_unitrefine_curation
     model_based_classification = ModelBasedClassification(
         sorting_analyzer=sorting_analyzer_for_unitrefine_curation, pipeline=model[0]
     )
-    classified_units = model_based_classification.predict_labels(export_to_phy=True, phy_folder=phy_folder)
+    _ = model_based_classification.predict_labels(export_to_phy=True, phy_folder=phy_folder)
 
     # Check that the cluster_prediction.tsv file was created in the specified phy_folder
     assert (phy_folder / "cluster_prediction.tsv").exists()

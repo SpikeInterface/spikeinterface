@@ -28,9 +28,9 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
             recordings = [recordings]
         self.recordings = recordings
         if len(recordings) > 1:
-            assert (
-                r.get_num_channels() == recordings[0].get_num_channels() for r in recordings[1:]
-            ), "All recordings must have the same number of channels"
+            assert (r.get_num_channels() == recordings[0].get_num_channels() for r in recordings[1:]), (
+                "All recordings must have the same number of channels"
+            )
 
         total_num_samples = sum([r.get_total_samples() for r in recordings])
         # In case of multiple recordings and/or multiple segments, we calculate the frame periods to be excluded (borders)
@@ -58,9 +58,9 @@ class SpikeInterfaceRecordingGenerator(SequentialGenerator):
         )
         self.total_samples = int(total_valid_samples) if total_samples == -1 else total_samples
         assert len(desired_shape) == 2, "desired_shape should be 2D"
-        assert (
-            desired_shape[0] * desired_shape[1] == recording.get_num_channels()
-        ), f"The product of desired_shape dimensions should be the number of channels: {recording.get_num_channels()}"
+        assert desired_shape[0] * desired_shape[1] == recording.get_num_channels(), (
+            f"The product of desired_shape dimensions should be the number of channels: {recording.get_num_channels()}"
+        )
         self.desired_shape = desired_shape
 
         start_frame = start_frame if start_frame is not None else 0

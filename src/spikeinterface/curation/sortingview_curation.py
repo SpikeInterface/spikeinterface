@@ -74,7 +74,7 @@ def apply_sortingview_curation(
 
         try:
             curation_dict = ka.load_json(uri=uri_or_json)
-        except:
+        except Exception:
             raise Exception(f"Could not retrieve curation from SortingView uri: {uri_or_json}")
 
     if curation_dict is None:

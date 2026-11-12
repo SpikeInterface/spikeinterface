@@ -1,3 +1,4 @@
+import importlib.util
 import unittest
 from pathlib import Path
 
@@ -158,21 +159,26 @@ def nwbfile_with_ecephys_content():
     return nwbfile
 
 
+# hdmf-zarr>=0.14 (zarr v3) requires python>=3.12, so it may be missing
+NWB_BACKENDS = ["hdf5"] + (["zarr"] if importlib.util.find_spec("hdmf_zarr") else [])
+
+
 def _generate_nwbfile(backend, file_path):
     from pynwb import NWBHDF5IO
-    from hdmf_zarr import NWBZarrIO
 
     nwbfile = nwbfile_with_ecephys_content()
     if backend == "hdf5":
         io_class = NWBHDF5IO
     elif backend == "zarr":
+        from hdmf_zarr import NWBZarrIO
+
         io_class = NWBZarrIO
     with io_class(str(file_path), mode="w") as io:
         io.write(nwbfile)
     return file_path, nwbfile
 
 
-@pytest.fixture(scope="module", params=["hdf5", "zarr"])
+@pytest.fixture(scope="module", params=NWB_BACKENDS)
 def generate_nwbfile(request, tmp_path_factory):
     nwbfile = nwbfile_with_ecephys_content()
     backend = request.param
@@ -312,6 +318,48 @@ def test_nwb_extractor_electrodes_region_out_of_order(tmp_path, use_pynwb):
 
 
 @pytest.mark.parametrize("use_pynwb", [True, False])
+def test_nwb_extractor_one_probe_per_electrode_group(tmp_path, use_pynwb):
+    """rel_x and rel_y are relative to each electrode group, so two identical probes written to one
+    ElectricalSeries share positions. Building a single probe from all channels failed on the
+    duplicate positions (GH-3999)."""
+    from pynwb import NWBHDF5IO
+    from pynwb.testing.mock.file import mock_NWBFile
+    from pynwb.testing.mock.device import mock_Device
+    from pynwb.testing.mock.ecephys import mock_ElectrodeGroup, mock_ElectricalSeries
+
+    nwbfile = mock_NWBFile()
+    device = mock_Device(nwbfile=nwbfile)
+
+    # Both groups get the same contact positions, so the two probes overlap.
+    group_names = ["probe_A", "probe_B"]
+    probe_locations = np.array([[0.0, 0.0], [0.0, 20.0], [0.0, 40.0], [0.0, 60.0]])
+    for group_name in group_names:
+        electrode_group = mock_ElectrodeGroup(name=group_name, device=device, nwbfile=nwbfile)
+        for rel_x, rel_y in probe_locations:
+            nwbfile.add_electrode(group=electrode_group, location="brain", rel_x=rel_x, rel_y=rel_y)
+
+    channels_per_group = len(probe_locations)
+    num_electrodes = len(group_names) * channels_per_group
+    electrode_region = nwbfile.create_electrode_table_region(region=list(range(num_electrodes)), description="all")
+    mock_ElectricalSeries(
+        name="ElectricalSeries", data=np.ones((10, num_electrodes)), electrodes=electrode_region, nwbfile=nwbfile
+    )
+
+    nwbfile_path = tmp_path / "two_electrode_groups.nwb"
+    with NWBHDF5IO(str(nwbfile_path), mode="w") as io:
+        io.write(nwbfile)
+
+    recording = NwbRecordingExtractor(
+        nwbfile_path, electrical_series_path="acquisition/ElectricalSeries", use_pynwb=use_pynwb
+    )
+
+    assert len(recording.get_probegroup().probes) == len(group_names)
+    recordings_by_group = recording.split_by("group")
+    for group_name in group_names:
+        assert np.array_equal(recordings_by_group[group_name].get_channel_locations(), probe_locations)
+
+
+@pytest.mark.parametrize("use_pynwb", [True, False])
 def test_nwb_extractor_offset_from_series(generate_nwbfile, use_pynwb):
     """Test that the offset is retrieved from the ElectricalSeries if it is present."""
     path_to_nwbfile, nwbfile_with_ecephys_content = generate_nwbfile
@@ -399,7 +447,7 @@ def test_failure_with_wrong_electrical_series_path(generate_nwbfile, use_pynwb):
     """Test that the extractor raises an error if the electrical series name is not found."""
     path_to_nwbfile, _ = generate_nwbfile
     with pytest.raises(ValueError):
-        recording_extractor = NwbRecordingExtractor(
+        _ = NwbRecordingExtractor(
             path_to_nwbfile,
             electrical_series_path="acquisition/ElectricalSeries3",
             use_pynwb=use_pynwb,
@@ -579,7 +627,7 @@ def test_sorting_extraction_start_time(tmp_path, use_pynwb):
 def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
     from pynwb import NWBHDF5IO
     from pynwb.testing.mock.file import mock_NWBFile
-    from pynwb.ecephys import ElectricalSeries, LFP, FilteredEphys
+    from pynwb.ecephys import ElectricalSeries
 
     from pynwb.testing.mock.ecephys import mock_electrodes
 
@@ -812,7 +860,7 @@ def test_sorting_electrical_series_path_and_time_base_are_mutually_exclusive(tmp
             **extra_kwarg,
         )
     expected_error = (
-        "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and " "'t_start'), not both."
+        "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and 't_start'), not both."
     )
     assert str(exc_info.value) == expected_error
 
@@ -1050,7 +1098,7 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
 
     # passing a non existing unit table name should raise an error
     with pytest.raises(ValueError):
-        sorting_extractor = NwbSortingExtractor(
+        _ = NwbSortingExtractor(
             file_path=file_path, sampling_frequency=10.0, t_start=0, use_pynwb=use_pynwb, unit_table_path="units2"
         )
 
@@ -1117,19 +1165,20 @@ def nwbfile_with_timeseries():
 
 def _generate_nwbfile_with_time_series(backend, file_path):
     from pynwb import NWBHDF5IO
-    from hdmf_zarr import NWBZarrIO
 
     nwbfile = nwbfile_with_timeseries()
     if backend == "hdf5":
         io_class = NWBHDF5IO
     elif backend == "zarr":
+        from hdmf_zarr import NWBZarrIO
+
         io_class = NWBZarrIO
     with io_class(str(file_path), mode="w") as io:
         io.write(nwbfile)
     return file_path, nwbfile
 
 
-@pytest.fixture(scope="module", params=["hdf5", "zarr"])
+@pytest.fixture(scope="module", params=NWB_BACKENDS)
 def generate_nwbfile_with_time_series(request, tmp_path_factory):
     backend = request.param
     nwbfile_path = tmp_path_factory.mktemp("nwb_tests_directory") / "test.nwb"

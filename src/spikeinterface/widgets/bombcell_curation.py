@@ -85,7 +85,6 @@ class BombcellUpsetPlotWidget(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
-        import pandas as pd
 
         dp = to_attr(data_plot)
         metrics = dp.metrics
@@ -239,8 +238,7 @@ def plot_bombcell_unit_labeling_all(
     dict
         Dictionary with keys 'histograms', 'waveforms', 'upset' containing widget objects.
     """
-    from pathlib import Path
-    from spikeinterface.curation import bombcell_get_default_thresholds, save_bombcell_results
+    from spikeinterface.curation import bombcell_get_default_thresholds
 
     if thresholds is None:
         thresholds = bombcell_get_default_thresholds()

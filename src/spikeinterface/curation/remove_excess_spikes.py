@@ -25,9 +25,9 @@ class RemoveExcessSpikesSorting(BaseSorting):
     def __init__(self, sorting: BaseSorting, recording: BaseRecording) -> None:
         super().__init__(sorting.get_sampling_frequency(), sorting.unit_ids)
 
-        assert (
-            sorting.get_num_segments() == recording.get_num_segments()
-        ), "The sorting and recording objects must have the same number of samples!"
+        assert sorting.get_num_segments() == recording.get_num_segments(), (
+            "The sorting and recording objects must have the same number of samples!"
+        )
 
         self._parent_sorting = sorting
         self._num_samples = np.empty(sorting.get_num_segments(), dtype=np.int64)
@@ -46,13 +46,13 @@ class RemoveExcessSpikesSorting(BaseSorting):
         self._kwargs = {"sorting": sorting, "recording": recording}
 
     def _compute_and_cache_spike_vector(self) -> None:
-        if self._parent_sorting._cached_spike_vector is None:
+        if self._parent_sorting._cached_time_ordered is None:
             self._parent_sorting._compute_and_cache_spike_vector()
 
-            if self._parent_sorting._cached_spike_vector is None:
+            if self._parent_sorting._cached_time_ordered is None:
                 return
 
-        parent_spike_vector = self._parent_sorting._cached_spike_vector
+        parent_spike_vector = self._parent_sorting._cached_time_ordered["spikes"]
         num_segments = self._parent_sorting.get_num_segments()
 
         list_spike_vectors = []
@@ -64,7 +64,7 @@ class RemoveExcessSpikesSorting(BaseSorting):
             list_spike_vectors.append(spike_vector[start:end])
 
         spike_vector = np.concatenate(list_spike_vectors)
-        self._cached_spike_vector = spike_vector
+        self._cached_time_ordered = {"spikes": spike_vector, "segment_slices": None}
 
 
 class RemoveExcessSpikesSortingSegment(BaseSortingSegment):

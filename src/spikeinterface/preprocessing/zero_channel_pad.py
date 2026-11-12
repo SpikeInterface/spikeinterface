@@ -129,7 +129,6 @@ class TracePaddedRecordingSegment(BasePreprocessorSegment):
 
 
 class ZeroChannelPaddedRecording(BaseRecording):
-
     def __init__(self, recording: BaseRecording, num_channels: int, channel_mapping: list | None = None):
         """Pads a recording with channels that contain only zero.
 
@@ -147,11 +146,11 @@ class ZeroChannelPaddedRecording(BaseRecording):
         BaseRecording.__init__(self, recording.get_sampling_frequency(), np.arange(num_channels), recording.get_dtype())
 
         if channel_mapping is not None:
-            assert (
-                len(channel_mapping) == recording.get_num_channels()
-            ), "The new mapping must be specified for all channels."
+            assert len(channel_mapping) == recording.get_num_channels(), (
+                "The new mapping must be specified for all channels."
+            )
             assert max(channel_mapping) < num_channels, (
-                "The new mapping cannot exceed total number of channels " "in the zero-chanenl-padded recording."
+                "The new mapping cannot exceed total number of channels in the zero-chanenl-padded recording."
             )
         else:
             if recording.has_probe():

@@ -38,7 +38,7 @@ from .gtstudy import StudyRunTimesWidget, StudyUnitCountsWidget, StudyPerformanc
 from .collision import ComparisonCollisionBySimilarityWidget, StudyComparisonCollisionBySimilarityWidget
 from .unit_labels import WaveformOverlayByLabelWidget
 from .unit_valid_periods import ValidUnitPeriodsWidget
-from .bombcell_curation import BombcellUpsetPlotWidget, plot_bombcell_unit_labeling_all
+from .bombcell_curation import BombcellUpsetPlotWidget
 
 widget_list = [
     AgreementMatrixWidget,

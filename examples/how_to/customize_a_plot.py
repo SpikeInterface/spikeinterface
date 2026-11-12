@@ -81,7 +81,6 @@ fig_units
 # Here's an example of making a unit summary plot.
 
 # +
-import matplotlib.pyplot as plt
 fig, axs = plt.subplots(ncols=2, nrows=1)
 
 unit_id=8

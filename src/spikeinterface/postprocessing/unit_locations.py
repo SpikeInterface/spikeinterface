@@ -1,16 +1,16 @@
 import numpy as np
 from itertools import chain
 
-from spikeinterface.core.core_tools import slice_rows, materialize_array
+from spikeinterface.core.core_tools import slice_rows
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from .localization_tools import _unit_location_methods
 
 # this dict is for peak location
 dtype_localize_by_method = {
-    "center_of_mass": [("x", "float64"), ("y", "float64")],
-    "grid_convolution": [("x", "float64"), ("y", "float64"), ("z", "float64")],
-    "peak_channel": [("x", "float64"), ("y", "float64")],
-    "monopolar_triangulation": [("x", "float64"), ("y", "float64"), ("z", "float64"), ("alpha", "float64")],
+    "center_of_mass": [("x", "float32"), ("y", "float32")],
+    "grid_convolution": [("x", "float32"), ("y", "float32"), ("z", "float32")],
+    "peak_channel": [("x", "float32"), ("y", "float32")],
+    "monopolar_triangulation": [("x", "float32"), ("y", "float32"), ("z", "float32"), ("alpha", "float32")],
 }
 
 possible_localization_methods = list(dtype_localize_by_method.keys())

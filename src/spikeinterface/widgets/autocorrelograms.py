@@ -16,7 +16,6 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
         )
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -46,7 +45,6 @@ class AutoCorrelogramsWidget(CrossCorrelogramsWidget):
             make_serializable,
             handle_display_and_url,
             import_figpack_or_sortingview,
-            generate_unit_table_view,
         )
 
         use_sortingview = backend_kwargs.get("use_sortingview", False)

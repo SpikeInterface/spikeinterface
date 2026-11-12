@@ -10,13 +10,28 @@ import zarr
 from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
 from spikeinterface.core.time_series import TimeSeries
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
-from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs
 from spikeinterface.core import get_channel_distances
 from spikeinterface.core.core_tools import ms_to_samples, samples_to_ms
 
+# Ignore Zarr consolidated metadata warning
+warnings.filterwarnings(
+    "ignore",
+    message="Consolidated metadata is currently not part",
+    category=UserWarning,
+)
+
+compressors_type = (
+    zarr.abc.codec.BytesBytesCodec
+    | zarr.abc.codec.ArrayBytesCodec
+    | list[zarr.abc.codec.BytesBytesCodec | zarr.abc.codec.ArrayBytesCodec]
+    | str
+    | None
+)
+filters_type = zarr.abc.codec.ArrayArrayCodec | list[zarr.abc.codec.ArrayArrayCodec] | None
+
 
 class PipelineNode:
-
     # If False (general case) then compute(traces_chunk, *node_input_args)
     # If True then compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
     _compute_has_extended_signature = False
@@ -51,7 +66,11 @@ class PipelineNode:
             parents = [parents]
         self.parents = parents
 
-        self._kwargs = dict()
+        self._kwargs = dict(
+            time_series=time_series,
+            return_output=return_output,
+            parents=parents,
+        )
 
     def get_margin(self):
         # can optionally be overwritten
@@ -69,7 +88,6 @@ class PipelineNode:
 
 
 class PeakSource(PipelineNode):
-
     # this is an important hack : this force a node.compute() before the machininery is started
     # this trigger eventually some numba jit compilation and avoid compilation racing
     # between processes or threads
@@ -107,13 +125,18 @@ class PeakRetriever(PeakSource):
     def __init__(self, recording, peaks):
         PipelineNode.__init__(self, recording, return_output=False)
 
-        self.peaks = peaks
+        self._peaks = peaks
 
         # precompute segment slice
-        self.segment_slices = []
-        for segment_index in range(recording.get_num_segments()):
-            i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
-            self.segment_slices.append(slice(i0, i1))
+        if recording.get_num_segments() > 1:
+            self.segment_slices = []
+            for segment_index in range(recording.get_num_segments()):
+                i0, i1 = np.searchsorted(peaks["segment_index"], [segment_index, segment_index + 1])
+                self.segment_slices.append(slice(i0, i1))
+        else:
+            self.segment_slices = None
+
+        self._kwargs.update(dict(peaks=peaks))
 
     def get_margin(self):
         return 0
@@ -122,15 +145,22 @@ class PeakRetriever(PeakSource):
         return base_peak_dtype
 
     def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
+        if self.segment_slices is not None:
+            sl = self.segment_slices[segment_index]
+            peaks_in_segment = self._peaks[sl]
+        else:
+            peaks_in_segment = self._peaks
         i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         return i0, i1
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
+        if self.segment_slices is not None:
+            sl = self.segment_slices[segment_index]
+            peaks_in_segment = self._peaks[sl]
+        else:
+            peaks_in_segment = self._peaks
+
         # i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
         i0, i1 = peak_slice
         local_peaks = peaks_in_segment[i0:i1]
@@ -195,7 +225,6 @@ class SpikeRetriever(PeakSource):
                 category=FutureWarning,
                 stacklevel=2,
             )
-
         self._dtype = spike_peak_dtype
 
         self.include_spikes_in_margin = include_spikes_in_margin
@@ -204,19 +233,36 @@ class SpikeRetriever(PeakSource):
 
         main_channel_ids = sorting.get_property("main_channel_id")
         assert main_channel_ids is not None, "SpikeRetriever needs the sorting to have `main_channel_id`s."
-        main_channel_indices = recording.ids_to_indices(main_channel_ids)
-        self.peaks = sorting_to_peaks(sorting, main_channel_indices, self._dtype)
+        self.main_channel_indices = recording.ids_to_indices(main_channel_ids)
+        self.spike_vector, segment_slices = sorting.to_spike_vector(return_slices=True)
+        self.sorting = sorting
+        self._peaks = None
+
+        # get_peak_slice() returns positions relative to the segment start
+        if sorting.get_num_segments() == 1:
+            self.segment_slices = None
+        else:
+            self.segment_slices = [slice(int(s0), int(s1)) for s0, s1 in segment_slices]
+
+        # build any lazy search index now, in the parent, so forked workers inherit it
+        # instead of each building its own
+        sorting.search_cached_spikes_sorted([0], segment_index=0)
 
         if not channel_from_template:
             channel_distance = get_channel_distances(recording)
             self.neighbours_mask = channel_distance <= radius_um
             self.peak_sign = peak_sign
 
-        # precompute segment slice
-        self.segment_slices = []
-        for segment_index in range(recording.get_num_segments()):
-            i0, i1 = np.searchsorted(self.peaks["segment_index"], [segment_index, segment_index + 1])
-            self.segment_slices.append(slice(i0, i1))
+        self._kwargs.update(
+            dict(
+                sorting=sorting,
+                channel_from_template=channel_from_template,
+                extremum_channel_inds=extremum_channel_inds,
+                radius_um=radius_um,
+                peak_sign=peak_sign,
+                include_spikes_in_margin=include_spikes_in_margin,
+            )
+        )
 
     def get_margin(self):
         return 0
@@ -225,26 +271,32 @@ class SpikeRetriever(PeakSource):
         return self._dtype
 
     def get_peak_slice(self, segment_index, start_frame, end_frame, max_margin):
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
         if self.include_spikes_in_margin:
-            i0, i1 = np.searchsorted(
-                peaks_in_segment["sample_index"], [start_frame - max_margin, end_frame + max_margin]
-            )
+            indices = [start_frame - max_margin, end_frame + max_margin]
         else:
-            i0, i1 = np.searchsorted(peaks_in_segment["sample_index"], [start_frame, end_frame])
-        return i0, i1
+            indices = [start_frame, end_frame]
+        return self.sorting.search_cached_spikes_sorted(
+            indices=indices,
+            segment_index=segment_index,
+        )
 
     def compute(self, traces, start_frame, end_frame, segment_index, max_margin, peak_slice):
         # get local peaks
-        sl = self.segment_slices[segment_index]
-        peaks_in_segment = self.peaks[sl]
         i0, i1 = peak_slice
+        if self.segment_slices is not None:
+            s0 = self.segment_slices[segment_index].start
+            spikes = self.spike_vector[s0 + i0 : s0 + i1]
+        else:
+            spikes = self.spike_vector[i0:i1]
 
-        local_peaks = peaks_in_segment[i0:i1]
+        local_peaks = np.zeros(spikes.size, dtype=self._dtype)
+        local_peaks["sample_index"] = spikes["sample_index"]
+        local_peaks["channel_index"] = self.main_channel_indices[spikes["unit_index"]]
+        local_peaks["amplitude"] = 0.0
+        local_peaks["segment_index"] = spikes["segment_index"]
+        local_peaks["unit_index"] = spikes["unit_index"]
 
         # make sample index local to traces
-        local_peaks = local_peaks.copy()
         local_peaks["sample_index"] -= start_frame - max_margin
 
         # handle flag for margin
@@ -346,6 +398,15 @@ class WaveformsNode(PipelineNode):
             self.ms_after = ms_after
             self.nafter = ms_to_samples(ms_after, sampling_frequency)
         self.neighbours_mask = None
+
+        self._kwargs.update(
+            dict(
+                ms_before=ms_before,
+                ms_after=ms_after,
+                nbefore=nbefore,
+                nafter=nafter,
+            )
+        )
 
 
 class ExtractDenseWaveforms(WaveformsNode):
@@ -470,6 +531,13 @@ class ExtractSparseWaveforms(WaveformsNode):
             self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
 
+        self._kwargs.update(
+            dict(
+                radius_um=radius_um,
+                sparsity_mask=sparsity_mask,
+            )
+        )
+
     def get_margin(self):
         return max(self.nbefore, self.nafter)
 
@@ -557,9 +625,9 @@ def check_graph(nodes, check_for_peak_source=True):
         node_parents = node.parents if node.parents else []
         for parent in node_parents:
             assert parent in nodes, f"Node {node} has parent {parent} that was not passed in nodes"
-            assert (
-                nodes.index(parent) < i
-            ), f"Nodes are ordered incorrectly: {node} before {parent} in the pipeline definition."
+            assert nodes.index(parent) < i, (
+                f"Nodes are ordered incorrectly: {node} before {parent} in the pipeline definition."
+            )
 
     return nodes
 
@@ -1022,10 +1090,13 @@ class GatherToZarr:
           Note that in both modes the `dest` must contain a ".zarr" suffix.
     names : list of str | None
         Names of the outputs. Can be None when `dest` is a list of explicit destinations.
-    compressor : numcodecs codec | "default" | None, default: "default"
-        The compressor used for every array. If "default", the SpikeInterface default
+    compressors : zarr.abc.codec.BytesBytesCodec | zarr.abc.codec.ArrayBytesCodec | list of them | str, or None, default: "default"
+        The compressors used for every array. If "default", the SpikeInterface default
         zarr compressor is used (Blosc-zstd, level 5, bitshuffle). If None, no compression.
         Ignored for destinations that are already a ``zarr.Array`` (they keep their own compressor).
+    filters : zarr.abc.codec.ArrayArrayCodec | list[zarr.abc.codec.ArrayArrayCodec] or None, default: None
+        The filters used for every array. If None, no filters are applied.
+        Ignored for destinations that are already a ``zarr.Array`` (they keep their own filters).
     zarr_target_chunk_bytes : int | dict[str, int], default: 10485760 (10 MiB)
         Target (uncompressed) size in bytes of one zarr chunk, used to compute the number of
         rows per chunk. An int applies the same target to every array, a dict sets it per array
@@ -1037,16 +1108,16 @@ class GatherToZarr:
         self,
         dest: str | Path | list[str | Path | zarr.Array] | None = None,
         names: list[str] | None = None,
-        compressor: "numcodecs.abc.Codec | str | None" = "default",
+        compressors: compressors_type = "default",
+        filters: filters_type = None,
         zarr_target_chunk_bytes: int | dict[str, int] = 10 * 1024 * 1024,
     ):
-        import zarr
-
         from spikeinterface.core.zarrextractors import get_default_zarr_compressor
+        from spikeinterface.core.zarr_tools import build_codec_pipeline
 
-        if compressor == "default":
-            compressor = get_default_zarr_compressor()
-        self.compressor = compressor
+        if compressors == "default":
+            compressors = get_default_zarr_compressor()
+        self.codec_kwargs = build_codec_pipeline(filters=filters, compressors=compressors)
 
         if isinstance(dest, (list, tuple)):
             # append to explicit destinations (paths inside a store or pre-created zarr.Arrays)
@@ -1128,13 +1199,13 @@ class GatherToZarr:
                 # pick the number of rows per chunk to target ~zarr_target_chunk_bytes per chunk
                 row_nbytes = int(np.prod(trailing_shape, dtype="int64")) * buf.dtype.itemsize
                 chunk0 = max(1, self.zarr_target_chunk_bytes[name] // max(1, row_nbytes))
-                self.arrays[i_name] = root.create_dataset(
+                self.arrays[i_name] = root.create_array(
                     name=internal_path,
                     shape=(0,) + trailing_shape,
                     chunks=(chunk0,) + trailing_shape,
                     dtype=buf.dtype,
-                    compressor=self.compressor,
                     overwrite=True,
+                    **self.codec_kwargs,
                 )
             self.arrays[i_name].append(buf, axis=0)
 

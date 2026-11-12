@@ -232,9 +232,9 @@ class Kilosort2_5Sorter(KilosortBase, BaseSorter):
         ops["skip_kilosort_preprocessing"] = params["skip_kilosort_preprocessing"]
         if params["skip_kilosort_preprocessing"]:
             ops["fproc"] = ops["fbinary"]
-            assert (
-                params["scaleproc"] is not None
-            ), "When skip_kilosort_preprocessing=True scaleproc must explicitly given"
+            assert params["scaleproc"] is not None, (
+                "When skip_kilosort_preprocessing=True scaleproc must explicitly given"
+            )
 
         # int16 scaling of whitened data, when None then scaleproc is set to 200.
         scaleproc = params["scaleproc"]

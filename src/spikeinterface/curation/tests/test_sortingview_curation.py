@@ -4,16 +4,8 @@ import os
 import importlib.util
 import numpy as np
 
-import spikeinterface as si
 from spikeinterface.core import generate_sorting
 import spikeinterface.extractors as se
-from spikeinterface import set_global_tmp_folder
-from spikeinterface.postprocessing import (
-    compute_correlograms,
-    compute_unit_locations,
-    compute_template_similarity,
-    compute_spike_amplitudes,
-)
 from spikeinterface.curation import apply_sortingview_curation
 
 parent_folder = Path(__file__).parent
@@ -103,7 +95,6 @@ def test_sha1_curation():
     assert "accept" in sorting_curated_sha1.get_property_keys()
     assert "mua" in sorting_curated_sha1.get_property_keys()
     assert "artifact" in sorting_curated_sha1.get_property_keys()
-    unit_ids = sorting_curated_sha1.unit_ids
     sorting_curated_sha1_accepted = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, include_labels=["accept"])
     sorting_curated_sha1_mua = apply_sortingview_curation(sorting, uri_or_json=sha1_uri, exclude_labels=["mua"])
     sorting_curated_sha1_art_mua = apply_sortingview_curation(
@@ -263,7 +254,7 @@ def test_json_no_merge_curation():
     sorting = sorting.rename_units(new_unit_ids=unit_ids_as_int)
 
     json_file = parent_folder / "sv-sorting-curation-no-merge.json"
-    sorting_curated = apply_sortingview_curation(sorting, uri_or_json=json_file)
+    _ = apply_sortingview_curation(sorting, uri_or_json=json_file)
 
 
 if __name__ == "__main__":

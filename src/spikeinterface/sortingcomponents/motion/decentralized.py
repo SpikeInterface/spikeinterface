@@ -3,7 +3,7 @@ import numpy as np
 from tqdm.auto import tqdm, trange
 
 from spikeinterface.core.motion import Motion
-from .motion_utils import get_spatial_windows, get_spatial_bin_edges, make_2d_motion_histogram, scipy_conv1d
+from .motion_utils import get_spatial_windows, get_spatial_bin_edges, make_2d_motion_histogram
 
 from .dredge import normxcorr1d
 
@@ -328,7 +328,7 @@ def compute_pairwise_displacement(
     if conv_engine == "torch":
         import torch
 
-    assert conv_engine in ("torch", "numpy"), f"'conv_engine' must be 'torch' or 'numpy'"
+    assert conv_engine in ("torch", "numpy"), "'conv_engine' must be 'torch' or 'numpy'"
     size = motion_hist.shape[0]
     pairwise_displacement = np.zeros((size, size), dtype="float32")
 
@@ -509,7 +509,6 @@ def compute_global_displacement(
         displacement = res.x
 
     elif convergence_method == "lsqr_robust":
-
         if sparse_mask is not None:
             I, J = np.nonzero(sparse_mask > 0)
         elif pairwise_displacement_weight is not None:

@@ -52,7 +52,7 @@ class HDSortSorter(BaseSorter):
 
     _params_description = {
         "detect_threshold": "Threshold for spike detection",
-        "detect_sign": "Use -1 (negative) or 1 (positive) depending " "on the sign of the spikes in the recording",
+        "detect_sign": "Use -1 (negative) or 1 (positive) depending on the sign of the spikes in the recording",
         "filter": "Enable or disable filter",
         "parfor": "If True, the Matlab parfor is used",
         "freq_min": "High-pass filter cutoff frequency",
@@ -248,7 +248,7 @@ class HDSortSorter(BaseSorter):
     def write_hdsort_input_format(cls, recording, save_path, chunk_memory="500M"):
         try:
             import h5py
-        except:
+        except Exception:
             raise Exception("To use HDSort, install h5py: pip install h5py")
 
         # check if already in write format
@@ -294,7 +294,6 @@ class HDSortSorter(BaseSorter):
                     mapping[i] = (ch, x[i], y[i], i)
                 ephys.create_dataset("mapping", data=mapping)
                 # save traces
-                segment_index = 0
                 write_to_h5_dataset_format(
                     recording,
                     dataset_path="/ephys/signal",
