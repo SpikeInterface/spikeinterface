@@ -209,17 +209,15 @@ corrected_recordings_list_motion, _ = session_alignment.align_sessions_after_mot
 # The ``"bin_um"`` parameter controls the bin-size of the activity histogram.
 # Along the probe's y-axis, spatial bins will be generated according to this bin size.
 #
-# To compute the histogram, the session is split into chunks across time, and either
-# the mean or median (bin-wise) taken across chunks. This generates the summary
-# histgoram for that session to be used to estimate inter-session displacement.
-#
-# The ``"method"`` parameter controls whether the mean (``"chunked_mean"``)
-# or median (``"chunked_median"``) is used. The idea of using the median is to
-# reduce the effect periods of the recording which may be outliers
-# due to noise or other signal contamination.
-# ``"chunked_bin_size_s"`` sets the size of the temporal chunks. By default is
-# ``"estimate"`` which estimates the chunk size based on firing frequency
-# (see XXXX). Otherwise, can taFke a float for chunk size in seconds.
+# The default ``"method"``, ``"entire_session"``, pools all peaks into one histogram
+# and divides by the recording duration to obtain rates. Alternatively,
+# ``"chunked_median"`` computes rate histograms for time chunks and takes their
+# bin-wise median, reducing the influence of unusually active periods.
+# For both methods, ``"log_transform"`` applies ``log2(1 + rate)`` after the
+# session histogram has been formed, rather than transforming individual chunks.
+# ``"chunked_bin_size_s"`` applies only to ``"chunked_median"``. Its default,
+# ``"estimate"``, estimates the chunk size based on firing frequency; a float
+# specifies the chunk size in seconds.
 #
 # The ``histogram_type`` can be ``"1d"` or ``"2d"``,
 # if 1D the firing rate x spatial bin histogram is generated. Otherwise
@@ -229,6 +227,7 @@ corrected_recordings_list_motion, _ = session_alignment.align_sessions_after_mot
 
 estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
 estimate_histogram_kwargs["histogram_type"] = "1d"
+estimate_histogram_kwargs["method"] = "chunked_median"
 estimate_histogram_kwargs["chunked_bin_size_s"] = 1.0
 
 _, extra_info_rigid = session_alignment.align_sessions(

@@ -290,7 +290,7 @@ plt.show()
 if False:
     A = extra_info["histogram_info_list"][2]["chunked_histograms"]
 
-    mean_ = alignment_utils.get_chunked_hist_mean(A)
+    mean_ = np.mean(A, axis=0)
     median_ = alignment_utils.get_chunked_hist_median(A)
     supremum_ = alignment_utils.get_chunked_hist_supremum(A)
     poisson_ = alignment_utils.get_chunked_hist_poisson_estimate(A)

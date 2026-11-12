@@ -21,10 +21,9 @@ import copy
 def get_estimate_histogram_kwargs() -> dict:
     """
     A dictionary controlling how the histogram for each session is
-    computed. The session histograms are estimated by chunking
-    the recording into time segments and computing histograms
-    for each chunk, then performing some summary statistic over
-    the chunked histograms.
+    computed. Histograms use the entire session or the bin-wise median
+    of time-chunk histograms, with counts normalized by duration before
+    aggregation and optional log transformation.
 
     Returns
     -------
@@ -33,21 +32,23 @@ def get_estimate_histogram_kwargs() -> dict:
     "bin_um" : number of spatial histogram bins. As the estimated peak
         locations are continuous (i.e. real numbers) this is not constrained
         by the number of channels.
-    "method" : may be "entire_session", "chunked_mean", "chunked_median".
-        "entire_session" pools all peaks into one histogram of counts over the
-        full recording, ignoring "chunked_bin_size_s". The other methods take
-        the mean or median of chunked histograms. See `alignment_utils.py`
-        for details on each method.
+    "method" : "entire_session" (default) or "chunked_median".
+        "entire_session" pools all peaks into one histogram and divides by
+        the recording duration to obtain rates, ignoring "chunked_bin_size_s".
+        "chunked_median" computes a rate histogram for each time chunk, then
+        takes the median across chunks for each histogram bin.
+        See `alignment_utils.py` for details.
     "chunked_bin_size_s" : The length in seconds (float) to chunk the recording
         for estimating the chunked histograms. Can be set to "estimate" (str),
         and the size is estimated from firing frequencies.
-    "log_transform" : if `True`, histograms are log transformed.
+    "log_transform" : if `True`, apply log2(1 + rate) to the session histogram
+        after pooling the entire session or taking the median of chunk rates.
     "depth_smooth_um" : if `None`, no smoothing is applied. See
         `make_2d_motion_histogram`.
     """
     return {
         "bin_um": 2,
-        "method": "chunked_mean",
+        "method": "entire_session",
         "chunked_bin_size_s": "estimate",
         "log_transform": True,
         "depth_smooth_um": None,
@@ -530,10 +531,11 @@ def _get_single_session_activity_histogram(
 ) -> tuple[np.ndarray, np.ndarray, dict]:
     """
     Compute an activity histogram for a single session.
-    The recording is chunked into time segments, histograms
-    estimated and a summary statistic calculated across the histograms
+    Pool all peaks into a rate histogram or take the bin-wise median of
+    rate histograms from time chunks. Apply log2(1 + rate), if requested,
+    only after constructing this session summary.
 
-    Note if `chunked_bin_size_is` is set to `"estimate"` the
+    For "chunked_median", if `chunked_bin_size_s` is set to `"estimate"` the
     histogram for the entire session is first created to get a good
     estimate of the firing rates.
     The firing rates are used to use a time segment size that will
@@ -557,8 +559,8 @@ def _get_single_session_activity_histogram(
         one time point) for the session.
     histogram_info : dict
         A dict of additional info including:
-            "chunked_histograms" : The chunked histograms over which
-                the summary histogram was calculated.
+            "chunked_histograms" : The rate histograms before log transformation
+                over which the summary histogram was calculated.
             "chunked_temporal_bin_centers" : The temporal vin centers
                 for the chunked histograms, with length num_chunks.
             "session_std" : The mean across bin-wise standard deviation
@@ -601,7 +603,7 @@ def _get_single_session_activity_histogram(
             depth_smooth_um=depth_smooth_um,
             weight_with_amplitude=weight_with_amplitude,
             avg_in_bin=avg_in_bin,
-            scale_to_hz=method != "entire_session",
+            scale_to_hz=True,
         )
 
     elif histogram_type in ["2d"]:
@@ -622,12 +624,12 @@ def _get_single_session_activity_histogram(
             )
 
         chunked_temporal_bin_centers = alignment_utils.get_bin_centers(chunked_temporal_bin_edges)
+        chunked_histograms = alignment_utils.scale_histogram_to_hz(
+            chunked_histograms, chunked_temporal_bin_edges, recording.get_duration()
+        )
 
     if method == "entire_session":
         session_histogram = chunked_histograms[0]
-
-    elif method == "chunked_mean":
-        session_histogram = alignment_utils.get_chunked_hist_mean(chunked_histograms)
 
     elif method == "chunked_median":
         session_histogram = alignment_utils.get_chunked_hist_median(chunked_histograms)
@@ -1008,7 +1010,6 @@ def _check_align_sessions_inputs(
 
     accepted_hist_methods = [
         "entire_session",
-        "chunked_mean",
         "chunked_median",
     ]
     method = estimate_histogram_kwargs["method"]

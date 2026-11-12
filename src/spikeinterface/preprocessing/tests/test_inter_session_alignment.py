@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from spikeinterface.core import Motion
 from spikeinterface.preprocessing.inter_session_alignment import session_alignment, alignment_utils
 from spikeinterface.generation.session_displacement_generator import *
 import spikeinterface  # required for monkeypatching
@@ -209,6 +210,7 @@ class TestInterSessionAlignment:
 
         estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
         estimate_histogram_kwargs["bin_um"] = bin_um
+        estimate_histogram_kwargs["method"] = "chunked_median"
         estimate_histogram_kwargs["chunked_bin_size_s"] = bin_s
         estimate_histogram_kwargs["log_transform"] = False
 
@@ -266,7 +268,8 @@ class TestInterSessionAlignment:
                     )
                 ]
                 assert np.allclose(
-                    np.histogram(new_peak_locs["y"], bins=bin_edges)[0] / (upper - lower),
+                    np.histogram(new_peak_locs["y"], bins=bin_edges)[0]
+                    / (min(upper, times[0] + recording.get_duration()) - lower),
                     chunked_histogram_info["chunked_histograms"][edge_idx, :],
                     rtol=0,
                     atol=1e-6,
@@ -289,6 +292,7 @@ class TestInterSessionAlignment:
             expected = np.zeros((2, 20))
             expected[0, [0, 6, 13]] = 1
             expected[1, 19] = 1
+        expected /= recording.get_duration()
 
         monkeypatch.setattr(
             alignment_utils,
@@ -315,39 +319,52 @@ class TestInterSessionAlignment:
             assert info["chunked_bin_size_s"] == 2.5
 
     @pytest.mark.parametrize("histogram_type", ["1d", "2d"])
-    @pytest.mark.parametrize("operator", ["mean", "median"])
-    def test_histogram_log_tranform(self, recording_1, histogram_type, operator):
-        """ """
-        # Run histogram compute with a set of kwargs
-        recordings_list, _, peaks_list, peak_locations_list = recording_1
+    @pytest.mark.parametrize("method", ["entire_session", "chunked_median"])
+    def test_histogram_log_transform(self, histogram_type, method):
+        """Check rates and apply the log after aggregation, including a partial final chunk."""
+        from spikeinterface.core import NumpyRecording
 
-        estimate_histogram_kwargs = session_alignment.get_estimate_histogram_kwargs()
-        estimate_histogram_kwargs["log_transform"] = False
-        estimate_histogram_kwargs["method"] = f"chunked_{operator}"
-        estimate_histogram_kwargs["histogram_type"] = histogram_type
-
-        _, extra_info_log_false = session_alignment.align_sessions(
-            recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
+        recording = NumpyRecording([np.zeros((3000, 2), dtype="float32")], sampling_frequency=1000)
+        peaks = np.array(
+            [(100, 1.0), (200, 1.0), (300, 1.0), (400, 10.0), (2100, 1.0), (2200, 10.0)],
+            dtype=[("sample_index", "int64"), ("amplitude", "float64")],
         )
+        locations = np.array([(0.5,), (0.5,), (0.5,), (1.5,), (0.5,), (1.5,)], dtype=[("y", "float64")])
 
-        # Now, run it again with log transform and check the
-        # summary histogram is indeed the log-transformed mean / median
-        # of the chunked histograms.
-        estimate_histogram_kwargs["log_transform"] = True
+        if histogram_type == "1d":
+            counts = np.array([[3.0, 1.0], [1.0, 1.0]])
+        else:
+            counts = np.zeros((2, 2, 20))
+            counts[:, 0, 0] = [3, 1]
+            counts[:, 1, 19] = [1, 1]
 
-        _, extra_info_log_true = session_alignment.align_sessions(
-            recordings_list, peaks_list, peak_locations_list, estimate_histogram_kwargs=estimate_histogram_kwargs
-        )
-        for ses_idx in range(len(recordings_list)):
+        if method == "entire_session":
+            expected_chunks = counts.sum(axis=0, keepdims=True) / 3.0
+            expected = expected_chunks[0]
+        else:
+            # The first chunk lasts two seconds; the final chunk lasts only one.
+            expected_chunks = counts.copy()
+            expected_chunks[0] /= 2.0
+            expected = np.median(expected_chunks, axis=0)
+            # With two unequal chunk rates, taking logs before the median would differ.
+            assert not np.allclose(np.log2(1 + expected), np.median(np.log2(1 + expected_chunks), axis=0))
 
-            summary_hist_log_false = extra_info_log_false["session_histogram_list"][ses_idx]
-            summary_hist_log_true = extra_info_log_true["session_histogram_list"][ses_idx]
-            chunked_histograms_log_true = extra_info_log_true["histogram_info_list"][ses_idx]["chunked_histograms"]
-
-            assert np.array_equal(np.log2(summary_hist_log_false + 1), summary_hist_log_true)
-
-            summary_func = np.median if operator == "median" else np.mean
-            assert np.array_equal(summary_hist_log_true, np.log2(1 + summary_func(chunked_histograms_log_true, axis=0)))
+        for log_transform in [False, True]:
+            histogram, _, info = session_alignment._get_single_session_activity_histogram(
+                recording,
+                peaks,
+                locations,
+                histogram_type=histogram_type,
+                spatial_bin_edges=np.array([0.0, 1.0, 2.0]),
+                method=method,
+                log_transform=log_transform,
+                chunked_bin_size_s=2.0,
+                depth_smooth_um=None,
+                weight_with_amplitude=False,
+                avg_in_bin=False,
+            )
+            np.testing.assert_allclose(info["chunked_histograms"], expected_chunks)
+            np.testing.assert_allclose(histogram, np.log2(1 + expected) if log_transform else expected)
 
     ###########################################################################
     # Following Motion Correction
@@ -446,32 +463,54 @@ class TestInterSessionAlignment:
 
         self.assert_interpolate_recording_not_duplicate(corrected_recordings[0])
 
-    def test_nonrigid_displacement_rebuilds_cached_interpolators(self):
-        from spikeinterface.core import Motion, NumpyRecording
+    def test_nonrigid_alignment_matches_combined_motion(self, recording_2):
+        """Check that nonrigid session alignment produces the expected traces.
 
-        traces = np.random.default_rng(0).normal(size=(300, 4)).astype("float32")
-        recording = NumpyRecording([traces], sampling_frequency=1000)
-        recording.set_channel_locations(np.c_[np.zeros(4), np.arange(4) * 20])
-        temporal_bins = np.array([0.05, 0.15, 0.25])
-        rigid_motion = Motion(np.array([[1.0], [2.0], [3.0]]), temporal_bins, np.array([30.0]))
-        original = InterpolateMotionRecording(recording, rigid_motion, border_mode="force_zeros")
+        Compare the aligned traces with fresh recordings using the combined
+        motion, and check that the original recordings remain unchanged.
+        The value of this test is to check that cached objects such as
+        interpolators are properly refreshed when align_sessions_after_motion_correction
+        is applied.
+        """
+        # Start with recordings that already have within-session rigid motion correction.
+        recordings_list, _, _, _ = recording_2
+        mc_recording_list, mc_motion_info_list = self.motion_correct_recordings_list(recordings_list, rigid_motion=True)
+        # Add small intra-session motion offsets (0.01 and 0.02 um) that session alignment must preserve.
+        for index, recording in enumerate(mc_recording_list):
+            recording.segments[0].motion.displacement[0] += 0.01 * (index + 1)
 
-        # Reading traces initializes the interpolators before adding session displacement.
-        original_traces = original.get_traces()
-        session_motion = Motion(np.array([[10.0, 20.0]]), np.array([0.15]), np.array([0.0, 60.0]))
-        corrected = session_alignment._add_displacement_to_interpolate_recording(original, session_motion)
+        # Copy the traces and motions which have had the extra displacements added
+        # This initializes cached interpolators, and saves the pre-alignment state.
+        original_traces = [recording.get_traces() for recording in mc_recording_list]
+        original_motions = [recording.segments[0].motion.copy() for recording in mc_recording_list]
+        non_rigid_window_kwargs = session_alignment.get_non_rigid_window_kwargs()
+        non_rigid_window_kwargs["rigid"] = False
 
-        corrected_motion = corrected.segments[0].motion
-        np.testing.assert_allclose(
-            corrected_motion.get_displacement_at_time_and_depth(np.full(3, 0.15), np.array([0.0, 30.0, 60.0])),
-            [12.0, 17.0, 22.0],
+        # Estimate session alignment and combine it with the existing motion correction.
+        corrected_recordings, extra_info = session_alignment.align_sessions_after_motion_correction(
+            mc_recording_list,
+            mc_motion_info_list,
+            align_sessions_kwargs={
+                "alignment_order": "to_session_1",
+                "non_rigid_window_kwargs": non_rigid_window_kwargs,
+            },
         )
-        expected_motion = Motion(
-            np.array([[11.0, 21.0], [12.0, 22.0], [13.0, 23.0]]), temporal_bins, np.array([0.0, 60.0])
-        )
-        expected = InterpolateMotionRecording(recording, expected_motion, border_mode="force_zeros")
-        np.testing.assert_allclose(corrected.get_traces(), expected.get_traces())
-        np.testing.assert_array_equal(original.get_traces(), original_traces)
+
+        for index, recording in enumerate(recordings_list):
+            original_motion = original_motions[index]
+
+            # Independently combine the original rigid motion with the estimated session shifts.
+            expected_motion = Motion(
+                original_motion.displacement[0] + extra_info["shifts_array"][index],
+                original_motion.temporal_bins_s[0],
+                extra_info["non_rigid_window_centers"],
+            )
+
+            # Independently create the motion object and compare. This tests that cached attributes
+            # on the `corrected_recordings` have been properly refreshed.
+            expected = InterpolateMotionRecording(recording, expected_motion, border_mode="force_zeros", p=2)
+            np.testing.assert_allclose(corrected_recordings[index].get_traces(), expected.get_traces())
+            np.testing.assert_array_equal(mc_recording_list[index].get_traces(), original_traces[index])
 
     @pytest.mark.parametrize("rigid_intersession", [True, False])
     def test_nonrigid_motion(self, rigid_intersession, recording_1, recording_2):
@@ -627,6 +666,10 @@ class TestInterSessionAlignment:
     ###########################################################################
 
     def test_estimate_chunk_size(self):
+        """
+        Test the function that chunks the time before computing histograms.
+        It estimates chunk size from the firing frequency.
+        """
         histogram = np.array([1.0, 4.0, 2.0])
         # The representative firing rate is 25% of the maximum: 1 Hz.
         # A 10% error tolerance at 90% confidence requires 270.6025 seconds.
@@ -731,18 +774,19 @@ class TestInterSessionAlignment:
             assert xcorr_matrix_unsmoothed.shape[1] == num_shifts
 
     def test_compute_histogram_crosscorrelation_multiple_sessions(self):
-        # Distinct offsets expose incorrect pairing of upper/lower triangular indices.
+        """Check pairwise shifts and their signs across six sessions.
+
+        Each session contains a single histogram peak at a known offset.
+        Cross-correlation should recover the relative displacement between
+        every pair of sessions.
+        """
         offsets = np.array([0, 1, 4, 9, 16, 25])
-        histograms = np.zeros((offsets.size, 128))
-        histograms[np.arange(offsets.size), 32 + offsets] = 1
-        histograms[np.arange(offsets.size), 96 + offsets] = 1
-        windows = np.zeros((2, 128))
-        windows[0, :64] = 1
-        windows[1, 64:] = 1
+        histograms = np.zeros((offsets.size, 64))
+        histograms[np.arange(offsets.size), 16 + offsets] = 1
 
         shifts_matrix, _ = alignment_utils.compute_histogram_crosscorrelation(
             histograms,
-            non_rigid_windows=windows,
+            non_rigid_windows=np.ones((1, 64)),
             num_shifts=30,
             interpolate=False,
             interp_factor=1,
@@ -755,7 +799,7 @@ class TestInterSessionAlignment:
         )
 
         expected = offsets[:, None] - offsets[None, :]
-        np.testing.assert_array_equal(shifts_matrix, np.repeat(expected[:, :, None], 2, axis=2))
+        np.testing.assert_array_equal(shifts_matrix[:, :, 0], expected)
 
     @pytest.mark.parametrize("histogram_mode", ["1d", "2d"])
     def test_compute_histogram_crosscorrelation_nonrigid(self, histogram_mode):
@@ -806,7 +850,7 @@ class TestInterSessionAlignment:
 
         default_kwargs = {
             "bin_um": 2,
-            "method": "chunked_mean",
+            "method": "entire_session",
             "chunked_bin_size_s": "estimate",
             "log_transform": True,
             "depth_smooth_um": None,
@@ -822,6 +866,7 @@ class TestInterSessionAlignment:
         different_kwargs = session_alignment.get_estimate_histogram_kwargs()
         different_kwargs.update(
             {
+                "method": "chunked_median",
                 "chunked_bin_size_s": 6,
                 "depth_smooth_um": 5,
                 "weight_with_amplitude": True,

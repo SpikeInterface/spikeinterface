@@ -66,17 +66,26 @@ def get_2d_activity_histogram(
     )
 
     if scale_to_hz:
-        if bin_s is None:
-            scaler = 1 / recording.get_duration()
-        else:
-            scaler = 1 / np.diff(temporal_bin_edges)[:, np.newaxis]
-
-        activity_histogram *= scaler
+        activity_histogram = scale_histogram_to_hz(activity_histogram, temporal_bin_edges, recording.get_duration())
 
     temporal_bin_centers = get_bin_centers(temporal_bin_edges)
     spatial_bin_centers = get_bin_centers(spatial_bin_edges)
 
     return activity_histogram, temporal_bin_centers, spatial_bin_centers
+
+
+def scale_histogram_to_hz(histogram, temporal_bin_edges, recording_duration_s):
+    """Normalize a floating-point histogram in place by each time bin's recorded duration.
+
+    Time is the first axis; remaining axes can represent depth and amplitude.
+    Bin edges start at the recording start, and the final bin may extend past
+    the recording end. Only its recorded duration contributes to normalization.
+    """
+    recording_end = temporal_bin_edges[0] + recording_duration_s
+    chunk_durations = np.diff(np.minimum(temporal_bin_edges, recording_end))
+    duration_shape = (-1,) + (1,) * (histogram.ndim - 1)
+    histogram /= chunk_durations.reshape(duration_shape)
+    return histogram
 
 
 def get_bin_centers(bin_edges):
@@ -124,13 +133,6 @@ def estimate_chunk_size(scaled_activity_histogram):
 # #############################################################################
 # Given a set off chunked_session_histograms (num time chunks x num spatial bins)
 # take the summary statistic over the time axis.
-
-
-def get_chunked_hist_mean(chunked_session_histograms):
-    """ """
-    mean_hist = np.mean(chunked_session_histograms, axis=0)
-
-    return mean_hist
 
 
 def get_chunked_hist_median(chunked_session_histograms):
@@ -329,7 +331,6 @@ def compute_histogram_crosscorrelation(
             # Upsample the cross-correlation
             if interpolate:
 
-                # Subdivide intervals to retain every original lag, including zero.
                 num_points = (shifts_array.size - 1) * interp_factor + 1
                 shifts_upsampled = np.linspace(shifts_array[0], shifts_array[-1], num_points)
 
