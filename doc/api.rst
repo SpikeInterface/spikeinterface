@@ -454,7 +454,6 @@ Hybrid
     :no-index:
 
     .. autofunction:: generate_hybrid_recording
-    .. autofunction:: estimate_templates_from_recording
     .. autofunction:: select_templates
     .. autofunction:: scale_template_to_range
     .. autofunction:: relocate_templates
@@ -510,6 +509,12 @@ Motion Correction
     .. autofunction:: interpolate_motion_on_traces
     .. autofunction:: clean_motion_vector
     .. autoclass:: InterpolateMotionRecording
+
+Tools
+~~~~~
+
+    .. autofunction:: estimate_templates_from_recording
+
 
 spikeinterface.benchmark
 ------------------------

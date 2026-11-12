@@ -1,6 +1,9 @@
-import numpy as np
-import shutil
 import importlib.util
+import shutil
+from pathlib import Path
+from typing import Literal
+
+import numpy as np
 
 if importlib.util.find_spec("psutil") is not None:
     import psutil
@@ -9,7 +12,7 @@ if importlib.util.find_spec("psutil") is not None:
 else:
     HAVE_PSUTIL = False
 
-
+from spikeinterface.core import BaseRecording, load
 from spikeinterface.core.waveform_tools import extract_waveforms_to_single_buffer
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
@@ -19,6 +22,67 @@ from spikeinterface.core.template_tools import get_template_peak_shift_on_main_c
 from spikeinterface.core.recording_tools import get_noise_levels
 from spikeinterface.core.sorting_tools import get_numba_vector_to_list_of_spiketrain
 from spikeinterface.core.core_tools import ms_to_samples
+
+
+def estimate_templates_from_recording(
+    recording: BaseRecording,
+    sorter_name: Literal["spykingcircus2", "tridesclous2", "lupin"] = "lupin",
+    sorter_params: dict | None = None,
+    temp_folder: str | Path | None = None,
+    verbose: bool = False,
+):
+    """
+    Get a template library from a recording, using the algorithms implemented inside
+    the internal SpikeInterface sorters.
+
+    Parameters
+    ----------
+    recording : BaseRecording
+        The recording to get templates from.
+    sorter_name : "lupin" | "spykingcircus2" | "tridesclous2", default: "lupin"
+        The sorter to be used to create the template library.
+    sorter_params : dict
+        The parameters provided to the run_sorter_local function of spikeinterface.
+    temp_folder : str | Path | None
+        A folder where the intermediate data, used to create the templates, is saved.
+    verbose : bool, default: True
+
+    Returns
+    -------
+    templates: Templates
+        The estimated templates
+    """
+    from spikeinterface.sorters.runsorter import run_sorter_local
+
+    if sorter_params is None:
+        sorter_params = {}
+
+    sorter_params["_templates_only"] = True
+
+    if temp_folder is None:
+        temp_folder = f"{sorter_name}_template_temporary_output"
+
+    temp_folder = Path(temp_folder)
+
+    # This is a bit of a hack. Our sorting functions make a lot of folder structure etc.,
+    # which isn't really needed. Instead of being clever, we just generate all this then
+    # delete it after we've extracted the templates.
+    run_sorter_local(
+        sorter_name,
+        recording,
+        folder=temp_folder,
+        remove_existing_folder=True,
+        delete_output_folder=False,
+        verbose=verbose,
+        raise_error=True,
+        with_output=False,
+        **sorter_params,
+    )
+
+    templates = load(temp_folder / "sorter_output/templates_temp.zarr")
+    shutil.rmtree(temp_folder)
+
+    return templates
 
 
 def make_multi_method_doc(methods, indent="    "):
