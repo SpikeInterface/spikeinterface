@@ -47,14 +47,14 @@ class UnitSpatialDistributionsWidget(BaseWidget):
 
     def __init__(
         self,
-        sorting_analyzer: SortingAnalyzer,
+        sorting_analyzer: "SortingAnalyzer",
         probe: Probe | None = None,
         depth_axis: Literal[0, 1] = 1,
         bins: int | tuple | None = None,
-        cmap: str | Colormap = "viridis",
+        cmap: "str | Colormap" = "viridis",
         kde: bool = False,
         depth_hist: bool = True,
-        groups: ArrayLike | None = None,
+        groups: "ArrayLike | None" = None,
         kde_kwargs: dict[str, Any] | None = None,
         backend: str | None = None,
         show_depth_hist_axis: bool = True,
