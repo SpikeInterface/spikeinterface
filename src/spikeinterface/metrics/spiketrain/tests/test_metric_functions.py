@@ -27,6 +27,11 @@ def test_calculate_firing_rates(sorting_analyzer_simple):
     firing_rates_periods = compute_firing_rates(sorting_analyzer, periods=periods)
     assert firing_rates == firing_rates_periods
 
+    # Overlapping periods shouldn't double-count time:
+    # the same periods twice should give the same firing rates as the original periods
+    firing_rates_overlapping = compute_firing_rates(sorting_analyzer, periods=np.concatenate([periods, periods]))
+    assert firing_rates_overlapping == firing_rates
+
     # calculate num spikes with empty periods
     empty_periods = np.empty(0, dtype=unit_period_dtype)
     firing_rates_empty_periods = compute_firing_rates(sorting_analyzer, periods=empty_periods)
