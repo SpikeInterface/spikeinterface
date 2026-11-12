@@ -112,10 +112,9 @@ plot_activity_histogram_2d(
 )
 plt.show()
 
-#
-# .. _with_motion_correction:
-
 # %%
+# .. _with_motion_correction:
+#
 # Inter-session alignment after motion correction
 # -----------------------------------------------
 #
@@ -136,8 +135,9 @@ plt.show()
 #
 #     You can verify this by confirming the recording is an ``InterpolateMotionRecording`` with:
 #
-#     .. code-block::
-#         type(recording)``  # quick check, should print `InterpolateMotionRecording`
+#     .. code-block:: python
+#
+#         type(recording)  # quick check, should print `InterpolateMotionRecording`
 #
 #         from spikeinterface.sortingcomponents.motion.motion_interpolation import InterpolateMotionRecording
 #
@@ -157,7 +157,7 @@ split_time = total_duration / 2
 
 # Split in two to simulate two sessions
 recording_part1 = motion_recording.time_slice(start_time=0, end_time=split_time)
-recording_part2 = motion_recording.time_slice(start_time=split_time, end_time=total_duration)
+recording_part2 = motion_recording.time_slice(start_time=split_time, end_time=None)
 
 # %%
 # Next, motion correction is performed, storing the results in a list:
@@ -275,7 +275,7 @@ plt.show()
 # by inspecting the output of inter-session alignment. First, we generate a
 # pair of recordings with non-rigid displacement and perform rigid alignment:
 
-recordings_list, _ = generate_session_displacement_recordings(
+recordings_list, _ = si.generate_session_displacement_recordings(
     num_units=8,
     recording_durations=[10, 10],
     recording_shifts=((0, 0), (0, 200)),  # (x offset, y offset) pairs
