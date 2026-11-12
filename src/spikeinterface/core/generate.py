@@ -8,7 +8,7 @@ from .base import minimum_spike_dtype
 from .basesorting import SpikeVectorSortingSegment
 from .numpyextractors import NumpySorting
 
-from probeinterface import generate_linear_probe, generate_multi_columns_probe
+from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
 
 from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from .core_tools import define_function_from_class, ms_to_samples, _ensure_seed
