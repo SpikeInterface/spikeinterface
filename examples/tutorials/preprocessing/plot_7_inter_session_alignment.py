@@ -161,13 +161,20 @@ recording_part2 = motion_recording.time_slice(start_time=split_time, end_time=No
 
 # %%
 # Next, motion correction is performed, storing the results in a list:
+# We override the motion estimator with its NumPy-based alternative so this
+# example does not require PyTorch, which the default ``rigid_fast`` estimator uses.
 
 # perform motion correction on each session, storing the outputs in lists
 recordings_list_motion = []
 motion_info_list = []
 for recording in [recording_part1, recording_part2]:
 
-    rec, motion_info = si.correct_motion(recording, output_motion_info=True, preset="rigid_fast")
+    rec, motion_info = si.correct_motion(
+        recording,
+        output_motion_info=True,
+        preset="rigid_fast",
+        estimate_motion_kwargs={"method": "decentralized", "conv_engine": "numpy"},
+    )
 
     recordings_list_motion.append(rec)
     motion_info_list.append(motion_info)
