@@ -1,0 +1,39 @@
+.. _release0.105.4:
+
+SpikeInterface 0.105.4 release notes
+------------------------------------
+
+October 27th 2026
+
+Minor release with bug fixes
+
+core:
+
+* Allow for ``main_channel_indices`` to use ``rec_attributes`` (#4867)
+* Remove legacy ``location`` property when loading old recordings (#4896)
+* Fix: do not include ``extra_metadata`` in zarr provenance dump (#4885)
+
+preprocessing:
+
+* Feat: expose ``periods`` property in silence_periods (#4897)
+* Dredge fixes (#4889)
+* Save ``dtype`` in ``phase_shift`` kwargs (#4886)
+* Make motion-corrected and silenced recordings JSON-serializable (#4877)
+
+extractors:
+
+* Fix: openephys - check ``sync_times`` only if not None (#4890)
+
+sorters:
+
+* Add ``main_channel_id`` to Lupin (#4894)
+
+
+Contributors:
+
+* @alejoe91
+* @chrishalcrow
+* @cwindolf
+* @galenlynch
+* @h-mayorquin
+* @yger

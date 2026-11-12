@@ -37,7 +37,6 @@ os.environ["FIGPACK_UPLOAD"] = "1" if FIGPACK_UPLOAD else "0"
 
 
 class TestWidgets(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
 
@@ -632,6 +631,11 @@ class TestWidgets(unittest.TestCase):
             if backend not in self.skip_backends:
                 sw.plot_rasters(self.sorting)
 
+        shifted_sorting = self.sorting.clone()
+        shifted_sorting.shift_times(5.0)
+        widget = sw.plot_rasters(shifted_sorting, backend="matplotlib")
+        assert widget.ax.get_xlim()[0] >= 5.0
+
     def test_plot_unit_probe_map(self):
         possible_backends = list(sw.UnitProbeMapWidget.get_possible_backends())
         for backend in possible_backends:
@@ -691,6 +695,16 @@ class TestWidgets(unittest.TestCase):
                 sw.plot_drift_raster_map(
                     peaks=peaks, peak_locations=peak_locations, recording=recording, color_amplitude=True
                 )
+                if backend == "matplotlib":
+                    shifted_recording = recording.clone()
+                    shifted_recording.shift_times(5.0)
+                    widget = sw.plot_drift_raster_map(
+                        peaks=peaks, peak_locations=peak_locations, recording=shifted_recording
+                    )
+                    np.testing.assert_allclose(
+                        widget.ax.get_xlim(),
+                        [shifted_recording.get_start_time(), shifted_recording.get_end_time()],
+                    )
                 # without recording
                 sw.plot_drift_raster_map(
                     peaks=peaks,
@@ -744,7 +758,6 @@ class TestWidgets(unittest.TestCase):
 
 if __name__ == "__main__":
     # unittest.main()
-    import matplotlib.pyplot as plt
 
     TestWidgets.setUpClass()
     mytest = TestWidgets()

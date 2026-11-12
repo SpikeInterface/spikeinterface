@@ -1,6 +1,5 @@
 import importlib.util
 import os
-import numpy as np
 
 from ..basesorter import BaseSorter
 
@@ -116,7 +115,7 @@ class RTSortSorter(BaseSorter):
     This implementation in SpikeInterface only implements RT-Sort's offline sorting.
     For more information see https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0312438"""
 
-    installation_mesg = f"""\nTo use RTSort run:\n
+    installation_mesg = """\nTo use RTSort run:\n
        >>> pip install git+https://github.com/braingeneers/braindance#egg=braindance[rt-sort]
 
     Additionally, install PyTorch (https://pytorch.org/get-started/locally/) with any version of CUDA as the compute platform.

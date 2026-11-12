@@ -69,7 +69,7 @@ class DriftingTemplatesWidget(BaseWidget):
             max=arr.shape[0] - 1,
             readout=False,
             continuous_update=True,
-            layout=widgets.Layout(width=f"100%"),
+            layout=widgets.Layout(width="100%"),
         )
 
         self.widget = widgets.AppLayout(

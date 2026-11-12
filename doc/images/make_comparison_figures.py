@@ -11,7 +11,6 @@ import sys
 sys.path.append('../../examples/modules/comparison/')
 from generate_erroneous_sorting import generate_erroneous_sorting
 
-import spikeinterface.extractors as se
 import spikeinterface.comparison as sc
 import spikeinterface.widgets as sw
 

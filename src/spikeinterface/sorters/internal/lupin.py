@@ -11,9 +11,8 @@ from spikeinterface.core import (
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
-from spikeinterface.core.core_tools import _check_zarr_write_is_supported
 
-from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
+from spikeinterface.preprocessing import bandpass_filter, common_reference, whiten
 from spikeinterface.core.base import minimum_spike_dtype
 
 from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_cache_preprocessing
@@ -124,11 +123,6 @@ class LupinSorter(ComponentsBasedSorter):
 
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
-
-        # TODO: remove once writing to zarr is supported with zarr>=3
-        if params["save_array"]:
-            _check_zarr_write_is_supported()
-
         from spikeinterface.sortingcomponents.tools import get_prototype_and_waveforms_from_recording
         from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
         from spikeinterface.sortingcomponents.peak_detection import detect_peaks
@@ -183,7 +177,6 @@ class LupinSorter(ComponentsBasedSorter):
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
-
                 rec_for_motion = recording_raw
                 if params["preprocessing_dict"] is None:
                     rec_for_motion = bandpass_filter(
@@ -309,6 +302,7 @@ class LupinSorter(ComponentsBasedSorter):
         clustering_kwargs["clean_templates"]["sparsify_threshold"] = params["template_sparsify_threshold"]
         clustering_kwargs["clean_templates"]["min_snr"] = params["template_min_snr_ptp"]
         clustering_kwargs["clean_templates"]["max_jitter_ms"] = params["template_max_jitter_ms"]
+        clustering_kwargs["clean_templates"]["peak_sign"] = params["peak_sign"]
         clustering_kwargs["merge_from_templates"]["use_lags"] = True
         clustering_kwargs["merge_from_templates"]["num_shifts"] = num_shifts_merging
         clustering_kwargs["noise_levels"] = noise_levels
@@ -381,6 +375,7 @@ class LupinSorter(ComponentsBasedSorter):
             noise_levels=noise_levels,
             min_snr=params["template_min_snr_ptp"],
             max_jitter_ms=params["template_max_jitter_ms"],
+            peak_sign=params["peak_sign"],
             remove_empty=True,
         )
 
@@ -405,6 +400,9 @@ class LupinSorter(ComponentsBasedSorter):
         final_spikes["segment_index"] = spikes["segment_index"]
         sorting = NumpySorting(final_spikes, sampling_frequency, templates.unit_ids)
 
+        main_channel_ids = templates.get_main_channels(peak_sign=params["peak_sign"], outputs="id")
+        sorting.set_property("main_channel_id", main_channel_ids)
+
         auto_merge = True
         analyzer_final = None
         if auto_merge:
@@ -425,7 +423,10 @@ class LupinSorter(ComponentsBasedSorter):
                 debug_folder=None,
                 job_kwargs=job_kwargs,
             )
-            sorting = NumpySorting.from_sorting(analyzer_final.sorting)
+            # This is an internal merge, we don't need to expose the "is_merged" property to the user
+            if "is_merged" in analyzer_final.sorting.get_property_keys():
+                analyzer_final.sorting.delete_property("is_merged")
+            sorting = NumpySorting.from_sorting(analyzer_final.sorting, with_metadata=True)
 
         if params["save_array"]:
             sorting_pre_peeler = sorting_pre_peeler.save(folder=sorter_output_folder / "sorting_pre_peeler")

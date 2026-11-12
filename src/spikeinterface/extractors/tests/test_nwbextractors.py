@@ -1,3 +1,4 @@
+import importlib.util
 import unittest
 from pathlib import Path
 
@@ -158,21 +159,26 @@ def nwbfile_with_ecephys_content():
     return nwbfile
 
 
+# hdmf-zarr>=0.14 (zarr v3) requires python>=3.12, so it may be missing
+NWB_BACKENDS = ["hdf5"] + (["zarr"] if importlib.util.find_spec("hdmf_zarr") else [])
+
+
 def _generate_nwbfile(backend, file_path):
     from pynwb import NWBHDF5IO
-    from hdmf_zarr import NWBZarrIO
 
     nwbfile = nwbfile_with_ecephys_content()
     if backend == "hdf5":
         io_class = NWBHDF5IO
     elif backend == "zarr":
+        from hdmf_zarr import NWBZarrIO
+
         io_class = NWBZarrIO
     with io_class(str(file_path), mode="w") as io:
         io.write(nwbfile)
     return file_path, nwbfile
 
 
-@pytest.fixture(scope="module", params=["hdf5", "zarr"])
+@pytest.fixture(scope="module", params=NWB_BACKENDS)
 def generate_nwbfile(request, tmp_path_factory):
     nwbfile = nwbfile_with_ecephys_content()
     backend = request.param
@@ -441,7 +447,7 @@ def test_failure_with_wrong_electrical_series_path(generate_nwbfile, use_pynwb):
     """Test that the extractor raises an error if the electrical series name is not found."""
     path_to_nwbfile, _ = generate_nwbfile
     with pytest.raises(ValueError):
-        recording_extractor = NwbRecordingExtractor(
+        _ = NwbRecordingExtractor(
             path_to_nwbfile,
             electrical_series_path="acquisition/ElectricalSeries3",
             use_pynwb=use_pynwb,
@@ -621,7 +627,7 @@ def test_sorting_extraction_start_time(tmp_path, use_pynwb):
 def test_sorting_extraction_start_time_from_series(tmp_path, use_pynwb):
     from pynwb import NWBHDF5IO
     from pynwb.testing.mock.file import mock_NWBFile
-    from pynwb.ecephys import ElectricalSeries, LFP, FilteredEphys
+    from pynwb.ecephys import ElectricalSeries
 
     from pynwb.testing.mock.ecephys import mock_electrodes
 
@@ -854,7 +860,7 @@ def test_sorting_electrical_series_path_and_time_base_are_mutually_exclusive(tmp
             **extra_kwarg,
         )
     expected_error = (
-        "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and " "'t_start'), not both."
+        "Provide either 'electrical_series_path' or the time base ('sampling_frequency' and 't_start'), not both."
     )
     assert str(exc_info.value) == expected_error
 
@@ -1091,7 +1097,7 @@ def test_multiple_unit_tables(tmp_path, use_pynwb):
 
     # passing a non existing unit table name should raise an error
     with pytest.raises(ValueError):
-        sorting_extractor = NwbSortingExtractor(
+        _ = NwbSortingExtractor(
             file_path=file_path, sampling_frequency=10.0, t_start=0, use_pynwb=use_pynwb, unit_table_path="units2"
         )
 
@@ -1158,19 +1164,20 @@ def nwbfile_with_timeseries():
 
 def _generate_nwbfile_with_time_series(backend, file_path):
     from pynwb import NWBHDF5IO
-    from hdmf_zarr import NWBZarrIO
 
     nwbfile = nwbfile_with_timeseries()
     if backend == "hdf5":
         io_class = NWBHDF5IO
     elif backend == "zarr":
+        from hdmf_zarr import NWBZarrIO
+
         io_class = NWBZarrIO
     with io_class(str(file_path), mode="w") as io:
         io.write(nwbfile)
     return file_path, nwbfile
 
 
-@pytest.fixture(scope="module", params=["hdf5", "zarr"])
+@pytest.fixture(scope="module", params=NWB_BACKENDS)
 def generate_nwbfile_with_time_series(request, tmp_path_factory):
     backend = request.param
     nwbfile_path = tmp_path_factory.mktemp("nwb_tests_directory") / "test.nwb"

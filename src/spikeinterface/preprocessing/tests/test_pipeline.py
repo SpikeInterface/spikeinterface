@@ -2,13 +2,10 @@ import pytest
 
 from spikeinterface.core.testing import check_recordings_equal
 from spikeinterface.core import create_sorting_analyzer
-from spikeinterface.core.core_tools import _is_zarr_write_supported
 from spikeinterface.generation import generate_recording, generate_ground_truth_recording
 from spikeinterface.preprocessing import (
     apply_preprocessing_pipeline,
     preprocessor_dict,
-    bandpass_filter,
-    common_reference,
     whiten,
     detect_and_remove_bad_channels,
     bandpass_filter,
@@ -46,7 +43,6 @@ def test_pipeline_equiv_to_step():
 
     for rec in [single_group_rec, rec_groups.split_by("group")]:
         for _, pp_wrapper in preprocessor_dict.items():
-
             pp_name = pp_wrapper.__name__
             pp_class = pp_names_to_functions[pp_name]
 
@@ -206,6 +202,7 @@ def test_loading_from_analyzer(create_cache_folder):
 
     cache_folder = create_cache_folder
     recording, sorting = generate_ground_truth_recording()
+    # Make it JSON-serializable by saving it to a folder and reloading it
     recording = recording.save(folder=cache_folder / "recording")
 
     preprocessing_dict = {"common_reference": {}, "highpass_filter": {"freq_min": 301.0}}
@@ -219,13 +216,11 @@ def test_loading_from_analyzer(create_cache_folder):
     pp_recording_from_binary = apply_preprocessing_pipeline(recording, pp_list_from_binary)
     check_recordings_equal(pp_recording, pp_recording_from_binary)
 
-    # TODO: remove once writing to zarr is supported with zarr>=3
-    if _is_zarr_write_supported():
-        analyzer_zarr_folder = cache_folder / "zarr_format.zarr"
-        _ = create_sorting_analyzer(sorting=sorting, recording=pp_recording, format="zarr", folder=analyzer_zarr_folder)
-        pp_list_from_zarr = get_preprocessing_list_from_analyzer(analyzer_zarr_folder)
-        pp_recording_from_zarr = apply_preprocessing_pipeline(recording, pp_list_from_zarr)
-        check_recordings_equal(pp_recording, pp_recording_from_zarr)
+    analyzer_zarr_folder = cache_folder / "zarr_format.zarr"
+    _ = create_sorting_analyzer(sorting=sorting, recording=pp_recording, format="zarr", folder=analyzer_zarr_folder)
+    pp_list_from_zarr = get_preprocessing_list_from_analyzer(analyzer_zarr_folder)
+    pp_recording_from_zarr = apply_preprocessing_pipeline(recording, pp_list_from_zarr)
+    check_recordings_equal(pp_recording, pp_recording_from_zarr)
 
 
 def test_pipeline_recording_arg_substitution(create_cache_folder):

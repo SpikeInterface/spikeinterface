@@ -8,7 +8,7 @@ import time
 from spikeinterface.core import generate_sorting
 from spikeinterface.core.job_tools import get_usable_cpu_count
 from spikeinterface.extractors import NumpySorting
-from spikeinterface.comparison import compare_multiple_sorters, MultiSortingComparison
+from spikeinterface.comparison import compare_multiple_sorters
 
 ON_GITHUB = bool(os.getenv("GITHUB_ACTIONS"))
 

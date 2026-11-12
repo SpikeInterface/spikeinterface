@@ -166,10 +166,11 @@ class Motion:
 
     @staticmethod
     def from_dict(d):
+        # arrays are lists when the dict comes from json
         return Motion(
-            d["displacement"],
-            d["temporal_bins_s"],
-            d["spatial_bins_um"],
+            [np.asarray(displacement) for displacement in d["displacement"]],
+            [np.asarray(temporal_bins_s) for temporal_bins_s in d["temporal_bins_s"]],
+            np.asarray(d["spatial_bins_um"]),
             direction=d["direction"],
             interpolation_method=d["interpolation_method"],
         )
@@ -183,7 +184,7 @@ class Motion:
                 raise FileExistsError(f"Folder {folder} already exists. Use `overwrite=True` to overwrite.")
         folder.mkdir(exist_ok=True, parents=True)
 
-        info_file = folder / f"spikeinterface_info.json"
+        info_file = folder / "spikeinterface_info.json"
         info = dict(
             version=spikeinterface.__version__,
             dev_mode=spikeinterface.DEV_MODE,
@@ -205,7 +206,7 @@ class Motion:
     def load(cls, folder):
         folder = Path(folder)
 
-        info_file = folder / f"spikeinterface_info.json"
+        info_file = folder / "spikeinterface_info.json"
         err_msg = f"Motion.load(folder): the folder {folder} does not contain a Motion object."
         if not info_file.exists():
             raise IOError(err_msg)

@@ -4,7 +4,7 @@ import numpy as np
 from .method_list import peak_localization_methods
 from ..tools import make_multi_method_doc
 
-from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 
 
 from spikeinterface.core.node_pipeline import (
@@ -30,9 +30,9 @@ def get_localization_pipeline_nodes(
     seed=None,
 ):
 
-    assert (
-        method in peak_localization_methods
-    ), f"Method {method} is not supported. Choose from {peak_localization_methods.keys()}"
+    assert method in peak_localization_methods, (
+        f"Method {method} is not supported. Choose from {peak_localization_methods.keys()}"
+    )
 
     assert method_kwargs is not None
 
@@ -60,6 +60,11 @@ def get_localization_pipeline_nodes(
         # How do you get peaks
 
         method_kwargs = method_kwargs.copy()
+        n_peaks = method_kwargs.pop("n_peaks", None)
+        if n_peaks is not None:
+            prototype_extra_kwargs = {"n_peaks": n_peaks}
+        else:
+            prototype_extra_kwargs = {}
         method_kwargs["prototype"], _, _ = get_prototype_and_waveforms_from_peaks(
             recording,
             peaks=peaks_or_spikes,
@@ -68,6 +73,7 @@ def get_localization_pipeline_nodes(
             channel_index_array=channel_index_array,
             job_kwargs=job_kwargs,
             seed=seed,
+            **prototype_extra_kwargs,
         )
 
     localization_nodes = method_class(recording, parents=[peak_source, extract_dense_waveforms], **method_kwargs)
@@ -146,9 +152,9 @@ def localize_peaks(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    assert (
-        method in peak_localization_methods
-    ), f"Method {method} is not supported. Choose from {peak_localization_methods.keys()}"
+    assert method in peak_localization_methods, (
+        f"Method {method} is not supported. Choose from {peak_localization_methods.keys()}"
+    )
 
     peak_source = PeakRetriever(recording, peaks)
 

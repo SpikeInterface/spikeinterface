@@ -1,6 +1,5 @@
 from types import SimpleNamespace
 
-import pytest
 import numpy as np
 
 from spikeinterface.sortingcomponents.matching import wobble
@@ -326,7 +325,6 @@ def test_compute_scale_amplitudes():
     rng = np.random.default_rng(seed)
     num_spikes = rng.integers(0, 100)
     norm_peaks = rng.random(num_spikes)
-    num_jittered = rng.integers(1, 100)
     peak_window_size = rng.integers(1, 100)
     high_resolution_conv = rng.random((peak_window_size, num_spikes))
     scale_min = rng.random() * 10

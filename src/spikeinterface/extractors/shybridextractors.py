@@ -41,9 +41,7 @@ class SHYBRIDRecordingExtractor(BinaryRecordingExtractor):
         Loaded data.
     """
 
-    installation_mesg = (
-        "To use the SHYBRID extractors, install SHYBRID and pyyaml: " "\n\n pip install shybrid pyyaml\n\n"
-    )
+    installation_mesg = "To use the SHYBRID extractors, install SHYBRID and pyyaml: \n\n pip install shybrid pyyaml\n\n"
 
     def __init__(self, file_path):
         if HAVE_SHYBRID:

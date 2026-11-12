@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import numpy as np
 
 
@@ -72,7 +70,6 @@ class GraphClustering:
         radius_um = peaks_svd["radius_um"]
         motion = peaks_svd["motion"]
         seed = params["seed"]
-        verbose = params["verbose"]
         clustering_kwargs = params["clusterer"].copy()
         graph_kwargs = params["graph_kwargs"].copy()
 

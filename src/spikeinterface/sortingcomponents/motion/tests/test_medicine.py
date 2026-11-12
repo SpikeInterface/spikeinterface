@@ -1,15 +1,16 @@
 import numpy as np
 import pytest
 
-torch = pytest.importorskip("torch")
-medicine = pytest.importorskip("medicine")
-
 from spikeinterface import get_noise_levels
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
 from spikeinterface.sortingcomponents.motion import estimate_motion
 from spikeinterface.sortingcomponents.peak_detection import detect_peak_methods
 from spikeinterface.sortingcomponents.peak_localization.method_list import LocalizeCenterOfMass
 from spikeinterface.sortingcomponents.tests.common import make_dataset
+
+
+torch = pytest.importorskip("torch")
+medicine = pytest.importorskip("medicine")
 
 # Kept tiny so the model trains in a fraction of a second. Not representative of settings
 # one would use for real motion estimation.

@@ -130,15 +130,20 @@ def get_prototype_and_waveforms_from_peaks(
     nbefore = ms_to_samples(ms_before, recording.sampling_frequency)
     nafter = ms_to_samples(ms_after, recording.sampling_frequency)
 
-    few_peaks = select_peaks(
+    few_peaks, few_indices = select_peaks(
         peaks,
         recording=recording,
         method="uniform",
         n_peaks=n_peaks,
         margin=(nbefore, nafter),
         channel_index_array=channel_index_array,
+        return_indices=True,
         seed=seed,
     )
+    if channel_index_array is not None:
+        few_channel_index_array = channel_index_array[few_indices]
+    else:
+        few_channel_index_array = None
     waveforms = extract_waveform_at_max_channel(
         recording,
         few_peaks,
@@ -146,7 +151,7 @@ def get_prototype_and_waveforms_from_peaks(
         ms_after=ms_after,
         job_kwargs=job_kwargs,
         job_name="waveform prototype",
-        channel_index_array=channel_index_array,
+        channel_index_array=few_channel_index_array,
     )
 
     with np.errstate(divide="ignore", invalid="ignore"):
@@ -610,6 +615,7 @@ def clean_templates(
     remove_empty=True,
     mean_sd_ratio_threshold=3.0,
     max_std_per_channel=None,
+    peak_sign="neg",
     verbose=False,
 ):
     """
@@ -645,7 +651,7 @@ def clean_templates(
     if max_jitter_ms is not None:
         max_jitter = int(max_jitter_ms * templates.sampling_frequency / 1000.0)
         n_before = len(templates.unit_ids)
-        shifts = get_template_peak_shift_on_main_channel(templates, with_dict=True)
+        shifts = get_template_peak_shift_on_main_channel(templates, peak_sign=peak_sign, with_dict=True)
         to_select = []
         for unit_id in templates.unit_ids:
             if np.abs(shifts[unit_id]) <= max_jitter:

@@ -6,7 +6,6 @@ from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.core import get_channel_distances
 from spikeinterface.sortingcomponents.peak_localization.method_list import (
     LocalizeCenterOfMass,
-    LocalizeMonopolarTriangulation,
 )
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,
@@ -70,9 +69,9 @@ def compute_features_from_peaks(
         extract_dense_waveforms,
     ]
     for feature_name in feature_list:
-        assert (
-            feature_name in _features_class.keys()
-        ), f"Feature {feature_name} in 'feature_list' is not possible. Possible features are {list(_features_class.keys())}"
+        assert feature_name in _features_class.keys(), (
+            f"Feature {feature_name} in 'feature_list' is not possible. Possible features are {list(_features_class.keys())}"
+        )
         Class = _features_class[feature_name]
         params = feature_params.get(feature_name, {}).copy()
         node = Class(recording, parents=[peak_retriever, extract_dense_waveforms], **params)

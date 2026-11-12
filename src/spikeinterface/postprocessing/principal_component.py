@@ -171,16 +171,24 @@ class ComputePrincipalComponents(AnalyzerExtension):
             * if mode is "by_channel_local", "pca_model" is a list of PCA model by channel
             * if mode is "by_channel_global" or "concatenated", "pca_model" is a single PCA model
         """
-        if self.sorting_analyzer._lazy:
-            raise RuntimeError("PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode.")
         mode = self.params["mode"]
         if mode == "by_channel_local":
             pca_models = []
             for chan_id in self.sorting_analyzer.channel_ids:
-                pca_models.append(self.data[f"pca_model_{mode}_{chan_id}"])
+                pca_model = self.data.get(f"pca_model_{mode}_{chan_id}")
+                if pca_model is None and self._sorting_analyzer._lazy:
+                    raise RuntimeError(
+                        "PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode."
+                    )
+                pca_models.append(pca_model)
+            return pca_models
         else:
-            pca_models = self.data[f"pca_model_{mode}"]
-        return pca_models
+            pca_model = self.data.get(f"pca_model_{mode}")
+            if pca_model is None and self._sorting_analyzer._lazy:
+                raise RuntimeError(
+                    "PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode."
+                )
+            return pca_model
 
     def get_projections_one_unit(self, unit_id, sparse=False):
         """
@@ -330,8 +338,6 @@ class ComputePrincipalComponents(AnalyzerExtension):
         Compute the PCs on waveforms extacted within the by ComputeWaveforms.
         Projections are computed only on the waveforms sampled by the SortingAnalyzer.
         """
-        if self.sorting_analyzer._lazy:
-            raise RuntimeError("PCA models are not loaded in lazy mode. Reload the sorting analyzer in non-lazy mode.")
         p = self.params
         mode = p["mode"]
 
@@ -388,12 +394,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
         p = self.params
         sorting_analyzer = self.sorting_analyzer
         sorting = sorting_analyzer.sorting
-        assert (
-            sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording()
-        ), "To compute PCA projections for all spikes, the sorting analyzer needs the recording"
+        assert sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording(), (
+            "To compute PCA projections for all spikes, the sorting analyzer needs the recording"
+        )
         recording = sorting_analyzer.recording
 
-        # assert sorting.get_num_segments() == 1
         assert p["mode"] in ("by_channel_local", "by_channel_global")
 
         assert file_path is not None
@@ -416,7 +421,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         num_spikes = sorting.to_spike_vector().size
         shape = (num_spikes, p["n_components"], max_channels_per_template)
-        all_pcs = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
+        _ = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
         all_pcs_args = dict(filename=file_path, mode="r+", dtype="float32", shape=shape)
 
         waveforms_ext = self.sorting_analyzer.get_extension("waveforms")
@@ -432,6 +437,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             waveforms_ext.nafter,
             unit_channels,
             pca_model,
+            sorting_analyzer.return_in_uV,
         )
         processor = TimeSeriesChunkExecutor(
             recording, func, init_func, init_args, job_name="extract PCs", verbose=verbose, **job_kwargs
@@ -572,7 +578,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                     try:
                         proj = pca_model.transform(wfs[:, :, wf_ind])
                         pca_projection[:, :, wf_ind][spike_mask, :] = proj
-                    except:
+                    except Exception:
                         # this could happen if len(wfs) is less then n_comp for a channel
                         project_on_non_fitted = True
             if project_on_non_fitted:
@@ -633,10 +639,13 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     nafter = worker_ctx["nafter"]
     unit_channels = worker_ctx["unit_channels"]
     pca_model = worker_ctx["pca_model"]
+    return_in_uV = worker_ctx["return_in_uV"]
 
     seg_size = recording.get_num_samples(segment_index=segment_index)
 
-    i0, i1 = np.searchsorted(spike_times, [start_frame, end_frame])
+    # i0 and i1 index the spike vector of all segments, like all_pcs
+    s0, s1 = worker_ctx["segment_slices"][segment_index]
+    i0, i1 = s0 + np.searchsorted(spike_times[s0:s1], [start_frame, end_frame])
 
     if i0 != i1:
         # protect from spikes on border :  spike_time<0 or spike_time>seg_size
@@ -654,7 +663,9 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
     # all waveforms in one go without worrying about borders.
     start = int(spike_times[i0] - nbefore)
     end = int(spike_times[i1 - 1] + nafter)
-    traces = recording.get_traces(start_frame=start, end_frame=end, segment_index=segment_index)
+    traces = recording.get_traces(
+        start_frame=start, end_frame=end, segment_index=segment_index, return_in_uV=return_in_uV
+    )  # IMPT: in the same units (uV) as the waveforms the PCA model was fitted on!
 
     nsamples = nbefore + nafter
 
@@ -707,24 +718,24 @@ def _all_pc_extractor_chunk(segment_index, start_frame, end_frame, worker_ctx):
             pass
 
 
-def _init_work_all_pc_extractor(recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model):
+def _init_work_all_pc_extractor(
+    recording, sorting, all_pcs_args, nbefore, nafter, unit_channels, pca_model, return_in_uV
+):
     worker_ctx = {}
     worker_ctx["recording"] = recording
     worker_ctx["sorting"] = sorting
 
-    spikes = sorting.to_spike_vector(concatenated=False)
-    # This is the first segment only
-    spikes = spikes[0]
-    spike_times = spikes["sample_index"]
-    spike_labels = spikes["unit_index"]
+    spikes, segment_slices = sorting.to_spike_vector(return_slices=True)
 
     worker_ctx["all_pcs"] = np.lib.format.open_memmap(**all_pcs_args)
-    worker_ctx["spike_times"] = spike_times
-    worker_ctx["spike_labels"] = spike_labels
+    worker_ctx["spike_times"] = spikes["sample_index"]
+    worker_ctx["spike_labels"] = spikes["unit_index"]
+    worker_ctx["segment_slices"] = segment_slices
     worker_ctx["nbefore"] = nbefore
     worker_ctx["nafter"] = nafter
     worker_ctx["unit_channels"] = unit_channels
     worker_ctx["pca_model"] = pca_model
+    worker_ctx["return_in_uV"] = return_in_uV
 
     return worker_ctx
 
