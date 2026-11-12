@@ -6,7 +6,6 @@ from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
 
 
 class RectifyRecording(BasePreprocessor):
-
     def __init__(self, recording):
         BasePreprocessor.__init__(self, recording)
         for parent_segment in recording.segments:

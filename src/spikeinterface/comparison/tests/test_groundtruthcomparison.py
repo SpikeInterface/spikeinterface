@@ -1,4 +1,3 @@
-import numpy as np
 from numpy.testing import assert_array_equal
 
 
@@ -111,6 +110,7 @@ def test_compare_sorter_to_ground_truth():
     bad_ids = sc.get_bad_units()
     assert_array_equal(bad_ids, [6, 11])
     num_bad = sc.count_bad_units()
+    assert num_bad == 2
 
     # bad units is union of false_positive_units + redundant_units
     fpu_ids = sc.get_false_positive_units()

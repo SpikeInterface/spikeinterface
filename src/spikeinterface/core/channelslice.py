@@ -17,9 +17,9 @@ class ChannelSliceRecording(BaseRecording):
         if renamed_channel_ids is None:
             renamed_channel_ids = channel_ids
         else:
-            assert len(renamed_channel_ids) == len(
-                np.unique(renamed_channel_ids)
-            ), "renamed_channel_ids must be unique!"
+            assert len(renamed_channel_ids) == len(np.unique(renamed_channel_ids)), (
+                "renamed_channel_ids must be unique!"
+            )
 
         self._channel_ids = np.asarray(channel_ids)
         self._renamed_channel_ids = np.asarray(renamed_channel_ids)
@@ -29,16 +29,16 @@ class ChannelSliceRecording(BaseRecording):
         # some checks
         # We use lists to compare numpy scalar types as their python versions (e.g. int vs int64())
         channel_ids_not_in_parents = [id for id in self._channel_ids.tolist() if id not in parents_chan_ids.tolist()]
-        assert (
-            len(channel_ids_not_in_parents) == 0
-        ), f"ChannelSliceRecording : channel ids {channel_ids_not_in_parents} are not all in parent ids {parents_chan_ids}"
+        assert len(channel_ids_not_in_parents) == 0, (
+            f"ChannelSliceRecording : channel ids {channel_ids_not_in_parents} are not all in parent ids {parents_chan_ids}"
+        )
 
-        assert len(self._channel_ids) == len(
-            self._renamed_channel_ids
-        ), "ChannelSliceRecording: renamed channel_ids must be the same size"
-        assert (
-            self._channel_ids.size == np.unique(self._channel_ids).size
-        ), "ChannelSliceRecording : channel_ids are not unique"
+        assert len(self._channel_ids) == len(self._renamed_channel_ids), (
+            "ChannelSliceRecording: renamed channel_ids must be the same size"
+        )
+        assert self._channel_ids.size == np.unique(self._channel_ids).size, (
+            "ChannelSliceRecording : channel_ids are not unique"
+        )
 
         sampling_frequency = recording.get_sampling_frequency()
 

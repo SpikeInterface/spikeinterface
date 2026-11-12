@@ -1,5 +1,3 @@
-import pytest
-
 import numpy as np
 
 from spikeinterface.preprocessing import get_spatial_interpolation_kernel
@@ -13,7 +11,6 @@ def test_get_spatial_interpolation_kernel():
     target_location[:, 1] = np.linspace(0, 130, 4)
 
     for method in ("kriging", "idw", "nearest"):
-
         kernel = get_spatial_interpolation_kernel(
             source_location, target_location, method=method, force_extrapolate=False
         )

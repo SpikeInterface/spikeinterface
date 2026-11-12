@@ -6,7 +6,6 @@ import spikeinterface
 from spikeinterface.core import BinaryRecordingExtractor, MockRecording
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.numpyextractors import NumpyRecording
-from spikeinterface.core.core_tools import measure_memory_allocation
 
 
 def test_BinaryRecordingExtractor(create_cache_folder):

@@ -5,7 +5,6 @@ This gather some function useful for some clustering algos.
 import numpy as np
 from spikeinterface.core.job_tools import fix_job_kwargs
 from spikeinterface.postprocessing import check_equal_template_with_distribution_overlap
-from spikeinterface.core import NumpySorting
 
 
 def _split_waveforms(
@@ -50,7 +49,6 @@ def _split_waveforms(
 
     if debug:
         import matplotlib.pyplot as plt
-        import umap
 
         fig, ax = plt.subplots()
 
@@ -122,7 +120,6 @@ def _split_waveforms_nested(
         # hdbscan on pca
         clustering = hdbscan.hdbscan(local_feature, **hdbscan_params)
         active_labels_with_noise = clustering[0]
-        cluster_probability = clustering[2]
         (persistent_clusters,) = np.nonzero(clustering[2] > probability_thr)
         active_labels_with_noise[~np.isin(active_labels_with_noise, persistent_clusters)] = -1
 
@@ -228,9 +225,6 @@ def auto_split_clustering(
     Loop over sparse waveform and try to over split.
     Internally used by PositionAndPCAClustering for the second step.
     """
-
-    import sklearn.decomposition
-    import hdbscan
 
     split_peak_labels = -1 * np.ones(peak_labels.size, dtype=np.int64)
     nb_clusters = 0
@@ -505,7 +499,6 @@ def remove_duplicates(
         idx = np.argsort(channel_norms)[::-1]
         explained_norms = np.cumsum(channel_norms[idx] / total_norm)
         channel = np.searchsorted(explained_norms, sparsify_threshold)
-        active_channels = np.sort(idx[:channel])
         templates[t, :, idx[channel:]] = 0
 
     from sklearn.metrics.pairwise import cosine_similarity
@@ -589,11 +582,9 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
     DEBUG = False
     sub_recording = None  # we only do a sub recording if we have data to iterate through
     while keep_searching:
-
         keep_searching = False
 
         for i in list(set(range(nb_templates)).difference(ignore_inds)):
-
             ## Could be speed up by only computing the values for templates that are
             ## nearby
 
@@ -642,7 +633,6 @@ def detect_mixtures(templates, method_kwargs={}, job_kwargs={}, tmp_folder=None,
                         import matplotlib.pyplot as plt
 
                         fig, axes = plt.subplots(1, 2)
-                        from spikeinterface.widgets import plot_traces
 
                         # plot_traces(sub_recording, ax=axes[0])
                         axes[1].plot(templates_array[i].flatten(), label=f"{ref_norm}")

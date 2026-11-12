@@ -27,8 +27,6 @@ def setup_NumpyRecording(tmp_path_factory):
 
     rec = NumpyRecording(timeseries_list, sampling_frequency)
     # print(rec)
-
-    times1 = rec.get_times(1)
     cache_folder = tmp_path_factory.mktemp("cache_folder")
     rec.save(folder=cache_folder / "test_NumpyRecording")
     return cache_folder

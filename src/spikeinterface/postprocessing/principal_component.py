@@ -394,9 +394,9 @@ class ComputePrincipalComponents(AnalyzerExtension):
         p = self.params
         sorting_analyzer = self.sorting_analyzer
         sorting = sorting_analyzer.sorting
-        assert (
-            sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording()
-        ), "To compute PCA projections for all spikes, the sorting analyzer needs the recording"
+        assert sorting_analyzer.has_recording() or sorting_analyzer.has_temporary_recording(), (
+            "To compute PCA projections for all spikes, the sorting analyzer needs the recording"
+        )
         recording = sorting_analyzer.recording
 
         assert p["mode"] in ("by_channel_local", "by_channel_global")
@@ -421,7 +421,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
 
         num_spikes = sorting.to_spike_vector().size
         shape = (num_spikes, p["n_components"], max_channels_per_template)
-        all_pcs = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
+        _ = np.lib.format.open_memmap(filename=file_path, mode="w+", dtype="float32", shape=shape)
         all_pcs_args = dict(filename=file_path, mode="r+", dtype="float32", shape=shape)
 
         waveforms_ext = self.sorting_analyzer.get_extension("waveforms")
@@ -578,7 +578,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
                     try:
                         proj = pca_model.transform(wfs[:, :, wf_ind])
                         pca_projection[:, :, wf_ind][spike_mask, :] = proj
-                    except:
+                    except Exception:
                         # this could happen if len(wfs) is less then n_comp for a channel
                         project_on_non_fitted = True
             if project_on_non_fitted:

@@ -1,7 +1,5 @@
 import pytest
 
-from spikeinterface.extractors import *
-
 
 @pytest.mark.skip("HerdingSpikes can be tested after running run_herdingspikes()")
 def test_herdingspikesextractors():

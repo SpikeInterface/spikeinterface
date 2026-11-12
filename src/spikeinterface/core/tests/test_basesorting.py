@@ -20,7 +20,6 @@ from spikeinterface.core import (
     generate_recording,
     generate_sorting,
     create_sorting_npz,
-    generate_sorting,
     load,
 )
 from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
@@ -133,9 +132,14 @@ def test_BaseSorting(create_cache_folder):
     )
     assert np.array_equal(spikes[order], ordered_spikes)
 
-    num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="dict")
+    num_spikes_per_unit_dict = sorting.count_num_spikes_per_unit(outputs="dict")
+    assert isinstance(num_spikes_per_unit_dict, dict)
+    assert all(unit in num_spikes_per_unit_dict for unit in sorting.unit_ids)
     num_spikes_per_unit = sorting.count_num_spikes_per_unit(outputs="array")
+    assert isinstance(num_spikes_per_unit, np.ndarray)
+    assert num_spikes_per_unit.size == sorting.unit_ids.size
     total_spikes = sorting.count_total_num_spikes()
+    assert total_spikes == num_spikes_per_unit.sum()
 
     # select units
     keep_units = [0, 1]

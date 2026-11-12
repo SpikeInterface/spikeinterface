@@ -190,12 +190,12 @@ def apply_curation(
     curated_sorting_or_analyzer : Sorting | SortingAnalyzer
         The curated object.
     """
-    assert isinstance(
-        sorting_or_analyzer, (BaseSorting, SortingAnalyzer)
-    ), f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}"
-    assert isinstance(
-        curation_dict_or_model, (dict, list, Curation, SequentialCuration)
-    ), f"`curation_dict_or_model` must be a dict, Curation or a SequentialCuration not an object of type {type(curation_dict_or_model)}"
+    assert isinstance(sorting_or_analyzer, (BaseSorting, SortingAnalyzer)), (
+        f"`sorting_or_analyzer` must be a Sorting or a SortingAnalyzer, not an object of type {type(sorting_or_analyzer)}"
+    )
+    assert isinstance(curation_dict_or_model, (dict, list, Curation, SequentialCuration)), (
+        f"`curation_dict_or_model` must be a dict, Curation or a SequentialCuration not an object of type {type(curation_dict_or_model)}"
+    )
     if isinstance(curation_dict_or_model, dict):
         curation_model = Curation(**curation_dict_or_model)
     elif isinstance(curation_dict_or_model, list):

@@ -65,7 +65,7 @@ def _create_simple_study(study_folder, cache_folder):
         },
     }
 
-    study = SorterStudy.create(
+    _ = SorterStudy.create(
         study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"]
     )
     # print(study)
@@ -100,7 +100,7 @@ def _create_very_simple_study(study_folder, cache_folder):
         },
     }
 
-    study = SorterStudy.create(
+    _ = SorterStudy.create(
         study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"]
     )
     # print(study)
@@ -245,7 +245,7 @@ def _create_complex_study(study_folder, cache_folder):
         },
     }
 
-    study = SorterStudy.create(
+    _ = SorterStudy.create(
         study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"]
     )
 
@@ -266,13 +266,16 @@ def test_SorterStudy(create_simple_study):
 
     # this is from the base class
     rt = study.get_run_times()
+    assert rt is not None
     # rt = study.plot_run_times()
     # import matplotlib.pyplot as plt
     # plt.show()
 
     perf_by_unit = study.get_performance_by_unit()
+    assert perf_by_unit is not None
     # print(perf_by_unit)
     count_units = study.get_count_units()
+    assert count_units is not None
     # print(count_units)
 
 

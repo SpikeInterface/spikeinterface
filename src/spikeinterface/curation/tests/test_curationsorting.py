@@ -52,13 +52,12 @@ def test_split_merge():
 
     merged = MergeUnitsSorting(splitted, units_to_merge=[[8, 10]], new_unit_ids=[4], properties_policy="keep")
     for i in range(len(spikestimes)):
-        assert (
-            all(parent_sort.get_unit_spike_train(4, segment_index=i) == merged.get_unit_spike_train(4, segment_index=i))
-            == True
+        assert all(
+            parent_sort.get_unit_spike_train(4, segment_index=i) == merged.get_unit_spike_train(4, segment_index=i)
         ), "splir or merge error"
-    assert parent_sort.get_unit_property(4, "someprop") == merged.get_unit_property(
-        4, "someprop"
-    ), "property wasn't kept"
+    assert parent_sort.get_unit_property(4, "someprop") == merged.get_unit_property(4, "someprop"), (
+        "property wasn't kept"
+    )
     # 1d
     assert merged.get_unit_property(4, "some_str_prop") == "", "error with array property"
     assert merged.get_unit_property(4, "some_prop_to_keep") == 1, "error with array property"
@@ -67,9 +66,9 @@ def test_split_merge():
     # 2d
     assert np.array_equal(merged.get_unit_property(4, "some_array_prop_to_keep"), [1, 1]), "error with array property"
     assert np.all(np.isnan(merged.get_unit_property(4, "some_array_prop_to_remove"))), "error with array property"
-    assert np.array_equal(
-        merged.get_unit_property(4, "some_array_prop_to_none"), [None, None]
-    ), "error with array property"
+    assert np.array_equal(merged.get_unit_property(4, "some_array_prop_to_none"), [None, None]), (
+        "error with array property"
+    )
 
     merged_with_dups = MergeUnitsSorting(
         parent_sort, new_unit_ids=[8], units_to_merge=[[0, 1]], properties_policy="remove", delta_time_ms=0.5
@@ -139,7 +138,7 @@ def test_curation():
         )
 
     # Test with empty sorting
-    empty_sorting = CurationSorting(NumpySorting.from_unit_dict({}, parent_sort.sampling_frequency))
+    _ = CurationSorting(NumpySorting.from_unit_dict({}, parent_sort.sampling_frequency))
 
 
 if __name__ == "__main__":

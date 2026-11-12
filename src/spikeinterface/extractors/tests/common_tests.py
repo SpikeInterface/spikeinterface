@@ -102,7 +102,7 @@ class RecordingCommonTestSuite(CommonTestSuite):
                 path = entity
                 kwargs = {}
             if hasattr(self.ExtractorClass, "NeoRawIOClass"):
-                rec = self.ExtractorClass(self.get_full_path(path), all_annotations=True, **kwargs)
+                _ = self.ExtractorClass(self.get_full_path(path), all_annotations=True, **kwargs)
 
     def test_pickling(self):
         for entity in self.entities:

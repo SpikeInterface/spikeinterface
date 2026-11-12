@@ -1,8 +1,6 @@
 import numpy as np
-from warnings import warn
 
 from .base import BaseWidget, to_attr
-from .utils import get_unit_colors
 
 
 class MultiCompGraphWidget(BaseWidget):
@@ -228,7 +226,6 @@ class MultiCompAgreementBySorterWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.colors as mpl_colors
         import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
 

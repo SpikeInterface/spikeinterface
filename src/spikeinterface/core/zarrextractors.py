@@ -13,7 +13,6 @@ from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .core_tools import (
     define_function_from_class,
     check_json,
-    is_path_remote,
     retrieve_importing_provenance,
     is_path_remote,
 )
@@ -165,9 +164,9 @@ class ZarrRecordingExtractor(BaseRecording):
             cr_by_segment = {}
         for segment_index in range(num_segments):
             trace_name = f"traces_seg{segment_index}"
-            assert (
-                len(channel_ids) == self._root[trace_name].shape[1]
-            ), f"Segment {segment_index} has the wrong number of channels!"
+            assert len(channel_ids) == self._root[trace_name].shape[1], (
+                f"Segment {segment_index} has the wrong number of channels!"
+            )
 
             time_kwargs = {}
             time_vector = self._root.get(f"times_seg{segment_index}", None)
@@ -944,7 +943,7 @@ def add_recording_to_zarr_group(
     channel_ids = recording.channel_ids
     if channel_ids.dtype.kind in ("U", "S"):
         channel_ids = channel_ids.astype("T")
-    arr = zarr_group.create_array(name="channel_ids", data=channel_ids, compressors=None)
+    _ = zarr_group.create_array(name="channel_ids", data=channel_ids, compressors=None)
     dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
     dataset_timestamps_paths: list | None = None
     if any(recording.has_time_vector(i) for i in range(recording.get_num_segments())):

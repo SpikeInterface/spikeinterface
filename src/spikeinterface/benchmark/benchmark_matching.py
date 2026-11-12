@@ -4,7 +4,6 @@ from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import CollisionGTComparison, compare_sorter_to_ground_truth
 from spikeinterface.widgets import (
-    plot_agreement_matrix,
     plot_comparison_collision_by_similarity,
 )
 
@@ -14,7 +13,6 @@ from spikeinterface.core.base import minimum_spike_dtype
 
 
 class MatchingBenchmark(Benchmark):
-
     def __init__(self, recording, gt_sorting, params):
         self.recording = recording
         self.gt_sorting = gt_sorting

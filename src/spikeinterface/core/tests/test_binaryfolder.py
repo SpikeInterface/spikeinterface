@@ -1,9 +1,7 @@
 import pytest
 
 import json
-from pathlib import Path
 import shutil
-
 import numpy as np
 
 from spikeinterface.core import load

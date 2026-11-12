@@ -163,7 +163,7 @@ class YassSorter(BaseSorter):
         # to yaml
         fname_config = sorter_output_folder / "config.yaml"
         with open(fname_config, "w") as file:
-            documents = yaml.dump(merge_params, file)
+            _ = yaml.dump(merge_params, file)
 
         # RunNN training on existing
         neural_nets_path = p["neural_nets_path"]

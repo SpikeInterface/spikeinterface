@@ -80,7 +80,6 @@ class UnitSummaryWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)

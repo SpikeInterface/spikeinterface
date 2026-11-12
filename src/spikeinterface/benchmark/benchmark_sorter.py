@@ -2,7 +2,6 @@
 This replace the previous `GroundTruthStudy`
 """
 
-import numpy as np
 from spikeinterface.core import NumpySorting, create_sorting_analyzer
 from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.sorters import run_sorter

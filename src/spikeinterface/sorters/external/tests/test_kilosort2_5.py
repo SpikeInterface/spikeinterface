@@ -1,6 +1,6 @@
 from spikeinterface.sorters import Kilosort2_5Sorter
 
-import os, getpass
+import getpass
 
 if getpass.getuser() == "samuel":
     kilosort2_5_path = "/home/samuel/Documents/SpikeInterface/Kilosort2.5"

@@ -144,7 +144,7 @@ def fix_job_kwargs(runtime_job_kwargs):
 
     for k in runtime_job_kwargs:
         assert k in job_keys, (
-            f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
+            f"{k} is not a valid job keyword argument. Available keyword arguments are: {list(job_keys)}"
         )
 
     # remove mutually exclusive from global job kwargs

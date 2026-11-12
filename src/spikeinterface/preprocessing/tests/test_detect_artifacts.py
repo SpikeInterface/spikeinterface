@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core import generate_recording, NumpyRecording
+from spikeinterface.core import NumpyRecording
 from spikeinterface.preprocessing import (
     detect_artifact_periods,
     detect_saturation_periods,
@@ -41,7 +41,6 @@ def test_detect_artifact_by_envelope(debug_plots):
     )
 
     if debug_plots:
-        import matplotlib
         import matplotlib.pyplot as plt
 
         plt.plot(envelope.get_traces(), color="r", lw=3)
@@ -151,7 +150,6 @@ def test_detect_saturation_periods(debug_plots):
     offset = 0
 
     if debug_plots:
-        import matplotlib
         import matplotlib.pyplot as plt
 
         plt.plot(data_seg_1)
@@ -206,12 +204,12 @@ def test_detect_saturation_periods(debug_plots):
     for seg_periods, seg_offset in zip([seg_1_periods, seg_2_periods], offsets):
         slow_period_idx = np.argmin(np.abs(seg_periods["start_sample_index"] - start_slow_artifact))
         slow_period = seg_periods[slow_period_idx]
-        assert (
-            slow_period["start_sample_index"] >= start_rising_sample + tolerance_samples
-        ), "Slow artifact period starts in the rising phase"
-        assert (
-            slow_period["end_sample_index"] <= stop_falling_sample + seg_offset - tolerance_samples
-        ), "Slow artifact period ends in the falling phase"
+        assert slow_period["start_sample_index"] >= start_rising_sample + tolerance_samples, (
+            "Slow artifact period starts in the rising phase"
+        )
+        assert slow_period["end_sample_index"] <= stop_falling_sample + seg_offset - tolerance_samples, (
+            "Slow artifact period ends in the falling phase"
+        )
 
     # Just do a quick test that a threshold slightly over the sat value is not detected.
     # In this case we only see the derivative threshold detection. We do not play around with this

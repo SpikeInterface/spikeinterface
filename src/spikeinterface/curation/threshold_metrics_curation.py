@@ -3,7 +3,6 @@ from pathlib import Path
 
 import numpy as np
 
-from spikeinterface.core.analyzer_extension_core import SortingAnalyzer
 
 from .curation_tools import is_threshold_disabled
 

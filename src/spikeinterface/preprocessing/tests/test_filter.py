@@ -2,7 +2,6 @@ import pytest
 
 import numpy as np
 from spikeinterface.core import generate_recording
-from spikeinterface import NumpyRecording, set_global_tmp_folder
 
 from spikeinterface.preprocessing import filter, bandpass_filter, notch_filter, causal_filter
 
@@ -110,8 +109,8 @@ class TestCausalFilter:
         """
         recording, raw_data = recording_and_data
 
-        with pytest.raises(BaseException) as e:
-            filt_data = causal_filter(recording, direction="forward-backward")
+        with pytest.raises(BaseException):
+            _ = causal_filter(recording, direction="forward-backward")
 
     def _run_iirfilter(self, options, recording):
         """
@@ -141,36 +140,33 @@ class TestCausalFilter:
 
 
 def test_filter(create_cache_folder):
+    from scipy.signal import iirfilter
+
     rec = generate_recording()
     rec = rec.save(folder=create_cache_folder / "test_filter_recording")
 
     rec2 = bandpass_filter(rec, freq_min=300.0, freq_max=6000.0)
 
     # compute by chunk
-    rec2_cached0 = rec2.save(
-        folder=create_cache_folder / "rec2_cached0", chunk_size=100000, verbose=False, progress_bar=True
-    )
+    _ = rec2.save(folder=create_cache_folder / "rec2_cached0", chunk_size=100000, verbose=False, progress_bar=True)
 
-    # compute by chunkf with joblib
+    # compute by chunk in parallel
     rec2_cached1 = rec2.save(folder=create_cache_folder / "rec2_cached1", total_memory="10k", n_jobs=4, verbose=True)
 
     # compute once
-    rec2_cached2 = rec2.save(folder=create_cache_folder / "rec2_cached2", verbose=False)
+    _ = rec2.save(folder=create_cache_folder / "rec2_cached2", verbose=False)
 
     trace0 = rec2.get_traces(segment_index=0)
     trace1 = rec2_cached1.get_traces(segment_index=0)
 
     # other filtering types
-    rec3 = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2, margin_ms=5.0)
-    rec4 = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
+    _ = filter(rec, band=500.0, btype="highpass", filter_mode="ba", filter_order=2, margin_ms=5.0)
+    _ = notch_filter(rec, freq=3000, q=30, margin_ms=5.0)
     rec5 = causal_filter(rec, direction="forward")
     rec6 = causal_filter(rec, direction="backward")
 
-    # filter from coefficients
-    from scipy.signal import iirfilter
-
     coeff = iirfilter(8, [0.02, 0.4], rs=30, btype="band", analog=False, ftype="cheby2", output="sos")
-    rec5 = filter(rec, coeff=coeff, filter_mode="sos", margin_ms=5.0)
+    rec5 = filter(rec, coeff=coeff, filter_mode="sos", margin_ms=50.0)
 
     # compute by chunk
     rec5_cached0 = rec5.save(
@@ -179,7 +175,7 @@ def test_filter(create_cache_folder):
 
     trace50 = rec5.get_traces(segment_index=0)
     trace51 = rec5_cached0.get_traces(segment_index=0)
-
+    np.testing.assert_array_almost_equal(trace50, trace51, decimal=4)
     assert np.allclose(rec.get_times(0), rec2.get_times(0))
 
     # reflect padding test
@@ -215,7 +211,7 @@ def test_filter_opencl():
     rec_filtered = rec_filtered.save(chunk_size=1000, progress_bar=True, n_jobs=30)
 
     rec2 = filter(rec, engine="opencl")
-    rec2_cached0 = rec2.save(chunk_size=1000, verbose=False, progress_bar=True, n_jobs=1)
+    _ = rec2.save(chunk_size=1000, verbose=False, progress_bar=True, n_jobs=1)
     # rec2_cached0 = rec2.save(chunk_size=1000,verbose=False, progress_bar=True, n_jobs=4)
 
     # import matplotlib.pyplot as plt

@@ -137,9 +137,9 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
         # subperiods
         assert period_mode in ("absolute", "relative"), f"Invalid subperiod_size_mode: {period_mode}"
-        assert (
-            period_duration_s_absolute > 0 or period_target_num_spikes > 0
-        ), "Either period_duration_s_absolute or period_target_num_spikes must be positive."
+        assert period_duration_s_absolute > 0 or period_target_num_spikes > 0, (
+            "Either period_duration_s_absolute or period_target_num_spikes must be positive."
+        )
         assert isinstance(period_target_num_spikes, (int)), "period_target_num_spikes must be an integer."
 
         # user_defined_periods formatting
@@ -147,7 +147,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
         if user_defined_periods is not None:
             try:
                 user_defined_periods = np.asarray(user_defined_periods)
-            except Exception as e:
+            except Exception:
                 raise ValueError(
                     (
                         "user_defined_periods must be some (n_periods, 3) [unit, good_period_start, good_period_end] "
@@ -362,12 +362,10 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
     def _compute_valid_periods(self, sorting_analyzer, unit_ids=None, **job_kwargs):
         if self.params["method"] == "user_defined":
-
             # directly use user defined periods
             return self.user_defined_periods, None, None, None
 
         elif self.params["method"] in ["false_positives_and_negatives", "combined"]:
-
             # dict: unit_id -> list of subperiod, each subperiod is an array of dtype unit_period_dtype with 4 fields
             all_periods, all_periods_w_margins = compute_subperiods(
                 sorting_analyzer,
@@ -394,7 +392,7 @@ class ComputeValidUnitPeriods(AnalyzerExtension):
 
             # Each item is one computation of fp and fn for one period and one unit
             items = [(period,) for period in all_periods_w_margins]
-            job_name = f"computing false positives and negatives"
+            job_name = "computing false positives and negatives"
 
             # parallel
             with ProcessPoolExecutor(

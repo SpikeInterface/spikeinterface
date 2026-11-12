@@ -30,7 +30,7 @@ class Mountainsort4Sorter(BaseSorter):
     }
 
     _params_description = {
-        "detect_sign": "Use -1 (negative) or 1 (positive) depending " "on the sign of the spikes in the recording",
+        "detect_sign": "Use -1 (negative) or 1 (positive) depending on the sign of the spikes in the recording",
         # Use -1, 0, or 1, depending on the sign of the spikes in the recording
         "adjacency_radius": "Radius in um to build channel neighborhood "
         "(Use -1 to include all channels in every neighborhood)",
@@ -126,7 +126,7 @@ class Mountainsort4Sorter(BaseSorter):
             if p["tempdir"] is not None:
                 p["tempdir"] = str(p["tempdir"])
             if verbose:
-                print(f'Using temporary directory {p["tempdir"]}')
+                print(f"Using temporary directory {p['tempdir']}")
             ms4_params.update(tempdir=p["tempdir"])
 
         # Check location no more needed done in basesorter
