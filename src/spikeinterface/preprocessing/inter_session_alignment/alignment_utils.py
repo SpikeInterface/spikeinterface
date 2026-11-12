@@ -1,5 +1,3 @@
-import time
-
 from spikeinterface import BaseRecording
 import numpy as np
 
@@ -120,10 +118,7 @@ def estimate_chunk_size(scaled_activity_histogram):
 
     t = lambda_hat_s / (e / confidence_z) ** 2
 
-    print(
-        f"Chunked histogram window size of: {t}s estimated "
-        f"for firing rate (25% of histogram peak) of {lambda_hat_s}"
-    )
+    print(f"Chunked histogram window size of: {t}s estimated for firing rate (25% of histogram peak) of {lambda_hat_s}")
 
     return t
 
@@ -264,13 +259,11 @@ def compute_histogram_crosscorrelation(
 
     for i in range(num_sessions):
         for j in range(i, num_sessions):
-
             xcorr_matrix = np.zeros((non_rigid_windows.shape[0], num_iter))
 
             # For each window, window the session histograms (`window` is binary)
             # and perform the cross correlations
             for win_idx, window in enumerate(non_rigid_windows):
-
                 if session_histogram_list.ndim == 3:
                     # For 2D histogram (spatial, amplitude), manually loop through shifts along
                     # the spatial axis of the histogram. This is faster than using correlate2d
@@ -289,7 +282,6 @@ def compute_histogram_crosscorrelation(
                     xcorr = np.zeros(num_iter)
 
                     for idx, shift in enumerate(shifts_array):
-
                         shifted_i = shift_array_fill_zeros(windowed_histogram_i, shift)
                         flatten_i = shifted_i.flatten()
 
@@ -330,7 +322,6 @@ def compute_histogram_crosscorrelation(
 
             # Upsample the cross-correlation
             if interpolate:
-
                 num_points = (shifts_array.size - 1) * interp_factor + 1
                 shifts_upsampled = np.linspace(shifts_array[0], shifts_array[-1], num_points)
 
@@ -445,7 +436,6 @@ def akima_interpolate_nonrigid_shifts(
 
     interp_nonrigid_shifts = np.zeros((num_sessions, num_bins))
     for ses_idx in range(num_sessions):
-
         y = non_rigid_shifts[ses_idx]
         y_new = Akima1DInterpolator(x, y, method="akima", extrapolate=True)(xs)
         interp_nonrigid_shifts[ses_idx, :] = y_new
