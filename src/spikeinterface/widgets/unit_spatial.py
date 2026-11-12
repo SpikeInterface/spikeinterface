@@ -8,7 +8,6 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap
     from numpy.typing import ArrayLike
     from spikeinterface.core import SortingAnalyzer
-    from spikeinterface.core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
 
 
 class UnitSpatialDistributionsWidget(BaseWidget):
