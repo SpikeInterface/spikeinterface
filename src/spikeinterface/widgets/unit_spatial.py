@@ -1,13 +1,10 @@
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 import numpy as np
+from numpy.typing import ArrayLike
 from probeinterface import Probe
+from spikeinterface.core import SortingAnalyzer
 from .base import BaseWidget, to_attr
-
-if TYPE_CHECKING:
-    from matplotlib.colors import Colormap
-    from numpy.typing import ArrayLike
-    from spikeinterface.core import SortingAnalyzer
 
 
 class UnitSpatialDistributionsWidget(BaseWidget):
@@ -47,14 +44,14 @@ class UnitSpatialDistributionsWidget(BaseWidget):
 
     def __init__(
         self,
-        sorting_analyzer: "SortingAnalyzer",
+        sorting_analyzer: SortingAnalyzer,
         probe: Probe | None = None,
         depth_axis: Literal[0, 1] = 1,
         bins: int | tuple | None = None,
-        cmap: "str | Colormap" = "viridis",
+        cmap="viridis",
         kde: bool = False,
         depth_hist: bool = True,
-        groups: "ArrayLike | None" = None,
+        groups: ArrayLike | None = None,
         kde_kwargs: dict[str, Any] | None = None,
         backend: str | None = None,
         show_depth_hist_axis: bool = True,
