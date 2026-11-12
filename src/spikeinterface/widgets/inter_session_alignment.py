@@ -161,7 +161,6 @@ class SessionAlignmentWidget(BaseWidget):
             gs = fig.add_gridspec(num_rows + 1, num_cols, wspace=0.3, hspace=0.5)
 
             for i in range(num_cols):
-
                 ax_top = fig.add_subplot(gs[0, i])
                 ax_bottom = fig.add_subplot(gs[1, i])
 
@@ -200,7 +199,6 @@ class SessionAlignmentWidget(BaseWidget):
                 dp.session_alignment_histogram_kwargs["legend"] = sessions
 
             if not dp.corrected_session_histogram_list:
-
                 ax = fig.add_subplot(gs[num_rows, :])
 
                 ActivityHistogram1DWidget(
@@ -211,7 +209,6 @@ class SessionAlignmentWidget(BaseWidget):
                 )
                 ax.legend(loc="upper left")
             else:
-
                 gs_sub = gs[num_rows, :].subgridspec(1, 2)
 
                 ax_left = fig.add_subplot(gs_sub[0])
@@ -390,7 +387,6 @@ class ActivityHistogram2DWidget(BaseWidget):
         xlabels = bin_centers[::divisor]
 
         for idx in range(num_sessions):
-
             # Plot uncorrected 2d histograms in the first column
             ax = fig.add_subplot(gs[idx, 0])
 
