@@ -2,15 +2,11 @@ import csv
 from pathlib import Path
 
 import numpy as np
-from scipy.signal import periodogram
 
 from spikeinterface.core import BaseRecording
 from spikeinterface.core.job_tools import fix_job_kwargs, TimeSeriesChunkExecutor
 
-from .common_reference import common_reference
-from .filter import highpass_filter
-from spikeinterface.widgets import plot_raw_data_quality_metrics
-import matplotlib.pyplot as plt
+from spikeinterface.preprocessing import common_reference, highpass_filter
 
 
 def raw_data_quality_metrics(
@@ -181,6 +177,9 @@ def raw_data_quality_metrics(
         "rolling_rms": all_rolling_rms,
     }
     if folder is not None:
+        # Plotting dependencies are only needed when saving figures.
+        import matplotlib.pyplot as plt
+        from .plot_raw_data_quality_metrics import plot_raw_data_quality_metrics
 
         _write_rms_summary_csvs(folder, all_chunk_results)
 
@@ -345,6 +344,9 @@ def _compute_rms_psd(segment_index, start_frame, end_frame, worker_context):
     """
     Compute the RMS and PSD for an indivudal chunk.
     """
+    # Keep SciPy optional when importing SpikeInterface.
+    from scipy.signal import periodogram
+
     recording = worker_context["recording"]
 
     traces = recording.get_traces(

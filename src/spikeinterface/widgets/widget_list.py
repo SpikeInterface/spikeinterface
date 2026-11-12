@@ -17,7 +17,6 @@ from .peaks_on_probe import PeaksOnProbeWidget
 from .potential_merges import PotentialMergesWidget
 from .probe_map import ProbeMapWidget
 from .quality_metrics import QualityMetricsWidget
-from .raw_data_quality_metrics import RawDataQualityMetricsWidget
 from .rasters import RasterWidget
 from .sorting_summary import SortingSummaryWidget
 from .spike_locations import SpikeLocationsWidget
@@ -65,7 +64,6 @@ widget_list = [
     PotentialMergesWidget,
     ProbeMapWidget,
     QualityMetricsWidget,
-    RawDataQualityMetricsWidget,
     RasterWidget,
     SortingSummaryWidget,
     SpikeLocationsWidget,
@@ -150,7 +148,6 @@ plot_peaks_on_probe = PeaksOnProbeWidget
 plot_potential_merges = PotentialMergesWidget
 plot_probe_map = ProbeMapWidget
 plot_quality_metrics = QualityMetricsWidget
-plot_raw_data_quality_metrics = RawDataQualityMetricsWidget
 plot_rasters = RasterWidget
 plot_sorting_summary = SortingSummaryWidget
 plot_spike_locations = SpikeLocationsWidget

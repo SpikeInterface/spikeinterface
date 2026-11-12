@@ -2,7 +2,7 @@ import numpy as np
 
 from spikeinterface.core import order_channels_by_depth
 
-from .base import BaseWidget
+from spikeinterface.widgets.base import BaseWidget
 
 
 class RawDataQualityMetricsWidget(BaseWidget):
@@ -14,7 +14,7 @@ class RawDataQualityMetricsWidget(BaseWidget):
     Parameters
     ----------
     results : dict
-        Output of ``spikeinterface.preprocessing.raw_data_quality_metrics``.
+        Output of ``spikeinterface.qualitycontrol.raw_data_quality_metrics``.
     recordings : dict
         Mapping from result names to recordings, used for channel IDs and locations.
     segment_index : int, default: 0
@@ -65,7 +65,7 @@ class RawDataQualityMetricsWidget(BaseWidget):
     def plot_matplotlib(self, data_plot, **backend_kwargs):
 
         from matplotlib.colors import LogNorm
-        from .utils_matplotlib import make_mpl_figure
+        from spikeinterface.widgets.utils_matplotlib import make_mpl_figure
 
         num_recordings = len(data_plot["recording_data"])
         backend_kwargs["ncols"] = num_recordings
@@ -137,3 +137,6 @@ class RawDataQualityMetricsWidget(BaseWidget):
         """Plot a channel map."""
         channel_indices = np.arange(values.shape[1])
         return axis.pcolormesh(coordinates, channel_indices, values.T, shading="nearest", cmap="viridis", norm=norm)
+
+
+plot_raw_data_quality_metrics = RawDataQualityMetricsWidget
