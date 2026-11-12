@@ -23,6 +23,18 @@ def generated_recording():
 
 
 @pytest.fixture(scope="module")
+def generated_recording_30khz():
+    recording, sorting = generate_ground_truth_recording(
+        durations=[10.0],
+        sampling_frequency=30000.0,
+        num_channels=32,
+        num_units=10,
+        seed=2205,
+    )
+    return recording
+
+
+@pytest.fixture(scope="module")
 def detected_peaks(generated_recording, chunk_executor_kwargs):
     recording = generated_recording
     peaks = detect_peaks(recording=recording, job_kwargs=chunk_executor_kwargs)

@@ -1,4 +1,5 @@
-import os, getpass
+import os
+import getpass
 
 if getpass.getuser() == "samuel":
     waveclus_path = "/home/samuel/Documents/SpikeInterface/wave_clus/"

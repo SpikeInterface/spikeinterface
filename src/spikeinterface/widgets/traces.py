@@ -29,8 +29,6 @@ class TracesWidget(BaseWidget):
         * "line": classical for low channel count
         * "map": for high channel count use color heat map
         * "auto": auto switch depending on the channel count ("line" if less than 64 channels, "map" otherwise)
-    return_scaled : bool | None, default: None
-            DEPRECATED. Use return_in_uV instead.
     return_in_uV : bool, default: False
         If True and the recording has scaling (gain_to_uV and offset_to_uV properties),
         traces are scaled to uV
@@ -73,7 +71,6 @@ class TracesWidget(BaseWidget):
         order_channel_by_depth=False,
         time_range=None,
         mode="auto",
-        return_scaled=None,
         return_in_uV=False,
         cmap="RdBu_r",
         show_channel_ids=False,
@@ -92,16 +89,6 @@ class TracesWidget(BaseWidget):
         backend=None,
         **backend_kwargs,
     ):
-
-        # Handle deprecated return_scaled parameter
-        if return_scaled is not None:
-            warnings.warn(
-                "`return_scaled` is deprecated and will be removed in version 0.105.0. Use `return_in_uV` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            return_in_uV = return_scaled
-
         if isinstance(recording, BaseRecording):
             recordings = {"rec": recording}
             rec0 = recording
@@ -154,7 +141,7 @@ class TracesWidget(BaseWidget):
         time_range = np.array(time_range, dtype=np.float64)
         if time_range[1] > t_end:
             warnings.warn(
-                "You have selected a time after the end of the segment. The range will be clipped to " f"{t_end}"
+                f"You have selected a time after the end of the segment. The range will be clipped to {t_end}"
             )
             time_range[1] = t_end
 
@@ -222,9 +209,9 @@ class TracesWidget(BaseWidget):
             if isinstance(clim, tuple):
                 clims = {layer_key: clim for layer_key in layer_keys}
             elif isinstance(clim, dict):
-                assert all(
-                    layer_key in clim for layer_key in layer_keys
-                ), f"all recordings must be a key in `clim` if `clim` is a dict. Provide keys {layer_keys} in clim"
+                assert all(layer_key in clim for layer_key in layer_keys), (
+                    f"all recordings must be a key in `clim` if `clim` is a dict. Provide keys {layer_keys} in clim"
+                )
                 clims = clim
             else:
                 raise TypeError(f"'clim' can be None, tuple, or dict! Unsupported type {type(clim)}")
@@ -233,9 +220,9 @@ class TracesWidget(BaseWidget):
         if events is not None:
             num_segments = rec0.get_num_segments()
             if num_segments > 1:
-                assert (
-                    len(events) == num_segments
-                ), f"events must be a list with the events for each of the {num_segments} segments"
+                assert len(events) == num_segments, (
+                    f"events must be a list with the events for each of the {num_segments} segments"
+                )
                 evensts_w_dtype = events
             else:
                 if isinstance(events, np.ndarray):
@@ -285,7 +272,6 @@ class TracesWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
         from matplotlib.ticker import MaxNLocator
         from .utils_matplotlib import make_mpl_figure
 
@@ -296,7 +282,7 @@ class TracesWidget(BaseWidget):
         if self.cb is not None:
             try:
                 self.cb.remove()
-            except:
+            except Exception:
                 pass
 
         ax = self.ax
@@ -631,7 +617,7 @@ class TracesWidget(BaseWidget):
 
         if not dp.order_channel_by_depth:
             warnings.warn(
-                "It is recommended to set 'order_channel_by_depth' to True " "when using the sortingview backend"
+                "It is recommended to set 'order_channel_by_depth' to True when using the sortingview backend"
             )
 
         tiled_layers = []
@@ -686,9 +672,9 @@ def _get_trace_list(recordings, channel_ids, segment_index, time_range=None, ret
     rec0 = recordings[k0]
 
     if return_in_uV:
-        assert all(
-            rec.has_scaleable_traces() for rec in recordings.values()
-        ), "Some recording layers do not have scaled traces. Use `return_in_uV=False`"
+        assert all(rec.has_scaleable_traces() for rec in recordings.values()), (
+            "Some recording layers do not have scaled traces. Use `return_in_uV=False`"
+        )
 
     assert time_range is not None or frame_range is not None, "You must provide either time_range or frame_range"
 

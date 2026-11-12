@@ -9,17 +9,13 @@ from spikeinterface.generation import (
 
 def test_make_one_displacement_vector():
 
-    displacement_vector = make_one_displacement_vector(
-        drift_mode="zigzag", duration=700.0, period_s=300, t_start_drift=100.0
-    )
+    _ = make_one_displacement_vector(drift_mode="zigzag", duration=700.0, period_s=300, t_start_drift=100.0)
 
-    displacement_vector = make_one_displacement_vector(
+    _ = make_one_displacement_vector(
         drift_mode="bump", duration=700.0, period_s=300, bump_interval_s=(30, 90.0), t_start_drift=100.0, seed=2205
     )
 
-    displacement_vector = make_one_displacement_vector(
-        drift_mode="random_walk", duration=700.0, t_start_drift=100.0, seed=2205
-    )
+    _ = make_one_displacement_vector(drift_mode="random_walk", duration=700.0, t_start_drift=100.0, seed=2205)
 
     # import matplotlib.pyplot as plt
     # fig, ax = plt.subplots()

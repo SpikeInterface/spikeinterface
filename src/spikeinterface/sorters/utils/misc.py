@@ -52,7 +52,7 @@ def get_git_commit(git_folder, shorten=True):
         commit = check_output(["git", "rev-parse", "HEAD"], cwd=git_folder).decode("utf8").strip()
         if shorten:
             commit = commit[:12]
-    except:
+    except Exception:
         commit = None
     return commit
 

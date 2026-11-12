@@ -51,7 +51,7 @@ class NeuroNexusRecordingExtractor(NeoBaseRecordingExtractor):
             **neo_kwargs,
         )
 
-        self._kwargs.update(dict(file_path=str(Path(file_path).resolve())))
+        self._kwargs.update(dict(file_path=str(Path(file_path).absolute())))
 
     @classmethod
     def map_to_neo_kwargs(cls, file_path):

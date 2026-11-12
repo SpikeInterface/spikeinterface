@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path, WindowsPath
 from collections import namedtuple
 from collections.abc import Generator, Callable
@@ -55,6 +56,8 @@ def define_function_handling_dict_from_class(source_class, name):
     source_class_or_dict_of_sources_classes.__signature__ = inspect.signature(source_class)
     source_class_or_dict_of_sources_classes.__doc__ = source_class.__doc__
     source_class_or_dict_of_sources_classes.__name__ = name
+    # propagate the _precomputable_kwarg_names attribute from the source class to the wrapper function
+    source_class_or_dict_of_sources_classes._precomputable_kwarg_names = source_class._precomputable_kwarg_names
 
     return source_class_or_dict_of_sources_classes
 
@@ -73,28 +76,71 @@ def define_function_from_class(source_class: Callable[P, T], name: str) -> Calla
 
 
 def read_python(path):
-    """Parses python scripts in a dictionary
+    """Parse a Python-style params/config file into a dict without executing it.
+
+    Only top-level ``name = <literal>`` assignments are honored; values are
+    restricted to Python literals (numbers, strings, bools, None, list/tuple/
+    set/dict) plus ``range(...)``/``list(range(...))`` with integer-literal
+    arguments. Any other construct (imports, calls, attribute access, etc.) is
+    ignored, so a params/config file can no longer execute arbitrary code.
 
     Parameters
     ----------
-    path: str or Path
-        Path to file to parse
+    path : str or Path
+        Path to the file to parse.
 
     Returns
     -------
-    metadata:
-        dictionary containing parsed file
-
+    metadata : dict
+        Parsed key/value pairs (keys lower-cased).
     """
-    import re
+    import ast
+
+    def _literal(node):
+        if isinstance(node, ast.Constant):
+            return node.value
+        if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+            values = [_literal(e) for e in node.elts]
+            if isinstance(node, ast.Tuple):
+                return tuple(values)
+            if isinstance(node, ast.Set):
+                return set(values)
+            return values
+        if isinstance(node, ast.Dict):
+            return {_literal(k): _literal(v) for k, v in zip(node.keys, node.values)}
+        if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.USub, ast.UAdd)):
+            value = _literal(node.operand)
+            return -value if isinstance(node.op, ast.USub) else +value
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in ("range", "list"):
+            if (
+                node.func.id == "list"
+                and node.args
+                and isinstance(node.args[0], ast.Call)
+                and isinstance(node.args[0].func, ast.Name)
+                and node.args[0].func.id == "range"
+            ):
+                return list(_literal(node.args[0]))
+            args = [_literal(a) for a in node.args]
+            if not all(isinstance(a, int) for a in args):
+                raise ValueError("range() arguments must be integer literals")
+            return range(*args)
+        raise ValueError("unsupported value in config file")
 
     path = Path(path).absolute()
     assert path.is_file()
     with path.open("r") as f:
         contents = f.read()
-    contents = re.sub(r"range\(([\d,]*)\)", r"list(range(\1))", contents)
+
     metadata = {}
-    exec(contents, {}, metadata)
+    for stmt in ast.parse(contents).body:
+        if isinstance(stmt, ast.Assign):
+            try:
+                value = _literal(stmt.value)
+            except ValueError:
+                continue  # skip non-literal assignments; never execute them
+            for target in stmt.targets:
+                if isinstance(target, ast.Name):
+                    metadata[target.id] = value
     metadata = {k.lower(): v for (k, v) in metadata.items()}
     return metadata
 
@@ -375,13 +421,13 @@ def recursive_path_modifier(d, func, target="path", copy=True) -> dict:
     else:
         for k, v in d.items():
             if target in k:
-                # paths can be str or list of str or None
+                # paths can be str or list of str or None, and a list can contain None
                 if v is None:
                     continue
                 if isinstance(v, (str, Path)):
                     dc[k] = func(v)
                 elif isinstance(v, list):
-                    dc[k] = [func(e) for e in v]
+                    dc[k] = [None if e is None else func(e) for e in v]
                 else:
                     raise ValueError(f"{k} key for path  must be str or list[str]")
 
@@ -456,7 +502,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
 
         # check relative is possible
         try:
-            p2 = _relative_to(p, relative_folder)
+            _ = _relative_to(p, relative_folder)
         except ValueError:
             not_possible.append(p)
             continue
@@ -516,8 +562,6 @@ def make_paths_absolute(input_dict, base_folder) -> dict:
         A copy of the input dict with modified paths.
     """
     base_folder = Path(base_folder)
-    # use as_posix instead of str to make the path unix like even on window
-    func = lambda p: (base_folder / p).resolve().absolute().as_posix()
 
     path_elements_in_dict = [e for e in extractor_dict_iterator(input_dict) if element_is_path(e)]
     output_dict = deepcopy(input_dict)
@@ -774,7 +818,8 @@ def is_path_remote(path: str | Path) -> bool:
     is_remote: bool
         Whether the path is a remote path.
     """
-    return "s3://" in str(path) or "gcs://" in str(path)
+    remote_schemes = ("s3://", "gcs://", "http://", "https://")
+    return any(scheme in str(path) for scheme in remote_schemes)
 
 
 def ms_to_samples(ms: float, sampling_frequency: float) -> int:
@@ -782,24 +827,172 @@ def ms_to_samples(ms: float, sampling_frequency: float) -> int:
     return round(ms * sampling_frequency / 1000.0)
 
 
-def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list) -> np.ndarray:
+def samples_to_ms(samples: int, sampling_frequency: float) -> float:
+    """Convert a duration in samples to milliseconds."""
+    return samples / sampling_frequency * 1000.0
+
+
+def slice_rows(array: np.ndarray | zarr.Array, row_indices: np.ndarray | list, axis: int = 0) -> np.ndarray:
     """
-    Slice a 2D array to select specific rows based on provided indices.
+    Slice an array to select specific indices/mask along one axis.
+    Note that this function creates a copy of the sliced data, so it is not a view.
 
     Parameters
     ----------
     array : np.ndarray | zarr.Array
         A numpy or zarr array or boolean mask from which rows will be selected.
     row_indices : np.ndarray | list
-        A list or array of row indices to select from the array.
+        A list or array of indices (or a boolean mask) to select along `axis`.
+    axis : int, default: 0
+        The axis along which to select. Use 0 (the default) for spike/unit rows,
+        or a later axis (e.g. the channel axis of a 3D templates/waveforms array).
 
     Returns
     -------
     np.ndarray
-        A new 2D numpy array containing only the selected rows.
+        A new numpy array containing only the selected entries along `axis`.
     """
     if isinstance(array, zarr.Array):
-        # For zarr arrays, we need to convert the list of indices to a numpy array for advanced indexing
-        return array.oindex[row_indices]
+        # For zarr arrays, we need orthogonal indexing to select along a single axis
+        selection = (slice(None),) * axis + (row_indices,)
+        return array.oindex[selection]
     else:
-        return array[row_indices, ...]
+        selection = (slice(None),) * axis + (row_indices, ...)
+        return array[selection]
+
+
+def materialize_array(array: np.ndarray | zarr.Array) -> np.ndarray:
+    """
+    Return an independent, writable in-memory numpy array, ready for in-place mutation.
+
+    Extension data is often shared by reference across analyzers (e.g. during merge/split) to
+    avoid unnecessary copies, since sharing is safe as long as nothing mutates the array in
+    place. A few operations (e.g. summing correlogram rows/columns into a merged unit, sparse
+    channel realignment of waveforms/PCA projections) do need to mutate in place, and for those
+    a real copy is required: zarr.Array has no `.copy()` method and is read-only from a
+    previously-saved store, while `copy.deepcopy()` does not actually clone a zarr array's
+    underlying data. Use this right before the in-place mutation, not as a default habit.
+
+    Parameters
+    ----------
+    array : np.ndarray | zarr.Array
+        A numpy or zarr array about to be mutated in place.
+
+    Returns
+    -------
+    np.ndarray
+        A new, independent, writable numpy array with the same data.
+    """
+    if isinstance(array, zarr.Array):
+        return array[:]
+    else:
+        return array.copy()
+
+
+def load_properties_from_folder(folder: str | Path, extractor: "BaseExtractor") -> dict:
+    """
+    Load properties from a folder properties as .npy files and return sets them
+    as properties to the extractor.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder containing the properties as .npy files.
+    extractor : BaseExtractor
+        The extractor to which the properties will be set.
+    """
+    folder = Path(folder)
+    if folder.is_dir():
+        for prop_file in folder.iterdir():
+            if prop_file.suffix == ".npy":
+                values = np.load(prop_file, allow_pickle=True)
+                key = prop_file.stem
+                if key == "contact_vector":
+                    continue
+                extractor.set_property(key, values)
+
+
+def save_properties_to_folder(folder: str | Path, extractor: "BaseExtractor"):
+    """
+    Save properties from an extractor to a folder as .npy files.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder where the properties will be saved as .npy files.
+    extractor : BaseExtractor
+        The extractor from which the properties will be saved.
+    """
+    folder = Path(folder)
+    folder.mkdir(exist_ok=True)
+    for key in extractor.get_property_keys():
+        values = extractor.get_property(key)
+        np.save(folder / f"{key}.npy", values, allow_pickle=True)
+
+
+def save_annotations_to_folder(folder: str | Path, extractor: "BaseExtractor"):
+    """
+    Save BaseExtractor annotations to annotations.json in the provided folder.
+    This is used for `BinaryFolderRecording` and `NumpyFolderSorting` since version 0.105.0.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder where the annotations will be saved as a json file.
+    extractor : BaseExtractor
+        The extractor from which the annotations will be saved.
+    """
+    folder = Path(folder)
+    (folder / "annotations.json").write_text(json.dumps(extractor._annotations, indent=4), encoding="utf8")
+
+
+def load_annotations_from_folder(folder: str | Path, extractor: "BaseExtractor"):
+    """
+    Load annotations from annotations.json in the provided folder.
+    This is used for BinaryFolderRecording and NumpyFolderSorting since version 0.105.0.
+    If the file doesn't exist, it will try to load annotations from the si_folder.json "annotations" field.
+
+    Parameters
+    ----------
+    folder : str or Path
+        The folder where the annotations will be loaded from.
+    extractor : BaseExtractor
+        The extractor to which the annotations will be added.
+    """
+    folder = Path(folder)
+    annotations_file = folder / "annotations.json"
+    if annotations_file.exists():
+        with open(annotations_file, "r") as f:
+            annotations = json.load(f)
+            extractor._annotations.update(annotations)
+    else:
+        # this was before 0.105.0
+        si_folder_json = folder / "si_folder.json"
+        if si_folder_json.is_file():
+            with open(si_folder_json, "r") as f:
+                si_folder_dict = json.load(f)
+            if "annotations" in si_folder_dict:
+                annotations = si_folder_dict["annotations"]
+                extractor._annotations.update(annotations)
+
+
+def save_provenance_to_folder(folder: str | Path, extractor: "BaseExtractor", relative_to: str | Path | None = None):
+    folder = Path(folder)
+    if extractor.check_serializability("json"):
+        provenance_file_path = folder / "provenance.json"
+        extractor.dump_to_json(file_path=provenance_file_path, relative_to=relative_to)
+    elif extractor.check_serializability("pickle"):
+        provenance_file = folder / "provenance.pkl"
+        extractor.dump_to_pickle(provenance_file, relative_to=folder)
+    else:
+        warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")
+
+
+def _ensure_seed(seed):
+    # when seed is None:
+    # we want to set one to push it in the Recordind._kwargs to reconstruct the same signal
+    # this is a better approach than having seed=42 or seed=my_dog_birthday because we ensure to have
+    # a new signal for all call with seed=None but the dump/load will still work
+    if seed is None:
+        seed = np.random.default_rng(seed=None).integers(0, 2**63)
+    return int(seed)

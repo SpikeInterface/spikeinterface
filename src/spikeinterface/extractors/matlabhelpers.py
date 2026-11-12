@@ -18,7 +18,8 @@ else:
 
 class MatlabHelper:
     installation_mesg = (
-        "To use the MATSortingExtractor install h5py and scipy: " "\n\n pip install h5py scipy\n\n"
+        "To use the MATSortingExtractor install h5py and scipy: "
+        "\n\n pip install h5py scipy\n\n"
     )  # error message when not installed
 
     def __init__(self, file_path):
@@ -32,7 +33,7 @@ class MatlabHelper:
         if not isinstance(file_path, Path):
             raise TypeError(f"Expected a str or Path file_path but got '{type(file_path).__name__}'")
 
-        file_path = file_path.resolve()  # get absolute path to this file
+        file_path = file_path.absolute()  # get absolute path to this file
         if not file_path.is_file():
             raise ValueError(f"Specified file path '{file_path}' is not a file.")
 

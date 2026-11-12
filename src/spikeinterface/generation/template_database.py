@@ -109,12 +109,12 @@ def query_templates_from_database(template_df: "pandas.DataFrame", verbose: bool
         current_channel_locations = templates.get_channel_locations()
         current_sampling_frequency = templates.sampling_frequency
 
-        assert (
-            current_nbefore == nbefore
-        ), f"Number of samples before the peak is not consistent across datasets: {current_nbefore} != {nbefore}"
-        assert (
-            current_sampling_frequency == sampling_frequency
-        ), f"Sampling frequency is not consistent across datasets: {current_sampling_frequency} != {sampling_frequency}"
+        assert current_nbefore == nbefore, (
+            f"Number of samples before the peak is not consistent across datasets: {current_nbefore} != {nbefore}"
+        )
+        assert current_sampling_frequency == sampling_frequency, (
+            f"Sampling frequency is not consistent across datasets: {current_sampling_frequency} != {sampling_frequency}"
+        )
         assert np.array_equal(
             current_channel_locations - current_channel_locations[0],
             channel_locations - channel_locations[0],

@@ -1,6 +1,9 @@
 from spikeinterface.core import NumpyRecording
+from spikeinterface.core.base import BaseExtractor
+from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.preprocessing import average_across_direction
+from spikeinterface.preprocessing.average_across_direction import AverageAcrossDirectionRecording
 
 import numpy as np
 
@@ -16,7 +19,7 @@ def test_average_across_direction():
     rec.set_dummy_probe_from_locations(geom)
 
     # test averaging across y
-    rec_avgy = average_across_direction(rec)
+    rec_avgy = average_across_direction(recording=rec)
     traces = rec_avgy.get_traces()
     assert traces.shape == (100, 3)
     # correct averages
@@ -57,6 +60,24 @@ def test_average_across_direction():
         assert False
     except np.core._exceptions._UFuncOutputCastingError:
         pass
+
+
+def test_average_across_direction_parent_recording_from_dict():
+    """
+    `AverageAcrossDirectionRecording` always serializes its wrapped recording under the legacy
+    `parent_recording` key in `_kwargs`. `BaseExtractor.from_dict` must keep reconstructing it
+    from that key even though `__init__`'s first parameter is now named `recording`.
+    """
+    recording_arr = np.arange(6, dtype="float32")[None, :] * np.ones((100, 1))
+    geom = np.array([[0, 1], [1, 1], [0, 2], [1, 2], [0, 3], [1, 3]])
+    recording = NumpyRecording(recording_arr, 10)
+    recording.set_dummy_probe_from_locations(geom)
+
+    recording_avgy = AverageAcrossDirectionRecording(recording=recording)
+    # We artificially rename 'recording' to 'parent_recording' in the kwargs to simulate legacy behavior
+    recording_avgy._kwargs["parent_recording"] = recording_avgy._kwargs.pop("recording")
+    reloaded = BaseExtractor.from_dict(recording_avgy.to_dict())
+    check_recordings_equal(recording_avgy, reloaded)
 
 
 if __name__ == "__main__":

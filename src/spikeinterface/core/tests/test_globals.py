@@ -1,18 +1,13 @@
-import pytest
-import warnings
-from pathlib import Path
-from os import cpu_count
-
 from spikeinterface import (
-    set_global_dataset_folder,
     get_global_dataset_folder,
-    set_global_tmp_folder,
-    get_global_tmp_folder,
-    set_global_job_kwargs,
     get_global_job_kwargs,
+    get_global_tmp_folder,
     reset_global_job_kwargs,
+    set_global_dataset_folder,
+    set_global_job_kwargs,
+    set_global_tmp_folder,
 )
-from spikeinterface.core.job_tools import fix_job_kwargs
+from spikeinterface.core.job_tools import get_usable_cpu_count, fix_job_kwargs
 
 
 def test_global_dataset_folder(create_cache_folder):
@@ -70,7 +65,7 @@ def test_global_job_kwargs():
         max_threads_per_worker=1,
     )
     # test that fix_job_kwargs grabs global kwargs
-    new_job_kwargs = dict(n_jobs=cpu_count())
+    new_job_kwargs = dict(n_jobs=get_usable_cpu_count())
     job_kwargs_split = fix_job_kwargs(new_job_kwargs)
     assert job_kwargs_split["n_jobs"] == new_job_kwargs["n_jobs"]
     assert job_kwargs_split["chunk_duration"] == job_kwargs["chunk_duration"]
@@ -81,9 +76,9 @@ def test_global_job_kwargs():
     assert job_kwargs_split["chunk_duration"] == job_kwargs["chunk_duration"]
     assert job_kwargs_split["progress_bar"] == job_kwargs["progress_bar"]
     # test that n_jobs are clipped if using more than virtual cores
-    excessive_n_jobs = dict(n_jobs=cpu_count() + 2)
+    excessive_n_jobs = dict(n_jobs=get_usable_cpu_count() + 2)
     job_kwargs_split = fix_job_kwargs(excessive_n_jobs)
-    assert job_kwargs_split["n_jobs"] == cpu_count()
+    assert job_kwargs_split["n_jobs"] == get_usable_cpu_count()
     reset_global_job_kwargs()
 
 

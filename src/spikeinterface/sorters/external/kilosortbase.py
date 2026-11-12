@@ -7,7 +7,7 @@ import sys
 import numpy as np
 
 from spikeinterface.sorters.utils import ShellScript, get_matlab_shell_name, get_bash_path
-from spikeinterface.sorters.basesorter import get_job_kwargs
+from spikeinterface.sorters.basesorter import get_job_kwargs, BaseSorter
 from spikeinterface.extractors.extractor_classes import KiloSortSortingExtractor
 from spikeinterface.core import write_binary_recording
 from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
@@ -226,9 +226,9 @@ class KilosortBase:
             else:
                 tmp_files_to_remove = ()
         else:
-            assert isinstance(
-                params["delete_tmp_files"], (tuple, list)
-            ), "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
+            assert isinstance(params["delete_tmp_files"], (tuple, list)), (
+                "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
+            )
 
             for name in params["delete_tmp_files"]:
                 assert name in all_tmp_files, f"{name} is not a valid option, must be one of: {all_tmp_files}"
@@ -254,6 +254,19 @@ class KilosortBase:
             params_file = sorter_output_folder / "spikeinterface_params.json"
         with params_file.open("r") as f:
             sorter_params = json.load(f)["sorter_params"]
+
+        channel_ids = None
+        recording_attributes_file = sorter_output_folder.parent / "recording_attributes.json"
+        if recording_attributes_file.is_file():
+            with open(recording_attributes_file, "r") as f:
+                rec_attributes = json.load(f)
+                channel_ids = rec_attributes.get("channel_ids")
+        else:
+            recording = BaseSorter.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
+            channel_ids = recording.channel_ids if recording is not None else None
+
         keep_good_only = sorter_params.get("keep_good_only", False)
-        sorting = KiloSortSortingExtractor(folder_path=sorter_output_folder, keep_good_only=keep_good_only)
+        sorting = KiloSortSortingExtractor(
+            folder_path=sorter_output_folder, keep_good_only=keep_good_only, channel_ids=channel_ids
+        )
         return sorting

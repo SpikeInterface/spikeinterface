@@ -419,7 +419,7 @@ class TestWhiten:
         np.sum(W == 0) == 6
 
         rec2 = whiten(rec)
-        rec2.save(verbose=False)
+        rec2.save(folder=cache_folder / "rec2", verbose=False)
 
         # test dtype
         rec_int = scale(rec2, dtype="int16")

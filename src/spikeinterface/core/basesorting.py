@@ -4,8 +4,12 @@ from copy import deepcopy
 
 import numpy as np
 
+
 from .base import BaseExtractor, BaseSegment, minimum_spike_dtype
 from .waveform_tools import has_exceeding_spikes
+
+#: Makes each unit's spiketrain compact in memory (unit, then segment, then sample).
+LEXSORT_UNIT_COMPACT = ("sample_index", "segment_index", "unit_index")
 
 
 class BaseSorting(BaseExtractor):
@@ -25,14 +29,13 @@ class BaseSorting(BaseExtractor):
         self._sorting_info = None
 
         # caching:
-        # 1. the spike vector : one vector complex dtype
-        self._cached_spike_vector = None
-        # 2. the segment slices in the spike vector
-        self._cached_spike_vector_segment_slices = None
-        # 3. the indices of spike train inside the spike_vector per segment (list) then unit (dict)
-        self._cached_spike_vector_to_indices = None
-        # 4. reordering of the spike vector
-        self._cached_lexsorted_spike_vector = {}
+        # 1. the spike vector : one vector complex dtype, with its segment slices (computed lazily if None)
+        #    {"spikes": spike vector, "segment_slices": None or (num_segments, 2) array}
+        self._cached_time_ordered = None
+        # 2. the indices of spike train inside the spike_vector per segment (list) then unit (dict)
+        self._cached_time_ordered_indices_by_unit = None
+        # 3. reordering of the spike vector
+        self._cached_unit_grouped = None
 
     def __repr__(self):
         return self._repr_header()
@@ -108,9 +111,9 @@ class BaseSorting(BaseExtractor):
         int
             The number of samples
         """
-        assert (
-            self.has_recording()
-        ), "This methods requires an associated recording. Call self.register_recording() first."
+        assert self.has_recording(), (
+            "This methods requires an associated recording. Call self.register_recording() first."
+        )
         return self._recording.get_num_samples(segment_index=segment_index)
 
     def get_total_samples(self) -> int:
@@ -134,10 +137,48 @@ class BaseSorting(BaseExtractor):
         float
             The duration in seconds
         """
-        assert (
-            self.has_recording()
-        ), "This methods requires an associated recording. Call self.register_recording() first."
+        assert self.has_recording(), (
+            "This methods requires an associated recording. Call self.register_recording() first."
+        )
         return self._recording.get_total_duration()
+
+    def search_cached_spikes_sorted(
+        self,
+        indices: list[int],
+        segment_index: int | None = None,
+    ):
+        """
+        Search sample indices (frames) in the cached spike vector of one segment.
+
+        Equivalent to `np.searchsorted(segment_sample_index, indices, side="left")`.
+        Sortings with a lazy spike vector override this to avoid materialising it.
+
+        Parameters
+        ----------
+        indices : list[int]
+            The sample indices (frames) to search.
+        segment_index : int | None, default: None
+            The segment to search. Can be None for mono-segment sortings.
+
+        Returns
+        -------
+        positions : np.ndarray
+            The insertion positions, relative to the start of the segment in the spike vector.
+        """
+        if self._cached_time_ordered is None:
+            self._compute_and_cache_spike_vector()
+        spikes = self._cached_time_ordered["spikes"]
+        if not isinstance(spikes, np.ndarray):  # np.memmap is an ndarray
+            # np.searchsorted would materialise a lazy vector on every call
+            raise TypeError(
+                f"{type(self).__name__} holds a lazy spike vector ({type(spikes).__name__}) "
+                "and must override search_cached_spikes_sorted()"
+            )
+        if segment_index is None:
+            assert self.get_num_segments() == 1, "segment_index is required for multi-segment sortings"
+            segment_index = 0
+        start, stop = self._get_spike_vector_segment_slices()[segment_index]
+        return np.searchsorted(spikes["sample_index"][start:stop], indices)
 
     def get_unit_spike_train(
         self,
@@ -166,8 +207,7 @@ class BaseSorting(BaseExtractor):
             If True, returns spike times in seconds instead of frames
         use_cache : bool, default: True
             If True, then precompute (or use) the to_reordered_spike_vector using
-            lexsort=("sample_index", "segment_index", "unit_index"), which makes a spiketrain
-            per unit and per segment compact in memory.
+            lexsort=LEXSORT_UNIT_COMPACT, which makes each unit's spiketrain compact in memory.
             Using the cache makes the first call quite slow but then future calls are very fast.
 
         Note: if use_cache=False, but the lexsorted cache is already computed then it will be used anyway.
@@ -191,17 +231,17 @@ class BaseSorting(BaseExtractor):
                 segment_index=segment_index,
                 start_time=start_time,
                 end_time=end_time,
+                use_cache=use_cache,
             )
 
         segment_index = self._check_segment_index(segment_index)
 
-        lexsort_key = ("sample_index", "segment_index", "unit_index")
-        if lexsort_key in self._cached_lexsorted_spike_vector.keys():
+        if self._cached_unit_grouped is not None:
             use_cache = True
 
         if use_cache:
             ordered_spike_vector, slices = self.to_reordered_spike_vector(
-                lexsort=lexsort_key,
+                lexsort=LEXSORT_UNIT_COMPACT,
                 return_order=False,
                 return_slices=True,
             )
@@ -228,6 +268,7 @@ class BaseSorting(BaseExtractor):
         segment_index: int | None = None,
         start_time: float | None = None,
         end_time: float | None = None,
+        use_cache: bool = True,
     ) -> np.ndarray:
         """
         Get spike train for a unit in seconds.
@@ -252,6 +293,9 @@ class BaseSorting(BaseExtractor):
             The start time in seconds for spike train extraction
         end_time : float or None, default: None
             The end time in seconds for spike train extraction
+        use_cache : bool, default: True
+            Passed to `get_unit_spike_train` when the times are computed from frames.
+            Ignored when the segment returns native times.
 
         Returns
         -------
@@ -264,7 +308,6 @@ class BaseSorting(BaseExtractor):
         # If sorting has a registered recording, get the frames and get the times from the recording
         # Note that this take into account the segment start time of the recording
         if self.has_recording():
-
             # Get all the spike times and then slice them
             start_frame = None
             end_frame = None
@@ -274,7 +317,7 @@ class BaseSorting(BaseExtractor):
                 start_frame=start_frame,
                 end_frame=end_frame,
                 return_times=False,
-                use_cache=True,
+                use_cache=use_cache,
             )
 
             spike_times = self.sample_index_to_time(spike_frames, segment_index=segment_index)
@@ -313,7 +356,7 @@ class BaseSorting(BaseExtractor):
             start_frame=start_frame,
             end_frame=end_frame,
             return_times=False,
-            use_cache=True,
+            use_cache=use_cache,
         )
 
         t_start = segment._t_start if segment._t_start is not None else 0
@@ -333,12 +376,12 @@ class BaseSorting(BaseExtractor):
         check_spike_frames : bool, default: True
             If True, assert for each segment that all spikes are within the recording's range.
         """
-        assert np.isclose(
-            self.get_sampling_frequency(), recording.get_sampling_frequency(), atol=0.1
-        ), "The recording has a different sampling frequency than the sorting!"
-        assert (
-            self.get_num_segments() == recording.get_num_segments()
-        ), "The recording has a different number of segments than the sorting!"
+        assert np.isclose(self.get_sampling_frequency(), recording.get_sampling_frequency(), atol=0.1), (
+            "The recording has a different sampling frequency than the sorting!"
+        )
+        assert self.get_num_segments() == recording.get_num_segments(), (
+            "The recording has a different number of segments than the sorting!"
+        )
         if check_spike_frames:
             if has_exceeding_spikes(self, recording):
                 warnings.warn(
@@ -500,48 +543,101 @@ class BaseSorting(BaseExtractor):
         else:
             return None
 
-    def _save(self, format: str = "numpy_folder", **save_kwargs):
-        """Save a sorting object to disk in a specified format.
+    def save(self, format="numpy_folder", **save_kwargs):
+        """
+        Save a `BaseSorting` object to a specified format:
 
-        Note
-        ----
-        This function replaces the old CacheSortingExtractor, but enables more engines
-        for caching a results.
+        * "numpy_folder"
+        * "zarr"
+        * "memory"
+        * "npz_folder" - deprecated
 
-        Since v0.98.0 "numpy_folder" is used by defult.
-        From v0.96.0 to 0.97.0 "npz_folder" was the default.
+        Parameters
+        ----------
+        format : str, default: "numpy_folder"
+            The format to save the sorting in. Options are:
+
+            - "numpy_folder": Saves the sorting in a binary numpy folder format.
+            - "zarr": Saves the sorting in Zarr format.
+            - "memory": Saves the sorting in memory (shared memory or numpy array).
+            - "npz_folder": Saves the sorting in a deprecated npz folder format.
+        verbose : bool, default: False
+            If True, prints additional information during the save process.
+        **save_kwargs : dict
+            Additional keyword arguments specific to the chosen format.
+
+            * "numpy_folder" format:
+                - folder : str or Path
+                    The folder where the files will be saved.
+                - mmap_mode : str or None, default: None
+                    The memory-mapping mode to use when saving numpy files. If None, no memory mapping is used.
+                - overwrite : bool, default: False
+                    If True, existing files in the folder will be overwritten.
+            * "zarr" format:
+                - folder : str or Path
+                    The folder where the Zarr files will be saved.
+                - overwrite: bool, default: False
+                    If True, the folder is removed if it already exists
+                - storage_options: dict or None, default: None
+                    Storage options for zarr `store`. E.g., if "s3://" or "gcs://" they can provide authentication methods, etc.
+                    For cloud storage locations, this should not be None (in case of default values, use an empty dict)
+                - target_chunk_size_bytes: int or None, default: 10 * 1024 * 1024 (10 MB)
+                    The target chunk size for each spike field in the zarr arrays.
+                    If explicitly set to None, no chunking is used.
+                - compressors: zarr compressors or str or None, default: "default"
+                    The compressor used for each spike field in the zarr arrays.
+                    If "default", the SpikeInterface default zarr compressor is used (Blosc-zstd, level 5, bitshuffle).
+                - filters: list of zarr filters or None, default: None
+                    The list of zarr filters to apply to each spike field in the zarr arrays.
+                    If None, a Delta filter is applied.
+                - shard_factor: int or None, default: None
+                    If given, a shard will be shard_factor * chunk size.
+            * "memory" format:
+                - sharedmem : bool, default: True
+                    If True, the recording is saved in shared memory. If False, it is saved as
+                    a numpy array in memory.
+
+        Returns
+        -------
+        BaseSorting
+            The saved sorting object in the specified format.
         """
         if format == "numpy_folder":
             from .sortingfolder import NumpyFolderSorting
 
+            if "folder" not in save_kwargs:
+                raise ValueError("For 'numpy_folder' format, 'folder' must be specified in save_kwargs.")
             folder = save_kwargs.pop("folder")
-            NumpyFolderSorting.write_sorting(self, folder)
-            cached = NumpyFolderSorting(folder)
+            cached = NumpyFolderSorting.write_sorting(self, folder_path=folder, **save_kwargs)
 
         elif format == "zarr":
             from .zarrextractors import ZarrSortingExtractor
 
-            zarr_path = save_kwargs.pop("zarr_path")
-            storage_options = save_kwargs.pop("storage_options")
-            ZarrSortingExtractor.write_sorting(self, zarr_path, storage_options, **save_kwargs)
-            cached = ZarrSortingExtractor(zarr_path, storage_options)
+            if "folder" not in save_kwargs:
+                raise ValueError("For 'zarr' format, 'folder' must be specified in save_kwargs.")
+            folder = save_kwargs.pop("folder")
+            cached = ZarrSortingExtractor.write_sorting(self, folder, **save_kwargs)
+        elif format == "memory":
+            if save_kwargs.get("sharedmem", True):
+                from .numpyextractors import SharedMemorySorting
 
+                cached = SharedMemorySorting.from_sorting(self, with_metadata=True)
+            else:
+                from .numpyextractors import NumpySorting
+
+                cached = NumpySorting.from_sorting(self, with_metadata=True)
         elif format == "npz_folder":
+            warnings.warn(
+                "The 'npz_folder' format is deprecated and will be removed in 0.106.0. "
+                "Please use 'numpy_folder' instead.",
+                FutureWarning,
+                stacklevel=True,
+            )
             from .sortingfolder import NpzFolderSorting
 
             folder = save_kwargs.pop("folder")
             NpzFolderSorting.write_sorting(self, folder)
             cached = NpzFolderSorting(folder_path=folder)
-
-        elif format == "memory":
-            if save_kwargs.get("sharedmem", True):
-                from .numpyextractors import SharedMemorySorting
-
-                cached = SharedMemorySorting.from_sorting(self)
-            else:
-                from .numpyextractors import NumpySorting
-
-                cached = NumpySorting.from_sorting(self)
         else:
             raise ValueError(f"Format {format} not supported")
 
@@ -580,11 +676,9 @@ class BaseSorting(BaseExtractor):
         """
 
         # speed strategy by order
-        # 1. if _cached_lexsorted_spike_vector has  ("sample_index", "segment_index", "unit_index") then use it and sum
-        # 2. if _cached_spike_vector not None then use it with np.unique()
+        # 1. if _cached_unit_grouped is not None then use it and sum
+        # 2. if _cached_time_ordered not None then use it with np.unique()
         # 3. compute spikevector and do np.unique()
-
-        cache_key = ("sample_index", "segment_index", "unit_index")
 
         if unit_ids is not None:
             assert outputs == "dict", "count_num_spikes_per_unit() with unit_ids not None works only for output='dict'"
@@ -597,9 +691,9 @@ class BaseSorting(BaseExtractor):
             keep_mask = slice(None)
             unit_ids = self.unit_ids
 
-        if cache_key in self._cached_lexsorted_spike_vector:
+        if self._cached_unit_grouped is not None:
             # case 1
-            slices = self._cached_lexsorted_spike_vector[cache_key]["slices"]
+            slices = self._cached_unit_grouped["unit_segment_slices"]
             # end of last segment minus start of first segment
             num_spikes = slices[keep_mask, -1, 1] - slices[keep_mask, 0, 0]
 
@@ -786,7 +880,8 @@ class BaseSorting(BaseExtractor):
         -------
         BaseSorting
             A new sorting object with only samples between start_sample_index and end_sample_index
-            for the given segment_index.
+            for the given segment_index. It has the same segments, properties, annotations, registered
+            recording and times as this sorting.
         """
         from spikeinterface.core.sorting_tools import select_sorting_periods
 
@@ -867,11 +962,10 @@ class BaseSorting(BaseExtractor):
     def precompute_spike_trains(self):
         """
         Pre-computes and caches all spike trains for this sorting.
-        This is equivalent to cache lexsort ("sample_index", "segment_index", "unit_index").
+        This is equivalent to cache lexsort LEXSORT_UNIT_COMPACT.
         """
-        cache_key = ("sample_index", "segment_index", "unit_index")
-        if cache_key not in self._cached_lexsorted_spike_vector:
-            self.to_reordered_spike_vector(lexsort=cache_key)
+        if self._cached_unit_grouped is None:
+            self.to_reordered_spike_vector(lexsort=LEXSORT_UNIT_COMPACT)
 
     def _compute_and_cache_spike_vector(self) -> None:
         #
@@ -881,7 +975,7 @@ class BaseSorting(BaseExtractor):
         Function that can be implemented by some children sorting to quickly
         cache the spike vector without computing it from spike trains
         (e.g. computing it from a sorting parent).
-        This function should set the `self._cached_spike_vector`, see for
+        This function should set the `self._cached_time_ordered`, see for
         instance the `UnitsSelectionSorting` implementation.
         """
 
@@ -927,8 +1021,7 @@ class BaseSorting(BaseExtractor):
         # the spikes are not lexsorted here because the previous loop ensure that the spike vector is constructucted alway the same way.
         # spikes = spikes[np.lexsort((spikes["unit_index"], spikes["sample_index"], spikes["segment_index"]))]
 
-        self._cached_spike_vector = spikes
-        self._cached_spike_vector_segment_slices = segment_slices
+        self._cached_time_ordered = {"spikes": spikes, "segment_slices": segment_slices}
 
     def to_spike_vector(
         self,
@@ -955,7 +1048,7 @@ class BaseSorting(BaseExtractor):
             This can be convenient for computing spikes position after sorter.
             This dict can be given by analyzer.get_main_channels(outputs="index", with_dict=False)
         use_cache : bool, default: True
-            When True the spikes vector is cached as an attribute of the object (`_cached_spike_vector`).
+            When True the spikes vector is cached as an attribute of the object (`_cached_time_ordered`).
             This caching only occurs when main_channel_indices=None.
 
         Returns
@@ -967,25 +1060,26 @@ class BaseSorting(BaseExtractor):
 
         """
 
-        if self._cached_spike_vector is None:
+        if self._cached_time_ordered is None:
             self._compute_and_cache_spike_vector()
+        cached_spikes = self._cached_time_ordered["spikes"]
 
         if extremum_channel_inds is not None:
             warnings.warn(
                 "Sorting.to_spike_vector() with extremum_channel_inds is deprecated. "
                 "Use main_channel_indices instead"
-                "This will be removed in 0.016.0"
+                "This will be removed in 0.106.0"
             )
             main_channel_indices = np.array([extremum_channel_inds[unit_id] for unit_id in self.unit_ids])
 
         if main_channel_indices is None:
-            spikes = self._cached_spike_vector
-        elif "channel_index" in self._cached_spike_vector.dtype.names:
-            spikes = self._cached_spike_vector
+            spikes = cached_spikes
+        elif "channel_index" in cached_spikes.dtype.names:
+            spikes = cached_spikes
         else:
             spike_dtype = minimum_spike_dtype + [("channel_index", "int64")]
-            spikes = np.zeros(self._cached_spike_vector.size, dtype=spike_dtype)
-            spikes[["sample_index", "unit_index", "segment_index"]] = self._cached_spike_vector
+            spikes = np.zeros(cached_spikes.size, dtype=spike_dtype)
+            spikes[["sample_index", "unit_index", "segment_index"]] = cached_spikes
             spikes["channel_index"] = main_channel_indices[spikes["unit_index"]]
 
         if not concatenated:
@@ -1011,30 +1105,34 @@ class BaseSorting(BaseExtractor):
         Note that, indices are return using absolute_index=True.
         """
 
-        if self._cached_spike_vector_to_indices is None:
+        if self._cached_time_ordered_indices_by_unit is None:
             from .sorting_tools import spike_vector_to_indices
 
             spike_vector = self.to_spike_vector(concatenated=False)
-            self._cached_spike_vector_to_indices = spike_vector_to_indices(
+            self._cached_time_ordered_indices_by_unit = spike_vector_to_indices(
                 spike_vector, self.unit_ids, absolute_index=True
             )
 
-        return self._cached_spike_vector_to_indices
+        return self._cached_time_ordered_indices_by_unit
 
     def _get_spike_vector_segment_slices(self):
-        if self._cached_spike_vector_segment_slices is None:
+        cache = self._cached_time_ordered
+        if cache["segment_slices"] is None:
             # compute the, this is needed when spikevector is loaded from format and not computed
             num_seg = self.get_num_segments()
-            slices = np.searchsorted(self._cached_spike_vector["segment_index"], np.arange(num_seg + 1))
-            self._cached_spike_vector_segment_slices = np.zeros((num_seg, 2), dtype="int64")
-            for seg_index in range(num_seg):
-                self._cached_spike_vector_segment_slices[seg_index, 0] = slices[seg_index]
-                self._cached_spike_vector_segment_slices[seg_index, 1] = slices[seg_index + 1]
-        return self._cached_spike_vector_segment_slices
+            if num_seg == 1:
+                cache["segment_slices"] = np.array([[0, cache["spikes"].size]], dtype="int64")
+            else:
+                slices = np.searchsorted(cache["spikes"]["segment_index"], np.arange(num_seg + 1))
+                cache["segment_slices"] = np.zeros((num_seg, 2), dtype="int64")
+                for seg_index in range(num_seg):
+                    cache["segment_slices"][seg_index, 0] = slices[seg_index]
+                    cache["segment_slices"][seg_index, 1] = slices[seg_index + 1]
+        return cache["segment_slices"]
 
     def to_reordered_spike_vector(
         self,
-        lexsort=("sample_index", "segment_index", "unit_index"),
+        lexsort=LEXSORT_UNIT_COMPACT,
         return_order=True,
         return_slices=True,
     ):
@@ -1046,31 +1144,19 @@ class BaseSorting(BaseExtractor):
 
         Please note that the lexsort syntax is the **reverse** of natural reading.
 
-        By default the spike_vector is lexsort-ed like this:
-          - ("unit_index", "sample_index", "segment_index") (segment then sample then unit)
-
-        But particular orderings can be better for some computations:
-          - ("sample_index", "unit_index", "segment_index") (segment then unit_index then sample)
-          - ("sample_index", "segment_index", "unit_index") (unit_index then segment then sample)
-
-        Note that the last representation makes the spiketrain per segment compact in memory.
+        One reordering is supported:
+          - LEXSORT_UNIT_COMPACT: ("sample_index", "segment_index", "unit_index").
+            Makes each unit's spiketrain compact in memory. This is what
+            unit-by-unit computations (e.g. isi violations) want.
 
         This operation is internally cached.
 
-        The order vector is also computed and can be applied to other external vectors like
-        spike_amplitudes, spike_locations, ...
-
-        An array of internal slices is also precomputed to have a fast access to a compact
-        portion of the reordered spikes.
-        Theses slices are stored as a 3d array to handle start->stop and depend of the lexsort itself.
-        Theses slices are pre computed using nested searchsorted.
-
         Parameters
         ----------
-        lexsort : tuple, default: ("sample_index", "unit_index", "segment_index")
-            Tuple for lexsort. Please note that this is the reverse natural reading order!
+        lexsort : tuple, default: LEXSORT_UNIT_COMPACT
+            The requested sort order. Must be the ordering listed above.
         return_order: bool, default: True
-            Return the order, or not. See Returns.
+            Return the numpy array needed to sort the spike vector (given the requested sort).
         return_slices: bool, default: True
             Return the slices, or not. See Returns.
 
@@ -1080,82 +1166,58 @@ class BaseSorting(BaseExtractor):
             Structured numpy array ("sample_index", "unit_index", "segment_index") with all spikes in the desired
             lexsort order
         order : np.array
-            Numpy array needed to sort the spike vector given the lexsort
-        slices :  np.array
-            Numpy array of size (num_units, num_segments, 2) or (num_segments, num_units, 2) given the lexsort,
-            where one can obtain the indices amin, amax of all the (segment,unit_index) values.
+            Numpy array needed to sort the spike vector given the lexsort. Can be used
+            to sort other external vectors like spike_amplitudes, spike_locations, ...
+        slices : np.array
+            A 3D array of internal slices for fast access to a compact portion of the reordered spikes,
+            of size (num_units, num_segments, 2).
+            The last dimension contains the start and end indices of each segment-unit pair.
+
+        Raises
+        ------
+        ValueError
+            If `lexsort` is not the supported ordering.
         """
-        lexsort = tuple(lexsort)
-
         if lexsort == ("unit_index", "sample_index", "segment_index"):
-            assert (
-                not return_order and not return_slices
-            ), 'If lexsort = ("unit_index", "sample_index", "segment_index"), both `return_order` and `return_slices` must be set to `False`.'
+            raise ValueError(
+                '`lexsort` = ("unit_index", "sample_index", "segment_index") is not supported: '
+                "Use `to_spike_vector()` to get the default order."
+            )
 
-            spikes = self.to_spike_vector(concatenated=True)
-            return spikes
+        if lexsort != LEXSORT_UNIT_COMPACT:
+            raise ValueError(f"`lexsort` must be {LEXSORT_UNIT_COMPACT}; got {lexsort}.")
 
-        assert lexsort in [
-            ("sample_index", "unit_index", "segment_index"),
-            ("sample_index", "segment_index", "unit_index"),
-        ], '`lexsort` must be equal to ("unit_index", "sample_index", "segment_index"),  ("sample_index", "unit_index", "segment_index") or ("sample_index", "segment_index", "unit_index")'
+        if self._cached_unit_grouped is None:
+            from .sorting_tools import reorder_spike_vector_by_unit_and_segment
 
-        key = str(lexsort)
-
-        if key not in self._cached_lexsorted_spike_vector.keys():
             spikes = self.to_spike_vector()
-            order = np.lexsort((spikes[lexsort[0]], spikes[lexsort[1]], spikes[lexsort[2]]))
-            ordered_spikes = spikes[order]
-            self._cached_lexsorted_spike_vector[key] = {}
-            self._cached_lexsorted_spike_vector[key]["ordered_spikes"] = ordered_spikes
-            self._cached_lexsorted_spike_vector[key]["order"] = order
-
             num_units = len(self.unit_ids)
             num_segments = self.get_num_segments()
 
-            # precompute the slices with nested search sorted
-            if lexsort == ("sample_index", "segment_index", "unit_index"):
-                # this case make spiketrain per unit compact in memory
+            slices_shape = (num_units, num_segments)
 
-                slices = np.zeros((num_units, num_segments, 2), dtype=np.int64)
-                unit_slices = np.searchsorted(ordered_spikes["unit_index"], np.arange(num_units + 1), side="left")
-                for unit_index, unit_id in enumerate(self.unit_ids):
-                    u0 = unit_slices[unit_index]
-                    u1 = unit_slices[unit_index + 1]
-                    seg_slices = np.searchsorted(
-                        ordered_spikes[u0:u1]["segment_index"], np.arange(num_segments + 1), side="left"
-                    )
-                    for segment_index in range(num_segments):
-                        s0 = seg_slices[segment_index]
-                        s1 = seg_slices[segment_index + 1]
-                        slices[unit_index, segment_index, :] = [u0 + s0, u0 + s1]
+            ordered_spikes, order, counts = reorder_spike_vector_by_unit_and_segment(
+                spikes, num_units, num_segments, unit_major=True
+            )
 
-            elif ("sample_index", "unit_index", "segment_index"):
-                slices = np.zeros((num_segments, num_units, 2), dtype=np.int64)
-                seg_slices = np.searchsorted(ordered_spikes["segment_index"], np.arange(num_segments + 1), side="left")
-                for segment_index in range(self.get_num_segments()):
-                    s0 = seg_slices[segment_index]
-                    s1 = seg_slices[segment_index + 1]
-                    unit_slices = np.searchsorted(
-                        ordered_spikes[s0:s1]["unit_index"], np.arange(num_units + 1), side="left"
-                    )
-                    for unit_index, unit_id in enumerate(self.unit_ids):
-                        u0 = unit_slices[unit_index]
-                        u1 = unit_slices[unit_index + 1]
-                        slices[segment_index, unit_index, :] = [s0 + u0, s0 + u1]
+            counts = counts.reshape(slices_shape)
+            stops = np.cumsum(counts.ravel()).reshape(slices_shape)
+            starts = stops - counts
+            slices = np.stack([starts, stops], axis=-1).astype(np.int64, copy=False)
 
-            self._cached_lexsorted_spike_vector[key]["slices"] = slices
+            self._cached_unit_grouped = {
+                "spikes": ordered_spikes,
+                "order": order,
+                "unit_segment_slices": slices,
+            }
 
-        ordered_spikes = self._cached_lexsorted_spike_vector[key]["ordered_spikes"]
-        out = (ordered_spikes,)
+        cached = self._cached_unit_grouped
+        out = [cached["spikes"]]
         if return_order:
-            out += (self._cached_lexsorted_spike_vector[key]["order"],)
+            out.append(cached["order"])
         if return_slices:
-            out += (self._cached_lexsorted_spike_vector[key]["slices"],)
-        if len(out) == 1:
-            return out[0]
-        else:
-            return out
+            out.append(cached["unit_segment_slices"])
+        return tuple(out) if len(out) > 1 else out[0]
 
     def to_numpy_sorting(self, propagate_cache=True):
         """
@@ -1172,12 +1234,14 @@ class BaseSorting(BaseExtractor):
 
         sorting = NumpySorting.from_sorting(self)
         if propagate_cache:
-            if len(self._cached_lexsorted_spike_vector) > 0:
-                sorting._cached_lexsorted_spike_vector = deepcopy(self._cached_lexsorted_spike_vector)
-            if self._cached_spike_vector_segment_slices is not None:
-                sorting._cached_spike_vector_segment_slices = self._cached_spike_vector_segment_slices.copy()
-            if self._cached_spike_vector_to_indices is not None:
-                sorting._cached_spike_vector_to_indices = deepcopy(self._cached_spike_vector_to_indices)
+            if self._cached_unit_grouped is not None:
+                sorting._cached_unit_grouped = deepcopy(self._cached_unit_grouped)
+            if self._cached_time_ordered is not None:
+                segment_slices = self._cached_time_ordered["segment_slices"]
+                if segment_slices is not None:
+                    sorting._cached_time_ordered["segment_slices"] = segment_slices.copy()
+            if self._cached_time_ordered_indices_by_unit is not None:
+                sorting._cached_time_ordered_indices_by_unit = deepcopy(self._cached_time_ordered_indices_by_unit)
 
         return sorting
 

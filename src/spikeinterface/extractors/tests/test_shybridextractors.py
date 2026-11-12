@@ -22,6 +22,7 @@ def test_shybrid_extractors(create_cache_folder):
     )
     rec_shybrid = SHYBRIDRecordingExtractor(cache_folder / "shybridtest" / "recording.yml")
     probe = rec_shybrid.get_probe()
+    assert probe is not None
 
     check_recordings_equal(rec, rec_shybrid, return_in_uV=False)
 

@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 
 from probeinterface import ProbeGroup
@@ -10,20 +8,21 @@ class ChannelsAggregationRecording(BaseRecording):
     """
     Class that handles aggregating channels from different recordings, e.g. from different channel groups.
 
+    Annotations shared by all the recordings, meaning present in every recording and with the same value
+    everywhere, are propagated to the aggregated recording. All other annotations are dropped.
+
     Do not use this class directly but use `si.aggregate_channels(...)`
+
+    Parameters
+    ----------
+    recording_list_or_dict : list or dict
+        The list or dictionary of recordings to aggregate.
+    renamed_channel_ids : list, optional
+        The new channel ids for the aggregated recording. If None, default unique consecutive ids are used.
 
     """
 
-    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None, recording_list=None):
-
-        if recording_list is not None:
-            warnings.warn(
-                "`recording_list` is deprecated and will be removed in 0.105.0. Please use `recording_list_or_dict` instead.",
-                category=FutureWarning,
-                stacklevel=2,
-            )
-            recording_list_or_dict = recording_list
-
+    def __init__(self, recording_list_or_dict=None, renamed_channel_ids=None):
         if isinstance(recording_list_or_dict, dict):
             recording_list = list(recording_list_or_dict.values())
             recording_ids = list(recording_list_or_dict.keys())
@@ -51,12 +50,11 @@ class ChannelsAggregationRecording(BaseRecording):
         # Generate a default list of channel ids that are unique and consecutive numbers as strings.
         num_all_channels = sum(rec.get_num_channels() for rec in recording_list)
         if renamed_channel_ids is not None:
-            assert (
-                len(np.unique(renamed_channel_ids)) == num_all_channels
-            ), "'renamed_channel_ids' doesn't have the right size or has duplicates!"
+            assert len(np.unique(renamed_channel_ids)) == num_all_channels, (
+                "'renamed_channel_ids' doesn't have the right size or has duplicates!"
+            )
             channel_ids = list(renamed_channel_ids)
         else:
-
             # Explicitly check if all channel_ids arrays are either all integers or all strings.
             all_ids_are_int_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.integer) for rec in recording_list)
             all_ids_are_str_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.str_) for rec in recording_list)
@@ -88,7 +86,7 @@ class ChannelsAggregationRecording(BaseRecording):
                             property_dict[prop_name] = np.concatenate(
                                 (property_dict[prop_name], rec.get_property(prop_name))
                             )
-                        except Exception as e:
+                        except Exception:
                             print(f"Skipping property '{prop_name}' for shape inconsistency")
                             del property_dict[prop_name]
                             break
@@ -96,6 +94,23 @@ class ChannelsAggregationRecording(BaseRecording):
         property_dict["aggregation_key"] = aggregation_key
         for prop_name, prop_values in property_dict.items():
             self.set_property(key=prop_name, values=prop_values)
+
+        # Propagate the annotations that are shared by the recordings. An annotation is shared when every
+        # recording carries it and all of them agree on its value. Anything else is dropped, which is the
+        # same rule used by `UnitsAggregationSorting` in unitsaggregationsorting.py.
+        for annotation_name in recording_list[0].get_annotation_keys():
+            if not all(annotation_name in rec.get_annotation_keys() for rec in recording_list):
+                continue
+            values = [rec.get_annotation(annotation_name, copy=False) for rec in recording_list]
+            try:
+                # `np.array_equal` gives a single bool for scalars, strings and arrays alike. Values it
+                # cannot compare (e.g. ragged object arrays) raise, and are then treated as not shared.
+                all_values_are_equal = all(np.array_equal(value, values[0]) for value in values[1:])
+            except Exception:
+                all_values_are_equal = False
+            if all_values_are_equal:
+                # take a copy so the aggregate does not share mutable state with its first child
+                self.set_annotation(annotation_name, recording_list[0].get_annotation(annotation_name), overwrite=True)
 
         # Aggregate probe information
         all_probegroups = [rec.get_probegroup() for rec in recording_list if rec.has_probe()]
@@ -129,7 +144,20 @@ class ChannelsAggregationRecording(BaseRecording):
             sub_segment = ChannelsAggregationRecordingSegment(channel_map, parent_segments)
             self.add_recording_segment(sub_segment)
 
-        self._kwargs = {"recording_list": recording_list, "renamed_channel_ids": renamed_channel_ids}
+        self._kwargs = {"recording_list_or_dict": recording_list, "renamed_channel_ids": renamed_channel_ids}
+
+    @classmethod
+    def _handle_kwargs_backward_compatibility(cls, old_kwargs, full_dict):
+        """
+        Fix backward compatibility issues with `recording_list' argument,
+        which is renamed to `recording_list_or_dict'.
+        """
+        if "recording_list" in old_kwargs:
+            new_kwargs = old_kwargs.copy()
+            new_kwargs["recording_list_or_dict"] = new_kwargs.pop("recording_list")
+        else:
+            new_kwargs = old_kwargs
+        return new_kwargs
 
     @property
     def recordings(self):
@@ -183,7 +211,7 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         else:
             for ps in parent_segments:
                 assert ps.get_times_kwargs()["t_start"] == times_kargs0["t_start"], (
-                    "All segments should have the same " "t_start"
+                    "All segments should have the same t_start"
                 )
 
         BaseRecordingSegment.__init__(self, **times_kargs0)
@@ -238,7 +266,6 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
 def aggregate_channels(
     recording_list_or_dict=None,
     renamed_channel_ids=None,
-    recording_list=None,
 ):
     """
     Aggregates channels of multiple recording into a single recording object
@@ -254,6 +281,12 @@ def aggregate_channels(
     -------
     aggregate_recording: ChannelsAggregationRecording
         The aggregated recording object
+
+    Notes
+    -----
+    Annotations are propagated only when they are shared by all the recordings, meaning present in every
+    recording and with the same value everywhere. Annotations missing from one recording, or with differing
+    values, are dropped.
     """
 
-    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids, recording_list)
+    return ChannelsAggregationRecording(recording_list_or_dict, renamed_channel_ids)

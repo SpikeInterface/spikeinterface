@@ -4,13 +4,17 @@ from typing import Literal
 
 import numpy as np
 
-from spikeinterface.core.base import BaseExtractor, unit_period_dtype
+from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
 from spikeinterface.core.basesorting import BaseSorting
 from spikeinterface.core.numpyextractors import NumpySorting
 
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True
+    # Instead of importing numba directly at the module level
+    # like we do in lazily imported submodules, here in `core`
+    # we defer the import of numba until the very last moment,
+    # to keep the import time of `spikeinterface.core` low.
 else:
     HAVE_NUMBA = False
 
@@ -36,7 +40,6 @@ def spike_vector_to_spike_trains(spike_vector: list[np.array], unit_ids: np.arra
     """
 
     if HAVE_NUMBA:
-        # the trick here is to have a function getter
         vector_to_list_of_spiketrain = get_numba_vector_to_list_of_spiketrain()
     else:
         vector_to_list_of_spiketrain = vector_to_list_of_spiketrain_numpy
@@ -79,7 +82,6 @@ def spike_vector_to_indices(spike_vector: list[np.array], unit_ids: np.array, ab
     """
 
     if HAVE_NUMBA:
-        # the trick here is to have a function getter
         vector_to_list_of_spiketrain = get_numba_vector_to_list_of_spiketrain()
     else:
         vector_to_list_of_spiketrain = vector_to_list_of_spiketrain_numpy
@@ -147,6 +149,207 @@ def get_numba_vector_to_list_of_spiketrain():
     return vector_to_list_of_spiketrain_numba
 
 
+def _is_flat_int64_view(dtype: np.dtype) -> bool:
+    """
+    Whether a spike-vector dtype can be safely viewed as a flat (num_spikes, num_fields) int64
+    matrix, which is what the numba counting sort moves rows through.
+
+    Requires every field to be int64, packed with no padding, and the first three fields to be
+    `minimum_spike_dtype`'s in order, because the kernel addresses unit_index and segment_index
+    positionally (columns 1 and 2) rather than by name.
+
+    The all-int64 rule is deliberately stricter than correctness demands -- the kernel copies rows
+    bitwise, so any 8-byte field would in fact round-trip through the view. Keeping it narrow means
+    the kernel only ever sees the layout it is written for, and it costs nothing in practice: every
+    spike-vector dtype spikeinterface constructs is all-int64.
+    """
+    names = dtype.names
+    if names is None or names[:3] != tuple(name for name, _ in minimum_spike_dtype):
+        return False
+    if dtype.itemsize != 8 * len(names):
+        return False
+    return all(dtype.fields[name][0] == np.int64 and dtype.fields[name][1] == 8 * i for i, name in enumerate(names))
+
+
+def reorder_spike_vector_by_unit_and_segment(
+    spike_vector: np.ndarray,
+    num_units: int,
+    num_segments: int,
+    unit_major: bool = True,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Stable reorder of a spike vector so that each (unit_index, segment_index) group is contiguous.
+
+    Each spike is assigned to one of `num_units * num_segments` buckets, and the spikes are stably
+    sorted by bucket. `unit_major` selects which of the two nestings to use:
+
+      * True  -> bucket = unit_index * num_segments + segment_index, i.e. each unit's spiketrain is
+                 compact in memory, and within a unit each segment is compact.
+      * False -> bucket = segment_index * num_units + unit_index, i.e. each segment is compact, and
+                 within a segment each unit is compact.
+
+    The sort is stable, so any ordering already present in `spike_vector` carries over to each
+    bucket. In particular, since a spike vector is sample_index-ascending within each segment, and
+    every bucket lies inside a single segment, every bucket of the output is sample_index-ascending.
+
+    Internally calls numba if numba is installed, in which case this is a counting sort running in
+    O(num_spikes), adapted from Cormen, Leiserson, Rivest and Stein (CLRS) chapter 8.2. The numpy
+    fallback is a stable (radix) argsort on the bucket.
+
+    Parameters
+    ----------
+    spike_vector : np.ndarray or array-like
+        Structured array whose first three fields are `minimum_spike_dtype`. Extra trailing fields
+        (e.g. the "channel_index" that `to_spike_vector(main_channel_indices=...)` adds) are carried
+        through to the output. Anything array-like is accepted and materialised with `np.asarray`,
+        so lazily-backed spike vectors work, at the cost of being read into memory.
+    num_units : int
+        The number of units. Every `unit_index` must be in [0, num_units).
+    num_segments : int
+        The number of segments. Every `segment_index` must be in [0, num_segments).
+    unit_major : bool, default: True
+        Whether unit_index or segment_index is the major key. See above.
+
+    Returns
+    -------
+    ordered_spikes : np.ndarray
+        Structured array of the same dtype and length as `spike_vector`, with the spikes grouped
+        by bucket.
+    order : np.ndarray
+        1d int64 array such that `spike_vector[order]` equals `ordered_spikes`.
+    counts : np.ndarray
+        1d int64 array of length `num_units * num_segments`, the number of spikes in each bucket,
+        in bucket order.
+    """
+    # Materialise anything array-like (e.g. a lazily zarr-backed spike vector).
+    spike_vector = np.asarray(spike_vector)
+
+    num_units, num_segments = int(num_units), int(num_segments)
+    if num_units < 0 or num_segments < 0:
+        raise ValueError(f"`num_units` and `num_segments` must not be negative; got {num_units} and {num_segments}.")
+    num_buckets = num_units * num_segments
+
+    # Both nestings are just a linear combination of unit_index and segment_index:
+    # bucket = unit_index * unit_stride + segment_index * segment_stride
+    unit_stride, segment_stride = (num_segments, 1) if unit_major else (1, num_units)
+
+    num_spikes = spike_vector.size
+    if num_spikes == 0:
+        return (
+            np.empty(0, dtype=spike_vector.dtype),
+            np.empty(0, dtype=np.int64),
+            np.zeros(num_buckets, dtype=np.int64),
+        )
+
+    out_of_range_error = (
+        f"`spike_vector` has a unit_index outside [0, {num_units}) or a segment_index outside [0, {num_segments})."
+    )
+
+    # The numba kernel expects an all-int64 unpadded dtype (e.g. `minimum_spike_dtype`), but it is
+    # possible that a spike vector has extra fields with other dtypes (`NumpySorting` allows that).
+    # So we check taht the numba path is safe, and anything else takes the dtype-agnostic numpy path.
+    if HAVE_NUMBA and _is_flat_int64_view(spike_vector.dtype):
+        reorder_spike_vector = get_numba_reorder_spike_vector()
+
+        num_fields = len(spike_vector.dtype.names)
+        # These flat (num_spikes, num_fields) int64 views are zero-copy
+        in_flat = np.ascontiguousarray(spike_vector).view(np.int64).reshape(num_spikes, num_fields)
+        out_flat = np.empty((num_spikes, num_fields), dtype=np.int64)
+        order = np.empty(num_spikes, dtype=np.int64)
+        counts = np.empty(num_buckets, dtype=np.int64)
+
+        in_range = reorder_spike_vector(in_flat, unit_stride, segment_stride, num_buckets, out_flat, order, counts)
+        if not in_range:
+            raise ValueError(out_of_range_error)
+
+        ordered_spikes = out_flat.view(spike_vector.dtype).reshape(num_spikes)
+        return ordered_spikes, order, counts
+
+    # numpy fallback: a stable argsort by bucket is equivalent to the counting sort above.
+    bucket_index = spike_vector["unit_index"] * unit_stride + spike_vector["segment_index"] * segment_stride
+
+    # Must be checked before narrowing: a negative or oversized bucket would silently wrap.
+    if bucket_index.min() < 0 or bucket_index.max() >= num_buckets:
+        raise ValueError(out_of_range_error)
+
+    counts = np.bincount(bucket_index, minlength=num_buckets).astype(np.int64, copy=False)
+
+    # Narrow the bucket to the smallest dtype that fits. This saves memory but also time:
+    # The cost of the radix sort that follows scales with the width of the key,
+    bucket_index = bucket_index.astype(np.min_scalar_type(num_buckets - 1), copy=False)
+
+    order = np.argsort(bucket_index, kind="stable")  # radix sort, because of integer key
+    ordered_spikes = spike_vector[order]
+    return ordered_spikes, order, counts
+
+
+def get_numba_reorder_spike_vector():
+    if hasattr(get_numba_reorder_spike_vector, "_cached_numba_function"):
+        return get_numba_reorder_spike_vector._cached_numba_function
+
+    from numba import jit
+
+    @jit(nopython=True, nogil=True, cache=False)
+    def reorder_spike_vector_numba(in_flat, unit_stride, segment_stride, num_buckets, out_flat, order, counts):
+        """
+        Stable counting-sort of a (N, num_fields) int64 spike-vector flat-buffer view by
+        (unit, segment). `num_fields` is 3 for `minimum_spike_dtype`, more when the spike vector
+        carries extra int64 fields; the extra columns are copied along with their spike.
+
+        Each spike's bucket is derived on the fly as
+        `unit_index * unit_stride + segment_index * segment_stride`, so no bucket array is needed.
+
+        Two O(N) passes:
+          1. histogram the buckets into `counts`,
+          2. cumulative-sum to per-bucket write positions, then scatter each
+             row of `in_flat` to its destination in `out_flat` and record the
+             source index in `order` so that ``in[order] == out``.
+
+        `out_flat`, `order` and `counts` are filled in place.
+
+        Stability: within each bucket, rows keep their input order, so any
+        ordering already present in `in_flat` (e.g. ascending sample_index
+        within a (segment, unit) group) carries over to `out_flat`.
+
+        Returns False if any spike falls outside [0, num_buckets),
+        in which case the outputs are meaningless; True otherwise.
+        """
+        num_spikes, num_fields = in_flat.shape
+
+        # Pass 1: histogram the buckets and do bounds-check (free! we already have to make the pass)
+        for b in range(num_buckets):
+            counts[b] = 0
+        for i in range(num_spikes):
+            bucket = in_flat[i, 1] * unit_stride + in_flat[i, 2] * segment_stride
+            if bucket < 0 or bucket >= num_buckets:
+                return False
+            counts[bucket] += 1
+
+        # Exclusive prefix sum, giving the write cursor of each bucket. This is kept in a separate
+        # buffer so that `counts` survives as the per-bucket sizes, which the caller needs.
+        write_pos = np.empty(num_buckets, dtype=np.int64)
+        running = 0
+        for b in range(num_buckets):
+            write_pos[b] = running
+            running += counts[b]
+
+        # Pass 2: scatter each spike into its bucket, recording where it came from.
+        for i in range(num_spikes):
+            bucket = in_flat[i, 1] * unit_stride + in_flat[i, 2] * segment_stride
+            pos = write_pos[bucket]
+            for field in range(num_fields):
+                out_flat[pos, field] = in_flat[i, field]
+            order[pos] = i
+            write_pos[bucket] = pos + 1
+
+        return True
+
+    # Cache the compiled function
+    get_numba_reorder_spike_vector._cached_numba_function = reorder_spike_vector_numba
+
+    return reorder_spike_vector_numba
+
+
 # stratified sampling (isi / amplitude / pca distance ? )
 def random_spikes_selection(
     sorting: BaseSorting,
@@ -197,8 +400,6 @@ def random_spikes_selection(
         random_spikes_indices = np.arange(spikes.size)
 
     elif method in rng_methods:
-        from spikeinterface.widgets.utils import get_segment_durations
-
         rng = np.random.default_rng(seed=seed)
 
         # since un concatenated
@@ -235,22 +436,26 @@ def random_spikes_selection(
 
             elif method == "percentage":
                 if percentage is None or not (0 < percentage <= 1):
-                    raise ValueError(f"percentage must be in the interval (0, 1]")
+                    raise ValueError("percentage must be in the interval (0, 1]")
 
                 rng_size = min(max_spikes_per_unit, int(all_unit_indices.size * percentage))
                 selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
             elif method == "maximum_rate":
                 if maximum_rate is None:
-                    raise ValueError(f"maximum_rate must be defined")
+                    raise ValueError("maximum_rate must be defined")
 
-                t_duration = np.sum(get_segment_durations(sorting))
+                t_duration = np.sum(get_segment_durations(sorting)[0])
                 rng_size = min(int(t_duration * maximum_rate), max_spikes_per_unit, all_unit_indices.size)
                 selected_unit_indices = rng.choice(all_unit_indices, size=rng_size, replace=False, shuffle=False)
 
             random_spikes_indices.append(selected_unit_indices)
 
-        random_spikes_indices = np.concatenate(random_spikes_indices)
+        if len(random_spikes_indices) > 0:
+            random_spikes_indices = np.concatenate(random_spikes_indices)
+        else:
+            # a sorting with no unit is valid, np.concatenate would raise on the empty list
+            random_spikes_indices = np.zeros(0, dtype="int64")
         random_spikes_indices = np.sort(random_spikes_indices)
 
     else:
@@ -336,7 +541,8 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
     -------
     BaseSorting
         A new sorting object with only samples between start_sample_index and end_sample_index
-        for the given segment_index.
+        for the given segment_index. It has the same segments, properties, annotations, registered
+        recording and times as the input sorting.
     """
     from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -350,11 +556,21 @@ def select_sorting_periods(sorting: BaseSorting, periods) -> BaseSorting:
         sliced_spike_vector = spike_vector[keep_mask]
 
         # important: we keep the original unit ids so the unit_index field in spike vector is still valid
-        sorting = NumpySorting(
-            sliced_spike_vector, sampling_frequency=sorting.sampling_frequency, unit_ids=sorting.unit_ids
+        # we also keep the number of segments, because the last ones can be left without spikes
+        new_sorting = NumpySorting(
+            sliced_spike_vector,
+            sampling_frequency=sorting.sampling_frequency,
+            unit_ids=sorting.unit_ids,
+            num_segments=sorting.get_num_segments(),
         )
-        sorting.copy_metadata(sorting)
-        return sorting
+        sorting.copy_metadata(new_sorting)
+        # not register_recording(): it resets the start times, which would discard a shift_times() of the sorting
+        if sorting.has_recording():
+            new_sorting._recording = sorting._recording
+        for segment, new_segment in zip(sorting.segments, new_sorting.segments):
+            new_segment._t_start = segment._t_start
+            new_segment._native_t_start = segment._native_t_start
+        return new_sorting
     else:
         return sorting
 
@@ -494,7 +710,6 @@ def set_properties_after_merging(
     default_missing_values = BaseExtractor.default_missing_property_values
 
     for key in prop_keys:
-
         parent_values = sorting_pre_merge.get_property(key)
 
         # propagate keep values
@@ -515,7 +730,8 @@ def set_properties_after_merging(
                 # Main channel id is special. For now, if there is a disagreement, we take the value of the unit
                 # with the most spikes. TODO: overwrite this for analyzer if templates exist.
                 num_spikes_per_unit = sorting_pre_merge.count_num_spikes_per_unit(unit_ids=merge_group)
-                max_unit_index = np.argmax(num_spikes_per_unit.values())
+                spike_counts_in_merge_group_order = [num_spikes_per_unit[unit_id] for unit_id in merge_group]
+                max_unit_index = np.argmax(spike_counts_in_merge_group_order)
                 new_values[new_index] = merge_values[max_unit_index]
             else:
                 if parent_values.dtype.kind not in default_missing_values:
@@ -836,9 +1052,9 @@ def generate_unit_ids_for_split(old_unit_ids, unit_splits, new_unit_ids=None, ne
             # then only doing a consistency check
             assert len(split_unit) == len(new_split_ids), "new_unit_ids should have the same len as unit_splits.values"
             # new_unit_ids can also be part of old_unit_ids only inside the same group:
-            assert all(
-                new_split_id not in old_unit_ids for new_split_id in new_split_ids
-            ), "new_unit_ids already exists but outside the split groups"
+            assert all(new_split_id not in old_unit_ids for new_split_id in new_split_ids), (
+                "new_unit_ids already exists but outside the split groups"
+            )
     else:
         dtype = old_unit_ids.dtype
         if np.issubdtype(dtype, np.integer) and new_id_strategy == "split":
@@ -939,9 +1155,9 @@ def _get_ids_after_splitting(old_unit_ids, split_units, new_unit_ids):
 
     assert len(new_unit_ids) == len(split_units), "new_unit_ids should have the same len as merge_unit_groups"
     for new_unit_in_split, unit_to_split in zip(new_unit_ids, split_units.keys()):
-        assert len(new_unit_in_split) == len(
-            split_units[unit_to_split]
-        ), "new_unit_ids should have the same len as split_units values"
+        assert len(new_unit_in_split) == len(split_units[unit_to_split]), (
+            "new_unit_ids should have the same len as split_units values"
+        )
 
     all_unit_ids = list(old_unit_ids.copy())
     for split_unit, split_new_units in zip(split_units, new_unit_ids):
@@ -975,12 +1191,12 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
     """
     all_old_unit_ids = np.asarray(all_old_unit_ids)
     all_new_unit_ids = np.asarray(all_new_unit_ids)
-    assert (
-        all_old_unit_ids.size == np.unique(all_old_unit_ids).size
-    ), "remap_unit_indices_in_vector: all_old_unit_ids not unique"
-    assert (
-        all_new_unit_ids.size == np.unique(all_new_unit_ids).size
-    ), "remap_unit_indices_in_vector: all_new_unit_ids not unique"
+    assert all_old_unit_ids.size == np.unique(all_old_unit_ids).size, (
+        "remap_unit_indices_in_vector: all_old_unit_ids not unique"
+    )
+    assert all_new_unit_ids.size == np.unique(all_new_unit_ids).size, (
+        "remap_unit_indices_in_vector: all_new_unit_ids not unique"
+    )
 
     if keep_old_unit_ids is None:
         keep_old_unit_ids = all_old_unit_ids
@@ -1005,3 +1221,84 @@ def remap_unit_indices_in_vector(vector, all_old_unit_ids, all_new_unit_ids, kee
     new_vector["unit_index"] = mapping[new_vector["unit_index"]]
 
     return new_vector, keep_mask_vector
+
+
+def get_segment_durations(sorting: BaseSorting, segment_indices: list[int] = None):
+    """
+    Calculate the duration and start, stop times of each segment in a sorting object.
+
+    Use first/last sample timestamps when a recording is available; otherwise
+    estimate from spikes.
+
+    Parameters
+    ----------
+    sorting : BaseSorting
+        The sorting object containing spike data
+    segment_indices : list[int] | None
+        List of the segment indices to process. Default to None.
+
+    Returns
+    -------
+    durations : np.ndarray
+        Segment durations in seconds, ordered like ``segment_indices``.
+    segment_start_stop_times : dict[int, tuple[float, float]]
+        Start and stop times of each segment, where the dict key is segment index.
+    """
+    if segment_indices is None:
+        segment_indices = range(sorting.get_num_segments())
+
+    if sorting.has_recording():
+        segment_start_stop_times = {
+            seg: (sorting.get_start_time(seg), sorting.get_end_time(seg)) for seg in segment_indices
+        }
+        ts = 1 / sorting.get_sampling_frequency()
+        durations = np.array([stop - start + ts for start, stop in segment_start_stop_times.values()])
+
+        return durations, segment_start_stop_times
+
+    spikes = sorting.to_spike_vector()
+
+    segment_t_starts = [sorting.get_start_time(seg_idx) for seg_idx in segment_indices]
+
+    return estimate_segment_durations_from_spike_vector(
+        spikes, segment_indices, sorting.get_sampling_frequency(), segment_t_starts
+    )
+
+
+def estimate_segment_durations_from_spike_vector(
+    spike_vector: np.ndarray,
+    segment_indices: list[int],
+    sampling_frequency: float,
+    segment_t_starts: list[float] | None = None,
+):
+    """
+    When we don't have the true segment times, we can estimate the
+    start and stop times for each segment from the spike times.
+
+    Starts are supplied or default to zero. Durations include the final sample interval.
+    Empty segments have zero duration and placeholder bounds from their start to one sample interval later.
+    """
+    segment_start_stop_times = {}
+    durations = []
+    ts = 1 / sampling_frequency
+    for i, seg_idx in enumerate(segment_indices):
+        if segment_t_starts is None:
+            segment_start = 0.0
+        else:
+            segment_start = segment_t_starts[i]
+
+        seg_end_idx = np.searchsorted(spike_vector["segment_index"], seg_idx + 1)
+
+        if seg_end_idx == 0 or spike_vector["segment_index"][seg_end_idx - 1] != seg_idx:
+            segment_start_stop_times[seg_idx] = (segment_start, segment_start + ts)
+            durations.append(0.0)
+            continue
+
+        segment_end = spike_vector["sample_index"][seg_end_idx - 1] / sampling_frequency + segment_start
+
+        segment_start_stop_times[seg_idx] = (segment_start, segment_end)
+        durations.append(segment_end - segment_start + ts)
+
+    durations = np.array(durations)
+
+    return durations, segment_start_stop_times

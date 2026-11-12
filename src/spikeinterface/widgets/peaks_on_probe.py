@@ -79,12 +79,10 @@ class PeaksOnProbeWidget(BaseWidget):
             dp.peaks,
             dp.peak_locations,
         )
-        fs = dp.recording.get_sampling_frequency()
         num_plots = len(peaks)
 
         # Set the maximum time to the end time of the longest segment
         if dp.time_range is None:
-
             time_range = self._get_min_and_max_times_in_recording(dp.recording)
         else:
             time_range = dp.time_range
@@ -98,7 +96,6 @@ class PeaksOnProbeWidget(BaseWidget):
 
         # Plot each passed peaks / peak_locations over the probe on a separate subplot
         for ax_idx, (peaks_to_plot, peak_locs_to_plot) in enumerate(zip(peaks, peak_locations)):
-
             ax = self.axes[ax_idx]
             plot_probe_map(dp.recording, ax=ax)
 
@@ -138,7 +135,7 @@ class PeaksOnProbeWidget(BaseWidget):
 
             ax.set_ylim(ylim[0], ylim[1])
 
-        self.figure.suptitle(f"Peaks on Probe Plot")
+        self.figure.suptitle("Peaks on Probe Plot")
 
     def _get_peaks_time_mask(self, recording, time_range, peaks_to_plot):
         """
@@ -152,7 +149,6 @@ class PeaksOnProbeWidget(BaseWidget):
         time_mask = np.zeros(peaks_to_plot.size, dtype=bool)
 
         for seg_idx in range(recording.get_num_segments()):
-
             segment = recording.select_segments(seg_idx)
 
             t_start_sample = segment.time_to_sample_index(time_range[0])
@@ -175,7 +171,6 @@ class PeaksOnProbeWidget(BaseWidget):
         t_starts = []
         t_stops = []
         for seg_idx in range(recording.get_num_segments()):
-
             segment = recording.select_segments(seg_idx)
 
             t_starts.append(segment.sample_index_to_time(0))

@@ -69,15 +69,15 @@ class SpikeAmplitudeNode(PipelineNode):
         if return_in_uV and recording.has_scaleable_traces():
             self._dtype = np.float32
             self._gains = recording.get_channel_gains()
-            self._offsets = recording.get_channel_gains()
+            self._offsets = recording.get_channel_offsets()
         else:
             self._dtype = recording.get_dtype()
             self._gains = None
             self._offsets = None
         spike_retriever = find_parent_of_type(parents, SpikeRetriever)
-        assert isinstance(
-            spike_retriever, SpikeRetriever
-        ), "SpikeAmplitudeNode needs a single SpikeRetriever as a parent"
+        assert isinstance(spike_retriever, SpikeRetriever), (
+            "SpikeAmplitudeNode needs a single SpikeRetriever as a parent"
+        )
         # put peak_shifts in vector way
         self._peak_shifts = np.array(list(peak_shifts.values()), dtype="int64")
         self._margin = np.max(np.abs(self._peak_shifts))
@@ -102,7 +102,6 @@ class SpikeAmplitudeNode(PipelineNode):
 
         # and scale
         if self._gains is not None:
-            traces = traces.astype("float32") * self._gains + self._offsets
             amplitudes = amplitudes.astype("float32", copy=True)
             amplitudes *= self._gains[chan_inds]
             amplitudes += self._offsets[chan_inds]

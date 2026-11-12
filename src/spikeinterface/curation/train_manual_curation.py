@@ -265,7 +265,6 @@ class CurationTrainer:
         metric_extensions = [analyzers[0].get_extension(extension_name) for extension_name in extension_names]
 
         for metric_extension, extension_name in zip(metric_extensions, extension_names):
-
             # remove the 's' at the end of the extension name
             extension_name = extension_name[:-1]
             if metric_extension is not None:
@@ -289,11 +288,9 @@ class CurationTrainer:
         conflicting_metrics = []
         for analyzer_index_1, analyzer_1 in enumerate(analyzers):
             for analyzer_index_2, analyzer_2 in enumerate(analyzers):
-
                 if analyzer_index_1 <= analyzer_index_2:
                     continue
                 else:
-
                     metric_params_1 = {}
                     metric_params_2 = {}
 
@@ -389,7 +386,7 @@ class CurationTrainer:
 
     def apply_scaling_imputation(self, imputation_strategy, scaling_technique, X_train, X_test, y_train, y_test):
         """Impute and scale the data using the specified techniques."""
-        from sklearn.experimental import enable_iterative_imputer
+        from sklearn.experimental import enable_iterative_imputer  # noqa: F401  (side-effect import, required by IterativeImputer)
         from sklearn.impute import SimpleImputer, KNNImputer, IterativeImputer
         from sklearn.ensemble import HistGradientBoostingRegressor
         from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
@@ -587,14 +584,14 @@ class CurationTrainer:
         import pandas as pd
 
         # export training data and labels
-        pd.DataFrame(self.X).to_csv(self.folder / f"training_data.csv", index_label="unit_id")
-        pd.DataFrame(self.y).to_csv(self.folder / f"labels.csv", index_label="unit_index")
+        pd.DataFrame(self.X).to_csv(self.folder / "training_data.csv", index_label="unit_id")
+        pd.DataFrame(self.y).to_csv(self.folder / "labels.csv", index_label="unit_index")
 
         self.requirements["scikit-learn"] = sklearn.__version__
 
         # Dump to skops if folder is provided
-        dump(self.best_pipeline, self.folder / f"best_model.skops")
-        self.test_accuracies_df.to_csv(self.folder / f"model_accuracies.csv", float_format="%.4f")
+        dump(self.best_pipeline, self.folder / "best_model.skops")
+        self.test_accuracies_df.to_csv(self.folder / "model_accuracies.csv", float_format="%.4f")
 
         model_info = {}
         model_info["metric_params"] = self.metrics_params
@@ -629,7 +626,7 @@ class CurationTrainer:
                 random_state=self.seed,
                 **search_kwargs,
             )
-        except:
+        except Exception:
             if self.verbose is True:
                 print("BayesSearchCV from scikit-optimize not available, using RandomizedSearchCV")
             from sklearn.model_selection import RandomizedSearchCV
@@ -787,7 +784,7 @@ def try_to_get_metrics_from_analyzer(sorting_analyzer):
     for metric_extension in metric_extensions:
         try:
             metric_extensions_data.append(metric_extension.get_data())
-        except:
+        except Exception:
             metric_extensions_data.append(None)
 
     return metric_extensions_data
@@ -832,7 +829,9 @@ def check_metric_names_are_the_same(metrics_for_each_analyzer):
 
 def _format_metric_dataframe(input_data):
 
-    input_data = input_data.map(lambda x: np.nan if np.isinf(x) else x)
-    input_data = input_data.astype("float32")
+    # cast before replacing infs: finite float64 values beyond float32 range overflow to inf
+    with np.errstate(over="ignore"):
+        input_data = input_data.astype("float32")
+    input_data = input_data.replace([np.inf, -np.inf], np.nan)
 
     return input_data

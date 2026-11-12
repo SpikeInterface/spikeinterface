@@ -1,6 +1,3 @@
-from .neobaseextractor import NeoBaseRecordingExtractor
-
-
 def get_neo_streams(extractor_name, *args, **kwargs):
     """Returns the NEO streams (stream names and stream ids) associated to a dataset.
     For multi-stream datasets, the `stream_id` or `stream_name` arguments can be used
@@ -57,7 +54,7 @@ def get_neo_extractor(extractor_name):
     from spikeinterface.extractors.neoextractors import neo_recording_class_dict
 
     assert extractor_name in neo_recording_class_dict, (
-        f"{extractor_name} not an extractor name:" f"\n{list(neo_recording_class_dict.keys())}"
+        f"{extractor_name} not an extractor name:\n{list(neo_recording_class_dict.keys())}"
     )
     neo_extractor = neo_recording_class_dict[extractor_name]
     return neo_extractor

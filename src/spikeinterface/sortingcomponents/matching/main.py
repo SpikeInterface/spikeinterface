@@ -1,7 +1,6 @@
 import numpy as np
-import warnings
 
-from .method_list import *
+from .method_list import matching_methods
 
 from spikeinterface.core.node_pipeline import run_node_pipeline
 
@@ -17,7 +16,6 @@ def find_spikes_from_templates(
     pipeline_kwargs=None,
     verbose=False,
     job_kwargs=None,
-    **old_kwargs,
 ) -> np.ndarray | tuple[np.ndarray, dict]:
     """Find spike from a recording from given templates.
 
@@ -50,15 +48,8 @@ def find_spikes_from_templates(
     outputs:
         Optionaly returns for debug purpose.
     """
-
-    if len(old_kwargs) > 0:
-        # This is the old behavior and will be remove in 0.105.0
-        warnings.warn(
-            "The signature of find_spikes_from_templates() has changed, now job_kwargs are in separated dict and not flatten"
-            "This warning will raise an error in version 0.105.0"
-        )
-        assert job_kwargs is None
-        job_kwargs = old_kwargs
+    if job_kwargs is None:
+        job_kwargs = {}
 
     if "method" in method_kwargs:
         # for flexibility the caller can put method inside method_kwargs
@@ -73,15 +64,15 @@ def find_spikes_from_templates(
     # if method_class.full_convolution:
     #   Maybe we need to automatically adjust the temporal chunks given templates and n_processes
 
-    if len(templates.unit_ids) == 0:
-        return np.zeros(0, dtype=node0.get_dtype())
-
     if method_class.need_noise_levels:
         if "noise_levels" not in method_kwargs:
             raise ValueError(f"find_spikes_from_templates() method {method} need noise_levels")
 
     node0 = method_class(recording, templates=templates, **method_kwargs)
     nodes = [node0]
+
+    if len(templates.unit_ids) == 0:
+        return np.zeros(0, dtype=node0.get_dtype())
 
     if pipeline_kwargs is None:
         pipeline_kwargs = dict()

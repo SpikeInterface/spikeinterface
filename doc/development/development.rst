@@ -111,49 +111,65 @@ maintainability of the code, making it easier for contributors to collaborate. T
 for the developer we use the following tools and conventions:
 
 
-Install Black and pre-commit
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Install ruff and pre-commit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We use the Python formatter Black, with defaults set in the :code:`pyproject.toml`. This allows for
-easy local formatting of code.
+We use `ruff <https://docs.astral.sh/ruff/>`_ both to format code and to lint it (catch errors such as
+undefined names or unused variables). Its settings live in the :code:`[tool.ruff]` section of :code:`pyproject.toml`.
+We use pre-commit to run ruff, and a few other checks, automatically before every commit.
 
-To install Black, you can use pip, the Python package installer. Run the following command in your terminal:
-
-.. code-block:: bash
-
-    pip install black
-
-This will install Black into your current Python environment.
-
-In addition to Black, we use pre-commit to manage a suite of code formatting.
-Pre-commit helps to automate the process of running these tools (including Black) before every commit,
-ensuring that all code is checked for style.
-
-You can install pre-commit using pip as well:
+You can install both with pip:
 
 .. code-block:: bash
 
-    pip install pre-commit
+    pip install ruff pre-commit
 
-
-Once pre-commit is installed, you can set up the pre-commit hooks for your local repository.
-These hooks are scripts that pre-commit will run prior to each commit. To install the pre-commit hooks,
-navigate to your local repository in your terminal and run the following command:
+Then set up the pre-commit hooks for your local repository by running, from the repository root:
 
 .. code-block:: bash
 
     pre-commit install
 
-Now, each time you make a commit, pre-commit will automatically run Black and any other configured hooks.
-If the hooks make changes or if there are any issues, the commit will be stopped, and you'll be able to review and add the changes.
+Now, each time you make a commit, pre-commit will run :code:`ruff format` and :code:`ruff check --fix` on the changed files
+under :code:`src/`. If the hooks make changes or find issues, the commit is stopped so you can review the changes, add them and commit again.
 
-If you want Black to omit a line from formatting, you can add the following comment to the end of the line:
+You can also run ruff yourself at any time:
+
+.. code-block:: bash
+
+    ruff format src          # format the code
+    ruff check src           # report lint errors
+    ruff check src --fix     # report lint errors and apply the safe automatic fixes
+
+A few things to know about the lint configuration:
+
+* Test files (:code:`tests/` folders, :code:`test_*.py` and :code:`conftest.py`) are excluded from linting.
+* Unused imports (:code:`F401`) and unused variables (:code:`F841`) are reported but never removed automatically,
+  because they are sometimes needed: side-effect imports, re-exports, or function calls that read from a file.
+  Fix them by hand, or keep them and mark the line with :code:`# noqa: F401`.
+* Pytest fixtures shared by several test modules belong in a :code:`conftest.py`, so pytest finds them without an import
+  (an import that ruff would see as unused).
+
+Since tests are not linted on every commit, it is worth checking them every now and then. A manual pre-commit hook lints
+everything under :code:`src/`, tests included:
+
+.. code-block:: bash
+
+    pre-commit run ruff-check-tests --hook-stage manual --all-files
+
+or, equivalently, with ruff directly:
+
+.. code-block:: bash
+
+    ruff check src --config 'lint.exclude = []'
+
+If you want ruff to leave a line unformatted, add the following comment to the end of the line:
 
 .. code-block:: python
 
     # fmt: skip
 
-To ignore a block of code you must flank the code with two comments:
+To leave a block of code unformatted, put these two comments around it:
 
 .. code-block:: python
 
@@ -161,7 +177,7 @@ To ignore a block of code you must flank the code with two comments:
     code here
     # fmt: on
 
-As described in the `black documentation <https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html#code-style>`_.
+To silence a single lint error on one line, add :code:`# noqa: <code>` (for example :code:`# noqa: F401`) to the end of that line.
 
 
 Docstring Conventions
@@ -202,7 +218,7 @@ This allows users to quickly understand the type of data that should be input in
 
 There should be a space between each parameter and the colon following it. This is neccessary for using the `numpydoc validator <https://numpydoc.readthedocs.io/en/latest/validation.html>`_.
 In the above example we demonstrate two other docstring conventions followed by SpikeInterface. First, that all string arguments should be presented
-with double quotes. This is the same stylistic convention followed by Black and enforced by the pre-commit for the repo. Second, when a parameter is a
+with double quotes. This is the same stylistic convention enforced by ruff format in the pre-commit for the repo. Second, when a parameter is a
 string with a limited number of values (e.g. :code:`mean` and :code:`median`), rather than give the type a value of :code:`str`, please list the possible strings
 so that the user knows what the options are.
 
@@ -384,6 +400,7 @@ In order to check if your spike sorter is installed, a :code:`try` - :code:`exce
 sorter is implemented in Python (installed with the package :code:`myspikesorter`), this block will look as follows:
 
 .. code-block:: python
+
     import importlib.util
     if importlib.util.find_spec("myspikesorter"):
         HAVE_MYSORTER = True

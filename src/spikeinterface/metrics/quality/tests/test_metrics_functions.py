@@ -8,6 +8,7 @@ from spikeinterface.core import (
     NumpySorting,
     synthetize_spike_train_bad_isi,
     add_synchrony_to_sorting,
+    generate_recording,
     generate_ground_truth_recording,
     create_sorting_analyzer,
     synthesize_random_firings,
@@ -213,6 +214,27 @@ def test_synchrony_counts_not_all_units():
     assert np.all(sync_count[0] == np.array([0, 1, 1]))
 
 
+def test_synchrony_metrics_do_not_cross_segments():
+    sampling_frequency = 1_000.0
+    samples_list = [[100, 200], [100, 100]]
+    labels_list = [[0, 1], [2, 3]]
+    sorting = NumpySorting.from_samples_and_labels(samples_list, labels_list, sampling_frequency, unit_ids=[0, 1, 2, 3])
+    recording = generate_recording(
+        durations=[1.0, 1.0],
+        sampling_frequency=sampling_frequency,
+        num_channels=4,
+        seed=1205,
+    )
+    sorting_analyzer = create_sorting_analyzer(sorting, recording, format="memory", sparse=False)
+
+    synchrony_metrics = compute_synchrony_metrics(sorting_analyzer)
+
+    expected_sync_spike_2 = {0: 0.0, 1: 0.0, 2: 1.0, 3: 1.0}
+    assert synchrony_metrics.sync_spike_2 == pytest.approx(expected_sync_spike_2)
+    assert np.all(np.array(list(synchrony_metrics.sync_spike_4.values())) == 0)
+    assert np.all(np.array(list(synchrony_metrics.sync_spike_8.values())) == 0)
+
+
 def test_mahalanobis_metrics():
     all_pcs1, all_labels1 = create_ground_truth_pc_distributions([1, -1], [1000, 1000])
     all_pcs2, all_labels2 = create_ground_truth_pc_distributions(
@@ -224,6 +246,12 @@ def test_mahalanobis_metrics():
 
     assert isolation_distance1 < isolation_distance2
     assert l_ratio1 > l_ratio2
+
+    # isolation distance is undefined for a unit with more spikes than the other units together
+    all_pcs3, all_labels3 = create_ground_truth_pc_distributions([1, -2], [1000, 500])
+    isolation_distance3, l_ratio3 = mahalanobis_metrics(all_pcs3, all_labels3, 0)
+    assert np.isnan(isolation_distance3) and np.isfinite(l_ratio3)
+    assert np.isfinite(mahalanobis_metrics(all_pcs3, all_labels3, 1)[0])
 
 
 def test_d_prime_metrics():
@@ -287,7 +315,7 @@ def test_calculate_firing_range(sorting_analyzer_simple):
     firing_ranges_empty = compute_firing_ranges(sorting_analyzer, periods=empty_periods)
     assert np.all(np.isnan(np.array(list(firing_ranges_empty.values()))))
 
-    with pytest.warns(UserWarning) as w:
+    with pytest.warns(UserWarning):
         firing_ranges_nan = compute_firing_ranges(
             sorting_analyzer, bin_size_s=sorting_analyzer.get_total_duration() + 1
         )
@@ -372,6 +400,7 @@ def test_calculate_amplitude_cv_metrics(sorting_analyzer_simple, periods_simple)
 def test_calculate_snrs(sorting_analyzer_simple, periods_simple):
     sorting_analyzer = sorting_analyzer_simple
     snrs = compute_snrs(sorting_analyzer)
+    assert isinstance(snrs, dict)
     # SNR doesn't support periods
 
     # testing method accuracy with magic number is not a good pratcice, I remove this.
@@ -606,6 +635,11 @@ def test_calculate_sd_ratio(sorting_analyzer_simple, periods_simple):
     sd_ratio_periods = compute_sd_ratio(sorting_analyzer_simple, periods=periods)
     assert sd_ratio == sd_ratio_periods
 
+    # a seed fixes the noise draw, even with another draw cached on the recording
+    sd_ratio_seed0 = compute_sd_ratio(sorting_analyzer_simple, seed=0)
+    assert sd_ratio_seed0 != compute_sd_ratio(sorting_analyzer_simple, seed=1)
+    assert sd_ratio_seed0 == compute_sd_ratio(sorting_analyzer_simple, seed=0)
+
     assert np.all(list(sd_ratio.keys()) == sorting_analyzer_simple.unit_ids)
 
     # calculate num spikes with empty periods
@@ -753,7 +787,7 @@ def test_unit_structure_in_output(small_sorting_analyzer):
         metric_fun = metric.metric_function
         try:
             qm_param = qm_params[metric_name]
-        except:
+        except Exception:
             qm_param = {}
 
         result_all = metric_fun(sorting_analyzer=small_sorting_analyzer, **qm_param)
@@ -769,7 +803,6 @@ def test_unit_structure_in_output(small_sorting_analyzer):
 
         else:
             for result_ind, result in enumerate(result_sub):
-
                 assert list(result_all[result_ind].keys()) == ["#3", "#9", "#4"], error
                 assert result_sub[result_ind].keys() == set(["#4", "#9"]), error
 
@@ -790,9 +823,10 @@ def test_unit_id_order_independence(small_sorting_analyzer):
 
     extensions_to_compute = {
         "random_spikes": {"seed": 1205},
-        "noise_levels": {"seed": 1205},
+        "noise_levels": {"random_slices_kwargs": {"seed": 1205}},
         "waveforms": {},
         "templates": {},
+        "amplitude_scalings": {},
         "spike_amplitudes": {},
         "spike_locations": {},
         "principal_components": {},

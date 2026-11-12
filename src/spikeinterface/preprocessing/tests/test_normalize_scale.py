@@ -5,17 +5,17 @@ from spikeinterface.core import generate_recording
 from spikeinterface.preprocessing import normalize_by_quantile, scale, center, zscore
 
 
-def test_normalize_by_quantile():
+def test_normalize_by_quantile(create_cache_folder):
     rec = generate_recording()
 
     rec2 = normalize_by_quantile(rec, mode="by_channel")
-    rec2.save(verbose=False)
+    rec2.save(folder=create_cache_folder / "rec2", verbose=False)
 
     traces = rec2.get_traces(segment_index=0, channel_ids=["1"])
     assert traces.shape[1] == 1
 
     rec2 = normalize_by_quantile(rec, mode="pool_channel")
-    rec2.save(verbose=False)
+    rec2.save(folder=create_cache_folder / "rec2_pool", verbose=False)
 
     # import matplotlib.pyplot as plt
     # from spikeinterface.widgets import plot_traces
@@ -93,8 +93,8 @@ def test_zscore_int():
     zscore_recording = zscore(rec_int, dtype="int16", int_scale=256, mode="mean+std", seed=seed)
     traces = zscore_recording.get_traces(segment_index=0)
     trace_mean = np.mean(traces, axis=0)
-    trace_std = np.std(traces, axis=0)
     assert np.all(np.abs(trace_mean) < 1)
+    # trace_std = np.std(traces, axis=0)
     # assert np.all(np.abs(trace_std - 256) < 1)
 
 

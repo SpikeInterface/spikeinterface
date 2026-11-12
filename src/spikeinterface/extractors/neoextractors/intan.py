@@ -70,7 +70,7 @@ class IntanRecordingExtractor(NeoBaseRecordingExtractor):
             self._add_channel_groups()
 
         self._kwargs.update(
-            dict(file_path=str(Path(file_path).resolve()), ignore_integrity_checks=ignore_integrity_checks),
+            dict(file_path=str(Path(file_path).absolute()), ignore_integrity_checks=ignore_integrity_checks),
         )
 
     @classmethod
@@ -156,7 +156,7 @@ class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording, AppendSegme
 
         if mode not in ("append", "concatenate"):
             mode_error = (
-                "Possible options for the `mode` argument are 'concatenate' or 'append', you have entered " f"{mode}."
+                f"Possible options for the `mode` argument are 'concatenate' or 'append', you have entered {mode}."
             )
             raise ValueError(mode_error)
 
@@ -195,7 +195,7 @@ class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording, AppendSegme
 
         # Update kwargs to include our specific parameters
         self._kwargs = dict(
-            folder_path=str(Path(folder_path).resolve()),
+            folder_path=str(Path(folder_path).absolute()),
             mode=mode,
             stream_id=stream_id,
             stream_name=stream_name,

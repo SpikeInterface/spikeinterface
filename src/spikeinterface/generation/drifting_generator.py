@@ -8,22 +8,24 @@ This module implements generation of more realistic signal than `spikeinterface.
 
 """
 
+from __future__ import annotations
 import numpy as np
 
 from probeinterface import generate_multi_columns_probe, get_probe, generate_tetrode
 
 from spikeinterface import Templates
 from spikeinterface.core import ms_to_samples
+from spikeinterface.core.core_tools import _ensure_seed
 from spikeinterface.core.generate import (
     generate_unit_locations,
     generate_sorting,
     generate_templates,
     synthesize_amplitude_factor,
     _ensure_unit_params,
-    _ensure_seed,
 )
 from .drift_tools import DriftingTemplates, make_linear_displacement, InjectDriftingTemplatesRecording
 from .noise_tools import generate_noise
+from probeinterface import Probe
 
 
 def _make_probe_by_name(probe_name: str):
@@ -124,8 +126,8 @@ def make_one_displacement_vector(
 
     t_start_drift = 0.0 if t_start_drift is None else t_start_drift
     t_end_drift = duration if t_end_drift is None else t_end_drift
-    assert t_start_drift < duration, f"'t_start_drift' must preceed 'duration'!"
-    assert t_end_drift <= duration, f"'t_end_drift' must preceed 'duration'!"
+    assert t_start_drift < duration, "'t_start_drift' must preceed 'duration'!"
+    assert t_end_drift <= duration, "'t_end_drift' must preceed 'duration'!"
     start_drift_index = int(t_start_drift * displacement_sampling_frequency)
     end_drift_index = int(t_end_drift * displacement_sampling_frequency)
 
@@ -133,7 +135,6 @@ def make_one_displacement_vector(
     displacement_vector = np.zeros(num_samples, dtype="float32")
 
     if drift_mode == "zigzag":
-
         times = np.arange(end_drift_index - start_drift_index) / displacement_sampling_frequency
 
         freq = 1.0 / period_s
@@ -216,7 +217,7 @@ def generate_displacement_vector(
     duration : float
         Duration of the displacement vector in seconds
     unit_locations : np.array
-        The unit location with shape (num_units, 3)
+        The unit location with shape (num_units, 2)
     displacement_sampling_frequency : float, default: 5.
         The sampling frequency of the displacement vector
     drift_start_um : list of float, default: [0, 20.]
@@ -279,16 +280,9 @@ def generate_displacement_vector(
         if non_rigid_gradient is None:
             displacement_unit_factor[:, m] = 1
         else:
-            gradient_direction = drift_stop_um - drift_start_um
-            gradient_direction /= np.linalg.norm(gradient_direction)
-
-            proj = np.dot(unit_locations, gradient_direction).squeeze()
-            factors = (proj - np.min(proj)) / (np.max(proj) - np.min(proj))
-            if non_rigid_gradient < 0:
-                # reverse
-                factors = 1 - factors
-            f = np.abs(non_rigid_gradient)
-            displacement_unit_factor[:, m] = factors * (1 - f) + f
+            displacement_unit_factor[:, m] = calculate_displacement_unit_factor(
+                non_rigid_gradient, unit_locations, drift_start_um, drift_stop_um
+            )
 
     displacement_vectors = np.concatenate(displacement_vectors, axis=2)
 
@@ -315,6 +309,66 @@ def generate_displacement_vector(
         displacement_sampling_frequency,
         displacements_steps,
     )
+
+
+def calculate_displacement_unit_factor(
+    non_rigid_gradient: float, unit_locations: np.array, drift_start_um: np.array, drift_stop_um: np.array
+) -> np.array:
+    """
+    Introduces a non-rigid drift across the probe, this is a linear
+    scaling of the displacement based on the unit position.
+
+    To introduce non-rigid drift, a set of scaling factors (one per unit)
+    are generated. These scale the displacement applied to each unit
+    as a function of unit position. The smaller the `non_rigid_gradient`,
+    the larger the influence of the unit position is on scaling the
+    displacement (more non-linearity).
+
+    The projections of the gradient vector (x, y)
+    and unit locations (x, y) are normalised to range between
+    0 and 1 (i.e. based on relative location to the gradient).
+    When all projections are equal, including for a single unit,
+    all factors are 1 and the displacement is rigid.
+
+    Parameters
+    ----------
+
+    non_rigid_gradient : float
+        A number in the range [0, 1] by which to scale the scaling factors
+        that are based on unit location. This sets the weighting given to the factors
+        based on unit locations. When 1, the factors will all equal 1 (no effect),
+        when 0, the scaling factor based on unit location will be used directly.
+        Smaller number results in more nonlinearity.
+    unit_locations : np.array
+        The unit location with shape (num_units, 2)
+    drift_start_um : np.array
+        The start boundary of the motion in the x and y direction.
+    drift_stop_um : np.array
+        The stop boundary of the motion in the x and y direction.
+
+    Returns
+    -------
+    displacement_unit_factor : np.array
+        An array of scaling factors (one per unit) by which
+        to scale the displacement.
+    """
+    gradient_direction = drift_stop_um - drift_start_um
+    gradient_direction /= np.linalg.norm(gradient_direction)
+
+    proj = np.dot(unit_locations, gradient_direction)
+    projection_range = np.max(proj) - np.min(proj)
+    if projection_range == 0:
+        return np.ones_like(proj)
+    factors = (proj - np.min(proj)) / projection_range
+
+    if non_rigid_gradient < 0:  # reverse
+        factors = 1 - factors
+
+    f = np.abs(non_rigid_gradient)
+
+    displacement_unit_factor = factors * (1 - f) + f
+
+    return displacement_unit_factor
 
 
 def generate_drifting_recording(
@@ -455,26 +509,15 @@ def generate_drifting_recording(
         num_units = sorting.get_num_units()
         sampling_frequency = sorting.sampling_frequency
         if sorting._recording is not None:
-            assert (
-                sorting.get_total_duration() == duration
-            ), "Sorting should have the same duration as the generated data"
+            assert sorting.get_total_duration() == duration, (
+                "Sorting should have the same duration as the generated data"
+            )
 
     # probe
     if probe is None:
-        if generate_probe_kwargs is not None:
-            probe = generate_multi_columns_probe(**generate_probe_kwargs)
-        else:
-            probe = _make_probe_by_name(probe_name)
-        # the wiring do not matter because the traces are generated after using the channel locations
-        num_channels = probe.get_contact_count()
-        probe.set_device_channel_indices(np.arange(num_channels))
+        probe = generate_probe(generate_probe_kwargs, probe_name)
 
     channel_locations = probe.contact_positions
-    # import matplotlib.pyplot as plt
-    # import probeinterface.plotting
-    # fig, ax = plt.subplots()
-    # probeinterface.plotting.plot_probe(probe, ax=ax)
-    # plt.show()
 
     # unit locations
     if unit_locations is None:
@@ -507,9 +550,7 @@ def generate_drifting_recording(
         ) = displacement_data
 
     # unit_params need to be fixed before the displacement steps
-    generate_templates_kwargs = generate_templates_kwargs.copy()
-    unit_params = _ensure_unit_params(generate_templates_kwargs.get("unit_params", {}), num_units, seed)
-    generate_templates_kwargs["unit_params"] = unit_params
+    generate_templates_kwargs = fix_generate_templates_kwargs(generate_templates_kwargs, num_units, seed)
 
     # generate templates
     templates_array = generate_templates(
@@ -609,3 +650,51 @@ def generate_drifting_recording(
         return static_recording, drifting_recording, sorting, extra_infos
     else:
         return static_recording, drifting_recording, sorting
+
+
+def generate_probe(generate_probe_kwargs: dict | None, probe_name: str | None = None) -> Probe:
+    """
+    Generate a probe for use in certain ground-truth recordings.
+
+    Parameters
+    ----------
+
+    generate_probe_kwargs : dict
+        The kwargs to pass to `generate_multi_columns_probe()`
+    probe_name : str | None
+        The probe type if generate_probe_kwargs is None.
+    """
+    if generate_probe_kwargs is not None:
+        probe = generate_multi_columns_probe(**generate_probe_kwargs)
+    else:
+        probe = _make_probe_by_name(probe_name)
+    # the wiring do not matter because the traces are generated after using the channel locations
+    num_channels = probe.get_contact_count()
+    probe.set_device_channel_indices(np.arange(num_channels))
+
+    return probe
+
+
+def fix_generate_templates_kwargs(generate_templates_kwargs: dict, num_units: int, seed: int) -> dict:
+    """
+    Fix the generate_template_kwargs such that the same units are created
+    across calls to `generate_template`. We must explicitly pre-set
+    the parameters for each unit, done in `_ensure_unit_params()`.
+
+    Parameters
+    ----------
+
+    generate_templates_kwargs : dict
+        These kwargs will have the "unit_params" entry edited such that the
+        parameters are explicitly set for each unit to create (rather than
+        generated randomly on the fly).
+    num_units : int
+        Number of units to fix the kwargs for
+    seed : int
+        Random seed.
+    """
+    generate_templates_kwargs = generate_templates_kwargs.copy()
+    unit_params = _ensure_unit_params(generate_templates_kwargs.get("unit_params", {}), num_units, seed)
+    generate_templates_kwargs["unit_params"] = unit_params
+
+    return generate_templates_kwargs

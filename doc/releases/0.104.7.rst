@@ -1,0 +1,16 @@
+.. _release0.104.7:
+
+SpikeInterface 0.104.7 release notes
+------------------------------------
+
+June 26th 2026
+
+Minor release with bug fixes to make release compatible with NEO 0.14.5
+
+extractors:
+
+* Remove load sync channel from SpikeGLX (#4560)
+
+Contributors:
+
+* @alejoe91

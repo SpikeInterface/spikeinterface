@@ -7,7 +7,6 @@ import numpy as np
 from spikeinterface.core import write_binary_recording, Motion, BaseRecording
 from spikeinterface.sorters.basesorter import BaseSorter, get_job_kwargs
 from .kilosortbase import KilosortBase
-from spikeinterface.sorters.basesorter import get_job_kwargs
 from importlib.metadata import version as importlib_version
 
 
@@ -183,9 +182,7 @@ class Kilosort4Sorter(BaseSorter):
 
         if version.parse(cls.get_sorter_version()) < version.parse("4.0.16"):
             raise RuntimeError(
-                "Kilosort versions before 4.0.16 are not supported"
-                "in SpikeInterface. "
-                "Please upgrade Kilosort version."
+                "Kilosort versions before 4.0.16 are not supportedin SpikeInterface. Please upgrade Kilosort version."
             )
 
         # setup kilosort's console and file log handlers
@@ -213,7 +210,7 @@ class Kilosort4Sorter(BaseSorter):
             # find the stream handler
             stream_handler = None
             for handler in logger.handlers:
-                if type(handler) == logging.StreamHandler:
+                if type(handler) is logging.StreamHandler:
                     stream_handler = handler
                     break
 

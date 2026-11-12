@@ -161,8 +161,6 @@ class IronClustSorter(BaseSorter):
 
     @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
-        p = params
-
         dataset_dir = sorter_output_folder / "ironclust_dataset"
         # Generate three files in the dataset directory: raw.mda, geom.csv, params.json
         MdaRecordingExtractor.write_recording(

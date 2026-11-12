@@ -17,7 +17,7 @@ def test_mda_extractors(create_cache_folder):
 
     MdaRecordingExtractor.write_recording(rec, cache_folder / "mdatest")
     rec_mda = MdaRecordingExtractor(cache_folder / "mdatest")
-    probe = rec_mda.get_probe()
+    assert rec_mda.has_probe()
 
     check_recordings_equal(rec, rec_mda, return_in_uV=False)
 

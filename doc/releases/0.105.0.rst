@@ -1,0 +1,368 @@
+.. _release0.105.0:
+
+SpikeInterface 0.105.0 release notes
+------------------------------------
+
+Sept 21st 2026
+
+Main changes:
+
+* Added ``dartsort`` [Boussard2023]_ as an external sorter, run with ``run_sorter("dartsort")`` (#2125)
+* Generalized the chunking machinery: the recording-specific chunking code is now a reusable ``TimeSeries`` base class, plus ``TimeSeriesChunkExecutor``, so that any object chunkable along the time axis reuses the same parallelization and time handling (#4472, #4533)
+* ``main_channel_indices`` and the ``main_channel_id`` sorting property replace ``peak_sign`` across postprocessing and metrics. The main channel is now set once on the analyzer, and sorters such as Kilosort and ``dartsort`` set it directly (#4624, #4672, #4733, #4725)
+* ``SortingAnalyzer`` gained a ``lazy`` mode, which keeps the spike vector and extension data as memmaps / Zarr arrays and defers loading until first access, and an independent ``read_only`` mode (#4623, #4709, #4713) (see: :doc:`/modules/core`)
+* Node pipelines can gather results straight to disk with ``GatherToZarr``, so pipeline node extension data no longer has to fit in memory (#4703)
+* Reworked probe handling around ``ProbeGroup``: ``set_probe`` and ``set_probegroup`` now act in place, while the new ``select_channels_with_probe`` and ``select_channels_with_probegroup`` return a new recording (#4465)
+* Added the ``detect_and_remove_artifacts`` preprocessor, with ``"envelope"`` and ``"saturation"`` detection, a separate ``recording_to_detect``, and ``"zeros"`` / ``"noise"`` / ``"apodization"`` silencing modes (#4539)
+* Added antialiased decimation (``decimate(..., antialias=True)``) and support for non-integer resampling rates (#4621)
+* Added ``SortingAnalyzer.split_by()`` to split an aggregated analyzer into per-group analyzers (#4660), and ``read_kilosort4_motion`` to build a ``Motion`` object from a Kilosort4 output folder (#4518)
+* Significant speedups in multi-segment synchrony metrics (#4770), duplicated spike removal (#4614), amplitude scalings (#4764, #4759, #4786), PCA over all spikes (#4488), NWB sorting loading (#4662), spike vector handling (#4618, #4695, #4581), and import time (#4641, #4644, #4650, #4651)
+
+API and breaking changes:
+
+Despite this long list of breaking changes, we have worked hard to try and preserve backwards compatibility for any objects saved using older versions of SpikeInterface. If you cannot load an object saved with an older version of SpikeInterface, please raise an issue.
+
+  * Probe handling is reworked around ``ProbeGroup``, and the internal ``"contact_vector"`` property is gone (#4465). Previously saved objects and folders still load.
+
+      * ``set_probe()`` and ``set_probegroup()`` always act in place and return ``None``. Use ``select_channels_with_probe()`` / ``select_channels_with_probegroup()`` to obtain a new recording (see: :doc:`/modules/core`)
+      * ``set_probe()`` accepts a single ``Probe`` only; pass a ``ProbeGroup`` to ``set_probegroup()``
+      * ``reset_probe()`` --> ``remove_probe()``
+      * ``has_3d_locations()`` --> ``is_probe_3d()``, and ``has_channel_location()`` is now equivalent to ``has_probe()``
+      * ``get_channel_locations()`` raises when no probe is attached, instead of falling back to a bare ``"location"`` property
+
+  * The main channel of each unit is fixed when the analyzer is created and stored as the ``main_channel_id`` sorting property. ``peak_sign`` is also decided when the analyzer is created, and so is removed from the API (#4624)
+
+      * ``get_template_extremum_channel()`` --> ``SortingAnalyzer.get_main_channels()``, ``get_template_extremum_channel_peak_shift()`` --> ``get_template_peak_shift_on_main_channel()``, ``get_template_extremum_amplitude()`` --> ``get_template_amplitude_on_main_channel()``. The old names are deprecated shims
+      * ``peak_sign`` is no longer a valid parameter of ``compute_quality_metrics``, ``compute_template_metrics``, ``compute_spike_amplitudes``, ``compute_spike_locations`` and ``compute_unit_locations``. It is removed from the saved params of older analyzers on load
+      * ``compute_snrs(sorting_analyzer, unit_ids, peak_sign, peak_mode, ...)`` --> ``compute_snrs(sorting_analyzer, unit_ids, method)``, and the ``snr`` metric params ``peak_sign``/``peak_mode`` --> ``method``
+      * ``get_template_amplitudes(..., mode=...)`` --> ``peak_mode=...``
+      * ``compute_sparsity()`` and the ``ChannelSparsity.from_*`` constructors take ``peak_sign=None`` / ``amplitude_mode=None`` by default. With an analyzer they must stay ``None``; with a ``Templates`` object they are now mandatory. ``amplitude_mode`` also moved earlier in the positional order of ``compute_sparsity()``
+      * ``estimate_sparsity()`` now defaults to ``peak_sign="both"`` instead of ``"neg"``, which changes results silently
+      * ``peak_sign`` is removed from ``remove_redundant_units()``, ``export_report()`` and ``plot_unit_depths()``
+      * ``sorting_to_peaks(sorting, extremum_channel_inds, dtype)`` --> ``sorting_to_peaks(sorting, main_channel_indices, dtype)``, taking an array rather than a dict, and ``SpikeRetriever`` now requires the sorting to carry ``main_channel_id``
+      * ``BaseSorting.to_spike_vector()`` gained ``main_channel_indices`` as its third positional parameter
+
+  * The chunking and node pipeline machinery is generalized to any time series (#4472, #4533)
+
+      * ``ChunkRecordingExecutor`` --> ``TimeSeriesChunkExecutor``, whose first argument is ``time_series`` rather than ``recording``, and whose ``run(recording_slices=...)`` --> ``run(slices=...)``
+      * ``PipelineNode.get_trace_margin()`` --> ``get_margin()``, ``PipelineNode.compute(traces, ...)`` --> ``compute(chunk, ...)``, and ``PipelineNode`` takes ``time_series`` rather than ``recording``
+      * ``run_node_pipeline(recording, ..., recording_slices=...)`` --> ``run_node_pipeline(time_series, ..., slices=...)``, and ``check_for_peak_source`` now defaults to ``False``
+      * ``divide_recording_into_chunks`` --> ``divide_time_series_into_chunks``, ``write_binary_recording_file_handle`` --> ``write_binary_file_handle``, ``get_random_recording_slices`` --> ``get_random_sample_slices``
+      * ``BaseRecordingSegment`` now derives from ``TimeSeriesSegment``, whose time attributes are private (#4701): use ``get_times_kwargs()``, ``get_start_time()``, ``set_times()`` and ``shift_times()`` instead of ``segment.t_start``, ``segment.time_vector`` and ``segment.sampling_frequency``
+
+  * Saving and serialization are unified on the concrete classes (#4671, #4661, #4664)
+
+      * ``BaseExtractor.save()`` is abstract, and ``BaseExtractor._save()`` is removed, so third-party extractors overriding ``_save`` no longer take part in ``save()``. Use ``Recording.save()``, ``Sorting.save()`` and ``Snippets.save()``
+      * ``folder_metadata`` is removed from ``to_dict()``, ``dump()``, ``dump_to_json()`` and ``dump_to_pickle()``, and ``load_metadata_from_folder()`` / ``save_metadata_to_folder()`` are removed. ``to_dict()`` also gained ``include_extra_metadata`` in its third positional slot
+      * ``check_if_memory_serializable()``, ``check_if_json_serializable()`` and ``check_if_pickle_serializable()`` --> ``check_serializability(type)``
+      * ``BaseExtractor.load_from_folder()`` is removed; use ``si.load()``
+      * ``ZarrRecordingExtractor.write_recording(recording, zarr_path=...)`` --> ``folder_path=...``, and ``add_traces_to_zarr()`` is removed
+      * ``_get_t_starts()`` --> ``get_segment_t_starts()``
+      * ``si.load()`` forwards unknown keyword arguments instead of dropping them, so a bad argument now raises (#4709)
+
+  * ``PreprocessingPipeline`` takes a *list* of ``{"name": ..., "params": ...}`` steps instead of a dictionary (#4755) (see: :doc:`/modules/preprocessing`)
+
+      * ``PreprocessingPipeline.preprocessor_dict`` --> ``.preprocessor_list``
+      * ``get_preprocessing_dict_from_analyzer`` / ``get_preprocessing_dict_from_file`` --> ``get_preprocessing_list_from_analyzer`` / ``get_preprocessing_list_from_file``
+      * ``apply_preprocessing_pipeline(recording, pipeline_or_dict, ...)`` --> ``apply_preprocessing_pipeline(recording_or_dict, pipeline, ...)``. Passing a dictionary still works, but is deprecated
+
+  * Other signature and naming changes
+
+      * ``parent_recording`` --> ``recording`` in ``ChannelSliceRecording``, ``FrameSliceRecording``, ``depth_order``, ``detect_and_remove_bad_channels`` and ``average_across_direction`` (#4779)
+      * ``AnalyzerExtension._select_extension_data()`` --> ``_select_units_extension_data()``, with a new ``_select_channels_extension_data()``. This breaks custom ``AnalyzerExtension`` subclasses (#4648)
+      * ``create_sorting_analyzer()`` gained several parameters between ``folder`` and ``sparse``, so ``sparse`` and ``sparsity`` must now be passed by keyword (#4624, #4623)
+      * ``NoiseGeneratorRecording`` and ``noise_generator_recording`` moved from ``spikeinterface.core`` to ``spikeinterface.generation`` (#4520). The lightweight ``MockRecording`` replaces the old core class for testing
+      * ``resample()``: ``margin_ms`` now defaults to ``None`` rather than ``100.0``, and ``skip_checks`` and ``check_nyquist()`` are removed (#4621, #4499)
+      * ``read_kilosort_as_analyzer()`` gained ``recording`` as its second positional parameter (#4529), and ``model_based_label_units()`` gained ``unit_ids`` as its second positional parameter (#4716)
+      * ``run_sorter`` raises an error when channel locations are not unique, suggesting ``run_sorter_by_property`` instead
+      * Python packaging: ``numpy>=2.0`` is required on all supported Python versions, the minimum ``neo`` and ``probeinterface`` versions are raised to ``0.14.5`` and ``0.4.0`` (#4593), the ``test``, ``test_core``, ``test_extractors`` and ``test_preprocessing`` extras are replaced by PEP 735 dependency groups, ``sonpy`` is dropped, and the ``pandas<3`` (#4691) and ``scikit-learn<1.8`` (#4780) pins are relaxed
+
+  * Changed results and defaults
+
+      * ``sliding_rp_violation`` values change: the metric now reuses ``compute_correlograms`` and derives refractory-period bins from the actual correlogram bins (#4324), the expected-violations formula is corrected to the [Llobet]_ formulation, which previously overestimated it, and the tested contamination range now includes 35% (#4682)
+      * Multi-segment ``synchrony_metrics`` were incorrectly grouping equal sample indices across segments, and are now computed per segment (#4770)
+      * ``estimate_sparsity()`` defaults to ``peak_sign="both"`` (#4624)
+      * ``amplitude_cutoff`` now prefers ``amplitude_scalings`` over ``spike_amplitudes`` (#4513)
+      * ``num_depth_bins`` for MEDiCINe motion estimation uses MEDiCINe's own recommended default (#4686)
+      * Preprocessed traces are rounded, rather than truncated, before being cast to integer dtypes (#4653)
+      * Amplitudes are scaled to uV using channel offsets in addition to gains (#4765)
+      * ``get_metrics_extension_data()`` drops duplicated columns when two extensions provide a metric of the same name (#4609)
+      * Template metrics no longer raise on 3D channel locations; they warn and use the first two dimensions (#4572)
+      * ``decimate`` emits a ``FutureWarning`` when ``antialias`` is not set explicitly: the default will become ``True`` in a future release (#4621)
+
+  * Removal of previously deprecated features
+
+      * ``curation.auto_label_units()`` --> ``model_based_label_units()`` (#4716)
+      * the ``load_sync_channel`` argument of ``OpenEphysBinaryRecordingExtractor`` --> ``stream_name`` / ``stream_id`` (#4466)
+      * the ``num_chan`` argument of ``BinaryRecordingExtractor`` --> ``num_channels`` (#4666)
+
+  * New deprecations, which will be removed in 0.106.0, and which now raise ``FutureWarning`` rather than ``DeprecationWarning`` so that they are visible by default (#4667, #4676):
+
+      * ``BaseSnippets``
+      * the ``in_place`` argument of ``set_probe``, as well as its return value
+      * ``set_channel_locations()`` and ``clear_channel_locations()``
+      * ``get_template_extremum_channel()`` --> ``analyzer.get_main_channels()``
+      * ``get_template_extremum_channel_peak_shift()`` --> ``get_template_peak_shift_on_main_channel()``
+      * ``get_template_extremum_amplitude()`` --> ``get_template_amplitude_on_main_channel()``
+      * ``save_to_memory()``, ``save_to_folder()`` and ``save_to_zarr()`` --> ``save(format=...)``
+      * the ``"npz_folder"`` save format and ``NpzFolderSorting.write_sorting()`` --> ``"numpy_folder"`` (reading ``npz_folder`` is still supported)
+      * the ``extremum_channel_inds`` argument of ``SpikeRetriever`` --> ``main_channel_ids`` from the sorting
+      * passing sparsity and job arguments as loose keyword arguments to ``create_sorting_analyzer`` --> ``sparsity_kwargs`` and ``job_kwargs`` dictionaries
+      * the ``input_data`` argument of ``model_based_label_units`` --> ``metrics``
+      * ``split_non_somatic_good_mua`` and ``label_non_somatic`` in Bombcell curation --> ``split_non_somatic``
+      * computing ``amplitude_cutoff`` without the ``amplitude_scalings`` extension (#4513)
+
+  * Passing a dictionary to ``apply_preprocessing_pipeline`` is deprecated and will be removed in 0.107.0 (#4755)
+
+  * Items deprecated during the 0.104 cycle, such as ``return_scaled``, the ``spikeinterface.qualitymetrics`` and ``spikeinterface.postprocessing.template_metrics`` modules, ``CurationModel``, ``get_potential_auto_merge()``, ``get_default_qm_params``, ``get_default_tm_params``, the ``sorting`` and ``sorting_analyzer`` arguments of several widgets, are removed.
+
+core:
+
+* Add ``GatherToZarr`` and save pipeline node extension data to disk (#4703)
+* Respect requested unit order for templates and sparsity in SortingAnalyzer.select_units (#4791)
+* Fix main_channel_id donor selection when merged units disagree (#4773)
+* Keep spikeinterface importable when zarr-python v3 is installed (#4751)
+* Run the kwargs backward compatibility hook regardless of the saved version (#4749)
+* Propagate shared annotations in aggregate_channels (#4731)
+* Support a SortingAnalyzer with no unit in the core extensions (#4729)
+* Fix ``n_jobs=-1`` oversubscribing cores under CPU affinity restrictions (#4724)
+* fix: preserve caller-owned inputs (#4721)
+* Fix ``is_merged``/``is_split`` properties for different strategies (#4718)
+* ``SortingAnalyzer``: add ``read_only`` mode (different than ``lazy``) (#4713)
+* Fix channel order bug and make ``select_channels`` private (#4712)
+* Fix cache spike vector in base sorting (#4710)
+* Propagate ``lazy`` arg to from ``si.load()`` (#4709)
+* Fixes a couple of minor warnings (#4707)
+* Create SortingAnalyzer object directly during create_sorting_analyzer (#4705)
+* Make time attributes private in ``TimeSeriesSegment`` (#4701)
+* Fix and speed up to_reordered_spike_vector (#4695)
+* Clean up code around create_sorting_analyzer and create/load_* functions in sortinganalyzer.py (#4680)
+* Add backwards compatibility when passing sparsity kwargs to create_sorting_analyzer (#4677)
+* Move the ``Base.save`` to ``Sorting.save()`` and ``Recording.save()`` (#4671)
+* Add copy_sorting option to SortingAnalyzer.create_memory (#4668)
+* Remove ``load_from_folder`` from base (#4664)
+* Cleanup Serializability checking in ``base.py`` (#4661)
+* Add ``SortingAnalyzer.split()`` function for aggregated analyzers (#4660)
+* Fix template estimate sparsity (#4657)
+* Parameter pass through for class -> function wrapper (#4656)
+* Improve sparsity estimation for aggregated analyzers (#4649)
+* Add ``SortingAnalyzer.select_channels()`` function (#4648)
+* Remove ``peak_sign`` in favour of ``main_channel_indices`` (#4624)
+* Lazy-mode for loading ``Sortinganalyzer`` (#4623)
+* ``write_binary``: ``None`` dtype should be replaced by actual dtype (#4622)
+* Avoid materializing entire time vector from zarr for time_to_sample_index (#4620)
+* Remove some full lexsort of spikes when not necesary. (#4618)
+* Remove deduplicated columns in ``get_metrics_extension_data`` (#4609)
+* Use np.load(..., mmap_mode="r") for time_vector in ``BaseRecording._extra_metadata_from_folder`` (#4608)
+* Fix file size calculation in ``write_binary()`` (#4607)
+* ``SortingAnalyzer``: intepret any remote path as zarr (#4583)
+* Faster unit selection sorting. (#4581)
+* Handle failure in dumping sorting provenance to Zarr (#4577)
+* Add SelectSegmentEvent (#4575)
+* Improve backward compatibility for dartsort after the chunkable PR  (#4559)
+* Add ``shift_times`` to ``BaseSorting`` (#4551)
+* Improvements over chuking refactoring (#4533)
+* Add ``num_channels`` to ``BaseRecordingSegment`` (#4526)
+* Add ``get_start_time``, ``get_end_time``, and ``get_last_spike_frame`` to ``BaseSorting`` (#4525)
+* Add ``t_starts`` parameter to ``generate_recording`` and ``generate_sorting`` (#4523)
+* Add regression test for GH-4508 (deprecated metric names in legacy WE folders) (#4514)
+* Improve ``get_times`` function to slice timestamps (#4512)
+* Delete a failed SortingAnalyzer extension (#4511)
+* Replace int() truncation with shared ms_to_samples()  (#4484)
+* Implement ``TimeSeries`` class (#4472)
+* Add ``zarr_class_info`` attribute to zarr files for unambiguous and extendible zarr read (#4467)
+* Use ``ProbeGroup`` object instead of ``contact_vector`` property and  ``set_probe/probegroup`` from ``select_channels_with_probe/probegroup`` (#4465)
+* Centralize ``add_segment`` and ``segments`` to ``BaseExtractor`` (#4462)
+
+extractors:
+
+* Add ``main_channel_id`` when running Kilosort (#4725)
+* Add ``ZarrArrayExtractor`` to read "plain" Zarr arrays (#4760)
+* Let ``get_streams`` work from the path alone on Neuralynx, Biocam and Blackrock (#4727)
+* Add option to export spike waveforms subset to phy (mimic phy extract-waveforms) (#4699)
+* Fix backward compatibility for binary recording/openephys/spikeglx (#4666)
+* Build the ``NwbSortingExtractor`` spike vector with a single bulk read (#4662)
+* Read the ragged index before the data when loading NWB table properties (#4655)
+* Map NWB sorting spikes to samples via the ElectricalSeries timestamps (#4654)
+* Fix NwbSortingExtractor unit-property loading for DynamicTableRegion columns (#4647)
+* Infer ``sampling_frequency`` from ``Units.resolution`` in ``NwbSortingExtractor`` (#4646)
+*  Separate NWB reading from extractor construction (#4630)
+* Materialize electrode-table columns before indexing in the NWB recording extractor (#4627)
+* Fix ``read_mclust`` returning zero units for ``.t`` files (#4626)
+* Use probeinterface's renamed Neuropixels readers and new probe detectors (#4593)
+* Implement cache spike vector for phy sorting reader (#4579)
+* Fix the IBL Cbin extractor so that it works with 4 split shanks as well (#4567)
+
+preprocessing:
+
+* Accept recording= consistently in detect_and_remove_bad_channels, depth_order and average_across_direction (#4779)
+* Extend preprocessing pipeline by defining a ``BasePipeline`` (#4755)
+* Parallelize coherence-based bad channel detection (#4750)
+* Handle empty annulus in local common reference (#4728)
+* Cast not_enough_channels as str before 'join' (#4690)
+* Fix remove_artifacts sparsity handling for median/average modes (#3290) (#4685)
+* Fix ``test_pipeline_equiv_to_step`` (#4675)
+* Fix double setting of ``operator`` in ``self`` (#4659)
+* Round before casting preprocessed traces to integer dtypes (#4653)
+* Add antialiased decimation and allow non-integer resampling rates (#4621)
+* Add per-group ref_channel_ids to common_reference (#4601)
+* Extend artifact detection: ``DetectAndRemoveArtifacts`` preprocessor and signed saturation (#4539)
+* Fix false-positive margin warning in forkserver workers (#4506)
+* Fix resampling of gapped recordings. (#4499)
+* Allow overwrite argument when saving motion object (#4464)
+* Refactor artifacts detection + add saturation detection (#4297)
+
+sorters:
+
+* Save recording_attributes before run_sorter() (#4795)
+* Only use nonempty main channel indices when making an analyzer from templates (#4763)
+* Fix encoding error in shellscript on Windows (#4720)
+* Add ``read_kilosort4_motion`` function (#4518)
+* Initial dartsort wrapper implementation. (#2125)
+
+postprocessing:
+
+* Speed up collision-aware amplitude scaling (#4786)
+* Fix ComputeACG3D soft merge indexing bug that swaps kept units' data (#4776)
+* Materialize templates array before amp scalings computation for lazy mode (#4769)
+* BUG: preserve correlogram unit axes across segments (#4767)
+* Use channel offsets, not gains, when scaling amplitudes to uV (#4765)
+* perf(postprocessing): compute only the amplitude scaling coefficients (#4764)
+* Scale only the waveforms amplitude_scalings reads (#4759)
+* Remove unused full-chunk scaling in spike_amplitudes (#4758)
+* Fix PCA metric recomputation when "soft" merging (#4748)
+* Expose seed for spike_locations (grid) (#4717)
+* Remove ``peak_sign`` in favour of ``main_channel_indices`` (#4624)
+* "Allow" for 3D channel locations for compute unit locs and template metrics (#4572)
+* Vectorize per-channel PCA transform in ``run_for_all_spikes`` (#4488)
+
+metrics:
+
+* Correct and speed up multi-segment synchrony metrics (#4770)
+* Fix PCA metric recomputation when "soft" merging (#4748)
+* Add ``template_operator`` to template metrics backwards compatibility (#4714)
+* Deepcopy of metric params (#4688)
+* Fix Llobet expected-violations formula in sliding RP metric (#4682)
+* QualityMetrics: store ``use_valid_periods`` param (#4596)
+* Amplitude cutoff should favor amplitude_scalings extension (#4513)
+* Harmonization of the way we are computing sliding_rp_violations (#4324)
+
+curation:
+
+* Fix mismatch in vairable name in mergeunitssorting.py (#4743)
+* Fix ``is_merged``/``is_split`` properties for different strategies (#4718)
+* Model_based_curation + unitrefine prediction: add ``unit_ids`` input (#4716)
+* Vectorize _find_duplicated_spikes_keep_first/last_iterative kernels. (#4614)
+* Bombcell extension (#4494)
+* Change to using upset-bombcell package (#4493)
+* Make sure default automerge params reflect their type (#4483)
+
+widgets:
+
+* Fix unit presence time_range (#4571)
+* Add ``sort_by_depth`` kwargs to ``RasterWidget`` (#4544)
+
+generators:
+
+* Fix amplitude being ignored for static hybrid recordings (#4674)
+* Add ``interpolation_kwargs`` to ``interpolate_templates`` (#4665)
+* Small change to add amplitude jitter in drifting_generator (#4592)
+* Use mock instead of generate in tests (#4587)
+* Generate recording with probe from library (#4568)
+* generate: Add power decay spatial profile (#4489)
+
+sortingcomponents:
+
+* Only use nonempty main channel indices when making an analyzer from templates (#4763)
+* Enhance single channel denoiser and ``WaveformNode`` (#4673)
+* Add ``thin_plate`` interpolation to ``interpolate_templates`` (#4640)
+* Add install check for components sorters (#4574)
+* Small fix in nodepipeline that prevent tdc peeler in drift-aware mode (#4557)
+* Patch to improve the nearest peeler. (#4516)
+
+motion correction:
+
+* Allow Dredge AP to use online motion resolution method (#4746)
+* Use MEDiCINe's own recommended default for num_depth_bins (#4686)
+
+documentation:
+
+* Update copyright in ``conf.py`` (#4642)
+* Update release dates and add 0.104.4 (#4613)
+* Fix doc typo on home page (#4492)
+
+continuous integration:
+
+* Use a single dataset cache for all the runner OSes (#4772)
+* Skip pruning of macOS uv cache (#4678)
+* Add cross-version serialization tests (#4636)
+* Update actions versions (#4585)
+* Modularize CI test and runtime dependencies per module (#4541)
+* Fix numpy and scipy failures on the CI (#4534)
+* Loosen import-time gate on Windows and unpin pytest (#4532)
+* Use uv and caching in CI (#4515)
+
+packaging:
+
+* Relax ``scikit-learn<1.8`` pin (#4780)
+* Dev version  should be 0.105.0 (#4696)
+* Relax pandas<3 pin (#4691)
+* Fix imports in sortingview (#4652)
+* Cleanup importing spikeinterface rather than inspecting it during curation (#4651)
+* Update checking for editable mode of spikeinterface (#4650)
+* Another round of import edits to reduce memory burden and increase speed of startup (#4644)
+* Updating Imports (details in comment) (#4641)
+* Use probeinterface and neo source when using spikeinterface source (#4615)
+* Use legacy numpy versions for ks 4.1.1-4.1.6 tests (#4591)
+* Add install check for components sorters (#4574)
+* Fix module level test groups (#4573)
+* Modularize CI test and runtime dependencies per module (#4541)
+
+testing:
+
+* Fix failing tests: decimate in chunks and skops (#4792)
+* Use a single dataset cache for all the runner OSes (#4772)
+* Fix interpolate tests after probeinterface to_numpy change (#4637)
+* Fix curation tests for missing kachery dependency (#4599)
+* Use legacy numpy versions for ks 4.1.1-4.1.6 tests (#4591)
+* Fix module level test groups (#4573)
+* Modularize CI test and runtime dependencies per module (#4541)
+* Speed up ``test_sorting_s3_nwb_zarr`` (again) (#4538)
+* Fix tests paths (#4490)
+
+deprecations:
+
+* Accept recording= consistently in detect_and_remove_bad_channels, depth_order and average_across_direction (#4779)
+* Deprecation -> Future (#4667)
+* Fix backward compatibility for binary recording/openephys/spikeglx (#4666)
+* Segment backward compatibility (#4542)
+
+Contributors:
+
+* @4iar
+* @Antorhythms
+* @AtomicGlance
+* @CodeBlackwell
+* @JESUSROYETH
+* @Julie-Fabre
+* @Leonard013
+* @RobertoDF
+* @SZNRR
+* @adityasingh2400
+* @alejoe91
+* @chrishalcrow
+* @cwindolf
+* @ecobost
+* @galenlynch
+* @grahamfindlay
+* @h-mayorquin
+* @hayleybounds
+* @lochhh
+* @nwatters01
+* @oliche
+* @rai-pranav
+* @samuelgarcia
+* @stanbot8
+* @tayheau
+* @yger
+* @zm711

@@ -56,7 +56,6 @@ class CombinatoSortingExtractor(BaseSorting):
         unit_counter = 0
         spiketrains = {}
         metadata = {}
-        unsorted = []
         with h5py.File(det_file, mode="r") as fdet:
             for sign, sfile in sort_cat_files:
                 with h5py.File(sfile, mode="r") as f:

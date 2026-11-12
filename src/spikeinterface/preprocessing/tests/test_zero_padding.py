@@ -8,13 +8,13 @@ from spikeinterface.preprocessing import zero_channel_pad, bandpass_filter, phas
 from spikeinterface.preprocessing.zero_channel_pad import TracePaddedRecording
 
 
-def test_zero_padding_channel():
+def test_zero_padding_channel(create_cache_folder):
     num_original_channels = 4
     num_padded_channels = num_original_channels + 8
     rec = generate_recording(num_channels=num_original_channels, durations=[10])
 
     rec2 = zero_channel_pad(rec, num_channels=num_padded_channels)
-    rec2.save(verbose=False)
+    rec2.save(folder=create_cache_folder / "rec2", verbose=False)
 
     print(rec2)
 
@@ -251,7 +251,6 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, 
 
 @pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
 def test_trace_padded_recording_retrieve_only_start_padding(recording, padding_start, padding_end):
-    num_samples = recording.get_num_samples()
     num_channels = recording.get_num_channels()
 
     padded_recording = TracePaddedRecording(

@@ -4,6 +4,7 @@
 It is useful when we do extractor.save(name="name").
 """
 
+import os
 import tempfile
 from pathlib import Path
 from copy import deepcopy
@@ -69,9 +70,14 @@ dataset_folder_set = False
 def get_global_dataset_folder():
     """
     Get the global dataset folder.
+
+    Unless it has been set manually with `set_global_dataset_folder`, it is read from the
+    `SPIKEINTERFACE_DATASET_FOLDER` environment variable and falls back to `~/spikeinterface_datasets`.
     """
     global dataset_folder
     global dataset_folder_set
+    if not dataset_folder_set:
+        dataset_folder = Path(os.environ.get("SPIKEINTERFACE_DATASET_FOLDER", Path.home() / "spikeinterface_datasets"))
     dataset_folder.mkdir(exist_ok=True, parents=True)
     return dataset_folder
 
@@ -125,7 +131,7 @@ def set_global_job_kwargs(**job_kwargs):
     global global_job_kwargs
     for k in job_kwargs:
         assert k in job_keys, (
-            f"{k} is not a valid job keyword argument. " f"Available keyword arguments are: {list(job_keys)}"
+            f"{k} is not a valid job keyword argument. Available keyword arguments are: {list(job_keys)}"
         )
     global_job_kwargs.update(job_kwargs)
     global global_job_kwargs_set

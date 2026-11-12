@@ -1,4 +1,5 @@
 from spikeinterface.core import SortingAnalyzer
+
 from .unit_waveforms import UnitWaveformsWidget
 from .base import to_attr
 
@@ -40,12 +41,17 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
         templates_dict = {}
         for u_i, unit in enumerate(unit_ids):
             templates_dict[unit] = {}
-            template_data = dp.templates[u_i]
-            templates_dict[unit]["mean"] = template_data[:, unit_id_to_channel_indices[unit]]
+            template_data = dp.templates[u_i][:, unit_id_to_channel_indices[unit]].astype("float32")
+            if use_sortingview:
+                template_data = template_data.T
+            templates_dict[unit]["mean"] = template_data
             if dp.do_shading:
                 templates_dict[unit]["shading"] = []
                 for shading_data in dp.templates_shading:
-                    templates_dict[unit]["shading"].append(shading_data[u_i][:, unit_id_to_channel_indices[unit]])
+                    shading_data_unit = shading_data[u_i][:, unit_id_to_channel_indices[unit]].astype("float32")
+                    if use_sortingview:
+                        shading_data_unit = shading_data_unit.T
+                    templates_dict[unit]["shading"].append(shading_data_unit)
             else:
                 templates_dict[unit]["shading"] = None
 
@@ -59,7 +65,9 @@ class UnitTemplatesWidget(UnitWaveformsWidget):
             for u, t in templates_dict.items()
         ]
 
-        channel_locations = {str(ch): dp.channel_locations[i_ch].astype(float) for i_ch, ch in enumerate(channel_ids)}
+        channel_locations = {
+            str(ch): dp.channel_locations[i_ch].astype("float32") for i_ch, ch in enumerate(channel_ids)
+        }
         v_average_waveforms = vv_views.AverageWaveforms(average_waveforms=aw_items, channel_locations=channel_locations)
 
         if not dp.hide_unit_selector:

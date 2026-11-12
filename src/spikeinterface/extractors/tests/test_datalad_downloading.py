@@ -13,6 +13,7 @@ def test_download_dataset():
 
     # local_folder automatic
     local_path = download_dataset(repo=repo, remote_path=remote_path, local_folder=None)
+    assert local_path is not None
 
 
 if __name__ == "__main__":

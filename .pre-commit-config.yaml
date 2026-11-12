@@ -5,8 +5,18 @@ repos:
     -   id: check-yaml
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
--   repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 26.5.1
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
     hooks:
-    -   id: black
+    -   id: ruff-check
+        args: [--fix]
+        files: ^src/
+    # occasional full lint including tests: pre-commit run ruff-check-tests --hook-stage manual --all-files
+    -   id: ruff-check
+        alias: ruff-check-tests
+        name: ruff check (including tests)
+        args: [--fix, --config, "lint.exclude = []"]
+        files: ^src/
+        stages: [manual]
+    -   id: ruff-format
         files: ^src/

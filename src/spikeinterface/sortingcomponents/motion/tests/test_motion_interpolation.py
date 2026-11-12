@@ -224,7 +224,7 @@ def test_cross_band_interpolation():
     assert np.array_equal(traces_corrected, target)
 
 
-def test_InterpolateMotionRecording():
+def test_InterpolateMotionRecording(create_cache_folder):
     # rec, sorting = make_dataset()
 
     # 2 segments
@@ -244,6 +244,7 @@ def test_InterpolateMotionRecording():
         noise_kwargs=dict(noise_levels=5.0, strategy="on_the_fly"),
         seed=2205,
     )
+    rec = rec.save(folder=create_cache_folder / "rec_for_test_interpolate_motion", format="binary")
 
     motion = make_fake_motion(rec)
 

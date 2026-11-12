@@ -7,6 +7,7 @@ Guides on how to solve specific, short problems in SpikeInterface. Learn how to.
     :maxdepth: 1
 
     viewers
+    read_various_formats
     customize_a_plot
     combine_recordings
     process_by_channel_group

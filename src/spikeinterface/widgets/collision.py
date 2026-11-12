@@ -67,7 +67,6 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
-        import sklearn
         import matplotlib
 
         from .utils_matplotlib import make_mpl_figure
@@ -87,7 +86,6 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
         template_inds = [all_unit_ids.index(u) for u in dp.unit_ids]
 
         templates_array = dp.templates_array[template_inds, :, :].copy()
-        flat_templates = templates_array.reshape(templates_array.shape[0], -1)
 
         similarity_matrix, _ = compute_similarity_with_templates_array(
             templates_array,
@@ -106,8 +104,6 @@ class ComparisonCollisionBySimilarityWidget(BaseWidget):
 
         fs = comp.sorting1.get_sampling_frequency()
         lags = comp.bins / fs * 1000
-
-        n = len(dp.unit_ids)
 
         similarities, recall_scores, pair_names = comp.compute_collision_by_similarity(
             similarity_matrix, unit_ids=dp.unit_ids, good_only=dp.good_only, min_accuracy=dp.min_accuracy
@@ -239,7 +235,6 @@ class StudyComparisonCollisionBySimilarityWidget(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         import matplotlib.pyplot as plt
-        import sklearn
         import matplotlib
 
         from .utils_matplotlib import make_mpl_figure

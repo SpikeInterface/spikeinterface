@@ -6,18 +6,18 @@ but check only for BaseRecording general methods.
 import json
 import pickle
 from pathlib import Path
+import platform
 import pytest
 import numpy as np
 from numpy.testing import assert_raises
 
-from probeinterface import Probe, ProbeGroup, generate_linear_probe
+from probeinterface import Probe
 
 from spikeinterface.core import (
     BinaryRecordingExtractor,
     NumpyRecording,
-    load,
     get_default_zarr_compressor,
-    aggregate_channels,
+    load,
 )
 from spikeinterface.core.base import BaseExtractor
 from spikeinterface.core.testing import check_recordings_equal
@@ -101,14 +101,14 @@ def test_BaseRecording(create_cache_folder):
 
     # dump/load json
     rec.dump_to_json(cache_folder / "test_BaseRecording.json")
-    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording.json")
+    rec2 = load(cache_folder / "test_BaseRecording.json")
     rec3 = load(cache_folder / "test_BaseRecording.json")
     check_recordings_equal(rec, rec2, return_in_uV=False, check_annotations=True, check_properties=False)
     check_recordings_equal(rec, rec3, return_in_uV=False, check_annotations=True, check_properties=False)
 
     # dump/load pickle
     rec.dump_to_pickle(cache_folder / "test_BaseRecording.pkl")
-    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording.pkl")
+    rec2 = load(cache_folder / "test_BaseRecording.pkl")
     rec3 = load(cache_folder / "test_BaseRecording.pkl")
     check_recordings_equal(rec, rec2, return_in_uV=False, check_annotations=True, check_properties=True)
     check_recordings_equal(rec, rec3, return_in_uV=False, check_annotations=True, check_properties=True)
@@ -120,12 +120,12 @@ def test_BaseRecording(create_cache_folder):
 
     # dump/load json - relative to
     rec.dump_to_json(cache_folder / "test_BaseRecording_rel.json", relative_to=cache_folder)
-    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
+    rec2 = load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
     rec3 = load(cache_folder / "test_BaseRecording_rel.json", base_folder=cache_folder)
 
     # dump/load relative=True
     rec.dump_to_json(cache_folder / "test_BaseRecording_rel_true.json", relative_to=True)
-    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
+    rec2 = load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
     rec3 = load(cache_folder / "test_BaseRecording_rel_true.json", base_folder=True)
     check_recordings_equal(rec, rec2, return_in_uV=False, check_annotations=True)
     check_recordings_equal(rec, rec3, return_in_uV=False, check_annotations=True)
@@ -137,12 +137,12 @@ def test_BaseRecording(create_cache_folder):
 
     # dump/load pkl - relative to
     rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel.pkl", relative_to=cache_folder)
-    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
+    rec2 = load(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
     rec3 = load(cache_folder / "test_BaseRecording_rel.pkl", base_folder=cache_folder)
 
     # dump/load relative=True
     rec.dump_to_pickle(cache_folder / "test_BaseRecording_rel_true.pkl", relative_to=True)
-    rec2 = BaseExtractor.load(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
+    rec2 = load(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
     rec3 = load(cache_folder / "test_BaseRecording_rel_true.pkl", base_folder=True)
     check_recordings_equal(rec, rec2, return_in_uV=False, check_annotations=True)
     check_recordings_equal(rec, rec3, return_in_uV=False, check_annotations=True)
@@ -155,7 +155,7 @@ def test_BaseRecording(create_cache_folder):
     # cache to binary
     folder = cache_folder / "simple_recording"
     rec.save(format="binary", folder=folder)
-    rec2 = BaseExtractor.load(folder)
+    rec2 = load(folder)
     assert "quality" in rec2.get_property_keys()
     values = rec2.get_property("quality")
     assert values[0] == 1.0
@@ -166,7 +166,7 @@ def test_BaseRecording(create_cache_folder):
     assert np.array_equal(groups, [0, 0, 1])
 
     # but also possible
-    rec3 = BaseExtractor.load(cache_folder / "simple_recording")
+    rec3 = load(cache_folder / "simple_recording")
 
     # cache to memory
     rec4 = rec3.save(format="memory", shared=False)
@@ -288,25 +288,15 @@ def test_BaseRecording(create_cache_folder):
 
     # Both return_scaled and return_in_uV raise error when no gain_to_uV/offset_to_uV properties
     with pytest.raises(ValueError):
-        traces_float32 = rec_int16.get_traces(return_scaled=True)
-    with pytest.raises(ValueError):
         traces_float32 = rec_int16.get_traces(return_in_uV=True)
 
     # Set properties and test both parameters
     rec_int16.set_property("gain_to_uV", [0.195] * 5)
     rec_int16.set_property("offset_to_uV", [0.0] * 5)
 
-    # Test deprecated return_scaled parameter
-    with pytest.warns(FutureWarning, match="`return_scaled` is deprecated"):
-        traces_float32_old = rec_int16.get_traces(return_scaled=True)  # Keep this for testing the deprecation warning
-        assert traces_float32_old.dtype == "float32"
-
     # Test new return_in_uV parameter
-    traces_float32_new = rec_int16.get_traces(return_in_uV=True)
-    assert traces_float32_new.dtype == "float32"
-
-    # Verify both parameters produce the same result
-    assert np.array_equal(traces_float32_old, traces_float32_new)
+    traces_float32 = rec_int16.get_traces(return_in_uV=True)
+    assert traces_float32.dtype == "float32"
 
     # test cast with dtype
     rec_float32 = rec_int16.astype("float32")
@@ -375,7 +365,7 @@ def test_BaseRecording(create_cache_folder):
 
     # test save to zarr
     compressor = get_default_zarr_compressor()
-    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
+    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressors=compressor)
     rec_zarr_loaded = load(cache_folder / "recording.zarr")
     # annotations is False because Zarr adds compression ratios
     check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
@@ -387,7 +377,7 @@ def test_BaseRecording(create_cache_folder):
         assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
 
     rec_zarr2 = rec2.save(
-        format="zarr", folder=cache_folder / "recording_channel_chunk", compressor=compressor, channel_chunk_size=2
+        format="zarr", folder=cache_folder / "recording_channel_chunk", compressors=compressor, channel_chunk_size=2
     )
     rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
 
@@ -486,12 +476,96 @@ def test_time_slice_with_time_vector():
     sampling_frequency = 10_000.0
     recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
     times = 1 + np.arange(0, 10_000) / sampling_frequency
-    recording.set_times(times=times, segment_index=0, with_warning=False)
+    recording.set_times(times=times, segment_index=0)
 
     sliced_recording_times = recording.time_slice(start_time=1.1, end_time=1.8)
     sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
 
     assert np.allclose(sliced_recording_times.get_traces(), sliced_recording_frames.get_traces())
+
+
+@pytest.mark.parametrize(
+    "mp_context",
+    [
+        pytest.param(
+            "fork", marks=pytest.mark.skipif(platform.system() != "Linux", reason="fork only supported on Linux")
+        ),
+        pytest.param(
+            "forkserver",
+            marks=pytest.mark.skipif(platform.system() != "Linux", reason="forkserver only supported on Linux"),
+        ),
+        "spawn",
+    ],
+)
+def test_save_load_binary_with_time_vector(create_cache_folder, mp_context):
+    cache_folder = create_cache_folder
+    rec = generate_recording(durations=[5.0], num_channels=3, sampling_frequency=10_000.0)
+    times = rec.get_times(segment_index=0) + 100.0
+
+    # Set time vector
+    rec.set_times(times=times, segment_index=0)
+    # Save
+    rec_saved = rec.save(folder=cache_folder / f"recording_with_time_vector_{mp_context}", format="binary")
+    assert np.allclose(rec.get_times(segment_index=0), rec_saved.get_times(segment_index=0))
+
+    # Save
+    rec_saved_par = rec.save(
+        folder=cache_folder / f"recording_with_time_vector_par_{mp_context}",
+        format="binary",
+        n_jobs=2,
+        mp_context=mp_context,
+    )
+    assert np.allclose(rec.get_times(segment_index=0), rec_saved_par.get_times(segment_index=0))
+
+    # Now reset_times and save again, to check that the time vector is not saved
+    rec_saved.reset_times()
+    rec_saved_no_time_vector = rec_saved.save(
+        folder=cache_folder / f"recording_without_time_vector_{mp_context}", format="binary"
+    )
+    assert not rec_saved_no_time_vector.has_time_vector(segment_index=0)
+
+    # Now make sure the same happens if we save in parallel with multiple jobs, which requires pickling/unpickling
+    # the recording object
+    rec_saved_no_time_vector_par = rec_saved.save(
+        folder=cache_folder / f"recording_without_time_vector_par_{mp_context}",
+        format="binary",
+        n_jobs=2,
+        mp_context=mp_context,
+    )
+    assert not rec_saved_no_time_vector_par.has_time_vector(segment_index=0)
+
+
+@pytest.mark.parametrize(
+    "save_kwargs",
+    [
+        dict(format="binary"),
+        dict(format="memory", sharedmem=False),
+        dict(format="memory", sharedmem=True),
+        dict(format="zarr"),
+    ],
+    ids=["binary", "numpy", "sharedmem", "zarr"],
+)
+def test_save_with_t_start_on_some_segments(tmp_path, save_kwargs):
+    rec = generate_recording(num_channels=2, durations=[0.5, 0.2, 0.1], sampling_frequency=1000.0)
+    rec.shift_times(100.0, segment_index=1)
+    assert rec.get_segment_t_starts() == [None, 100.0, None]
+
+    if save_kwargs["format"] == "binary":
+        save_kwargs = dict(save_kwargs, folder=tmp_path / "saved")
+    elif save_kwargs["format"] == "zarr":
+        save_kwargs = dict(save_kwargs, folder=tmp_path / "saved.zarr")
+    saved = rec.save(**save_kwargs)
+
+    # load() builds the recording again from what was saved, e.g. from binary.json for the binary format
+    for rec_to_check in (saved, load(saved.to_dict())):
+        assert rec_to_check.get_segment_t_starts() == [None, 100.0, None]
+        for segment_index in range(rec.get_num_segments()):
+            assert type(rec_to_check.get_start_time(segment_index)) is float
+            assert rec_to_check.get_start_time(segment_index) == rec.get_start_time(segment_index)
+            assert np.array_equal(rec_to_check.get_times(segment_index), rec.get_times(segment_index))
+            assert np.array_equal(
+                rec_to_check.get_traces(segment_index=segment_index), rec.get_traces(segment_index=segment_index)
+            )
 
 
 if __name__ == "__main__":

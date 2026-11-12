@@ -1,5 +1,4 @@
 import numpy as np
-from warnings import warn
 
 from spikeinterface.core import SortingAnalyzer, BaseSorting
 from .base import BaseWidget, to_attr
@@ -33,16 +32,8 @@ class UnitPresenceWidget(BaseWidget):
         bin_duration_s: float = 0.05,
         smooth_sigma: float = 4.5,
         backend: str | None = None,
-        sorting: BaseSorting | None = None,
         **backend_kwargs,
     ):
-
-        if sorting is not None:
-            # When removed, make `sorting_analyzer_or_sorting` a required argument rather than None.
-            deprecation_msg = "`sorting` argument is deprecated and will be removed in version 0.105.0. Please use `sorting_analyzer_or_sorting` instead"
-            warn(deprecation_msg, category=FutureWarning, stacklevel=2)
-            sorting_analyzer_or_sorting = sorting
-
         sorting = self.ensure_sorting(sorting_analyzer_or_sorting)
 
         if segment_index is None:
@@ -63,7 +54,6 @@ class UnitPresenceWidget(BaseWidget):
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
