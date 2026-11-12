@@ -1,17 +1,17 @@
 import numpy as np
 import importlib.util
 
+from spikeinterface.core.node_pipeline import (
+    PeakDetector,
+)
+from spikeinterface.core.recording_tools import get_channel_distances
+from .by_channel import ByChannelTorchPeakDetector, ByChannelPeakDetector
+
 numba_spec = importlib.util.find_spec("numba")
 if numba_spec is not None:
     HAVE_NUMBA = True
 else:
     HAVE_NUMBA = False
-
-from spikeinterface.core.node_pipeline import (
-    PeakDetector,
-)
-from spikeinterface.core.recording_tools import get_channel_distances
-from .by_channel import ByChannelTorchPeakDetector
 
 torch_spec = importlib.util.find_spec("torch")
 if torch_spec is not None:
@@ -29,8 +29,6 @@ if opencl_spec is not None:
 else:
     HAVE_PYOPENCL = False
 
-from .by_channel import ByChannelPeakDetector
-
 
 class LocallyExclusivePeakDetector(PeakDetector):
     """Detect peaks using the "locally exclusive" method."""
@@ -42,10 +40,13 @@ class LocallyExclusivePeakDetector(PeakDetector):
 
     # this is because numba
     need_first_call_before_pipeline = True
-    params_doc = ByChannelPeakDetector.params_doc + """
+    params_doc = (
+        ByChannelPeakDetector.params_doc
+        + """
     radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
+    )
 
     def __init__(
         self,
@@ -148,7 +149,6 @@ if HAVE_NUMBA:
         keep_peak = np.ones(npeaks, dtype="bool")
         next_start = 0
         for i in range(npeaks):
-
             if (samples_inds[i] < exclude_sweep_size + 1) or (
                 samples_inds[i] >= (num_samples - exclude_sweep_size - 1)
             ):
@@ -195,10 +195,13 @@ class LocallyExclusiveTorchPeakDetector(ByChannelTorchPeakDetector):
     engine = "torch"
     need_noise_levels = True
     preferred_mp_context = "spawn"
-    params_doc = ByChannelPeakDetector.params_doc + """
+    params_doc = (
+        ByChannelPeakDetector.params_doc
+        + """
     radius_um: float
         The radius to use to select neighbour channels for locally exclusive detection.
     """
+    )
 
     def __init__(
         self,
@@ -265,10 +268,13 @@ class LocallyExclusiveOpenCLPeakDetector(LocallyExclusivePeakDetector):
     engine = "opencl"
     preferred_mp_context = None
     need_noise_levels = True
-    params_doc = LocallyExclusiveTorchPeakDetector.params_doc + """
+    params_doc = (
+        LocallyExclusiveTorchPeakDetector.params_doc
+        + """
     opencl_context_kwargs: None or dict
        kwargs to create the opencl context
     """
+    )
 
     def __init__(
         self,

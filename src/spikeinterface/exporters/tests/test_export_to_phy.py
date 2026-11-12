@@ -6,13 +6,6 @@ import pytest
 from spikeinterface.core import generate_ground_truth_recording, create_sorting_analyzer
 from spikeinterface.exporters import export_to_phy
 
-from spikeinterface.exporters.tests.common import (
-    make_sorting_analyzer,
-    sorting_analyzer_dense_for_export,
-    sorting_analyzer_sparse_for_export,
-    sorting_analyzer_with_group_for_export,
-)
-
 
 def test_export_to_phy_dense(sorting_analyzer_dense_for_export, create_cache_folder):
     cache_folder = create_cache_folder
@@ -286,13 +279,3 @@ def test_export_to_phy_add_waveforms_missing_extension(create_cache_folder):
     assert not (output_folder / "_phy_spikes_subset.spikes.npy").is_file()
     assert not (output_folder / "_phy_spikes_subset.channels.npy").is_file()
     assert not (output_folder / "_phy_spikes_subset.waveforms.npy").is_file()
-
-
-if __name__ == "__main__":
-    sorting_analyzer_sparse = make_sorting_analyzer(sparse=True)
-    sorting_analyzer_group = make_sorting_analyzer(sparse=False, with_group=True)
-    sorting_analyzer_dense = make_sorting_analyzer(sparse=False)
-
-    test_export_to_phy_dense(sorting_analyzer_dense)
-    test_export_to_phy_sparse(sorting_analyzer_sparse)
-    test_export_to_phy_by_property(sorting_analyzer_group)

@@ -107,7 +107,7 @@ def test_templates_from_svd(recording, peaks, job_kwargs):
     peaks_svd, sparse_mask, svd_model = extract_peaks_svd(
         recording, peaks, n_components=1, ms_before=1, ms_after=1, job_kwargs=job_kwargs
     )
-    templates = get_templates_from_peaks_and_svd(
+    _ = get_templates_from_peaks_and_svd(
         recording,
         peaks,
         peaks["channel_index"],

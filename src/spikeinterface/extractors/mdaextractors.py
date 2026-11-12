@@ -43,8 +43,7 @@ class MdaRecordingExtractor(BaseRecording):
         dtype = self._diskreadmda.dt()
         num_channels = self._diskreadmda.N1()
         assert geom.shape[0] == self._diskreadmda.N1(), (
-            f"Incompatible dimensions between geom.csv and timeseries "
-            f"file: {geom.shape[0]} <> {self._diskreadmda.N1()}"
+            f"Incompatible dimensions between geom.csv and timeseries file: {geom.shape[0]} <> {self._diskreadmda.N1()}"
         )
         sampling_frequency = float(self._dataset_params["samplerate"])
         BaseRecording.__init__(
@@ -102,7 +101,7 @@ class MdaRecordingExtractor(BaseRecording):
         """
         job_kwargs = fix_job_kwargs(job_kwargs)
         assert recording.get_num_segments() == 1, (
-            "MdaRecording.write_recording() can only write a single segment " "recording"
+            "MdaRecording.write_recording() can only write a single segment recording"
         )
         save_path = Path(save_path)
         save_path.mkdir(parents=True, exist_ok=True)
@@ -434,7 +433,7 @@ class DiskReadMda:
             tmp_fname = _download_bytes_to_tmpfile(self._path, offset, offset + self._header.num_bytes_per_entry * N)
             try:
                 ret = self._read_chunk_1d_helper(tmp_fname, N, offset=0)
-            except:
+            except Exception:
                 ret = None
             return ret
         return self._read_chunk_1d_helper(self._path, N, offset=offset)
@@ -482,7 +481,7 @@ def _read_header(path):
             raise Exception("Problem downloading bytes from " + path)
         try:
             ret = _read_header(tmp_fname)
-        except:
+        except Exception:
             ret = None
         Path(tmp_fname).unlink()
         return ret
@@ -490,7 +489,7 @@ def _read_header(path):
     f = open(path, "rb")
     try:
         dt_code = _read_int32(f)
-        num_bytes_per_entry = _read_int32(f)
+        _read_int32(f)  # num_bytes_per_entry: unused, but must be read to advance the file pointer
         num_dims = _read_int32(f)
         uses64bitdims = False
         if num_dims < 0:
@@ -689,7 +688,7 @@ def _writemda(X, fname, dt):
         print(f"Unexpected data type: {dt}")
         return False
 
-    if type(fname) == str:
+    if type(fname) is str:
         f = open(fname, "wb")
     else:
         f = fname
@@ -706,13 +705,13 @@ def _writemda(X, fname, dt):
         bytes0 = X.astype(dt).tobytes(order="F")
         f.write(bytes0)
 
-        if type(fname) == str:
+        if type(fname) is str:
             f.close()
         return True
     except Exception as e:  # catch *all* exceptions
         traceback.print_exc()
         print(e)
-        if type(fname) == str:
+        if type(fname) is str:
             f.close()
         return False
 
@@ -791,7 +790,7 @@ def appendmda(X, path):
 
 
 def file_extension(fname):
-    if type(fname) == str:
+    if type(fname) is str:
         filename, ext = os.path.splitext(fname)
         return ext
     else:
@@ -817,7 +816,7 @@ def _write_int64(f, val):
 def _header_from_file(f):
     try:
         dt_code = _read_int32(f)
-        num_bytes_per_entry = _read_int32(f)
+        _read_int32(f)  # num_bytes_per_entry: unused, but must be read to advance the file pointer
         num_dims = _read_int32(f)
         uses64bitdims = False
         if num_dims < 0:

@@ -42,7 +42,6 @@ else:
 
 
 if HAVE_NUMBA:
-
     ##########################
     # isocut zone
 
@@ -284,7 +283,6 @@ def isosplit(
     """
 
     if initial_labels is None:
-
         if n_init >= X.shape[0]:
             # protect against too high n_init compared to sample size
             warnings.warn(f"isosplit : n_init {n_init} is too big compared to sample size {X.shape[0]}")
@@ -367,7 +365,6 @@ def isosplit(
                 break
 
             if active_labels.size > 1:
-
                 # Find the pairs to compare on this iteration
                 # These will be closest pairs of active clusters that have not yet
                 # been compared in this pass

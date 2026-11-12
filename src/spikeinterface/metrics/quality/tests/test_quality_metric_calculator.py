@@ -217,7 +217,7 @@ def test_quality_metrics_with_periods():
             periods[idx]["end_sample_index"] = period_end
             periods[idx]["segment_index"] = segment_index
 
-    metrics_ext_periods = compute_quality_metrics(
+    _ = compute_quality_metrics(
         sorting_analyzer,
         metric_names=None,
         skip_pc_metrics=True,
@@ -239,7 +239,7 @@ def test_quality_metrics_with_periods():
 
     # should not fail if external periods are the same as valid unit periods
     valid_periods = sorting_analyzer.get_extension("valid_unit_periods").get_data(outputs="numpy")
-    metrics_ext_periods = compute_quality_metrics(
+    _ = compute_quality_metrics(
         sorting_analyzer,
         metric_names=None,
         skip_pc_metrics=True,
@@ -261,7 +261,6 @@ def test_quality_metrics_with_periods():
 
 
 if __name__ == "__main__":
-
     sorting_analyzer = get_sorting_analyzer()
     print(sorting_analyzer)
 

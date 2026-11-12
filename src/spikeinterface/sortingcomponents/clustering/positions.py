@@ -1,5 +1,4 @@
 # """Sorting components: clustering"""
-from pathlib import Path
 import importlib.util
 
 import numpy as np

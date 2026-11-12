@@ -26,16 +26,16 @@ class BaseEvent(BaseExtractor):
         if not isinstance(structured_dtype, dict):
             structured_dtype = {chan_id: structured_dtype for chan_id in channel_ids}
         else:
-            assert all(
-                chan_id in structured_dtype for chan_id in channel_ids
-            ), "Missing some channel_ids from structured_dtype dict keys"
+            assert all(chan_id in structured_dtype for chan_id in channel_ids), (
+                "Missing some channel_ids from structured_dtype dict keys"
+            )
 
         # check dtype fields (if present)
         for _, dtype in structured_dtype.items():
             if dtype.names is not None:
-                assert (
-                    "time" in dtype.names or "timestamp" in dtype.names
-                ), "The event dtype need to have the 'time' or 'timestamp' field"
+                assert "time" in dtype.names or "timestamp" in dtype.names, (
+                    "The event dtype need to have the 'time' or 'timestamp' field"
+                )
 
         self.structured_dtype = structured_dtype
 

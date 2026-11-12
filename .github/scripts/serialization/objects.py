@@ -140,7 +140,6 @@ def _check_recording_with_probe(rec, check_extra_data=None):
 
 
 def _build_recording_with_interleaved_probes():
-    import numpy as np
     from probeinterface import ProbeGroup, generate_linear_probe
     from spikeinterface.core import generate_recording
 

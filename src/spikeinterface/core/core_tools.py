@@ -502,7 +502,7 @@ def check_paths_relative(input_dict, relative_folder) -> bool:
 
         # check relative is possible
         try:
-            p2 = _relative_to(p, relative_folder)
+            _ = _relative_to(p, relative_folder)
         except ValueError:
             not_possible.append(p)
             continue
@@ -562,8 +562,6 @@ def make_paths_absolute(input_dict, base_folder) -> dict:
         A copy of the input dict with modified paths.
     """
     base_folder = Path(base_folder)
-    # use as_posix instead of str to make the path unix like even on window
-    func = lambda p: (base_folder / p).resolve().absolute().as_posix()
 
     path_elements_in_dict = [e for e in extractor_dict_iterator(input_dict) if element_is_path(e)]
     output_dict = deepcopy(input_dict)
@@ -981,10 +979,10 @@ def load_annotations_from_folder(folder: str | Path, extractor: "BaseExtractor")
 def save_provenance_to_folder(folder: str | Path, extractor: "BaseExtractor", relative_to: str | Path | None = None):
     folder = Path(folder)
     if extractor.check_serializability("json"):
-        provenance_file_path = folder / f"provenance.json"
+        provenance_file_path = folder / "provenance.json"
         extractor.dump_to_json(file_path=provenance_file_path, relative_to=relative_to)
     elif extractor.check_serializability("pickle"):
-        provenance_file = folder / f"provenance.pkl"
+        provenance_file = folder / "provenance.pkl"
         extractor.dump_to_pickle(provenance_file, relative_to=folder)
     else:
         warnings.warn("The extractor is not serializable to file. The provenance will not be saved.")

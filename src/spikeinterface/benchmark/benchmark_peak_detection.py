@@ -17,7 +17,6 @@ from .benchmark_plot_tools import fit_sigmoid, sigmoid
 
 
 class PeakDetectionBenchmark(Benchmark):
-
     def __init__(self, recording, gt_sorting, params, gt_peaks, exhaustive_gt=True, delta_t_ms=0.2):
         self.recording = recording
         self.gt_sorting = gt_sorting
@@ -233,9 +232,7 @@ class PeakDetectionStudy(BenchmarkStudy):
         import matplotlib.pyplot as plt
 
         if ax is None:
-            fig, ax = plt.subplots(1, figsize=figsize)
-        else:
-            fig = ax.get_figure()
+            _, ax = plt.subplots(1, figsize=figsize)
 
         results = {}
         labels = []
@@ -283,7 +280,6 @@ class PeakDetectionStudy(BenchmarkStudy):
             fig = ax.get_figure()
 
         for key in case_keys:
-
             import sklearn.metrics
 
             gt_templates = self.get_result(key)["gt_templates"]
@@ -292,7 +288,6 @@ class PeakDetectionStudy(BenchmarkStudy):
             distances = np.zeros(num_templates)
 
             for i in range(num_templates):
-
                 a = gt_templates[i].flatten()
                 b = found_templates[i].flatten()
 

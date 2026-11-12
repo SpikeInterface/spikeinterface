@@ -7,7 +7,6 @@ import numpy as np
 
 
 class TestUnitLocationsExtension(AnalyzerExtensionCommonTestSuite):
-
     @pytest.mark.parametrize(
         "params",
         [
@@ -60,7 +59,6 @@ def test_2d_and_3d_unit_localization():
     analyzer_2D.compute(["random_spikes", "templates"])
 
     for method in ["center_of_mass", "grid_convolution", "monopolar_triangulation", "max_channel"]:
-
         analyzer_2D.compute("unit_locations", method=method)
         analyzer_3D.compute("unit_locations", method=method)
         unit_locations_2D = analyzer_2D.get_extension("unit_locations").get_data()

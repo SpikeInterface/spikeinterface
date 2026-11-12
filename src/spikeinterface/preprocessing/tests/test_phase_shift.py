@@ -20,7 +20,6 @@ def create_shifted_channel():
 
     ratio = 10
     sr = sr_h / ratio
-    times = times_h[0::ratio]
     delay_sample = 4
     sig0 = sig_h[0::ratio]
     sig1 = sig_h[delay_sample::ratio]

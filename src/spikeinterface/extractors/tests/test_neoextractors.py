@@ -2,7 +2,6 @@ import unittest
 import platform
 import subprocess
 import os
-from packaging import version
 import importlib.util
 
 import pytest
@@ -37,7 +36,6 @@ from spikeinterface.extractors.extractor_classes import (
     AxonaRecordingExtractor,
     Plexon2EventExtractor,
     MaxwellRecordingExtractor,
-    CedRecordingExtractor,
     AlphaOmegaRecordingExtractor,
     Spike2RecordingExtractor,
     EDFRecordingExtractor,

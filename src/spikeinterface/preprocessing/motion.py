@@ -12,7 +12,6 @@ import numpy as np
 from spikeinterface.core import get_noise_levels, fix_job_kwargs
 from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core.core_tools import SIJsonEncoder
-from spikeinterface.core.job_tools import _shared_job_kwargs_doc
 from spikeinterface.core import BaseRecording
 
 motion_options_preset = {
@@ -332,11 +331,10 @@ def compute_motion(
     """
 
     # local import are important because "sortingcomponents" is not important by default
-    from spikeinterface.sortingcomponents.peak_detection import detect_peaks, detect_peak_methods
+    from spikeinterface.sortingcomponents.peak_detection import detect_peaks
     from spikeinterface.sortingcomponents.peak_selection import select_peaks
-    from spikeinterface.sortingcomponents.peak_localization import localize_peaks, peak_localization_methods
-    from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, run_node_pipeline
-    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion, estimate_motion_methods
+    from spikeinterface.sortingcomponents.peak_localization import localize_peaks
+    from spikeinterface.sortingcomponents.motion.motion_estimation import estimate_motion
 
     # get preset params and update if necessary
     detect_kwargs, select_kwargs, localize_peaks_kwargs, estimate_motion_kwargs = _update_motion_kwargs(
@@ -382,8 +380,6 @@ def compute_motion(
 
     else:
         # localization is done after select_peaks()
-        pipeline_nodes = None
-
         t0 = time.perf_counter()
         method_kwargs = detect_kwargs.copy()
         method_kwargs["noise_levels"] = noise_levels
@@ -654,7 +650,6 @@ def load_motion_info(folder):
     if (folder / "motion").is_dir():
         motion = Motion.load(folder / "motion")
     else:
-
         is_legacy_format = True
         required_files = ["spatial_bins.npy", "temporal_bins.npy", "motion.npy"]
         for required_file in required_files:
@@ -662,7 +657,6 @@ def load_motion_info(folder):
                 is_legacy_format = False
 
         if is_legacy_format:
-
             warnings.warn("Trying to load Motion from the legacy format")
 
             spatial_bins_um = np.load(folder / "spatial_bins.npy")
@@ -672,7 +666,6 @@ def load_motion_info(folder):
             motion = Motion(displacement=displacement, temporal_bins_s=temporal_bins_s, spatial_bins_um=spatial_bins_um)
 
         else:
-
             warnings.warn("No `motion` object in folder. `motion_info` is loaded with `motion` equal to `None`.")
 
             motion = None

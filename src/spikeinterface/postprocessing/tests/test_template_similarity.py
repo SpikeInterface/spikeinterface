@@ -14,7 +14,6 @@ from spikeinterface.postprocessing.template_similarity import (
 )
 
 if importlib.util.find_spec("numba") is not None:
-
     HAVE_NUMBA = True
     from spikeinterface.postprocessing.template_similarity import _compute_similarity_matrix_numba
 else:
@@ -25,7 +24,6 @@ SKIP_NUMBA = pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 
 
 class TestSimilarityExtension(AnalyzerExtensionCommonTestSuite):
-
     @pytest.mark.parametrize(
         "params",
         [

@@ -1,7 +1,6 @@
 from pathlib import Path
 import json
 
-from copy import deepcopy
 import shutil
 
 import numpy as np
@@ -191,7 +190,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         # All properties, annotations, and probe information are already saved in the folder,
         # so we don't need to include them in the si_folder.json
         cached = BinaryFolderRecording(folder_path=folder_path)
-        si_folder_path = folder_path / f"si_folder.json"
+        si_folder_path = folder_path / "si_folder.json"
         cached.dump_to_json(
             file_path=si_folder_path,
             relative_to=folder_path,

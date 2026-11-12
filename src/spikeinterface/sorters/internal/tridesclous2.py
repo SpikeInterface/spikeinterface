@@ -1,6 +1,3 @@
-import shutil
-import importlib
-
 from .si_based import ComponentsBasedSorter
 
 from copy import deepcopy
@@ -10,13 +7,12 @@ from spikeinterface.core import (
     NumpySorting,
     estimate_templates_with_accumulator,
     Templates,
-    compute_sparsity,
     ms_to_samples,
 )
 
 from spikeinterface.core.job_tools import fix_job_kwargs
 
-from spikeinterface.preprocessing import bandpass_filter, common_reference, zscore, whiten
+from spikeinterface.preprocessing import bandpass_filter, common_reference, whiten
 from spikeinterface.core.base import minimum_spike_dtype
 
 from spikeinterface.sortingcomponents.tools import cache_preprocessing, clean_cache_preprocessing
@@ -142,7 +138,6 @@ class Tridesclous2Sorter(ComponentsBasedSorter):
         # preprocessing
         if params["apply_preprocessing"]:
             if params["apply_motion_correction"]:
-
                 rec_for_motion = recording_raw
                 if params["preprocessing_dict"] is None:
                     rec_for_motion = bandpass_filter(

@@ -79,9 +79,9 @@ def export_to_phy(
     assert isinstance(sorting_analyzer, SortingAnalyzer), "sorting_analyzer must be a SortingAnalyzer object"
     sorting = sorting_analyzer.sorting
 
-    assert (
-        sorting_analyzer.get_num_segments() == 1
-    ), f"Export to phy only works with one segment, your extractor has {sorting_analyzer.get_num_segments()} segments"
+    assert sorting_analyzer.get_num_segments() == 1, (
+        f"Export to phy only works with one segment, your extractor has {sorting_analyzer.get_num_segments()} segments"
+    )
     num_chans = sorting_analyzer.get_num_channels()
     fs = sorting_analyzer.sampling_frequency
 
@@ -159,7 +159,7 @@ def export_to_phy(
     with (output_folder / "params.py").open("w") as f:
         if use_relative_path:
             if copy_binary:
-                f.write(f"dat_path = r'recording.dat'\n")
+                f.write("dat_path = r'recording.dat'\n")
             elif rec_path == "None":
                 f.write(f"dat_path = {rec_path}\n")
             else:
@@ -168,7 +168,7 @@ def export_to_phy(
             f.write(f"dat_path = r'{str(rec_path)}'\n")
         f.write(f"n_channels_dat = {num_chans}\n")
         f.write(f"dtype = '{dtype_str}'\n")
-        f.write(f"offset = 0\n")
+        f.write("offset = 0\n")
         f.write(f"sample_rate = {fs}\n")
         f.write(f"hp_filtered = {sorting_analyzer.is_filtered()}")
 

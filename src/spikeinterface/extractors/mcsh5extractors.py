@@ -111,7 +111,7 @@ def openMCSH5File(filename, stream_id):
     stream_name = "Stream_" + str(stream_id)
     analog_stream_names = list(rf.require_group("/Data/Recording_0/AnalogStream").keys())
     assert stream_name in analog_stream_names, (
-        f"Specified stream does not exist. " f"Available streams: {analog_stream_names}"
+        f"Specified stream does not exist. Available streams: {analog_stream_names}"
     )
 
     stream = rf.require_group("/Data/Recording_0/AnalogStream/" + stream_name)
@@ -141,9 +141,9 @@ def openMCSH5File(filename, stream_id):
     timestep_avg = np.mean(TimeVals[1:] - TimeVals[0:-1])
     timestep_min = np.min(TimeVals[1:] - TimeVals[0:-1])
     timestep_max = np.min(TimeVals[1:] - TimeVals[0:-1])
-    assert all(
-        np.abs(np.array((timestep_min, timestep_max)) - timestep_avg) / timestep_avg < 1e-6
-    ), "Time steps vary by more than 1 ppm"
+    assert all(np.abs(np.array((timestep_min, timestep_max)) - timestep_avg) / timestep_avg < 1e-6), (
+        "Time steps vary by more than 1 ppm"
+    )
     samplingRate = 1.0 / timestep_avg
 
     mcs_info = {

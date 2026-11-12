@@ -44,12 +44,10 @@ edge artifacts, even though this is less memory-efficient.
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-from pathlib import Path
 import pandas as pd
 import seaborn as sns
 
 import spikeinterface as si
-import spikeinterface.extractors as se
 import spikeinterface.preprocessing as spre
 import spikeinterface.widgets as sw
 from spikeinterface.core import generate_ground_truth_recording

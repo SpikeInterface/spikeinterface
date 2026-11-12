@@ -8,9 +8,9 @@ def check_ipywidget_backend():
     import matplotlib
 
     mpl_backend = matplotlib.get_backend()
-    assert (
-        "ipympl" in mpl_backend or "widget" in mpl_backend
-    ), "To use the 'ipywidgets' backend, you have to set %matplotlib widget"
+    assert "ipympl" in mpl_backend or "widget" in mpl_backend, (
+        "To use the 'ipywidgets' backend, you have to set %matplotlib widget"
+    )
 
 
 class TimeSlider(W.HBox):
@@ -80,7 +80,7 @@ class TimeSlider(W.HBox):
             max=self.frame_limits[self.segment_index] - 1,
             readout=False,
             continuous_update=False,
-            layout=W.Layout(width=f"70%"),
+            layout=W.Layout(width="70%"),
         )
 
         self.slider.observe(self.slider_moved, names="value", type="change")
@@ -184,7 +184,7 @@ class TimeSlider(W.HBox):
     def time_label_changed(self, change=None):
         try:
             new_time = float(self.time_label.value)
-        except:
+        except Exception:
             new_time = None
         if new_time is not None:
             self.update_time(new_time=new_time, update_slider=True)

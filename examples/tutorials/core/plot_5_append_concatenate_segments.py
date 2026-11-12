@@ -22,11 +22,10 @@ Here is the difference. Imagine we have 2 recordings with 2 and 3 segments respe
 Here is a short example.
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 
-from spikeinterface import NumpyRecording, NumpySorting
+from spikeinterface import NumpyRecording
 from spikeinterface import append_recordings, concatenate_recordings
 
 ##############################################################################
