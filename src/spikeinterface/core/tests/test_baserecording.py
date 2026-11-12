@@ -11,12 +11,11 @@ import pytest
 import numpy as np
 from numpy.testing import assert_raises
 
-from probeinterface import Probe, ProbeGroup, generate_linear_probe
+from probeinterface import Probe
 
 from spikeinterface.core import (
     BinaryRecordingExtractor,
     NumpyRecording,
-    load,
     get_default_zarr_compressor,
     load,
 )
@@ -366,7 +365,7 @@ def test_BaseRecording(create_cache_folder):
 
     # test save to zarr
     compressor = get_default_zarr_compressor()
-    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressor=compressor)
+    rec_zarr = rec2.save(format="zarr", folder=cache_folder / "recording", compressors=compressor)
     rec_zarr_loaded = load(cache_folder / "recording.zarr")
     # annotations is False because Zarr adds compression ratios
     check_recordings_equal(rec2, rec_zarr, return_in_uV=False, check_annotations=False, check_properties=True)
@@ -378,7 +377,7 @@ def test_BaseRecording(create_cache_folder):
         assert rec2.get_annotation(annotation_name) == rec_zarr_loaded.get_annotation(annotation_name)
 
     rec_zarr2 = rec2.save(
-        format="zarr", folder=cache_folder / "recording_channel_chunk", compressor=compressor, channel_chunk_size=2
+        format="zarr", folder=cache_folder / "recording_channel_chunk", compressors=compressor, channel_chunk_size=2
     )
     rec_zarr2_loaded = load(cache_folder / "recording_channel_chunk.zarr")
 
@@ -477,7 +476,7 @@ def test_time_slice_with_time_vector():
     sampling_frequency = 10_000.0
     recording = generate_recording(durations=[1.0], num_channels=3, sampling_frequency=sampling_frequency)
     times = 1 + np.arange(0, 10_000) / sampling_frequency
-    recording.set_times(times=times, segment_index=0, with_warning=False)
+    recording.set_times(times=times, segment_index=0)
 
     sliced_recording_times = recording.time_slice(start_time=1.1, end_time=1.8)
     sliced_recording_frames = recording.frame_slice(start_frame=1000, end_frame=8000)
@@ -504,7 +503,7 @@ def test_save_load_binary_with_time_vector(create_cache_folder, mp_context):
     times = rec.get_times(segment_index=0) + 100.0
 
     # Set time vector
-    rec.set_times(times=times, segment_index=0, with_warning=False)
+    rec.set_times(times=times, segment_index=0)
     # Save
     rec_saved = rec.save(folder=cache_folder / f"recording_with_time_vector_{mp_context}", format="binary")
     assert np.allclose(rec.get_times(segment_index=0), rec_saved.get_times(segment_index=0))
@@ -534,6 +533,39 @@ def test_save_load_binary_with_time_vector(create_cache_folder, mp_context):
         mp_context=mp_context,
     )
     assert not rec_saved_no_time_vector_par.has_time_vector(segment_index=0)
+
+
+@pytest.mark.parametrize(
+    "save_kwargs",
+    [
+        dict(format="binary"),
+        dict(format="memory", sharedmem=False),
+        dict(format="memory", sharedmem=True),
+        dict(format="zarr"),
+    ],
+    ids=["binary", "numpy", "sharedmem", "zarr"],
+)
+def test_save_with_t_start_on_some_segments(tmp_path, save_kwargs):
+    rec = generate_recording(num_channels=2, durations=[0.5, 0.2, 0.1], sampling_frequency=1000.0)
+    rec.shift_times(100.0, segment_index=1)
+    assert rec.get_segment_t_starts() == [None, 100.0, None]
+
+    if save_kwargs["format"] == "binary":
+        save_kwargs = dict(save_kwargs, folder=tmp_path / "saved")
+    elif save_kwargs["format"] == "zarr":
+        save_kwargs = dict(save_kwargs, folder=tmp_path / "saved.zarr")
+    saved = rec.save(**save_kwargs)
+
+    # load() builds the recording again from what was saved, e.g. from binary.json for the binary format
+    for rec_to_check in (saved, load(saved.to_dict())):
+        assert rec_to_check.get_segment_t_starts() == [None, 100.0, None]
+        for segment_index in range(rec.get_num_segments()):
+            assert type(rec_to_check.get_start_time(segment_index)) is float
+            assert rec_to_check.get_start_time(segment_index) == rec.get_start_time(segment_index)
+            assert np.array_equal(rec_to_check.get_times(segment_index), rec.get_times(segment_index))
+            assert np.array_equal(
+                rec_to_check.get_traces(segment_index=segment_index), rec.get_traces(segment_index=segment_index)
+            )
 
 
 if __name__ == "__main__":

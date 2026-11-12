@@ -204,6 +204,6 @@ class PeakActivityMapWidget(BaseWidget):
             artists = artists + (im,)
 
         if with_color_bar:
-            self.cbar = self.figure.colorbar(im, ax=self.ax, label=f"Peak rate (Hz)")
+            self.cbar = self.figure.colorbar(im, ax=self.ax, label="Peak rate (Hz)")
 
         return artists

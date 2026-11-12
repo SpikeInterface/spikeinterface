@@ -1,5 +1,4 @@
 import warnings
-import importlib.util
 from multiprocessing import get_context
 from threadpoolctl import threadpool_limits
 from tqdm.auto import tqdm
@@ -10,11 +9,6 @@ from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
 
 from .tools import aggregate_sparse_features, FeaturesLoader
 
-if importlib.util.find_spec("numba") is not None:
-    import numba
-else:
-    pass
-# isocut requires numba
 
 # important all DEBUG and matplotlib are left in the code intentionally
 
@@ -352,7 +346,6 @@ class LocalFeatureClustering:
             if final_features.shape[1] == 1:
                 final_features = np.hstack((final_features, np.zeros_like(final_features)))
 
-            sl = slice(None, None, 100)
             for k in np.unique(possible_labels):
                 mask = possible_labels == k
                 ax = axs[0]
@@ -364,7 +357,7 @@ class LocalFeatureClustering:
                 ax.plot(flatten_wfs[mask].T, color=colors[k], alpha=0.1)
                 if k > -1:
                     ax.plot(np.median(flatten_wfs[mask].T, axis=1), color=colors[k], lw=2)
-                ax.set_xlabel(f"PCA features")
+                ax.set_xlabel("PCA features")
 
                 ax = axs[3]
                 if n_pca_features == 1:

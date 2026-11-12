@@ -8,7 +8,6 @@ Here is a gallery of all the available widgets using SortingAnalyzer objects.
 import matplotlib.pyplot as plt
 
 import spikeinterface as si
-import spikeinterface.extractors as se
 import spikeinterface.widgets as sw
 
 ##############################################################################

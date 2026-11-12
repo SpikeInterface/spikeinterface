@@ -245,9 +245,9 @@ def bombcell_label_units(
         if external_metrics is None:
             raise ValueError("Either sorting_analyzer or external_metrics must be provided")
         if isinstance(external_metrics, list):
-            assert all(
-                isinstance(df, pd.DataFrame) for df in external_metrics
-            ), "All items in external_metrics must be DataFrames"
+            assert all(isinstance(df, pd.DataFrame) for df in external_metrics), (
+                "All items in external_metrics must be DataFrames"
+            )
             combined_metrics = pd.concat(external_metrics, axis=1)
         else:
             combined_metrics = external_metrics

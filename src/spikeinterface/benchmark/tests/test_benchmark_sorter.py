@@ -10,18 +10,20 @@ from spikeinterface.benchmark import SorterStudy
 @pytest.fixture(scope="module")
 def create_simple_study(tmp_path_factory):
     study_folder = tmp_path_factory.mktemp("sorter_study_folder")
+    cache_folder = tmp_path_factory.mktemp("recording_cache_folder")
     if study_folder.is_dir():
         shutil.rmtree(study_folder)
-    _create_simple_study(study_folder)
+    _create_simple_study(study_folder, cache_folder)
     return study_folder
 
 
 @pytest.fixture(scope="module")
 def create_complex_study(tmp_path_factory):
     study_folder = tmp_path_factory.mktemp("sorter_study_folder_complex")
+    cache_folder = tmp_path_factory.mktemp("recording_cache_folder_complex")
     if study_folder.is_dir():
         shutil.rmtree(study_folder)
-    _create_complex_study(study_folder)
+    _create_complex_study(study_folder, cache_folder)
     return study_folder
 
 
@@ -29,9 +31,13 @@ def simple_preprocess(rec):
     return bandpass_filter(rec)
 
 
-def _create_simple_study(study_folder):
+def _create_simple_study(study_folder, cache_folder):
     rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=42)
     rec1, gt_sorting1 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=91)
+
+    # cache recordings
+    rec0 = rec0.save(folder=cache_folder / "rec0")
+    rec1 = rec1.save(folder=cache_folder / "rec1")
 
     datasets = {
         "toy_tetrode": (rec0, gt_sorting0),
@@ -59,14 +65,16 @@ def _create_simple_study(study_folder):
         },
     }
 
-    study = SorterStudy.create(
+    _ = SorterStudy.create(
         study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"]
     )
     # print(study)
 
 
-def _create_very_simple_study(study_folder):
+def _create_very_simple_study(study_folder, cache_folder):
     rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=42)
+
+    rec0 = rec0.save(folder=cache_folder / "rec0")
 
     datasets = {
         "toy_tetrode": (rec0, gt_sorting0),
@@ -92,17 +100,23 @@ def _create_very_simple_study(study_folder):
         },
     }
 
-    study = SorterStudy.create(
+    _ = SorterStudy.create(
         study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"]
     )
     # print(study)
 
 
-def _create_complex_study(study_folder):
+def _create_complex_study(study_folder, cache_folder):
     rec0, gt_sorting0 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=42)
     rec1, gt_sorting1 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=91)
     rec2, gt_sorting2 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=91)
     rec3, gt_sorting3 = generate_ground_truth_recording(num_channels=4, durations=[30.0], seed=91)
+
+    # cache recordings
+    rec0 = rec0.save(folder=cache_folder / "rec0")
+    rec1 = rec1.save(folder=cache_folder / "rec1")
+    rec2 = rec2.save(folder=cache_folder / "rec2")
+    rec3 = rec3.save(folder=cache_folder / "rec3")
 
     datasets = {
         "toy_tetrode": (rec0, gt_sorting0),
@@ -231,7 +245,7 @@ def _create_complex_study(study_folder):
         },
     }
 
-    study = SorterStudy.create(
+    _ = SorterStudy.create(
         study_folder, datasets=datasets, cases=cases, levels=["sorter_name", "processing", "probe_type"]
     )
 
@@ -252,13 +266,16 @@ def test_SorterStudy(create_simple_study):
 
     # this is from the base class
     rt = study.get_run_times()
+    assert rt is not None
     # rt = study.plot_run_times()
     # import matplotlib.pyplot as plt
     # plt.show()
 
     perf_by_unit = study.get_performance_by_unit()
+    assert perf_by_unit is not None
     # print(perf_by_unit)
     count_units = study.get_count_units()
+    assert count_units is not None
     # print(count_units)
 
 
@@ -310,28 +327,23 @@ def test_add_remove_cases(create_simple_study):
 
 
 if __name__ == "__main__":
-    study_folder_simple = Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudy"
-    if study_folder_simple.exists():
-        shutil.rmtree(study_folder_simple)
-    _create_simple_study(_create_very_simple_study)
-    test_SorterStudy(study_folder_simple)
+    import tempfile
 
-    study_folder_very_simple = (
-        Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_AddRemoveCases"
-    )
-    if study_folder_very_simple.exists():
-        shutil.rmtree(study_folder_very_simple)
-    _create_very_simple_study(_create_very_simple_study)
-    test_add_remove_cases(_create_very_simple_study)
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_folder = Path(tmp_dir)
+        cache_folder = tmp_folder / "cache"
+        study_folder_simple = tmp_folder / "study_simple"
+        _create_simple_study(study_folder_simple, cache_folder)
+        test_SorterStudy(study_folder_simple)
 
-    study_folder_complex = (
-        Path(__file__).resolve().parents[4] / "cache_folder" / "benchmarks" / "test_SorterStudy_complex"
-    )
-    if study_folder_complex.exists():
-        shutil.rmtree(study_folder_complex)
-    _create_complex_study(study_folder_complex)
-    test_get_grouped_keys_mapping(study_folder_complex)
-    test_add_remove_cases(create_simple_study)
+        study_folder_very_simple = tmp_folder / "study_very_simple"
+        _create_very_simple_study(study_folder_very_simple, cache_folder / "very_simple")
+        test_add_remove_cases(study_folder_very_simple)
+
+        study_folder_complex = tmp_folder / "study_complex"
+        _create_complex_study(study_folder_complex, cache_folder / "complex")
+        test_get_grouped_keys_mapping(study_folder_complex)
+        test_add_remove_cases(study_folder_complex)
 
 # # test out all plots and levels
 # import matplotlib.pyplot as plt

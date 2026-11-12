@@ -106,7 +106,7 @@ class ShellScript:
         try:
             retcode = self._process.wait(timeout=timeout)
             return retcode
-        except:
+        except Exception:
             return None
 
     def cleanup(self) -> None:
@@ -133,7 +133,7 @@ class ShellScript:
             try:
                 self._process.wait(timeout=0.02)
                 return
-            except:
+            except Exception:
                 pass
 
     def kill(self) -> None:
@@ -144,7 +144,7 @@ class ShellScript:
         self._process.send_signal(signal.SIGKILL)
         try:
             self._process.wait(timeout=1)
-        except:
+        except Exception:
             print("WARNING: unable to kill shell script.")
             pass
 
@@ -157,7 +157,7 @@ class ShellScript:
         try:
             self._process.wait(timeout=timeout)
             return True
-        except:
+        except Exception:
             return False
 
     def elapsedTimeSinceStart(self) -> float | None:
@@ -208,7 +208,7 @@ def _rmdir_with_retries(dirname, num_retries, delay_between_tries=1):
         try:
             shutil.rmtree(dirname)
             break
-        except:
+        except Exception:
             if retry_num < num_retries:
                 print(f"Retrying to remove directory: {dirname}")
                 time.sleep(delay_between_tries)

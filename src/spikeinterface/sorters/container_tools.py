@@ -8,14 +8,19 @@ import warnings
 # TODO move this inside functions
 
 
-from spikeinterface.core.core_tools import recursive_path_modifier, _get_paths_list
+from spikeinterface.core.core_tools import recursive_path_modifier, _get_paths_list, is_path_remote
 
 
 def find_recording_folders(d):
     """Finds all recording folders 'paths' in a dict"""
 
     path_list = _get_paths_list(d=d)
-    folders_to_mount = [Path(p).resolve().parent for p in path_list]
+    # Remote paths (URLs) are read over the network from inside the container, so there is nothing
+    # to mount for them.
+    local_path_list = [p for p in path_list if not is_path_remote(p)]
+    folders_to_mount = [Path(p).resolve().parent for p in local_path_list]
+    if len(folders_to_mount) == 0:
+        return []
 
     try:  # this will fail if on different drives (Windows)
         base_folders_to_mount = [Path(os.path.commonpath(folders_to_mount))]
@@ -97,7 +102,6 @@ class ContainerClient:
             elif Path(sif_file).exists():
                 singularity_image = sif_file
             else:
-
                 docker_image = Client.load("docker://" + container_image)
                 if docker_image and len(docker_image.tags) > 0:
                     tag = docker_image.tags[0]
@@ -111,7 +115,7 @@ class ContainerClient:
                 raise FileNotFoundError(f"Unable to locate container image {container_image}")
 
             # bin options
-            singularity_bind = ",".join([f'{volume_src}:{volume["bind"]}' for volume_src, volume in volumes.items()])
+            singularity_bind = ",".join([f"{volume_src}:{volume['bind']}" for volume_src, volume in volumes.items()])
             options = ["--bind", singularity_bind]
 
             # gpu options
@@ -273,6 +277,6 @@ def install_package_in_container(
         raise ValueError(f"install_package_incontainer, wrong installation_mode={installation_mode}")
 
     if isinstance(res_output, str) and "ERROR" in res_output.upper():
-        warnings.warn(f"pip install of {package_name} in container may have failed. " f"pip output:\n{res_output}")
+        warnings.warn(f"pip install of {package_name} in container may have failed. pip output:\n{res_output}")
 
     return res_output

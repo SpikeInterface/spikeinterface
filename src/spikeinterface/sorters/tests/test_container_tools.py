@@ -64,6 +64,12 @@ def test_find_recording_folders(setup_module):
         assert len(f3) == 3
 
 
+def test_find_recording_folders_skips_remote_paths(tmp_path):
+    """A remote path is read from inside the container, so it is not mounted (GH-2370)."""
+    recording_dict = {"kwargs": {"file_paths": [str(tmp_path / "recording.bin"), "s3://bucket/recording.zarr"]}}
+    assert find_recording_folders(recording_dict) == [tmp_path.resolve()]
+
+
 @pytest.mark.skipif(ON_GITHUB, reason="Docker tests don't run on github: test locally")
 def test_ContainerClient():
     mode = "docker"
@@ -95,24 +101,24 @@ def test_install_package_in_container():
     container_client = ContainerClient(mode, container_image, volumes, py_user_base, extra_kwargs)
     container_client.start()
 
-    txt = container_client.run_command("pip install --user --upgrade pip")
+    _ = container_client.run_command("pip install --user --upgrade pip")
 
     # # pypi installation
-    txt = install_package_in_container(container_client, "neo", installation_mode="pypi", version="0.11.0")
+    _ = install_package_in_container(container_client, "neo", installation_mode="pypi", version="0.11.0")
     # print(txt)
-    txt = container_client.run_command("pip list")
+    _ = container_client.run_command("pip list")
     # print(txt)
 
     # # github installation
-    txt = install_package_in_container(
+    _ = install_package_in_container(
         container_client, "spikeinterface", extra="[full]", installation_mode="github", version="0.99.0"
     )
     # print(txt)
-    txt = container_client.run_command("pip list")
+    _ = container_client.run_command("pip list")
     # print(txt)
 
     # folder installation
-    txt = install_package_in_container(
+    _ = install_package_in_container(
         container_client,
         "spikeinterface",
         extra="[full]",
@@ -121,7 +127,7 @@ def test_install_package_in_container():
     )
     # print(txt)
 
-    txt = container_client.run_command("pip list")
+    _ = container_client.run_command("pip list")
     # print(txt)
 
     container_client.stop()

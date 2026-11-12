@@ -2,7 +2,6 @@
 
 import numpy as np
 
-from spikeinterface.curation.curation_tools import is_threshold_disabled
 from .base import BaseWidget, to_attr
 
 
@@ -38,9 +37,9 @@ class WaveformOverlayByLabelWidget(BaseWidget):
         self.check_extensions(sorting_analyzer, "templates")
         if labels_order is not None:
             assert len(labels_order) == len(np.unique(unit_labels)), "labels_order length must match unique unit types"
-            assert all(
-                [label in np.unique(unit_labels) for label in labels_order]
-            ), "All labels in labels_order must be present in unit_labels"
+            assert all([label in np.unique(unit_labels) for label in labels_order]), (
+                "All labels in labels_order must be present in unit_labels"
+            )
         else:
             labels_order = np.unique(unit_labels)
         plot_data = dict(

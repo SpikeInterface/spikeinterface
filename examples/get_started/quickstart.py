@@ -34,7 +34,6 @@ from pprint import pprint
 # The spikeinterface module by itself imports only the spikeinterface.core submodule
 # which is not useful for the end user
 
-import spikeinterface
 
 # We need to import one by one different submodules separately (preferred).
 # There are several modules:
@@ -50,9 +49,7 @@ import spikeinterface
 
 import spikeinterface as si  # import core only
 import spikeinterface.extractors as se
-import spikeinterface.preprocessing as spre
 import spikeinterface.sorters as ss
-import spikeinterface.postprocessing as spost
 import spikeinterface.metrics as sm
 import spikeinterface.comparison as sc
 import spikeinterface.exporters as sexp

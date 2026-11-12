@@ -418,7 +418,6 @@ class TridesclousPeeler(BaseTemplateMatching):
 
         all_spikes = []
         for start, stop, channel_motions in loop:
-
             local_residuals = residuals[start:stop]
 
             spikes_in_time_bin = []
@@ -782,7 +781,6 @@ def get_neighbors_spikes(sample_inds, chan_inds, delta_sample, near_chan_mask):
 
     neighbors_spikes_inds = []
     for i in range(sample_inds.size):
-
         inds = np.flatnonzero(np.abs(sample_inds - sample_inds[i]) < delta_sample)
         neighb = []
         for ind in inds:
@@ -817,7 +815,6 @@ def fit_one_amplitude_with_neighbors(
         amplitude = np.sum(template.flatten() * wf.flatten()) / template_norms[cluster_index]
 
     else:
-
         lim0 = min(start, np.min(neighbors_spikes["sample_index"]) - nbefore)
         lim1 = max(stop, np.max(neighbors_spikes["sample_index"]) + nafter)
 
@@ -833,7 +830,6 @@ def fit_one_amplitude_with_neighbors(
 
         num_spikes_to_fit = 1 + np.sum(mask_not_fitted)
         x = np.zeros((lim1 - lim0, num_chans, num_spikes_to_fit), dtype="float32")
-        wanted_channel_mask = chan_sparsity_mask
         construct_prediction_sparse(
             np.array([local_spike]),
             x[:, :, 0],

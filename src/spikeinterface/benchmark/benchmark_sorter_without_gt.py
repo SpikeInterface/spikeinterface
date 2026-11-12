@@ -4,7 +4,7 @@ This replace the previous `GroundTruthStudy`
 
 import numpy as np
 from spikeinterface.core import NumpySorting, create_sorting_analyzer
-from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
+from .benchmark_base import Benchmark, BenchmarkStudy
 from spikeinterface.sorters import run_sorter
 from spikeinterface.comparison import compare_multiple_sorters
 
@@ -107,7 +107,6 @@ class SorterStudyWithoutGroundTruth(BenchmarkStudy):
         groups = self._get_comparison_groups()
 
         for data_key, group in groups.items():
-
             sorting_list = [self.get_result(key)["sorting"] for key in group]
             name_list = [key for key in group]
             multi_comp = compare_multiple_sorters(

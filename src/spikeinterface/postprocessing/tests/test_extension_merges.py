@@ -27,7 +27,6 @@ def test_correlograms_merge():
 
     for new_id_strategy in ["append", "take_first", "user"]:
         for merge_unit_groups, new_unit_id in zip(trial_merges, new_unit_ids):
-
             # first, compute the correlograms of the merged units using the merge method
             if new_id_strategy == "user":
                 merged_sorting_analyzer = sorting_analyzer.merge_units(
@@ -87,7 +86,6 @@ def test_acgs_3d_merge(sparse):
 
     for new_id_strategy in ["append", "take_first"]:
         for merge_unit_groups in trial_merges:
-
             merged_sorting_analyzer = sorting_analyzer.merge_units(
                 merge_unit_groups=merge_unit_groups, new_id_strategy=new_id_strategy
             )

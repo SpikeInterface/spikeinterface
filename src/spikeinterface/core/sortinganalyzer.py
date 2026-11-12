@@ -39,8 +39,22 @@ from .job_tools import split_job_kwargs, fix_job_kwargs
 from .numpyextractors import NumpySorting
 from .sparsity import ChannelSparsity, estimate_sparsity
 from .sortingfolder import NumpyFolderSorting
-from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open, _write_object_array
+from .zarrextractors import get_default_zarr_compressor, ZarrSortingExtractor, super_zarr_open
+from .zarr_tools import (
+    iterate_zarr_group,
+    get_zarr_attr_or_legacy_object,
+    write_json_array,
+    write_pickle_array,
+    read_encoded_array,
+)
 from .node_pipeline import run_node_pipeline
+
+# Ignore Zarr consolidated metadata warning
+warnings.filterwarnings(
+    "ignore",
+    message="Consolidated metadata is currently not part",
+    category=UserWarning,
+)
 
 # Typing hints
 PeakSignType = Literal["both", "neg", "pos"]
@@ -194,7 +208,6 @@ def create_sorting_analyzer(
 
     # Aggregate split recordings and sortings if they are provided as dicts
     if isinstance(sorting, dict) and isinstance(recording, dict):
-
         if sorting.keys() != recording.keys():
             raise ValueError(
                 f"Keys of `sorting`, {sorting.keys()}, and `recording`, {recording.keys()}, dicts do not match."
@@ -289,28 +302,28 @@ def create_sorting_analyzer(
                 **job_kwargs,
             )
     else:  # main_channel_indices provided as argument
-        assert (
-            len(main_channel_indices) == sorting.get_num_units()
-        ), "len(main_channel_indices) must equal the number of units in the `sorting`"
+        assert len(main_channel_indices) == sorting.get_num_units(), (
+            "len(main_channel_indices) must equal the number of units in the `sorting`"
+        )
         if sparsity is None and sparse:  # sparsity needs to be calculated
             sparsity_method = sparsity_kwargs.get("method", "radius")  # default method is radius
-            assert (
-                sparsity_method == "radius"
-            ), 'If you pass `main_channel_indices`, you need to use sparsity method "radius"'
+            assert sparsity_method == "radius", (
+                'If you pass `main_channel_indices`, you need to use sparsity method "radius"'
+            )
 
     # Handle sparsity
     if sparsity is not None:
         # some checks
         assert isinstance(sparsity, ChannelSparsity), "'sparsity' must be a ChannelSparsity object"
-        assert np.array_equal(
-            sorting.unit_ids, sparsity.unit_ids
-        ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
-        assert np.array_equal(
-            recording.channel_ids, sparsity.channel_ids
-        ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
-        assert all(
-            sparsity.mask[u, c] for u, c in enumerate(main_channel_indices)
-        ), "sparsity is not consistent with main_channel_indices"
+        assert np.array_equal(sorting.unit_ids, sparsity.unit_ids), (
+            "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
+        )
+        assert np.array_equal(recording.channel_ids, sparsity.channel_ids), (
+            "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
+        )
+        assert all(sparsity.mask[u, c] for u, c in enumerate(main_channel_indices)), (
+            "sparsity is not consistent with main_channel_indices"
+        )
     elif sparse:
         sparsity = estimate_sparsity(
             sorting,
@@ -526,9 +539,9 @@ class SortingAnalyzer:
         backend_options: dict[str, Any] | None = None,
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
-        assert (
-            main_channel_indices is not None
-        ), "To create a SortingAnalyzer you need to specify the main_channel_indices"
+        assert main_channel_indices is not None, (
+            "To create a SortingAnalyzer you need to specify the main_channel_indices"
+        )
 
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
@@ -714,7 +727,6 @@ class SortingAnalyzer:
         info_file = folder / "spikeinterface_info.json"
         settings_file = folder / "settings.json"
         sorting_folder = folder / "sorting"
-        sorting_provenance_file = folder / "sorting_provenance.json"
         sparsity_file = folder / "sparsity_mask.npy"
         recording_provenance_file = folder / "recording"  # .json (default) or .pickle (if not json-serializable)
         rec_attributes_file = recording_info_folder / "recording_attributes.json"
@@ -731,17 +743,8 @@ class SortingAnalyzer:
             json.dump(check_json(settings), f, indent=4)
 
         # Save the sorting output
-        sorting = sorting.save(folder=sorting_folder)
-
-        # Dump sorting provenance
-        if sorting.check_serializability("json"):
-            sorting.dump(sorting_provenance_file, relative_to=folder)
-        elif sorting.check_serializability("pickle"):
-            sorting.dump(sorting_provenance_file.with_suffix(".pickle"), relative_to=folder)
-        else:
-            warnings.warn(
-                "The sorting provenance is not serializable! The sorting provenance link will be lost for future load"
-            )
+        mmap_mode = "r" if lazy else None
+        sorting_cached = sorting.save(folder=sorting_folder, relative_to=folder, mmap_mode=mmap_mode)
 
         # Save sparsity
         if sparsity is not None:
@@ -776,7 +779,7 @@ class SortingAnalyzer:
 
         # Create SortingAnalyzer
         sorting_analyzer = SortingAnalyzer(
-            sorting=sorting,
+            sorting=sorting_cached,
             recording=recording,
             rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="binary_folder",
@@ -826,8 +829,16 @@ class SortingAnalyzer:
     def main_channel_indices(self):
         if self._main_channel_indices is None:
             sorting_main_channel_ids = self.get_sorting_property("main_channel_id")
-            if sorting_main_channel_ids is not None and self.has_recording():
-                main_channel_indices = self.recording.ids_to_indices(sorting_main_channel_ids)
+            if sorting_main_channel_ids is not None and (self.has_recording() or self.rec_attributes):
+                if self.has_recording():
+                    main_channel_indices = self.recording.ids_to_indices(sorting_main_channel_ids)
+                elif self.rec_attributes.get("channel_ids") is not None:
+                    channel_ids = np.array(self.rec_attributes.get("channel_ids"))
+                    main_channel_indices = np.array(
+                        [list(channel_ids).index(id) for id in sorting_main_channel_ids], dtype=int
+                    )
+                else:
+                    main_channel_indices = None
                 self._main_channel_indices = main_channel_indices
             else:
                 self._main_channel_indices = self._compute_main_channel_backwards_compatibility()
@@ -985,7 +996,7 @@ class SortingAnalyzer:
                     try:
                         recording = load(filename, base_folder=folder)
                         break
-                    except:
+                    except Exception:
                         pass
 
         # Load recording attributes
@@ -1025,6 +1036,7 @@ class SortingAnalyzer:
         assert mode in ("r+", "a", "r"), "mode must be 'r+', 'a' or 'r'"
 
         storage_options = self._backend_options.get("storage_options", {})
+
         zarr_root = super_zarr_open(self.folder, mode=mode, storage_options=storage_options)
         return zarr_root
 
@@ -1042,9 +1054,7 @@ class SortingAnalyzer:
         backend_options: dict | None,
         lazy: bool = False,
     ) -> "SortingAnalyzer":
-        # used by create and save_as
-
-        from .zarrextractors import add_sorting_to_zarr_group
+        from .zarrextractors import add_sorting_to_zarr_group, ZarrSortingExtractor
 
         is_remote = is_path_remote(folder)
         if not is_remote:
@@ -1057,8 +1067,13 @@ class SortingAnalyzer:
         storage_options = backend_options.get("storage_options", {})
         saving_options = backend_options.get("saving_options", {})
 
+        if not is_remote:
+            storage_options_kwargs = {}
+        else:
+            storage_options_kwargs = {"storage_options": storage_options}
+
         # Create zarr root group (and subgroups)
-        zarr_root = zarr.open(folder, mode="w", storage_options=storage_options)
+        zarr_root = zarr.open(folder, mode="w", **storage_options_kwargs)
         sorting_group = zarr_root.create_group("sorting")  # for sorting output
         recording_info_group = zarr_root.create_group("recording_info")  # rec_attributes and probe group
         zarr_root.create_group("extensions")  # used later
@@ -1071,47 +1086,27 @@ class SortingAnalyzer:
         settings = {"return_in_uV": return_in_uV, "peak_sign": peak_sign, "peak_mode": peak_mode}
         zarr_root.attrs["settings"] = check_json(settings)
 
-        # Save the sorting output
-        add_sorting_to_zarr_group(sorting, sorting_group, **saving_options)
-
-        # Dump sorting provenance
         relative_to = None if is_remote else folder
-        sort_dict = sorting.to_dict(relative_to=relative_to, recursive=True)
-        if sorting.check_serializability("json"):
-            _write_object_array(zarr_root, "sorting_provenance", check_json(sort_dict), codec="json")
-        elif sorting.check_serializability("pickle"):
-            try:
-                _write_object_array(zarr_root, "sorting_provenance", sort_dict, codec="pickle")
-            except:
-                warnings.warn(
-                    "Failed to serialize sorting provenance with Pickle Codec! "
-                    "The sorting provenance link will be lost for future load"
-                )
-        else:
-            warnings.warn(
-                "The sorting provenance is not serializable! "
-                "The sorting provenance link will be lost for future load"
-            )
+        # Save the sorting output
+        add_sorting_to_zarr_group(sorting, sorting_group, relative_to=folder, **saving_options)
+        sorting_cached = ZarrSortingExtractor(folder / "sorting", lazy_spike_vector=lazy)
 
         # Save sparsity
         if sparsity is not None:
-            zarr_root.create_dataset("sparsity_mask", data=sparsity.mask, **saving_options)
+            zarr_root.create_array("sparsity_mask", data=sparsity.mask, **saving_options)
 
         # Dump recording provenance
         if recording is not None:
             rec_dict = recording.to_dict(relative_to=relative_to, recursive=True)
             if recording.check_serializability("json"):
-                _write_object_array(zarr_root, "recording", check_json(rec_dict), codec="json")
-            elif recording.check_serializability("pickle"):
-                try:
-                    _write_object_array(zarr_root, "recording", rec_dict, codec="pickle")
-                except:
-                    warnings.warn(
-                        "Failed to serialize recording with Pickle Codec! "
-                        "The recording link will be lost for future load"
-                    )
+                compressors = saving_options.get("compressors", get_default_zarr_compressor())
+                write_json_array(zarr_root, "recording", check_json(rec_dict), compressors=compressors)
             else:
-                warnings.warn("The Recording is not serializable! The recording link will be lost for future load")
+                warnings.warn(
+                    "The recording is not JSON-serializable, so it is not saved in the zarr SortingAnalyzer, which "
+                    "will load without a recording. Use `set_temporary_recording()` after loading to attach it "
+                    "again, or save the SortingAnalyzer in 'binary_folder' format, which keeps it."
+                )
         else:
             assert rec_attributes is not None, "recording or rec_attributes must be provided"
             warnings.warn("Recording not provided, instantiating SortingAnalyzer in recordingless mode.")
@@ -1135,7 +1130,7 @@ class SortingAnalyzer:
 
         # Create SortingAnalyzer
         sorting_analyzer = SortingAnalyzer(
-            sorting=NumpySorting.from_sorting(sorting, with_metadata=True, copy_spike_vector=True),
+            sorting=sorting_cached,
             recording=recording,
             rec_attributes={**rec_attributes_to_save, "probegroup": probegroup},
             format="zarr",
@@ -1164,6 +1159,10 @@ class SortingAnalyzer:
 
         backend_options = {} if backend_options is None else backend_options
         storage_options = backend_options.get("storage_options", {})
+        if not is_path_remote(str(folder)):
+            storage_options_kwargs = {}
+        else:
+            storage_options_kwargs = storage_options
 
         # Open root group
         zarr_root = super_zarr_open(str(folder), mode="r", storage_options=storage_options)
@@ -1174,9 +1173,9 @@ class SortingAnalyzer:
         si_info = zarr_root.attrs["spikeinterface_info"]
         if parse(si_info["version"]) < parse("0.101.1"):
             try:
-                zarr_root_a = zarr.open(str(folder), mode="a", storage_options=storage_options)
+                zarr_root_a = zarr.open(str(folder), mode="a", **storage_options_kwargs)
                 zarr.consolidate_metadata(zarr_root_a.store)
-            except:
+            except Exception:
                 warnings.warn(
                     "The zarr store was not consolidated prior to v0.101.1. "
                     "This may lead to unexpected behavior in loading extensions. "
@@ -1200,31 +1199,26 @@ class SortingAnalyzer:
         settings = cls._handle_backward_compatibility_settings_pre_init(settings)
 
         # Load sorting (in memory or lazy)
-        if lazy:
-            copy_spike_vector = False
-            lazy_spike_vector = True
-        else:
-            copy_spike_vector = True
-            lazy_spike_vector = False
-        sorting = NumpySorting.from_sorting(
-            ZarrSortingExtractor(
-                folder,
-                zarr_group="sorting",
-                storage_options=storage_options,
-                lazy_spike_vector=lazy_spike_vector,
-            ),
-            with_metadata=True,
-            copy_spike_vector=copy_spike_vector,
+        zarr_sorting = ZarrSortingExtractor(
+            folder, zarr_group="sorting", storage_options=storage_options, lazy_spike_vector=lazy
         )
+        if lazy:
+            sorting = zarr_sorting
+        else:
+            sorting = NumpySorting.from_sorting(zarr_sorting, with_metadata=True, copy_spike_vector=True)
 
         # Load recording (if available)
         if recording is None:
-            rec_field = zarr_root.get("recording")
-            if rec_field is not None:
-                rec_dict = rec_field[0]
+            try:
+                rec_field = zarr_root.get("recording")
+                rec_dict = read_encoded_array(rec_field) if rec_field is not None else None
+            except Exception:
+                # legacy zarr v2 object array, which zarr v3 cannot open natively
+                rec_dict = get_zarr_attr_or_legacy_object(zarr_root, "recording")
+            if rec_dict is not None:
                 try:
                     recording = load(rec_dict, base_folder=folder)
-                except:
+                except Exception:
                     pass
 
         # Load recording attributes
@@ -1324,7 +1318,6 @@ class SortingAnalyzer:
             if self.format == "binary_folder":
                 np.save(self.folder / "sorting" / "properties" / f"{key}.npy", self.sorting.get_property(key))
             elif self.format == "zarr":
-
                 zarr_root = self._get_zarr_root(mode="r+")
                 prop_values = self.sorting.get_property(key)
                 if prop_values.dtype.kind == "O":
@@ -1333,7 +1326,7 @@ class SortingAnalyzer:
                     if key in zarr_root["sorting"]["properties"]:
                         zarr_root["sorting"]["properties"][key][:] = prop_values
                     else:
-                        zarr_root["sorting"]["properties"].create_dataset(name=key, data=prop_values, compressor=None)
+                        zarr_root["sorting"]["properties"].create_array(name=key, data=prop_values, compressors=None)
                     # IMPORTANT: we need to re-consolidate the zarr store!
                     zarr.consolidate_metadata(zarr_root.store)
 
@@ -1996,7 +1989,6 @@ class SortingAnalyzer:
 
         # remove units which do not pass the sparsity threshold
         if self.sparsity is not None and merging_mode == "soft":
-
             mergeable = self.are_units_mergeable(
                 merge_unit_groups,
                 sparsity_overlap=sparsity_overlap,
@@ -2183,36 +2175,41 @@ class SortingAnalyzer:
         """
         from .loading import load
 
+        sorting_provenance = None
         if self.format == "memory":
             # the original sorting provenance is not kept in that case
-            sorting_provenance = None
-
+            pass
         elif self.format == "binary_folder":
             for type in ("json", "pickle"):
-                filename = self.folder / f"sorting_provenance.{type}"
+                filename = self.folder / "sorting" / f"provenance.{type}"
                 sorting_provenance = None
+                if not filename.is_file():
+                    # Legacy location
+                    filename = self.folder / "sorting_provenance.json"
+                # try-except here is because it's not required to be able
+                # to load the sorting provenance, as the user might have deleted
+                # the original sorting folder
                 if filename.is_file():
-                    # try-except here is because it's not required to be able
-                    # to load the sorting provenance, as the user might have deleted
-                    # the original sorting folder
                     try:
                         sorting_provenance = load(filename, base_folder=self.folder)
                         break
-                    except:
+                    except Exception:
                         pass
-                        # sorting_provenance = None
-
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
             sorting_provenance = None
-            if "sorting_provenance" in zarr_root.keys():
+            # In zarr v3, sorting_provenance is stored in attributes (in zarr v2 it was an object array)
+            sort_dict = zarr_root["sorting"].attrs.get("provenance")
+            if sort_dict is None:
+                # Legacy
+                sort_dict = get_zarr_attr_or_legacy_object(zarr_root, "sorting_provenance")
+            if sort_dict is not None:
                 # try-except here is because it's not required to be able
                 # to load the sorting provenance, as the user might have deleted
                 # the original sorting folder
                 try:
-                    sort_dict = zarr_root["sorting_provenance"][0]
                     sorting_provenance = load(sort_dict, base_folder=self.folder)
-                except:
+                except Exception:
                     pass
 
         return sorting_provenance
@@ -2267,13 +2264,6 @@ class SortingAnalyzer:
         all_channel_ids = list(self.rec_attributes["channel_ids"])
         indices = np.array([all_channel_ids.index(id) for id in channel_ids], dtype=int)
         return indices
-
-    def get_recording_property(self, key) -> np.ndarray:
-        values = np.array(self.rec_attributes["properties"].get(key, None))
-        return values
-
-    def get_sorting_property(self, key) -> np.ndarray:
-        return self.sorting.get_property(key)
 
     def get_dtype(self):
         return self.rec_attributes["dtype"]
@@ -2351,9 +2341,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             extensions = {k: {} for k in input}
             if extension_params is not None:
                 for ext_name, ext_params in extension_params.items():
-                    assert (
-                        ext_name in input
-                    ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
+                    assert ext_name in input, (
+                        f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
+                    )
                     extensions[ext_name] = ext_params
             self.compute_several_extensions(extensions=extensions, save=save, verbose=verbose, **job_kwargs)
         else:
@@ -2409,9 +2399,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         # check dependencies
         if extension_class.need_recording:
-            assert (
-                self.has_recording() or self.has_temporary_recording()
-            ), f"Extension {extension_name} requires the recording"
+            assert self.has_recording() or self.has_temporary_recording(), (
+                f"Extension {extension_name} requires the recording"
+            )
         required_dependencies = extension_class.get_required_dependencies(**params)
         for dependency_name in required_dependencies:
             if "|" in dependency_name:
@@ -2429,7 +2419,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             else:
                 extension_instance.run(save=save, verbose=verbose)
             if not self._lazy:
-
                 for variable_name in extension_instance.data.keys():
                     # Materialize the data if not in lazy mode
                     if isinstance(extension_instance.data[variable_name], (np.memmap, zarr.Array)):
@@ -2556,9 +2545,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             try:
                 for extension_name, extension_params in extensions_with_pipeline.items():
                     extension_class = get_extension_class(extension_name)
-                    assert (
-                        self.has_recording() or self.has_temporary_recording()
-                    ), f"Extension {extension_name} requires the recording"
+                    assert self.has_recording() or self.has_temporary_recording(), (
+                        f"Extension {extension_name} requires the recording"
+                    )
 
                     extension_folder = self.folder / "extensions" / extension_name if gather_dest is not None else None
                     for variable_name in extension_class.nodepipeline_variables:
@@ -2614,7 +2603,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                         extension_instance._save_run_info()
                         extension_instance._save_data()
                         if self.format == "zarr":
-
                             zarr.consolidate_metadata(self._get_zarr_root().store)
                     if not self._lazy and gather_mode != "memory":
                         # Materialize the data if not in lazy mode
@@ -2656,10 +2644,16 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
-            if "extensions" in zarr_root.keys():
+            # Avoid iterating zarr_root.keys() because legacy v2 stores may contain
+            # object-dtype arrays (e.g. "recording", "sorting_provenance") that zarr v3
+            # cannot parse, causing ValueError on enumeration.
+            try:
                 extension_group = zarr_root["extensions"]
-                for extension_name in extension_group.keys():
-                    if "params" in extension_group[extension_name].attrs.keys():
+            except KeyError:
+                extension_group = None
+            if extension_group is not None:
+                for extension_name, extension in iterate_zarr_group(extension_group):
+                    if "params" in extension.attrs.keys():
                         saved_extension_names.append(extension_name)
 
         else:
@@ -2700,9 +2694,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             The loaded instance of the extension
 
         """
-        assert (
-            self.format != "memory"
-        ), "SortingAnalyzer.load_extension() does not work for format='memory' use SortingAnalyzer.get_extension() instead"
+        assert self.format != "memory", (
+            "SortingAnalyzer.load_extension() does not work for format='memory' use SortingAnalyzer.get_extension() instead"
+        )
 
         extension_class = get_extension_class(extension_name)
 
@@ -2728,7 +2722,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             if extension_folder.is_dir():
                 shutil.rmtree(extension_folder)
         if self.format == "zarr":
-
             zarr_root = self._get_zarr_root(mode="r+")
             if extension_name in (root := zarr_root["extensions"]):
                 del root[extension_name]
@@ -2852,7 +2845,6 @@ def _sort_extensions_by_dependency(extensions):
 
     i = 0
     while i < len(extensions_list):
-
         extension = extensions_list[i]
         extension_params = extension_params_list[i]
 
@@ -2877,10 +2869,8 @@ def _sort_extensions_by_dependency(extensions):
         # Otherwise, should check the dependency which has just been moved => at position i
         did_nothing = True
         for dependency in dependencies:
-
             # if dependency is on the right, move it left of the current dependency
             if dependency in extensions_list[i:]:
-
                 dependency_arg = extensions_list.index(dependency)
 
                 extension_params_list.pop(dependency_arg)
@@ -2947,9 +2937,9 @@ def register_result_extension(extension_class):
 
     already_registered = any(extension_class is ext for ext in _possible_extensions)
     if not already_registered:
-        assert all(
-            extension_class.extension_name != ext.extension_name for ext in _possible_extensions
-        ), "Extension name already exists"
+        assert all(extension_class.extension_name != ext.extension_name for ext in _possible_extensions), (
+            "Extension name already exists"
+        )
 
         _possible_extensions.append(extension_class)
 
@@ -2986,7 +2976,7 @@ def get_extension_class(extension_name: str, auto_import=True):
         if extension_name in _builtin_extensions:
             module = _builtin_extensions[extension_name]
             if auto_import:
-                imported_module = importlib.import_module(module)
+                _ = importlib.import_module(module)
                 extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
             else:
                 raise ValueError(
@@ -3402,23 +3392,28 @@ class AnalyzerExtension:
                 self.set_data(ext_data_name, ext_data)
         elif self.format == "zarr":
             extension_group = self._get_zarr_extension_group(mode="r")
-            for ext_data_name in extension_group.keys():
-                ext_data_ = extension_group[ext_data_name]
-                if "dict" in ext_data_.attrs:
-                    ext_data = ext_data_[0]
+            for ext_data_name, ext_data_ in iterate_zarr_group(extension_group):
+                if "encoding" in ext_data_.attrs:
+                    if lazy and ext_data_.attrs["encoding"] == "pickle":
+                        continue
+                    ext_data = read_encoded_array(ext_data_)
+                elif "dict" in ext_data_.attrs:
+                    # legacy json object array (spikeinterface<=0.105)
+                    ext_data = read_encoded_array(ext_data_)
                 elif "dataframe" in ext_data_.attrs:
                     import pandas as pd
 
                     index = ext_data_["index"]
                     ext_data = pd.DataFrame(index=index)
-                    for col in ext_data_.keys():
+                    for col, col_data in iterate_zarr_group(ext_data_):
                         if col != "index":
-                            ext_data.loc[:, col] = ext_data_[col][:]
+                            ext_data.loc[:, col] = col_data[:]
                     ext_data = ext_data.convert_dtypes()
                 elif "object" in ext_data_.attrs:
+                    # legacy pickle object array (spikeinterface<=0.105)
                     if lazy:
                         continue
-                    ext_data = ext_data_[0]
+                    ext_data = read_encoded_array(ext_data_)
                 else:
                     ext_data = ext_data_ if lazy else np.array(ext_data_[:])
                 self.set_data(ext_data_name, ext_data)
@@ -3516,18 +3511,17 @@ class AnalyzerExtension:
             self._save_run_info()
             self._save_data()
             if self.format == "zarr":
-
-                zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
+                zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root(mode="r+").store)
 
     def save(self):
+        self._reset_extension_folder()
         self._save_params()
         self._save_importing_provenance()
         self._save_run_info()
         self._save_data()
 
         if self.format == "zarr":
-
-            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root().store)
+            zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root(mode="r+").store)
 
     def _save_data(self):
         if self.format == "memory":
@@ -3541,11 +3535,10 @@ class AnalyzerExtension:
             import pandas as pd
 
             HAS_PANDAS = True
-        except:
+        except Exception:
             HAS_PANDAS = False
 
         if self.format == "binary_folder":
-
             extension_folder = self._get_binary_extension_folder()
             for ext_data_name, ext_data in self.data.items():
                 if isinstance(ext_data, dict):
@@ -3566,16 +3559,18 @@ class AnalyzerExtension:
                     try:
                         with (extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
                             pickle.dump(ext_data, f)
-                    except:
+                    except Exception:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-
             saving_options = self.sorting_analyzer._backend_options.get("saving_options", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
 
             # if compression is not externally given, we use the default
-            if "compressor" not in saving_options:
-                saving_options["compressor"] = get_default_zarr_compressor()
+            if "compressors" not in saving_options and "compressor" not in saving_options:
+                saving_options["compressors"] = get_default_zarr_compressor()
+            if "compressor" in saving_options:
+                saving_options["compressors"] = [saving_options["compressor"]]
+                del saving_options["compressor"]
 
             for ext_data_name, ext_data in self.data.items():
                 if isinstance(ext_data, zarr.Array):
@@ -3585,34 +3580,35 @@ class AnalyzerExtension:
                 if ext_data_name in extension_group:
                     del extension_group[ext_data_name]
                 if isinstance(ext_data, (dict, list)):
-                    ext_data_ = check_json(ext_data)
-                    _write_object_array(extension_group, ext_data_name, ext_data_, codec="json")
-                    extension_group[ext_data_name].attrs["dict"] = True
+                    write_json_array(
+                        extension_group, ext_data_name, check_json(ext_data), compressors=saving_options["compressors"]
+                    )
                 elif isinstance(ext_data, np.ndarray):
                     # only save the array if the dataset does not already exist, since it is created directly
                     # by the run_node_pipeline() function in the case of nodepipeline extensions
                     if ext_data_name not in extension_group:
-                        extension_group.create_dataset(name=ext_data_name, data=ext_data, **saving_options)
+                        extension_group.create_array(name=ext_data_name, data=ext_data, **saving_options)
                 elif HAS_PANDAS and isinstance(ext_data, pd.DataFrame):
                     df_group = extension_group.create_group(ext_data_name)
                     # first we save the index
                     indices = ext_data.index.to_numpy()
                     if indices.dtype.kind == "O":
                         indices = indices.astype(str)
-                    df_group.create_dataset(name="index", data=indices)
+                    df_group.create_array(name="index", data=indices)
                     for col in ext_data.columns:
                         col_data = ext_data[col].to_numpy()
                         if col_data.dtype.kind == "O":
                             col_data = col_data.astype(str)
-                        df_group.create_dataset(name=col, data=col_data)
+                        df_group.create_array(name=col, data=col_data)
                     df_group.attrs["dataframe"] = True
                 else:
                     # any object
                     try:
-                        _write_object_array(extension_group, ext_data_name, ext_data, codec="pickle")
-                    except:
+                        write_pickle_array(
+                            extension_group, ext_data_name, ext_data, compressors=saving_options["compressors"]
+                        )
+                    except Exception:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
-                    extension_group[ext_data_name].attrs["object"] = True
 
     def _reset_extension_folder(self):
         """
@@ -3635,7 +3631,6 @@ class AnalyzerExtension:
             extension_folder.mkdir(exist_ok=False, parents=True)
 
         elif self.format == "zarr":
-
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
             zarr.consolidate_metadata(zarr_root.store)
@@ -3650,7 +3645,6 @@ class AnalyzerExtension:
                 shutil.rmtree(extension_folder)
 
         elif self.format == "zarr":
-
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             if self.extension_name in zarr_root["extensions"]:
                 del zarr_root["extensions"][self.extension_name]
@@ -3706,8 +3700,6 @@ class AnalyzerExtension:
     def _save_params(self):
         params_to_save = self.params.copy()
 
-        self._reset_extension_folder()
-
         # TODO make sparsity local Result specific
         # if "sparsity" in params_to_save and params_to_save["sparsity"] is not None:
         #     assert isinstance(
@@ -3752,16 +3744,16 @@ class AnalyzerExtension:
                 extension_group.attrs["run_info"] = run_info
 
     def get_pipeline_nodes(self):
-        assert (
-            self.use_nodepipeline
-        ), "AnalyzerExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
+        assert self.use_nodepipeline, (
+            "AnalyzerExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
+        )
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):
         if self.run_info is not None:
-            assert self.run_info[
-                "run_completed"
-            ], f"You must run the extension {self.extension_name} before retrieving data"
+            assert self.run_info["run_completed"], (
+                f"You must run the extension {self.extension_name} before retrieving data"
+            )
         assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 

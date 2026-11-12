@@ -61,7 +61,7 @@ class KlustaSortingExtractor(BaseSorting):
             config_file = [f for f in klustafolder.iterdir() if f.suffix == ".prm"][0]
             config = read_python(str(config_file))
             sampling_frequency = config["traces"]["sample_rate"]
-        except Exception as e:
+        except Exception:
             print("Could not load sampling frequency info")
 
         kf_reader = h5py.File(kwikfile, "r")
@@ -96,9 +96,9 @@ class KlustaSortingExtractor(BaseSorting):
                     "cluster_group"
                 ]
 
-                assert (
-                    cluster_group in self.default_cluster_groups.keys()
-                ), f'cluster_group not in "default_dict: {cluster_group}'
+                assert cluster_group in self.default_cluster_groups.keys(), (
+                    f'cluster_group not in "default_dict: {cluster_group}'
+                )
                 cluster_group_name = self.default_cluster_groups[cluster_group]
 
                 if cluster_group_name.lower() in cs_to_exclude:

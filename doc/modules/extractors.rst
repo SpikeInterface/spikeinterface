@@ -175,6 +175,7 @@ For sorted data formats, we currently support:
 * **Neurodata Without Borders** :py:func:`~spikeinterface.extractors.read_nwb_sorting()`
 * **Neuroscope** :py:func:`~spikeinterface.extractors.read_neuroscope_sorting()`
 * **Neuralynx spikes** :py:func:`~spikeinterface.extractors.read_neuralynx_sorting()`
+* **NeuroExplorer spikes** :py:func:`~spikeinterface.extractors.read_neuroexplorer_sorting()`
 * **NPZ (created by SpikeInterface)** :py:func:`~spikeinterface.core.read_npz_sorting()`
 * **Plexon spikes** :py:func:`~spikeinterface.extractors.read_plexon_sorting()`
 * **Plexon 2 spikes** :py:func:`~spikeinterface.extractors.read_plexon2_sorting()`

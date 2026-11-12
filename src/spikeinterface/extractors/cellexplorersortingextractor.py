@@ -157,9 +157,9 @@ class CellExplorerSortingExtractor(BaseSorting):
             self.session_info_file_path = self.session_path / f"{self.session_id}.sessionInfo.mat"
 
         self.session_info_file_path = Path(self.session_info_file_path).absolute()
-        assert (
-            self.session_info_file_path.is_file()
-        ), f"No {self.session_id}.sessionInfo.mat file found in the {self.session_path}!, can't inferr sampling rate, please pass the sampling rate at initialization"
+        assert self.session_info_file_path.is_file(), (
+            f"No {self.session_id}.sessionInfo.mat file found in the {self.session_path}!, can't inferr sampling rate, please pass the sampling rate at initialization"
+        )
 
         session_info_mat = read_mat(self.session_info_file_path)
         rates = session_info_mat["sessionInfo"]["rates"]

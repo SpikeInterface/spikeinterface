@@ -2,7 +2,6 @@ import unittest
 import platform
 import subprocess
 import os
-from packaging import version
 import importlib.util
 
 import pytest
@@ -19,6 +18,7 @@ from spikeinterface.extractors.extractor_classes import (
     IntanRecordingExtractor,
     NeuroScopeRecordingExtractor,
     NeuroExplorerRecordingExtractor,
+    NeuroExplorerSortingExtractor,
     NeuroScopeSortingExtractor,
     NeuroNexusRecordingExtractor,
     PlexonRecordingExtractor,
@@ -36,7 +36,6 @@ from spikeinterface.extractors.extractor_classes import (
     AxonaRecordingExtractor,
     Plexon2EventExtractor,
     MaxwellRecordingExtractor,
-    CedRecordingExtractor,
     AlphaOmegaRecordingExtractor,
     Spike2RecordingExtractor,
     EDFRecordingExtractor,
@@ -270,6 +269,15 @@ class NeuroExplorerRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ]
 
 
+class NeuroExplorerSortingTest(SortingCommonTestSuite, unittest.TestCase):
+    ExtractorClass = NeuroExplorerSortingExtractor
+    downloads = ["neuroexplorer"]
+    entities = [
+        "neuroexplorer/File_neuroexplorer_1.nex",
+        "neuroexplorer/File_neuroexplorer_2.nex",
+    ]
+
+
 class NeuroScopeSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuroScopeSortingExtractor
     downloads = ["neuroscope"]
@@ -310,12 +318,12 @@ class NeuralynxRecordingTest(RecordingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxRecordingExtractor
     downloads = ["neuralynx"]
     entities = [
-        "neuralynx/Cheetah_v1.1.0/original_data",
-        "neuralynx/Cheetah_v4.0.2/original_data",
-        "neuralynx/Cheetah_v5.4.0/original_data",
-        "neuralynx/Cheetah_v5.5.1/original_data",
-        "neuralynx/Cheetah_v5.6.3/original_data",
-        "neuralynx/Cheetah_v5.7.4/original_data",
+        ("neuralynx/Cheetah_v1.1.0/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v4.0.2/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.4.0/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.5.1/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.6.3/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.7.4/original_data", dict(gap_tolerance_ms=1.0)),
     ]
 
 
@@ -323,8 +331,8 @@ class NeuralynxSortingTest(SortingCommonTestSuite, unittest.TestCase):
     ExtractorClass = NeuralynxSortingExtractor
     downloads = ["neuralynx"]
     entities = [
-        "neuralynx/Cheetah_v5.5.1/original_data",
-        "neuralynx/Cheetah_v5.6.3/original_data",
+        ("neuralynx/Cheetah_v5.5.1/original_data", dict(gap_tolerance_ms=1.0)),
+        ("neuralynx/Cheetah_v5.6.3/original_data", dict(gap_tolerance_ms=1.0)),
     ]
 
 

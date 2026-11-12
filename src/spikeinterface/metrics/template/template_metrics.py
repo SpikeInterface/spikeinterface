@@ -88,7 +88,6 @@ class ComputeTemplateMetrics(BaseMetricExtension):
 
         # For backwards compatibility - this reformats metrics_kwargs as metric_params
         if (metrics_kwargs := self.params.get("metrics_kwargs")) is not None:
-
             metric_params = {}
             for metric_name in self.params["metric_names"]:
                 metric_params[metric_name] = deepcopy(metrics_kwargs)

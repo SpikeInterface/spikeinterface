@@ -285,9 +285,9 @@ def make_match_count_matrix(
 
     num_segments_sorting1 = sorting1.get_num_segments()
     num_segments_sorting2 = sorting2.get_num_segments()
-    assert (
-        num_segments_sorting1 == num_segments_sorting2
-    ), "make_match_count_matrix : sorting1 and sorting2 must have the same segment number"
+    assert num_segments_sorting1 == num_segments_sorting2, (
+        "make_match_count_matrix : sorting1 and sorting2 must have the same segment number"
+    )
 
     n_jobs = fix_job_kwargs({"n_jobs": n_jobs})["n_jobs"]
     executor = ThreadPoolExecutor(max_workers=1) if ensure_symmetry and n_jobs > 1 else None
@@ -536,7 +536,6 @@ def make_best_match(agreement_scores, min_score) -> "tuple[pd.Series, pd.Series]
     best_match_21 : pd.Series
 
     """
-    import pandas as pd
 
     unit1_ids = np.array(agreement_scores.index)
     unit2_ids = np.array(agreement_scores.columns)
@@ -580,7 +579,6 @@ def make_hungarian_match(agreement_scores, min_score):
     hungarian_match_21 : pd.Series
 
     """
-    import pandas as pd
 
     unit1_ids = np.array(agreement_scores.index)
     unit2_ids = np.array(agreement_scores.columns)
@@ -954,7 +952,6 @@ def make_matching_events(times1, times2, delta):
 
     mask2 = membership_sorted[inds] == 2
     inds2 = inds[mask2]
-    n2 = np.sum(mask2)
     matching_event[n1:]["index1"] = spike_index_sorted[inds2 + 1]
     matching_event[n1:]["index2"] = spike_index_sorted[inds2]
     matching_event[n1:]["delta_frame"] = times_concat_sorted[inds2] - times_concat_sorted[inds2 + 1]
@@ -1369,9 +1366,9 @@ def compute_distance_matrix(
 
     num_segments_sorting1 = sorting1.get_num_segments()
     num_segments_sorting2 = sorting2.get_num_segments()
-    assert (
-        num_segments_sorting1 == num_segments_sorting2
-    ), "make_match_count_matrix : sorting1 and sorting2 must have the same number of segments"
+    assert num_segments_sorting1 == num_segments_sorting2, (
+        "make_match_count_matrix : sorting1 and sorting2 must have the same number of segments"
+    )
 
     squared_norm_1_vector = _compute_spike_vector_squared_norm(spike_vector_per_segment1, num_units1, delta_frames)
     squared_norm_2_vector = _compute_spike_vector_squared_norm(spike_vector_per_segment2, num_units2, delta_frames)
@@ -1442,9 +1439,9 @@ def calculate_generalized_comparison_metrics(
 
     num_segments_sorting1 = sorting1.get_num_segments()
     num_segments_sorting2 = sorting2.get_num_segments()
-    assert (
-        num_segments_sorting1 == num_segments_sorting2
-    ), "make_match_count_matrix : sorting1 and sorting2 must have the same number of segments"
+    assert num_segments_sorting1 == num_segments_sorting2, (
+        "make_match_count_matrix : sorting1 and sorting2 must have the same number of segments"
+    )
 
     squared_norm1 = _compute_spike_vector_squared_norm(spike_vector1_segments, num_units2, delta_frames)
     squared_norm2 = _compute_spike_vector_squared_norm(spike_vector2_segments, num_units2, delta_frames)

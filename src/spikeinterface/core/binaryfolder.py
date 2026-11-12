@@ -1,7 +1,6 @@
 from pathlib import Path
 import json
 
-from copy import deepcopy
 import shutil
 
 import numpy as np
@@ -15,7 +14,7 @@ from .core_tools import (
     make_paths_absolute,
     load_properties_from_folder,
     save_properties_to_folder,
-    save_extractor_provenance,
+    save_provenance_to_folder,
     save_annotations_to_folder,
     load_annotations_from_folder,
 )
@@ -145,7 +144,8 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         t_starts = recording.get_segment_t_starts()
         if recording.has_any_time_vector():
             file_timestamps_paths = [
-                folder_path / f"times_cached_seg{i}.raw" for i in range(recording.get_num_segments())
+                folder_path / f"times_cached_seg{i}.raw" if recording.has_time_vector(segment_index=i) else None
+                for i in range(recording.get_num_segments())
             ]
         else:
             file_timestamps_paths = None
@@ -160,7 +160,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         )
 
         save_properties_to_folder(folder_path / "properties", recording)
-        save_extractor_provenance(folder_path, recording)
+        save_provenance_to_folder(folder_path, recording, relative_to=folder_path)
         # new in version 0.105.0, before that annotations were handle by "si_folder.json" file
         save_annotations_to_folder(folder_path, recording)
 
@@ -190,7 +190,7 @@ class BinaryFolderRecording(BinaryRecordingExtractor):
         # All properties, annotations, and probe information are already saved in the folder,
         # so we don't need to include them in the si_folder.json
         cached = BinaryFolderRecording(folder_path=folder_path)
-        si_folder_path = folder_path / f"si_folder.json"
+        si_folder_path = folder_path / "si_folder.json"
         cached.dump_to_json(
             file_path=si_folder_path,
             relative_to=folder_path,

@@ -4,13 +4,6 @@ from pathlib import Path
 import importlib
 import numpy as np
 
-hdbscan_spec = importlib.util.find_spec("hdbscan")
-if hdbscan_spec is not None:
-    HAVE_HDBSCAN = True
-    import hdbscan
-else:
-    HAVE_HDBSCAN = False
-
 from spikeinterface.core.base import minimum_spike_dtype
 from spikeinterface.core.core_tools import ms_to_samples
 from spikeinterface.core.waveform_tools import estimate_templates
@@ -23,6 +16,14 @@ from spikeinterface.core.node_pipeline import (
     ExtractSparseWaveforms,
     PeakRetriever,
 )
+
+
+hdbscan_spec = importlib.util.find_spec("hdbscan")
+if hdbscan_spec is not None:
+    HAVE_HDBSCAN = True
+    import hdbscan
+else:
+    HAVE_HDBSCAN = False
 
 
 class RandomProjectionClustering:

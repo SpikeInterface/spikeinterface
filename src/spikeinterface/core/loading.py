@@ -1,4 +1,3 @@
-import warnings
 from pathlib import Path
 
 import json
@@ -99,7 +98,6 @@ def load(
         return _load_object_from_dict(d, object_type, base_folder=base_folder)
 
     elif is_local and file_path.is_dir():
-
         folder = file_path
         if folder.suffix == ".zarr":
             # Local zarr can be
@@ -195,7 +193,7 @@ def _guess_object_from_local_folder(folder):
     elif (folder / "waveforms").is_dir():
         # before the SortingAnlazer, it was WaveformExtractor (v<0.101)
         return "WaveformExtractor"
-    elif (folder / f"si_folder.json").is_file():
+    elif (folder / "si_folder.json").is_file():
         # In later versions (0.94<v<=0.105) we use the si_folder.json file
         # This should be Recording | Sorting
         return "Recording|Sorting"
@@ -204,8 +202,7 @@ def _guess_object_from_local_folder(folder):
         for dump_ext in ("json", "pkl", "pickle"):
             f = folder / f"cached.{dump_ext}"
             if f.is_file():
-                file = f
-        return "Recording|Sorting"
+                return "Recording|Sorting"
 
 
 def _load_object_from_folder(folder, object_type: str, **kwargs):
@@ -235,10 +232,10 @@ def _load_object_from_folder(folder, object_type: str, **kwargs):
         return analyzer
 
     elif object_type in ("Recording", "Sorting", "Recording|Sorting"):
-        if (folder / f"si_folder.json").is_file():
+        if (folder / "si_folder.json").is_file():
             # In later versions (0.94<v<0.102) we use the si_folder.json file
             # This should be Recording | Sorting
-            si_file = folder / f"si_folder.json"
+            si_file = folder / "si_folder.json"
         else:
             # For backward compatibility (v<=0.94) we check for the cached.json/pkl/pickle files
             for dump_ext in ("json", "pkl", "pickle"):
@@ -248,7 +245,6 @@ def _load_object_from_folder(folder, object_type: str, **kwargs):
         return load(si_file, base_folder=folder)
 
     elif object_type.startswith("Group"):
-
         sub_object_type = object_type.split("[")[1].split("]")[0]
         with open(folder / "spikeinterface_info.json", "r") as f:
             spikeinterface_info = json.load(f)
@@ -270,11 +266,15 @@ def _guess_object_from_zarr(zarr_folder):
         return _guess_object_from_dict(spikeinterface_info)
 
     # here it is the old fashion and a bit ambiguous
-    if "templates_array" in zarr_root.keys():
+    # get_zarr_group_keys is used to be compatible with both zarr v2 and zarr v3 groups
+    from .zarr_tools import get_zarr_group_keys
+
+    root_keys = get_zarr_group_keys(zarr_root)
+    if "templates_array" in root_keys:
         return "Templates"
-    elif "channel_ids" in zarr_root.keys() and "unit_ids" not in zarr_root.keys():
+    elif "channel_ids" in root_keys and "unit_ids" not in root_keys:
         return "Recording"
-    elif "unit_ids" in zarr_root.keys() and "channel_ids" not in zarr_root.keys():
+    elif "unit_ids" in root_keys and "channel_ids" not in root_keys:
         return "Sorting"
 
 

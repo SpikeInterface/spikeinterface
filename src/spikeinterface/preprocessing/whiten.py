@@ -76,9 +76,9 @@ class WhitenRecording(BasePreprocessor):
         dtype_ = fix_dtype(recording, dtype)
 
         if dtype_.kind == "i":
-            assert (
-                int_scale is not None
-            ), "For recording with dtype=int you must set the output dtype to float OR set a int_scale"
+            assert int_scale is not None, (
+                "For recording with dtype=int you must set the output dtype to float OR set a int_scale"
+            )
 
         if not apply_mean and regularize:
             raise ValueError("`apply_mean` must be `True` if regularising. `assume_centered` is fixed to `True`.")
