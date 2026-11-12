@@ -34,7 +34,6 @@ class RawDataQualityMetricsWidget(BaseWidget):
 
         recording_data = {}
         for recording_name, summary in results["chunked_results"].items():
-
             recording = recordings[recording_name]
             channel_indices = np.arange(recording.get_num_channels())
             if order_by_depth and recording.has_channel_location():
@@ -77,7 +76,6 @@ class RawDataQualityMetricsWidget(BaseWidget):
         self.axes = np.asarray(self.axes).reshape(2, num_recordings)
 
         for column_index, (recording_name, recording_data) in enumerate(data_plot["recording_data"].items()):
-
             rms_axis, psd_axis = self.axes[:, column_index]
 
             rms_axis.text(
@@ -91,7 +89,6 @@ class RawDataQualityMetricsWidget(BaseWidget):
             )
 
             if recording_data["rms"] is not None:
-
                 rms_axis.set_title("RMS", fontsize=15, pad=26)
                 rms_axis.text(
                     0.5,

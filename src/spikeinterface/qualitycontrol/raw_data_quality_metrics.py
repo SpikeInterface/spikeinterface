@@ -140,7 +140,6 @@ def raw_data_quality_metrics(
     all_chunk_results = {}
     all_rolling_rms = {}
     for recording_name, recording in recordings.items():
-
         if verbose:
             print(f"Running quality metrics for: {recording_name}")
 
@@ -280,7 +279,6 @@ def _compute_rms_psd_over_sparse_chunks(recording, sparse_slices_for_recording, 
         "freqs": [],
     }
     for segment_index in range(num_segments):
-
         seg_rms_median = np.median(np.stack(chunk_results["rms"][segment_index]), axis=0)
         seg_rms_quantile = np.percentile(seg_rms_median, [10, 90])
 
@@ -422,7 +420,6 @@ def _generate_skipped_chunk_slices(
 
     slices = []
     for segment_index in range(recording.get_num_segments()):
-
         num_samples = recording.get_num_samples(segment_index)
         max_start_frame = num_samples - chunk_size
         if max_start_frame < 0:
