@@ -251,7 +251,6 @@ def test_trace_padded_recording_retrieve_traces_with_partial_padding(recording, 
 
 @pytest.mark.parametrize("padding_start, padding_end", [(5, 5), (0, 5), (5, 0), (0, 0)])
 def test_trace_padded_recording_retrieve_only_start_padding(recording, padding_start, padding_end):
-    num_samples = recording.get_num_samples()
     num_channels = recording.get_num_channels()
 
     padded_recording = TracePaddedRecording(

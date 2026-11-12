@@ -81,7 +81,10 @@ def test_make_match_count_matrix_with_mismatched_sortings():
     delta_frames = 10
 
     sorting1, sorting2 = make_sorting(
-        [100, 200, 300, 400], [0, 0, 1, 0], [500, 600, 700, 800], [0, 0, 1, 0]  # Completely different spike times
+        [100, 200, 300, 400],
+        [0, 0, 1, 0],
+        [500, 600, 700, 800],
+        [0, 0, 1, 0],  # Completely different spike times
     )
 
     match_event_count = make_match_count_matrix(sorting1, sorting2, delta_frames)

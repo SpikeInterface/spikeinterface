@@ -17,7 +17,7 @@ from .time_series import TimeSeries, TimeSeriesSegment
 def write_binary(
     time_series: TimeSeries,
     file_paths: list[Path | str] | Path | str,
-    file_timestamps_paths: list[Path | str] | Path | str | None = None,
+    file_timestamps_paths: list[Path | str | None] | Path | str | None = None,
     dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
@@ -37,8 +37,9 @@ def write_binary(
         The time_series object to be saved to binary file
     file_paths : list[Path | str] | Path | str
         The path to the files to save data for each segment.
-    file_timestamps_paths : list[Path | str] | Path | str | None, default: None
-        The path to the timestamps file. If None, timestamps are not saved.
+    file_timestamps_paths : list[Path | str | None] | Path | str | None, default: None
+        The path to the timestamps file. If None, timestamps are not saved. In a list, an entry
+        is None for a segment without timestamps.
     dtype : dtype or None, default: None
         Type of the saved data
     add_file_extension, bool, default: True
@@ -299,6 +300,7 @@ def _write_time_series_to_zarr(
     dtype=None,
     chunks=None,
     shards=None,
+    buffer_megabytes=500,
     compressor_data=None,
     filters_data=None,
     compressor_times=None,
@@ -320,12 +322,14 @@ def _write_time_series_to_zarr(
         List of paths to traces datasets in the zarr group
     dataset_timestamps_paths : list or None, default: None
         List of paths to timestamps datasets in the zarr group. If None, timestamps are not saved.
+    dtype : dtype, default: None
+        Type of the saved data
     chunks : tuple or None, default: None
         Chunking dimensions to use for the zarr dataset.
     shards : tuple or None, default: None
         Sharding configuration for the zarr dataset.
-    dtype : dtype, default: None
-        Type of the saved data
+    buffer_megabytes : int, default: 500
+        Buffer size in megabytes for writing data to zarr
     compressor_data : zarr compressor or None, default: None
         Zarr compressor for data
     filters_data : list, default: None
@@ -348,9 +352,9 @@ def _write_time_series_to_zarr(
 
     assert dataset_paths is not None, "Provide 'dataset_paths' to save data in zarr format"
     if dataset_timestamps_paths is not None:
-        assert (
-            len(dataset_timestamps_paths) == time_series.get_num_segments()
-        ), "dataset_timestamps_paths should have the same length as the number of segments in the time_series"
+        assert len(dataset_timestamps_paths) == time_series.get_num_segments(), (
+            "dataset_timestamps_paths should have the same length as the number of segments in the time_series"
+        )
     else:
         dataset_timestamps_paths = [None] * time_series.get_num_segments()
 
@@ -403,7 +407,7 @@ def _write_time_series_to_zarr(
     # use executor (loop or workers)
     func = _write_zarr_chunk
     init_func = _init_zarr_worker
-    init_args = (time_series, zarr_datasets, dtype, zarr_timestamps_datasets)
+    init_args = (time_series, zarr_datasets, dtype, buffer_megabytes, zarr_timestamps_datasets)
     executor = TimeSeriesChunkExecutor(
         time_series, func, init_func, init_args, verbose=verbose, job_name="write_zarr", **job_kwargs
     )
@@ -420,9 +424,7 @@ def _write_time_series_to_zarr(
         zarr_group.create_array(name="t_starts", data=t_starts, compressors=None)
 
 
-def _init_zarr_worker(time_series, zarr_datasets, dtype, zarr_timestamps_datasets=None):
-    import zarr
-
+def _init_zarr_worker(time_series, zarr_datasets, dtype, buffer_megabytes, zarr_timestamps_datasets=None):
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx["time_series"] = time_series
@@ -432,6 +434,7 @@ def _init_zarr_worker(time_series, zarr_datasets, dtype, zarr_timestamps_dataset
     else:
         worker_ctx["zarr_timestamps_datasets"] = None
     worker_ctx["dtype"] = np.dtype(dtype)
+    worker_ctx["buffer_megabytes"] = buffer_megabytes
 
     return worker_ctx
 
@@ -447,15 +450,27 @@ def _write_zarr_chunk(segment_index, start_frame, end_frame, worker_ctx):
         zarr_timestamps_dataset = worker_ctx["zarr_timestamps_datasets"][segment_index]
     else:
         zarr_timestamps_dataset = None
+    write_buffer_megabytes = worker_ctx["buffer_megabytes"]
 
-    # apply function
-    data = time_series.get_data(
-        start_frame=start_frame,
-        end_frame=end_frame,
-        segment_index=segment_index,
-    )
-    data = data.astype(dtype)
-    zarr_dataset[start_frame:end_frame, :] = data
+    # With shards, a job covers a whole shard so only one worker writes to it. The data is computed one
+    # zarr chunk at a time to keep the memory of the chain small, and written as many whole chunks at a time
+    # as fit in write_buffer_megabytes because zarr reads and rewrites the whole shard on every write.
+    num_samples_per_read = zarr_dataset.chunks[0]
+    num_values_per_sample = int(np.prod(zarr_dataset.shape[1:]))
+    bytes_per_read = num_samples_per_read * num_values_per_sample * dtype.itemsize
+    num_reads_per_write = max(1, write_buffer_megabytes * 1_000_000 // bytes_per_read)
+    num_samples_per_write = num_reads_per_write * num_samples_per_read
+    for write_start in range(start_frame, end_frame, num_samples_per_write):
+        write_end = min(write_start + num_samples_per_write, end_frame)
+        data = np.empty((write_end - write_start,) + zarr_dataset.shape[1:], dtype=dtype)
+        for read_start in range(write_start, write_end, num_samples_per_read):
+            read_end = min(read_start + num_samples_per_read, write_end)
+            data[read_start - write_start : read_end - write_start] = time_series.get_data(
+                start_frame=read_start,
+                end_frame=read_end,
+                segment_index=segment_index,
+            )
+        zarr_dataset[write_start:write_end, :] = data
 
     if zarr_timestamps_dataset is not None:
         timestamps = time_series.get_times(start_frame=start_frame, end_frame=end_frame, segment_index=segment_index)

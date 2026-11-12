@@ -7,12 +7,10 @@ from spikeinterface.widgets import (
     plot_crosscorrelograms,
 )
 
-import numpy as np
 from .benchmark_base import Benchmark, BenchmarkStudy
 
 
 class MergingBenchmark(Benchmark):
-
     def __init__(self, recording, splitted_sorting, params, gt_sorting, splitted_cells=None):
         self.recording = recording
         self.splitted_sorting = splitted_sorting
@@ -45,7 +43,6 @@ class MergingBenchmark(Benchmark):
 
 
 class MergingStudy(BenchmarkStudy):
-
     benchmark_class = MergingBenchmark
 
     def create_benchmark(self, key):

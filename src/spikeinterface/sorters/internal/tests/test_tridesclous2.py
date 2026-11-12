@@ -1,6 +1,5 @@
 import unittest
 
-import pytest
 
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
@@ -26,7 +25,7 @@ class Tridesclous2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase
 
         sorter_params["gather_mode"] = "npy"
 
-        sorting = run_sorter(
+        _ = run_sorter(
             sorter_name,
             recording,
             folder=output_folder,

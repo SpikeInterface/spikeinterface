@@ -56,7 +56,7 @@ def pytest_collection_modifyitems(config, items):
 
         try:
             rel_path = Path(item.fspath).relative_to(modules_location)
-        except:
+        except Exception:
             continue
 
         module = rel_path.parts[0]

@@ -208,7 +208,6 @@ def create_sorting_analyzer(
 
     # Aggregate split recordings and sortings if they are provided as dicts
     if isinstance(sorting, dict) and isinstance(recording, dict):
-
         if sorting.keys() != recording.keys():
             raise ValueError(
                 f"Keys of `sorting`, {sorting.keys()}, and `recording`, {recording.keys()}, dicts do not match."
@@ -303,28 +302,28 @@ def create_sorting_analyzer(
                 **job_kwargs,
             )
     else:  # main_channel_indices provided as argument
-        assert (
-            len(main_channel_indices) == sorting.get_num_units()
-        ), "len(main_channel_indices) must equal the number of units in the `sorting`"
+        assert len(main_channel_indices) == sorting.get_num_units(), (
+            "len(main_channel_indices) must equal the number of units in the `sorting`"
+        )
         if sparsity is None and sparse:  # sparsity needs to be calculated
             sparsity_method = sparsity_kwargs.get("method", "radius")  # default method is radius
-            assert (
-                sparsity_method == "radius"
-            ), 'If you pass `main_channel_indices`, you need to use sparsity method "radius"'
+            assert sparsity_method == "radius", (
+                'If you pass `main_channel_indices`, you need to use sparsity method "radius"'
+            )
 
     # Handle sparsity
     if sparsity is not None:
         # some checks
         assert isinstance(sparsity, ChannelSparsity), "'sparsity' must be a ChannelSparsity object"
-        assert np.array_equal(
-            sorting.unit_ids, sparsity.unit_ids
-        ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
-        assert np.array_equal(
-            recording.channel_ids, sparsity.channel_ids
-        ), "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
-        assert all(
-            sparsity.mask[u, c] for u, c in enumerate(main_channel_indices)
-        ), "sparsity is not consistent with main_channel_indices"
+        assert np.array_equal(sorting.unit_ids, sparsity.unit_ids), (
+            "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
+        )
+        assert np.array_equal(recording.channel_ids, sparsity.channel_ids), (
+            "create_sorting_analyzer(): if external sparsity is given unit_ids must correspond"
+        )
+        assert all(sparsity.mask[u, c] for u, c in enumerate(main_channel_indices)), (
+            "sparsity is not consistent with main_channel_indices"
+        )
     elif sparse:
         sparsity = estimate_sparsity(
             sorting,
@@ -540,9 +539,9 @@ class SortingAnalyzer:
         backend_options: dict[str, Any] | None = None,
     ):
         assert recording is not None, "To create a SortingAnalyzer you need to specify the recording"
-        assert (
-            main_channel_indices is not None
-        ), "To create a SortingAnalyzer you need to specify the main_channel_indices"
+        assert main_channel_indices is not None, (
+            "To create a SortingAnalyzer you need to specify the main_channel_indices"
+        )
 
         # some checks
         if sorting.sampling_frequency != recording.sampling_frequency:
@@ -997,7 +996,7 @@ class SortingAnalyzer:
                     try:
                         recording = load(filename, base_folder=folder)
                         break
-                    except:
+                    except Exception:
                         pass
 
         # Load recording attributes
@@ -1176,7 +1175,7 @@ class SortingAnalyzer:
             try:
                 zarr_root_a = zarr.open(str(folder), mode="a", **storage_options_kwargs)
                 zarr.consolidate_metadata(zarr_root_a.store)
-            except:
+            except Exception:
                 warnings.warn(
                     "The zarr store was not consolidated prior to v0.101.1. "
                     "This may lead to unexpected behavior in loading extensions. "
@@ -1219,7 +1218,7 @@ class SortingAnalyzer:
             if rec_dict is not None:
                 try:
                     recording = load(rec_dict, base_folder=folder)
-                except:
+                except Exception:
                     pass
 
         # Load recording attributes
@@ -1319,7 +1318,6 @@ class SortingAnalyzer:
             if self.format == "binary_folder":
                 np.save(self.folder / "sorting" / "properties" / f"{key}.npy", self.sorting.get_property(key))
             elif self.format == "zarr":
-
                 zarr_root = self._get_zarr_root(mode="r+")
                 prop_values = self.sorting.get_property(key)
                 if prop_values.dtype.kind == "O":
@@ -1991,7 +1989,6 @@ class SortingAnalyzer:
 
         # remove units which do not pass the sparsity threshold
         if self.sparsity is not None and merging_mode == "soft":
-
             mergeable = self.are_units_mergeable(
                 merge_unit_groups,
                 sparsity_overlap=sparsity_overlap,
@@ -2196,7 +2193,7 @@ class SortingAnalyzer:
                     try:
                         sorting_provenance = load(filename, base_folder=self.folder)
                         break
-                    except:
+                    except Exception:
                         pass
         elif self.format == "zarr":
             zarr_root = self._get_zarr_root(mode="r")
@@ -2212,7 +2209,7 @@ class SortingAnalyzer:
                 # the original sorting folder
                 try:
                     sorting_provenance = load(sort_dict, base_folder=self.folder)
-                except:
+                except Exception:
                     pass
 
         return sorting_provenance
@@ -2267,13 +2264,6 @@ class SortingAnalyzer:
         all_channel_ids = list(self.rec_attributes["channel_ids"])
         indices = np.array([all_channel_ids.index(id) for id in channel_ids], dtype=int)
         return indices
-
-    def get_recording_property(self, key) -> np.ndarray:
-        values = np.array(self.rec_attributes["properties"].get(key, None))
-        return values
-
-    def get_sorting_property(self, key) -> np.ndarray:
-        return self.sorting.get_property(key)
 
     def get_dtype(self):
         return self.rec_attributes["dtype"]
@@ -2351,9 +2341,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             extensions = {k: {} for k in input}
             if extension_params is not None:
                 for ext_name, ext_params in extension_params.items():
-                    assert (
-                        ext_name in input
-                    ), f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
+                    assert ext_name in input, (
+                        f"SortingAnalyzer.compute(): Parameters specified for {ext_name}, which is not in the specified {input}"
+                    )
                     extensions[ext_name] = ext_params
             self.compute_several_extensions(extensions=extensions, save=save, verbose=verbose, **job_kwargs)
         else:
@@ -2409,9 +2399,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
 
         # check dependencies
         if extension_class.need_recording:
-            assert (
-                self.has_recording() or self.has_temporary_recording()
-            ), f"Extension {extension_name} requires the recording"
+            assert self.has_recording() or self.has_temporary_recording(), (
+                f"Extension {extension_name} requires the recording"
+            )
         required_dependencies = extension_class.get_required_dependencies(**params)
         for dependency_name in required_dependencies:
             if "|" in dependency_name:
@@ -2555,9 +2545,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             try:
                 for extension_name, extension_params in extensions_with_pipeline.items():
                     extension_class = get_extension_class(extension_name)
-                    assert (
-                        self.has_recording() or self.has_temporary_recording()
-                    ), f"Extension {extension_name} requires the recording"
+                    assert self.has_recording() or self.has_temporary_recording(), (
+                        f"Extension {extension_name} requires the recording"
+                    )
 
                     extension_folder = self.folder / "extensions" / extension_name if gather_dest is not None else None
                     for variable_name in extension_class.nodepipeline_variables:
@@ -2613,7 +2603,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                         extension_instance._save_run_info()
                         extension_instance._save_data()
                         if self.format == "zarr":
-
                             zarr.consolidate_metadata(self._get_zarr_root().store)
                     if not self._lazy and gather_mode != "memory":
                         # Materialize the data if not in lazy mode
@@ -2705,9 +2694,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             The loaded instance of the extension
 
         """
-        assert (
-            self.format != "memory"
-        ), "SortingAnalyzer.load_extension() does not work for format='memory' use SortingAnalyzer.get_extension() instead"
+        assert self.format != "memory", (
+            "SortingAnalyzer.load_extension() does not work for format='memory' use SortingAnalyzer.get_extension() instead"
+        )
 
         extension_class = get_extension_class(extension_name)
 
@@ -2733,7 +2722,6 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             if extension_folder.is_dir():
                 shutil.rmtree(extension_folder)
         if self.format == "zarr":
-
             zarr_root = self._get_zarr_root(mode="r+")
             if extension_name in (root := zarr_root["extensions"]):
                 del root[extension_name]
@@ -2857,7 +2845,6 @@ def _sort_extensions_by_dependency(extensions):
 
     i = 0
     while i < len(extensions_list):
-
         extension = extensions_list[i]
         extension_params = extension_params_list[i]
 
@@ -2882,10 +2869,8 @@ def _sort_extensions_by_dependency(extensions):
         # Otherwise, should check the dependency which has just been moved => at position i
         did_nothing = True
         for dependency in dependencies:
-
             # if dependency is on the right, move it left of the current dependency
             if dependency in extensions_list[i:]:
-
                 dependency_arg = extensions_list.index(dependency)
 
                 extension_params_list.pop(dependency_arg)
@@ -2952,9 +2937,9 @@ def register_result_extension(extension_class):
 
     already_registered = any(extension_class is ext for ext in _possible_extensions)
     if not already_registered:
-        assert all(
-            extension_class.extension_name != ext.extension_name for ext in _possible_extensions
-        ), "Extension name already exists"
+        assert all(extension_class.extension_name != ext.extension_name for ext in _possible_extensions), (
+            "Extension name already exists"
+        )
 
         _possible_extensions.append(extension_class)
 
@@ -2991,7 +2976,7 @@ def get_extension_class(extension_name: str, auto_import=True):
         if extension_name in _builtin_extensions:
             module = _builtin_extensions[extension_name]
             if auto_import:
-                imported_module = importlib.import_module(module)
+                _ = importlib.import_module(module)
                 extensions_dict = {ext.extension_name: ext for ext in _possible_extensions}
             else:
                 raise ValueError(
@@ -3526,7 +3511,6 @@ class AnalyzerExtension:
             self._save_run_info()
             self._save_data()
             if self.format == "zarr":
-
                 zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root(mode="r+").store)
 
     def save(self):
@@ -3537,7 +3521,6 @@ class AnalyzerExtension:
         self._save_data()
 
         if self.format == "zarr":
-
             zarr.consolidate_metadata(self.sorting_analyzer._get_zarr_root(mode="r+").store)
 
     def _save_data(self):
@@ -3552,11 +3535,10 @@ class AnalyzerExtension:
             import pandas as pd
 
             HAS_PANDAS = True
-        except:
+        except Exception:
             HAS_PANDAS = False
 
         if self.format == "binary_folder":
-
             extension_folder = self._get_binary_extension_folder()
             for ext_data_name, ext_data in self.data.items():
                 if isinstance(ext_data, dict):
@@ -3577,10 +3559,9 @@ class AnalyzerExtension:
                     try:
                         with (extension_folder / f"{ext_data_name}.pkl").open("wb") as f:
                             pickle.dump(ext_data, f)
-                    except:
+                    except Exception:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
         elif self.format == "zarr":
-
             saving_options = self.sorting_analyzer._backend_options.get("saving_options", {})
             extension_group = self._get_zarr_extension_group(mode="r+")
 
@@ -3626,7 +3607,7 @@ class AnalyzerExtension:
                         write_pickle_array(
                             extension_group, ext_data_name, ext_data, compressors=saving_options["compressors"]
                         )
-                    except:
+                    except Exception:
                         raise Exception(f"Could not save {ext_data_name} as extension data")
 
     def _reset_extension_folder(self):
@@ -3650,7 +3631,6 @@ class AnalyzerExtension:
             extension_folder.mkdir(exist_ok=False, parents=True)
 
         elif self.format == "zarr":
-
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             _ = zarr_root["extensions"].create_group(self.extension_name, overwrite=True)
             zarr.consolidate_metadata(zarr_root.store)
@@ -3665,7 +3645,6 @@ class AnalyzerExtension:
                 shutil.rmtree(extension_folder)
 
         elif self.format == "zarr":
-
             zarr_root = self.sorting_analyzer._get_zarr_root(mode="r+")
             if self.extension_name in zarr_root["extensions"]:
                 del zarr_root["extensions"][self.extension_name]
@@ -3765,16 +3744,16 @@ class AnalyzerExtension:
                 extension_group.attrs["run_info"] = run_info
 
     def get_pipeline_nodes(self):
-        assert (
-            self.use_nodepipeline
-        ), "AnalyzerExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
+        assert self.use_nodepipeline, (
+            "AnalyzerExtension.get_pipeline_nodes() must be called only when use_nodepipeline=True"
+        )
         return self._get_pipeline_nodes()
 
     def get_data(self, *args, **kwargs):
         if self.run_info is not None:
-            assert self.run_info[
-                "run_completed"
-            ], f"You must run the extension {self.extension_name} before retrieving data"
+            assert self.run_info["run_completed"], (
+                f"You must run the extension {self.extension_name} before retrieving data"
+            )
         assert len(self.data) > 0, "Extension has been run but no data found."
         return self._get_data(*args, **kwargs)
 

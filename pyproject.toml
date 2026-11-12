@@ -51,8 +51,20 @@ include = ["spikeinterface*"]
 namespaces = false
 exclude = ["spikeinterface.*.tests"]
 
-[tool.black]
+[tool.ruff]
 line-length = 120
+force-exclude = true
+[tool.ruff.lint]
+select = ['E4', 'E7', 'E9', 'F']
+exclude = ["**/tests/**", "**/test_*.py", "**/conftest.py", "examples/**", "doc/conf.py", "installation_tips/**"]
+ignore = ['E741', 'E731', 'F821']
+# report but never auto-remove unused imports/variables: they may be side-effect imports, re-exports, or calls that advance state
+unfixable = ['F401', 'F841']
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ['F401', 'F403']
+"src/spikeinterface/full.py" = ['F403']
+"src/spikeinterface/core/testing_tools.py" = ['E402', 'F403']
+"src/spikeinterface/extractors/extractor_classes.py" = ['F401', 'F403']
 
 [project.urls]
 homepage = "https://github.com/SpikeInterface/spikeinterface"
@@ -167,6 +179,7 @@ widgets = [
     "matplotlib>=3.6",
     "ipympl",
     "ipywidgets",
+    "seaborn>=0.13.0",
     "figpack",
     "figpack-spike-sorting",
     "distinctipy",
@@ -232,7 +245,7 @@ docs = [
 
 dev = [
     "spikeinterface[docs]",
-    "black",
+    "ruff",
     "pre-commit",
 ]
 
@@ -342,7 +355,7 @@ test-all = [
 
 # Tools for the pre-commit hooks. uv installs this group by default.
 dev = [
-    "black",
+    "ruff",
     "pre-commit",
 ]
 

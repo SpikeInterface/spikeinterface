@@ -1,7 +1,6 @@
-import warnings
 from typing import Literal, List
 from itertools import chain, combinations
-from pydantic import BaseModel, Field, model_validator, field_validator, field_serializer
+from pydantic import BaseModel, Field, model_validator, field_validator
 
 import numpy as np
 
@@ -504,7 +503,6 @@ class SequentialCuration(BaseModel):
                     )
 
         for curation_index in range(len(self.curation_steps))[:-1]:
-
             curation_1 = self.curation_steps[curation_index]
             curation_2 = self.curation_steps[curation_index + 1]
 
@@ -513,7 +511,7 @@ class SequentialCuration(BaseModel):
 
             if not (set(previous_model_final_ids) == set(next_model_initial_ids)):
                 raise ValueError(
-                    f"The initial unit_ids of curation {curation_index+1} do not match the final unit_ids of curation {curation_index}."
+                    f"The initial unit_ids of curation {curation_index + 1} do not match the final unit_ids of curation {curation_index}."
                 )
 
         return self

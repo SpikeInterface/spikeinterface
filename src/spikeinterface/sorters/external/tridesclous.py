@@ -31,7 +31,7 @@ class TridesclousSorter(BaseSorter):
         "freq_min": "High-pass filter cutoff frequency",
         "freq_max": "Low-pass filter cutoff frequency",
         "detect_threshold": "Threshold for spike detection",
-        "detect_sign": "Use -1 (negative) or 1 (positive) depending " "on the sign of the spikes in the recording",
+        "detect_sign": "Use -1 (negative) or 1 (positive) depending on the sign of the spikes in the recording",
         "common_ref_removal": "remove common reference with median",
     }
 

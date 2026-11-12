@@ -180,9 +180,9 @@ class DriftRasterMapWidget(BaseRasterWidget):
                 recording = None
                 sampling_frequency = sorting_analyzer.sampling_frequency
             peaks = sorting_analyzer.sorting.to_spike_vector()
-            assert sorting_analyzer.has_extension(
-                "spike_locations"
-            ), "The sorting analyzer must have the 'spike_locations' extension to use this function"
+            assert sorting_analyzer.has_extension("spike_locations"), (
+                "The sorting analyzer must have the 'spike_locations' extension to use this function"
+            )
             peak_locations = sorting_analyzer.get_extension("spike_locations").get_data()
             if color_amplitude:
                 assert sorting_analyzer.has_extension("spike_amplitudes"), (
@@ -348,9 +348,9 @@ class MotionInfoWidget(BaseWidget):
                 raise ValueError(
                     "plot drift map : the Motion object is multi-segment you must provide segment_index=XX"
                 )
-        assert recording.get_num_segments() == len(
-            motion.displacement
-        ), "The number of segments in the recording must be the same as the number of segments in the motion object"
+        assert recording.get_num_segments() == len(motion.displacement), (
+            "The number of segments in the recording must be the same as the number of segments in the motion object"
+        )
 
         plot_data = dict(
             sampling_frequency=motion_info["parameters"]["sampling_frequency"],

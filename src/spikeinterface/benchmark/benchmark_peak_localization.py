@@ -9,7 +9,6 @@ from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
 
 class PeakLocalizationBenchmark(Benchmark):
-
     def __init__(self, recording, gt_sorting, params, gt_positions, channel_from_template=False):
         self.recording = recording
         self.gt_sorting = gt_sorting
@@ -69,7 +68,6 @@ class PeakLocalizationBenchmark(Benchmark):
 
 
 class PeakLocalizationStudy(BenchmarkStudy):
-
     benchmark_class = PeakLocalizationBenchmark
 
     def create_benchmark(self, key):
@@ -93,14 +91,12 @@ class PeakLocalizationStudy(BenchmarkStudy):
             metrics = analyzer.get_extension("quality_metrics").get_data()
             snrs = metrics["snr"].values
             result = self.get_result(key)
-            norms = np.linalg.norm(result["templates"].templates_array, axis=(1, 2))
 
             coordinates = self.benchmarks[key].gt_positions[:, :2].copy()
             coordinates[:, 0] -= coordinates[:, 0].mean()
             coordinates[:, 1] -= coordinates[:, 1].mean()
             distances_to_center = np.linalg.norm(coordinates, axis=1)
             zdx = np.argsort(distances_to_center)
-            idx = np.argsort(norms)
 
             wdx = np.argsort(snrs)
 
@@ -152,7 +148,6 @@ class PeakLocalizationStudy(BenchmarkStudy):
 
 
 class UnitLocalizationBenchmark(Benchmark):
-
     def __init__(self, recording, gt_sorting, params, gt_positions):
         self.recording = recording
         self.gt_sorting = gt_sorting
@@ -255,16 +250,12 @@ class UnitLocalizationStudy(BenchmarkStudy):
             metrics = analyzer.get_extension("quality_metrics").get_data()
             snrs = metrics["snr"].values
             result = self.get_result(key)
-            norms = np.linalg.norm(result["templates"].templates_array, axis=(1, 2))
 
             coordinates = self.benchmarks[key].gt_positions[:, :2].copy()
             coordinates[:, 0] -= coordinates[:, 0].mean()
             coordinates[:, 1] -= coordinates[:, 1].mean()
             distances_to_center = np.linalg.norm(coordinates, axis=1)
             zdx = np.argsort(distances_to_center)
-            idx = np.argsort(norms)
-
-            from scipy.signal import savgol_filter
 
             wdx = np.argsort(snrs)
 

@@ -56,7 +56,6 @@ def test_bandpower(freq_min, freq_max, debug=False):
 
     fs = 1000
     T = 300
-    t = np.arange(0, T, 1 / fs)
 
     rng = np.random.default_rng()
     x = rng.standard_normal(T * fs)

@@ -1,8 +1,9 @@
-global default_backend_
-default_backend_ = "matplotlib"
-
 from spikeinterface.core import SortingAnalyzer, BaseSorting
 from spikeinterface.core.waveforms_extractor_backwards_compatibility import MockWaveformExtractor
+
+
+global default_backend_
+default_backend_ = "matplotlib"
 
 
 def get_default_plotter_backend():
@@ -105,7 +106,7 @@ class BaseWidget:
         if backend is None:
             backend = get_default_plotter_backend()
         assert backend in self.get_possible_backends(), (
-            f"{backend} backend not available! Available backends are: " f"{self.get_possible_backends()}"
+            f"{backend} backend not available! Available backends are: {self.get_possible_backends()}"
         )
         return backend
 

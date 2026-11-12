@@ -101,17 +101,17 @@ class Templates:
             self.channel_ids = np.arange(self.num_channels)
         else:
             self.channel_ids = np.asarray(self.channel_ids)
-            assert (
-                len(self.channel_ids) == self.num_channels
-            ), f"length of channel ids {len(self.channel_ids)} must be equal to the number of channels {self.num_channels}"
+            assert len(self.channel_ids) == self.num_channels, (
+                f"length of channel ids {len(self.channel_ids)} must be equal to the number of channels {self.num_channels}"
+            )
 
         if self.unit_ids is None:
             self.unit_ids = np.arange(self.num_units)
         else:
             self.unit_ids = np.asarray(self.unit_ids)
-            assert (
-                self.unit_ids.size == self.num_units
-            ), f"length of units ids {self.unit_ids.size} must be equal to the number of units {self.num_units}"
+            assert self.unit_ids.size == self.num_units, (
+                f"length of units ids {self.unit_ids.size} must be equal to the number of units {self.num_units}"
+            )
 
         if self.sparsity_mask is not None:
             self.sparsity = ChannelSparsity(

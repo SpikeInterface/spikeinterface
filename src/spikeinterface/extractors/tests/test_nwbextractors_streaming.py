@@ -10,7 +10,7 @@ import numpy as np
 
 from spikeinterface import load
 from spikeinterface.core.testing import check_recordings_equal
-from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
+from spikeinterface.core.testing import check_sortings_equal
 from spikeinterface.extractors.extractor_classes import NwbRecordingExtractor, NwbSortingExtractor
 
 py_version = sys.version_info
@@ -42,8 +42,6 @@ def test_recording_s3_nwb_fsspec(tmp_path, cache):
     dtype = rec.get_dtype()
 
     for segment_index in range(num_seg):
-        num_samples = rec.get_num_samples(segment_index=segment_index)
-
         full_traces = rec.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame)
         assert full_traces.shape == (num_frames, num_chans)
         assert full_traces.dtype == dtype
@@ -78,8 +76,6 @@ def test_recording_s3_nwb_remfile():
     dtype = rec.get_dtype()
 
     for segment_index in range(num_seg):
-        num_samples = rec.get_num_samples(segment_index=segment_index)
-
         full_traces = rec.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame)
         assert full_traces.shape == (num_frames, num_chans)
         assert full_traces.dtype == dtype
@@ -108,8 +104,6 @@ def test_recording_s3_nwb_remfile_file_like(tmp_path):
     dtype = rec.get_dtype()
 
     for segment_index in range(num_seg):
-        num_samples = rec.get_num_samples(segment_index=segment_index)
-
         full_traces = rec.get_traces(segment_index=segment_index, start_frame=start_frame, end_frame=end_frame)
         assert full_traces.shape == (num_frames, num_chans)
         assert full_traces.dtype == dtype
