@@ -1,21 +1,22 @@
 import numpy as np
+import pandas as pd
 from numpy.testing import assert_array_equal
 
-from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import (
+    compare_spike_trains,
+    compute_performance,
+    do_confusion_matrix,
     do_count_event,
-    make_match_count_matrix,
+    do_count_score,
+    do_score_labels,
     make_agreement_scores,
-    make_possible_match,
     make_best_match,
     make_hungarian_match,
-    do_score_labels,
-    compare_spike_trains,
-    do_confusion_matrix,
-    do_count_score,
-    compute_performance,
+    make_match_count_matrix,
+    make_possible_match,
 )
 from spikeinterface.core.generate import generate_sorting
+from spikeinterface.extractors import NumpySorting
 
 
 def make_sorting(times1, labels1, times2, labels2):
@@ -401,6 +402,15 @@ def test_do_score_labels_counts_spikes_once():
     labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, {0: 0})
     assert_array_equal(labels_st1[0][0], ["TP", "TP", "FN"])
     assert_array_equal(labels_st2[0][0], ["TP", "TP", "FP"])
+
+    # test label_misclassification. the spike from st1u0 is where most of the action is at.
+    # it should get CL'd to one spike, and that should be the one from st2u1 at time 503.
+    sorting1, sorting2 = make_sorting([100, 500, 900, 1300], [0, 0, 1, 2], [102, 503, 505, 901, 1301], [0, 1, 2, 1, 2])
+    unit_map12 = pd.Series({0: 0, 1: 1, 2: 2})
+    labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclassification=True)
+    assert_array_equal(labels_st1[0][0], ["TP", "CL_0_1"])
+    assert_array_equal(labels_st2[1][0], ["CL_1_0", "TP"])
+    assert_array_equal(labels_st2[2][0], ["FP", "TP"])
 
 
 def test_compare_spike_trains():

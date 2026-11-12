@@ -667,56 +667,57 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
     """
     compute_pair_match_indices = get_optimized_compute_pair_match_indices()
 
+    # initialize labels dict of lists for each sorting with UNPAIRED
+    num_segments = sorting1.get_num_segments()
     unit1_ids = sorting1.get_unit_ids()
     unit2_ids = sorting2.get_unit_ids()
-    labels_st1 = dict()
-    labels_st2 = dict()
-
-    # copy spike trains for faster access from extractors with memmapped data
-    num_segments = sorting1.get_num_segments()
-    sts1 = {u1: [sorting1.get_unit_spike_train(u1, seg_index) for seg_index in range(num_segments)] for u1 in unit1_ids}
-    sts2 = {u2: [sorting2.get_unit_spike_train(u2, seg_index) for seg_index in range(num_segments)] for u2 in unit2_ids}
-
-    for u1 in unit1_ids:
-        lab_st1 = [np.array(["UNPAIRED"] * len(sts), dtype="<U8") for sts in sts1[u1]]
-        labels_st1[u1] = lab_st1
-    for u2 in unit2_ids:
-        lab_st2 = [np.array(["UNPAIRED"] * len(sts), dtype="<U8") for sts in sts2[u2]]
-        labels_st2[u2] = lab_st2
+    labels_st1 = {u1: [] for u1 in unit1_ids}
+    labels_st2 = {u2: [] for u2 in unit2_ids}
+    for seg_index in range(num_segments):
+        for u1 in unit1_ids:
+            ns1 = len(sorting1.get_unit_spike_train(u1, seg_index))
+            labels_st1[u1].append(np.full((ns1,), "UNPAIRED", dtype="<U8"))
+        for u2 in unit2_ids:
+            ns2 = len(sorting2.get_unit_spike_train(u2, seg_index))
+            labels_st2[u2].append(np.full((ns2,), "UNPAIRED", dtype="<U8"))
 
     for seg_index in range(num_segments):
         for u1 in unit1_ids:
             u2 = unit_map12[u1]
-            sts = sts1[u1][seg_index]
+            st1 = sorting1.get_unit_spike_train(u1, seg_index)
             if u2 != -1 and u2 != "":
                 lab_st1 = labels_st1[u1][seg_index]
                 lab_st2 = labels_st2[u2][seg_index]
-                mapped_st = sorting2.get_unit_spike_train(u2, seg_index)
-                assert np.all(np.diff(sts) >= 0) and np.all(np.diff(mapped_st) >= 0)
-                match_indices1, match_indices2 = compute_pair_match_indices(sts, mapped_st, delta_frames)
+                st2 = sorting2.get_unit_spike_train(u2, seg_index)
+                match_indices1, match_indices2 = compute_pair_match_indices(st1, st2, delta_frames)
                 lab_st1[match_indices1] = "TP"
                 lab_st2[match_indices2] = "TP"
             else:
-                lab_st1 = np.array(["FN"] * len(sts))
+                lab_st1 = np.array(["FN"] * len(st1))
                 labels_st1[u1][seg_index] = lab_st1
 
     if label_misclassification:
+        mapped_unit2_ids = [u2 for u2 in unit2_ids if u2 in unit_map12.values]
         for seg_index in range(num_segments):
             for u1 in unit1_ids:
+                if unit_map12[u1] == -1 or unit_map12[u1] == "":
+                    continue
                 lab_st1 = labels_st1[u1][seg_index]
-                st1 = sts1[u1][seg_index]
+                st1 = sorting1.get_unit_spike_train(u1, seg_index)
                 for l_gt, lab in enumerate(lab_st1):
-                    if lab == "UNPAIRED":
-                        for u2 in unit2_ids:
-                            if u2 in unit_map12.values and unit_map12[u1] != -1:
-                                lab_st2 = labels_st2[u2][seg_index]
-                                n_sp = st1[l_gt]
-                                mapped_st = sts2[u2][seg_index]
-                                matches = np.abs(mapped_st.astype(int) - n_sp) <= delta_frames
-                                if np.sum(matches) > 0:
-                                    if "CL" not in lab_st1[l_gt] and "CL" not in lab_st2[np.where(matches)[0][0]]:
-                                        lab_st1[l_gt] = "CL_" + str(u1) + "_" + str(u2)
-                                        lab_st2[np.where(matches)[0][0]] = "CL_" + str(u2) + "_" + str(u1)
+                    if lab != "UNPAIRED":
+                        continue
+                    n_sp = st1[l_gt]
+                    for u2 in mapped_unit2_ids:
+                        lab_st2 = labels_st2[u2][seg_index]
+                        st2 = sorting2.get_unit_spike_train(u2, seg_index)
+                        matches = np.flatnonzero(np.abs(st2.astype(int) - n_sp) <= delta_frames)
+                        if not matches.size:
+                            continue
+                        if "CL" not in lab_st2[matches[0]]:
+                            lab_st1[l_gt] = "CL_" + str(u1) + "_" + str(u2)
+                            lab_st2[matches[0]] = "CL_" + str(u2) + "_" + str(u1)
+                            break
 
     for seg_index in range(num_segments):
         for u1 in unit1_ids:
