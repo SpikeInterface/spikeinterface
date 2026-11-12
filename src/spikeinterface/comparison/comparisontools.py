@@ -691,7 +691,7 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
             if u2 != -1 and u2 != "":
                 lab_st1 = labels_st1[u1][seg_index]
                 lab_st2 = labels_st2[u2][seg_index]
-                mapped_st = sts2[u2][seg_index]
+                mapped_st = sorting2.get_unit_spike_train(u2, seg_index)
                 assert np.all(np.diff(sts) >= 0) and np.all(np.diff(mapped_st) >= 0)
                 match_indices1, match_indices2 = compute_pair_match_indices(sts, mapped_st, delta_frames)
                 lab_st1[match_indices1] = "TP"
