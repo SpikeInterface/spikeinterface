@@ -83,7 +83,7 @@ def compute_total_samples_per_unit(sorting_analyzer, periods=None):
     sorting_analyzer : SortingAnalyzer
         The sorting analyzer object.
     periods : array of unit_period_dtype, default: None
-        Periods to consider for each unit.
+        Periods to consider for each unit. Where a unit's periods overlap, the overlapping samples count once.
 
     Returns
     -------
@@ -93,9 +93,17 @@ def compute_total_samples_per_unit(sorting_analyzer, periods=None):
     if periods is not None:
         total_samples_array = np.zeros(len(sorting_analyzer.unit_ids), dtype="int64")
         sorting = sorting_analyzer.sorting
-        for period in periods:
+        # count the union of each unit's periods
+        order = np.lexsort((periods["start_sample_index"], periods["segment_index"], periods["unit_index"]))
+        covered_until = {}  # (unit_index, segment_index) -> end of that unit's periods so far
+        for period in periods[order]:
             unit_index = period["unit_index"]
-            total_samples_array[unit_index] += period["end_sample_index"] - period["start_sample_index"]
+            key = (unit_index, period["segment_index"])
+            start = max(period["start_sample_index"], covered_until.get(key, period["start_sample_index"]))
+            end = period["end_sample_index"]
+            if end > start:
+                total_samples_array[unit_index] += end - start
+                covered_until[key] = end
         total_samples = dict(zip(sorting.unit_ids, total_samples_array))
     else:
         total = sorting_analyzer.get_total_samples()
