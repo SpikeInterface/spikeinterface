@@ -69,7 +69,13 @@ class Motion:
         else:
             rigid_txt = f"non-rigid - {nbins} spatial bins"
 
-        interval_s = self.temporal_bins_s[0][1] - self.temporal_bins_s[0][0]
+        if self.temporal_bins_s[0].size > 1:
+            interval_s = self.temporal_bins_s[0][1] - self.temporal_bins_s[0][0]
+        else:
+            # If there is only one temporal bin (entire session), assume the bin
+            # left edge is zero, and take twice it for the bin size.
+            interval_s = self.temporal_bins_s[0][0] * 2
+
         txt = f"Motion {rigid_txt} - interval {interval_s}s - {self.num_segments} segments"
         return txt
 
@@ -151,6 +157,13 @@ class Motion:
         displacement = self.interpolators[segment_index](points)
         # reshape to grid domain shape if necessary
         displacement = displacement.reshape(out_shape)
+
+        # For the inter-session alignment case
+        if self.temporal_bins_s[segment_index].size == 1 and self.spatial_bins_um.size == 1:
+            # TODO: double check, this used to be assert all isnan
+            #            assert np.all(displacement == -0)
+            assert self.displacement[segment_index].size == 1
+            displacement[:] = self.displacement[segment_index]
 
         return displacement
 
