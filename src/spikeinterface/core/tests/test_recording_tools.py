@@ -1,4 +1,5 @@
 import numpy as np
+import spikeinterface.core.recording_tools as recording_tools
 
 from spikeinterface.core import NumpyRecording, generate_recording, MockRecording
 
@@ -227,6 +228,279 @@ def test_get_noise_levels_output():
         random_slices_kwargs=dict(num_chunks_per_segment=40, chunk_size=1_000, seed=seed),
     )
     assert np.allclose(std_estimated_with_std, [std, std], rtol=1e-2, atol=1e-3)
+
+
+def test_get_noise_levels_cache_parameters(monkeypatch):
+    """Sampling parameters must be part of the noise-level cache semantics."""
+    recording = generate_recording(num_channels=2, sampling_frequency=1000.0, durations=[2.0])
+    computed_chunks = []
+
+    def fake_noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
+        value = float(len(computed_chunks) + 1)
+        computed_chunks.append((segment_index, start_frame, end_frame))
+        return np.full(recording.get_num_channels(), value)
+
+    monkeypatch.setattr(recording_tools, "_noise_level_chunk", fake_noise_level_chunk)
+    sampling_kwargs = {"num_chunks_per_segment": 1, "chunk_size": 100, "seed": 42}
+
+    first = get_noise_levels(
+        recording, return_in_uV=False, random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False
+    )
+    np.testing.assert_array_equal(first, [1.0, 1.0])
+
+    # Identical parameters hit the cache, and seed=None is a wildcard for the seed.
+    cached = get_noise_levels(
+        recording, return_in_uV=False, random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False
+    )
+    cached_any_seed = get_noise_levels(
+        recording,
+        return_in_uV=False,
+        random_slices_kwargs={**sampling_kwargs, "seed": None},
+        n_jobs=1,
+        progress_bar=False,
+    )
+    np.testing.assert_array_equal(cached, first)
+    np.testing.assert_array_equal(cached_any_seed, first)
+    assert len(computed_chunks) == 1
+
+    # A different explicit seed and a different chunk layout each trigger recomputation.
+    different_seed = get_noise_levels(
+        recording,
+        return_in_uV=False,
+        random_slices_kwargs={**sampling_kwargs, "seed": 123},
+        n_jobs=1,
+        progress_bar=False,
+    )
+    np.testing.assert_array_equal(different_seed, [2.0, 2.0])
+    different_layout = get_noise_levels(
+        recording,
+        return_in_uV=False,
+        random_slices_kwargs={**sampling_kwargs, "seed": 123, "num_chunks_per_segment": 2},
+        n_jobs=1,
+        progress_bar=False,
+    )
+    np.testing.assert_array_equal(different_layout, [3.5, 3.5])
+    assert len(computed_chunks) == 4
+
+    # The new layout can be reused when the caller does not care about the seed.
+    cached_any_seed = get_noise_levels(
+        recording,
+        return_in_uV=False,
+        random_slices_kwargs={**sampling_kwargs, "seed": None, "num_chunks_per_segment": 2},
+        n_jobs=1,
+        progress_bar=False,
+    )
+    np.testing.assert_array_equal(cached_any_seed, different_layout)
+    assert len(computed_chunks) == 4
+
+    # force_recompute remains an unconditional override.
+    forced = get_noise_levels(
+        recording,
+        return_in_uV=False,
+        force_recompute=True,
+        random_slices_kwargs={**sampling_kwargs, "seed": 123, "num_chunks_per_segment": 2},
+        n_jobs=1,
+        progress_bar=False,
+    )
+    np.testing.assert_array_equal(forced, [5.5, 5.5])
+    assert len(computed_chunks) == 6
+
+    # Overwriting a computed property turns it back into user-supplied state.
+    key = "noise_level_mad_raw"
+    manual_values = np.full(recording.get_num_channels(), 9.0)
+    recording.set_property(key, manual_values)
+    assert key not in recording._noise_levels_params
+    np.testing.assert_array_equal(
+        get_noise_levels(recording, return_in_uV=False, n_jobs=1, progress_bar=False), manual_values
+    )
+
+    # An explicit sampling request recomputes the manually supplied value.
+    get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False)
+    assert key in recording._noise_levels_params
+    recording.delete_property(key)
+    assert key not in recording._noise_levels_params
+
+
+def test_noise_levels_cache_invalidated_on_gain_change():
+    recording = generate_recording(num_channels=4, durations=[5.0])
+    recording.set_channel_gains([1.0] * 4)
+    recording.set_channel_offsets([0.0] * 4)
+
+    sampling_kwargs = {"seed": 42}
+
+    scaled_before = {}
+    raw_before = {}
+
+    for method in ("mad", "std", "rms"):
+        scaled_before[method] = get_noise_levels(
+            recording,
+            method=method,
+            return_in_uV=True,
+            random_slices_kwargs=sampling_kwargs,
+            n_jobs=1,
+            progress_bar=False,
+        ).copy()
+
+        raw_before[method] = get_noise_levels(
+            recording,
+            method=method,
+            return_in_uV=False,
+            random_slices_kwargs=sampling_kwargs,
+            n_jobs=1,
+            progress_bar=False,
+        ).copy()
+
+    recording.set_channel_gains([10.0] * 4)
+
+    for method in ("mad", "std", "rms"):
+        scaled_after = get_noise_levels(
+            recording,
+            method=method,
+            return_in_uV=True,
+            random_slices_kwargs=sampling_kwargs,
+            n_jobs=1,
+            progress_bar=False,
+        )
+
+        raw_after = get_noise_levels(
+            recording,
+            method=method,
+            return_in_uV=False,
+            random_slices_kwargs=sampling_kwargs,
+            n_jobs=1,
+            progress_bar=False,
+        )
+
+        np.testing.assert_allclose(scaled_after, scaled_before[method] * 10, rtol=1e-4)
+        np.testing.assert_array_equal(raw_after, raw_before[method])
+
+
+def test_noise_levels_cache_invalidated_on_offset_change():
+    recording = generate_recording(num_channels=4, durations=[5.0])
+    recording.set_channel_gains([1.0] * 4)
+    recording.set_channel_offsets([0.0] * 4)
+
+    sampling_kwargs = {"seed": 42}
+
+    rms_before = get_noise_levels(
+        recording,
+        method="rms",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
+    ).copy()
+
+    std_before = get_noise_levels(
+        recording,
+        method="std",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
+    ).copy()
+
+    mad_before = get_noise_levels(
+        recording,
+        method="mad",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
+    ).copy()
+
+    recording.set_channel_offsets([100.0] * 4)
+
+    rms_after = get_noise_levels(
+        recording,
+        method="rms",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
+    ).copy()
+
+    std_after = get_noise_levels(
+        recording,
+        method="std",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
+    ).copy()
+
+    mad_after = get_noise_levels(
+        recording,
+        method="mad",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
+    ).copy()
+
+    assert not np.allclose(rms_before, rms_after)
+    np.testing.assert_allclose(std_after, std_before, rtol=1e-5)
+    np.testing.assert_allclose(mad_after, mad_before, rtol=1e-5)
+
+
+def test_noise_levels_cache_invalidated_on_calibration_property_deletion():
+    recording = generate_recording(num_channels=4, durations=[5.0])
+    recording.set_channel_gains([1.0] * 4)
+    recording.set_channel_offsets([0.0] * 4)
+
+    sampling_kwargs = {"seed": 42}
+
+    for method in ("mad", "std", "rms"):
+        get_noise_levels(
+            recording,
+            method=method,
+            return_in_uV=True,
+            random_slices_kwargs=sampling_kwargs,
+            n_jobs=1,
+            progress_bar=False,
+        )
+
+    scaled_keys = [
+        "noise_level_mad_scaled",
+        "noise_level_std_scaled",
+        "noise_level_rms_scaled",
+    ]
+
+    for key in scaled_keys:
+        assert key in recording.get_property_keys()
+
+    recording.delete_property("gain_to_uV")
+
+    for key in scaled_keys:
+        assert key not in recording.get_property_keys()
+
+
+def test_get_noise_levels_normalizes_chunk_duration(monkeypatch):
+    """Equivalent duration- and frame-based chunk specifications share the cache."""
+    recording = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[2.0])
+    computed_chunks = []
+
+    def fake_noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
+        computed_chunks.append((segment_index, start_frame, end_frame))
+        return np.ones(recording.get_num_channels())
+
+    monkeypatch.setattr(recording_tools, "_noise_level_chunk", fake_noise_level_chunk)
+    by_duration = get_noise_levels(
+        recording,
+        return_in_uV=False,
+        random_slices_kwargs={"num_chunks_per_segment": 1, "seed": 0},
+        n_jobs=1,
+        progress_bar=False,
+    )
+    by_frames = get_noise_levels(
+        recording,
+        return_in_uV=False,
+        random_slices_kwargs={"num_chunks_per_segment": 1, "chunk_size": 500, "seed": 0},
+        n_jobs=1,
+        progress_bar=False,
+    )
+    np.testing.assert_array_equal(by_frames, by_duration)
+    assert len(computed_chunks) == 1
 
 
 def test_get_chunk_with_margin():

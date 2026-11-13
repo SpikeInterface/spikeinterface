@@ -287,6 +287,28 @@ class BaseExtractor:
     def get_annotation_keys(self) -> list:
         return list(self._annotations.keys())
 
+    def _invalidate_noise_levels_for_calibration(self, key):
+        """
+        Invalidate scaled noise-level estimates when calibration properties change.
+        """
+        if key == "gain_to_uV":
+            noise_keys = [
+                "noise_level_mad_scaled",
+                "noise_level_std_scaled",
+                "noise_level_rms_scaled",
+            ]
+        elif key == "offset_to_uV":
+            noise_keys = ["noise_level_rms_scaled"]
+        else:
+            return
+
+        noise_levels_params = getattr(self, "_noise_levels_params", None)
+
+        for noise_key in noise_keys:
+            self._properties.pop(noise_key, None)
+            if noise_levels_params is not None:
+                noise_levels_params.pop(noise_key, None)
+
     def set_property(
         self,
         key,
@@ -317,6 +339,13 @@ class BaseExtractor:
             This argument specifies how to fill missing values.
             The `missing_value` is required for types int and unsigned int.
         """
+
+        # Invalidate noise-level sampling metadata when the property is updated.
+        noise_levels_params = getattr(self, "_noise_levels_params", None)
+        if noise_levels_params is not None:
+            noise_levels_params.pop(key, None)
+
+        self._invalidate_noise_levels_for_calibration(key)
 
         if values is None:
             if key in self._properties:
@@ -406,6 +435,11 @@ class BaseExtractor:
     def delete_property(self, key) -> None:
         if key in self._properties:
             del self._properties[key]
+            noise_levels_params = getattr(self, "_noise_levels_params", None)
+            if noise_levels_params is not None:
+                noise_levels_params.pop(key, None)
+
+            self._invalidate_noise_levels_for_calibration(key)
         else:
             raise Exception(f"{key} is not a property key")
 
