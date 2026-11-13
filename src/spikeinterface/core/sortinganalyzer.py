@@ -2389,7 +2389,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             save = False
         extension_class = get_extension_class(extension_name)
 
-        for child in _get_children_dependencies(extension_name):
+        for child in _get_children_dependencies(extension_name, self._get_extensions_params()):
             if self.has_extension(child):
                 if verbose:
                     print(f"Deleting extension: {child}")
@@ -2487,8 +2487,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         # Sort extensions by dependency order
         sorted_extensions = _sort_extensions_by_dependency(extensions)
 
+        all_extensions_params = {**self._get_extensions_params(), **extensions}
         for extension_name in sorted_extensions.keys():
-            for child in _get_children_dependencies(extension_name):
+            for child in _get_children_dependencies(extension_name, all_extensions_params):
                 if verbose:
                     print(f"Deleting extension: {child}")
                 self.delete_extension(child)
@@ -2752,6 +2753,17 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         """
         return list(self.extensions.keys())
 
+    def _get_extensions_params(self) -> dict[str, dict]:
+        """
+        Return the params of all computed extensions (loaded or saved), keyed by extension name.
+        """
+        # saved-but-unloaded extensions fall back to default params rather than being read from disk
+        params: dict[str, dict] = {}
+        if self.format != "memory":
+            params = {name: {} for name in self.get_saved_extension_names()}
+        params.update({name: ext.params for name, ext in self.extensions.items()})
+        return params
+
     def has_extension(self, extension_name: str) -> bool:
         """
         Check if the extension exists in memory (dict) or in the folder or in zarr.
@@ -2850,16 +2862,6 @@ def _sort_extensions_by_dependency(extensions):
 
         required_dependencies = get_extension_class(extension).get_required_dependencies(**extension_params)
         optional_dependencies = get_extension_class(extension).get_optional_dependencies(**extension_params)
-        for dependency in required_dependencies:
-            if "|" in dependency:
-                for dep in dependency.split("|"):
-                    if extension not in _extension_children[dep]:
-                        print(f"Adding missing dependency child link: {dep} -> {extension}")
-                        _extension_children[dep].append(extension)
-            else:
-                if extension not in _extension_children[dependency]:
-                    print(f"Adding missing dependency child link: {dependency} -> {extension}")
-                    _extension_children[dependency].append(extension)
 
         # Split cases with an "or" in them, and flatten into a list
         all_dependencies = required_dependencies + optional_dependencies
@@ -2890,11 +2892,8 @@ def _sort_extensions_by_dependency(extensions):
 global _possible_extensions
 _possible_extensions = []
 
-global _extension_children
-_extension_children = {}
 
-
-def _get_children_dependencies(extension_name):
+def _get_children_dependencies(extension_name, extensions):
     """
     Extension classes have a `depend_on` attribute to declare on which class they
     depend on. For instance "templates" depends on "waveforms". "waveforms" depends on "random_spikes".
@@ -2908,15 +2907,29 @@ def _get_children_dependencies(extension_name):
     For instance, recomputing the "waveforms" needs to delete the "templates", since the latter depends on the former.
     For this particular example, if we change the "ms_before" parameter of the "waveforms", also the "templates" will
     require recomputation as this parameter is inherited.
+
+    Dependencies are resolved with the params of each extension, so optional dependencies (e.g. "quality_metrics"
+    on "spike_amplitudes") are included. Every alternative of a "a|b" dependency counts as a parent, since which
+    one was used is not recorded.
+
+    Parameters
+    ----------
+    extension_name : str
+        The parent extension name.
+    extensions : dict
+        Mapping of computed extension name -> params.
+
+    Returns
+    -------
+    names : list
+        The children, grand children, etc. of ``extension_name``.
     """
     names = []
-    children = _extension_children[extension_name]
-    for child in children:
-        if child not in names:
+    for child, params in extensions.items():
+        if child not in names and extension_name in get_extension_class(child).get_any_dependencies(**params):
             names.append(child)
-        grand_children = _get_children_dependencies(child)
-        names.extend(grand_children)
-    return list(names)
+            names.extend(n for n in _get_children_dependencies(child, extensions) if n not in names)
+    return names
 
 
 def register_result_extension(extension_class):
@@ -2942,15 +2955,6 @@ def register_result_extension(extension_class):
         )
 
         _possible_extensions.append(extension_class)
-
-        # create the children dpendencies to be able to delete on re-compute
-        _extension_children[extension_class.extension_name] = []
-        for parent_name in extension_class.get_required_dependencies():
-            if "|" in parent_name:
-                for name in parent_name.split("|"):
-                    _extension_children[name].append(extension_class.extension_name)
-            else:
-                _extension_children[parent_name].append(extension_class.extension_name)
 
 
 def get_extension_class(extension_name: str, auto_import=True):
