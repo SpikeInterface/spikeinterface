@@ -29,7 +29,7 @@ dependencies = [
     # "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
     # "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
     "neo>=0.14.6",
-    "probeinterface>=0.4.2",
+    "probeinterface>=0.5.0",
     "packaging",
     "pydantic",
 ]
