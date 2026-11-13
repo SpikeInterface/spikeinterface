@@ -498,7 +498,6 @@ def _normalize_noise_level_params(recording, random_slices_kwargs):
     if params["method"] != "full_random":
         raise ValueError(f"get_random_sample_slices : wrong method {params['method']}")
 
-
     chunk_size = params["chunk_size"]
     if chunk_size is None:
         chunk_duration = params["chunk_duration"]

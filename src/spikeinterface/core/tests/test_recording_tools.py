@@ -315,14 +315,10 @@ def test_get_noise_levels_cache_parameters(monkeypatch):
     )
 
     # An explicit sampling request recomputes the manually supplied value.
-    get_noise_levels(
-        recording, return_in_uV=False, random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False
-    )
+    get_noise_levels(recording, return_in_uV=False, random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False)
     assert key in recording._noise_levels_params
     recording.delete_property(key)
     assert key not in recording._noise_levels_params
-
-
 
 
 def test_noise_levels_cache_invalidated_on_gain_change():
@@ -375,12 +371,8 @@ def test_noise_levels_cache_invalidated_on_gain_change():
             progress_bar=False,
         )
 
-        np.testing.assert_allclose(
-            scaled_after, scaled_before[method] * 10, rtol=1e-4
-        )
+        np.testing.assert_allclose(scaled_after, scaled_before[method] * 10, rtol=1e-4)
         np.testing.assert_array_equal(raw_after, raw_before[method])
-
-
 
 
 def test_noise_levels_cache_invalidated_on_offset_change():
@@ -391,44 +383,64 @@ def test_noise_levels_cache_invalidated_on_offset_change():
     sampling_kwargs = {"seed": 42}
 
     rms_before = get_noise_levels(
-        recording, method="rms", return_in_uV=True,
-        random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False,
+        recording,
+        method="rms",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
     ).copy()
 
     std_before = get_noise_levels(
-        recording, method="std", return_in_uV=True,
-        random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False,
+        recording,
+        method="std",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
     ).copy()
 
     mad_before = get_noise_levels(
-        recording, method="mad", return_in_uV=True,
-        random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False,
+        recording,
+        method="mad",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
     ).copy()
 
     recording.set_channel_offsets([100.0] * 4)
 
     rms_after = get_noise_levels(
-        recording, method="rms", return_in_uV=True,
-        random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False,
+        recording,
+        method="rms",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
     ).copy()
 
     std_after = get_noise_levels(
-        recording, method="std", return_in_uV=True,
-        random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False,
+        recording,
+        method="std",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
     ).copy()
 
     mad_after = get_noise_levels(
-        recording, method="mad", return_in_uV=True,
-        random_slices_kwargs=sampling_kwargs, n_jobs=1, progress_bar=False,
+        recording,
+        method="mad",
+        return_in_uV=True,
+        random_slices_kwargs=sampling_kwargs,
+        n_jobs=1,
+        progress_bar=False,
     ).copy()
 
     assert not np.allclose(rms_before, rms_after)
     np.testing.assert_allclose(std_after, std_before, rtol=1e-5)
     np.testing.assert_allclose(mad_after, mad_before, rtol=1e-5)
-
-
-
-
 
 
 def test_noise_levels_cache_invalidated_on_calibration_property_deletion():
@@ -461,12 +473,6 @@ def test_noise_levels_cache_invalidated_on_calibration_property_deletion():
 
     for key in scaled_keys:
         assert key not in recording.get_property_keys()
-
-
-
-
-
-
 
 
 def test_get_noise_levels_normalizes_chunk_duration(monkeypatch):
