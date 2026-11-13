@@ -411,7 +411,12 @@ def test_do_score_labels_counts_spikes_once():
     # also check empty unit handling. unit 3 in both trains are empty, unit 4 are empty too
     # but are mapped to each other.
     sorting1, sorting2 = make_sorting(
-        [100, 500, 900, 1300], [0, 0, 1, 2], [102, 503, 505, 901, 1301], [0, 1, 2, 1, 2], ids1=[0, 1, 2, 3, 4], ids2=[0, 1, 2, 3, 4]
+        [100, 500, 900, 1300],
+        [0, 0, 1, 2],
+        [102, 503, 505, 901, 1301],
+        [0, 1, 2, 1, 2],
+        ids1=[0, 1, 2, 3, 4],
+        ids2=[0, 1, 2, 3, 4],
     )
     unit_map12 = pd.Series({0: 0, 1: 1, 2: 2, 3: -1, 4: 4})
     labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclassification=True)
