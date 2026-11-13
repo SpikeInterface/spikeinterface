@@ -10,6 +10,7 @@ import numpy as np
 from probeinterface import ProbeGroup
 
 from .job_tools import (
+    chunk_duration_to_chunk_size,
     ensure_chunk_size,
     divide_segment_into_chunks,
     fix_job_kwargs,
@@ -470,6 +471,73 @@ def get_closest_channels(recording, channel_ids=None, num_channels=None):
     return np.array(closest_channels_inds), np.array(dists)
 
 
+_NOISE_LEVEL_SAMPLE_PARAMS_DEFAULTS = {
+    "method": "full_random",
+    "num_chunks_per_segment": 20,
+    "chunk_duration": "500ms",
+    "chunk_size": None,
+    "margin_frames": 0,
+    "seed": None,
+}
+
+
+def _normalize_noise_level_params(recording, random_slices_kwargs):
+    """Return the effective sampling parameters used by ``get_random_sample_slices``.
+
+    ``chunk_duration`` is converted to samples, since it is only an alternative way
+    of specifying ``chunk_size``. Chunk sizes are also clipped in the same way as
+    ``get_random_sample_slices`` for recordings with short segments.
+    """
+    params = _NOISE_LEVEL_SAMPLE_PARAMS_DEFAULTS.copy()
+    unexpected_kwargs = set(random_slices_kwargs).difference(params)
+    if unexpected_kwargs:
+        unexpected_key = next(iter(unexpected_kwargs))
+        raise TypeError(f"get_random_sample_slices() got an unexpected keyword argument {unexpected_key!r}")
+    params.update(random_slices_kwargs)
+
+    if params["method"] != "full_random":
+        raise ValueError(f"get_random_sample_slices : wrong method {params['method']}")
+
+
+    chunk_size = params["chunk_size"]
+    if chunk_size is None:
+        chunk_duration = params["chunk_duration"]
+        if chunk_duration is None:
+            raise ValueError("get_random_sample_slices need chunk_size or chunk_duration")
+        chunk_size = chunk_duration_to_chunk_size(chunk_duration, recording)
+
+    # Match the effective chunk-size adjustment performed by get_random_sample_slices.
+    margin_frames = params["margin_frames"]
+    for segment_index in range(recording.get_num_segments()):
+        chunk_size_limit = recording.get_num_samples(segment_index) - 2 * margin_frames
+        if chunk_size > chunk_size_limit:
+            chunk_size = chunk_size_limit - 1
+
+    return {
+        "method": params["method"],
+        "num_chunks_per_segment": params["num_chunks_per_segment"],
+        "chunk_size": chunk_size,
+        "margin_frames": margin_frames,
+        "seed": params["seed"],
+    }
+
+
+def _noise_level_params_match(stored_params, requested_params):
+    """Check whether a cached estimate is compatible with a sampling request.
+
+    A requested ``seed=None`` is a wildcard, while all other sampling parameters
+    must match exactly.
+    """
+    if stored_params is None:
+        return False
+
+    stored_params = dict(stored_params)
+    requested_params = dict(requested_params)
+    requested_seed = requested_params.pop("seed")
+    stored_seed = stored_params.pop("seed", None)
+    return stored_params == requested_params and (requested_seed is None or requested_seed == stored_seed)
+
+
 def _noise_level_chunk(segment_index, start_frame, end_frame, worker_ctx):
     recording = worker_ctx["recording"]
 
@@ -531,8 +599,8 @@ def get_noise_levels(
         If True, returned noise levels are scaled to uV
     method : "mad" | "std" | "rms", default: "mad"
         The method to use to estimate noise levels
-    force_recompute : bool
-        If True, noise levels are recomputed even if they are already stored in the recording extractor
+    force_recompute : bool, default: False
+        If True, noise levels are recomputed even if a compatible estimate is already stored
     random_slices_kwargs : dict
         Options transmitted to  get_random_sample_slices(), please read documentation from this
         function for more details.
@@ -549,52 +617,67 @@ def get_noise_levels(
     else:
         key = f"noise_level_{method}_raw"
 
-    if key in recording.get_property_keys() and not force_recompute:
-        noise_levels = recording.get_property(key=key)
-    else:
-        # This is to keep backward compatibility
-        # lets keep for a while and remove this maybe in 0.103.0
-        # chunk_size used to be in the signature and now is ambiguous
-        random_slices_kwargs_, job_kwargs = split_job_kwargs(kwargs)
-        if len(random_slices_kwargs_) > 0 or "chunk_size" in job_kwargs:
-            msg = (
-                "get_noise_levels(recording, num_chunks_per_segment=20) is deprecated\n"
-                "Now, you need to use get_noise_levels(recording, random_slices_kwargs=dict(num_chunks_per_segment=20, chunk_size=1000))\n"
-                "Please read get_random_sample_slices() documentation for more options."
-            )
-            # if the user use both the old and the new behavior then an error is raised
-            assert len(random_slices_kwargs) == 0, msg
-            warnings.warn(msg)
-            random_slices_kwargs = random_slices_kwargs_
-            if "chunk_size" in job_kwargs:
-                random_slices_kwargs["chunk_size"] = job_kwargs["chunk_size"]
-
-        slices = get_random_sample_slices(recording, **random_slices_kwargs)
-
-        noise_levels_chunks = []
-
-        def append_noise_chunk(res):
-            noise_levels_chunks.append(res)
-
-        func = _noise_level_chunk
-        init_func = _noise_level_chunk_init
-        init_args = (recording, return_in_uV, method)
-        executor = TimeSeriesChunkExecutor(
-            recording,
-            func,
-            init_func,
-            init_args,
-            job_name="noise_level",
-            verbose=False,
-            gather_func=append_noise_chunk,
-            **job_kwargs,
+    # This is to keep backward compatibility with the legacy keyword arguments.
+    # ``chunk_size`` used to be part of the get_noise_levels signature and is
+    # ambiguous with the job-level chunk_size option.
+    random_slices_kwargs = {} if random_slices_kwargs is None else dict(random_slices_kwargs)
+    random_slices_kwargs_legacy, job_kwargs = split_job_kwargs(kwargs)
+    if len(random_slices_kwargs_legacy) > 0 or "chunk_size" in job_kwargs:
+        msg = (
+            "get_noise_levels(recording, num_chunks_per_segment=20) is deprecated\n"
+            "Now, you need to use get_noise_levels(recording, random_slices_kwargs=dict(num_chunks_per_segment=20, chunk_size=1000))\n"
+            "Please read get_random_sample_slices() documentation for more options."
         )
-        executor.run(slices=slices)
-        noise_levels_chunks = np.stack(noise_levels_chunks)
-        noise_levels = np.mean(noise_levels_chunks, axis=0)
+        # If the user uses both the old and the new behavior then an error is raised.
+        assert len(random_slices_kwargs) == 0, msg
+        warnings.warn(msg)
+        random_slices_kwargs = random_slices_kwargs_legacy
+        if "chunk_size" in job_kwargs:
+            random_slices_kwargs["chunk_size"] = job_kwargs["chunk_size"]
 
-        # set property
-        recording.set_property(key, noise_levels)
+    requested_params = _normalize_noise_level_params(recording, random_slices_kwargs)
+    default_params = _normalize_noise_level_params(recording, {})
+    noise_levels_params = getattr(recording, "_noise_levels_params", {})
+
+    if key in recording.get_property_keys() and not force_recompute:
+        stored_params = noise_levels_params.get(key)
+        if stored_params is None:
+            # Preserve manually supplied and loaded properties for the default call.
+            if requested_params == default_params:
+                return recording.get_property(key=key)
+        elif _noise_level_params_match(stored_params, requested_params):
+            return recording.get_property(key=key)
+
+    slices = get_random_sample_slices(recording, **random_slices_kwargs)
+
+    noise_levels_chunks = []
+
+    def append_noise_chunk(res):
+        noise_levels_chunks.append(res)
+
+    func = _noise_level_chunk
+    init_func = _noise_level_chunk_init
+    init_args = (recording, return_in_uV, method)
+    executor = TimeSeriesChunkExecutor(
+        recording,
+        func,
+        init_func,
+        init_args,
+        job_name="noise_level",
+        verbose=False,
+        gather_func=append_noise_chunk,
+        **job_kwargs,
+    )
+    executor.run(slices=slices)
+    noise_levels_chunks = np.stack(noise_levels_chunks)
+    noise_levels = np.mean(noise_levels_chunks, axis=0)
+
+    # Store the property and the parameters that produced it. set_property clears
+    # stale metadata, so attach the new metadata only after setting the property.
+    recording.set_property(key, noise_levels)
+    if not hasattr(recording, "_noise_levels_params"):
+        recording._noise_levels_params = {}
+    recording._noise_levels_params[key] = requested_params
 
     return noise_levels
 
