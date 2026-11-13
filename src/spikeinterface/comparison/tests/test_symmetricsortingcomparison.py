@@ -36,9 +36,18 @@ def test_compare_two_sorters():
 def test_compare_multi_segment():
     sort = generate_sorting(durations=[10, 10])
 
-    cmp_multi = compare_two_sorters(sort, sort)
+    cmp_multi_serial = compare_two_sorters(sort, sort)
+    cmp_multi = compare_two_sorters(sort, sort, n_jobs=2)
 
     assert np.allclose(np.diag(cmp_multi.agreement_scores), np.ones(len(sort.unit_ids)))
+    np.testing.assert_array_equal(cmp_multi.match_event_count, cmp_multi_serial.match_event_count)
+    np.testing.assert_array_equal(cmp_multi.agreement_scores.to_numpy(), cmp_multi_serial.agreement_scores.to_numpy())
+    np.testing.assert_array_equal(
+        cmp_multi.hungarian_match_12.to_numpy(), cmp_multi_serial.hungarian_match_12.to_numpy()
+    )
+    np.testing.assert_array_equal(
+        cmp_multi.hungarian_match_21.to_numpy(), cmp_multi_serial.hungarian_match_21.to_numpy()
+    )
 
 
 def test_agreements():
