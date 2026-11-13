@@ -682,17 +682,15 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
     for seg_index in range(num_segments):
         for u1 in unit1_ids:
             u2 = unit_map12[u1]
+            if u2 == -1 or u2 == "":
+                continue
             st1 = sorting1.get_unit_spike_train(u1, seg_index)
-            if u2 != -1 and u2 != "":
-                lab_st1 = labels_st1[u1][seg_index]
-                lab_st2 = labels_st2[u2][seg_index]
-                st2 = sorting2.get_unit_spike_train(u2, seg_index)
-                match_indices1, match_indices2 = compute_pair_match_indices(st1, st2, delta_frames)
-                lab_st1[match_indices1] = "TP"
-                lab_st2[match_indices2] = "TP"
-            else:
-                lab_st1 = np.array(["FN"] * len(st1))
-                labels_st1[u1][seg_index] = lab_st1
+            lab_st1 = labels_st1[u1][seg_index]
+            lab_st2 = labels_st2[u2][seg_index]
+            st2 = sorting2.get_unit_spike_train(u2, seg_index)
+            match_indices1, match_indices2 = compute_pair_match_indices(st1, st2, delta_frames)
+            lab_st1[match_indices1] = "TP"
+            lab_st2[match_indices2] = "TP"
 
     if label_misclassification:
         mapped_unit2_ids = [u2 for u2 in unit2_ids if u2 in unit_map12.values]
@@ -721,7 +719,6 @@ def do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclass
         for u1 in unit1_ids:
             lab_st1 = labels_st1[u1][seg_index]
             lab_st1[lab_st1 == "UNPAIRED"] = "FN"
-
         for u2 in unit2_ids:
             lab_st2 = labels_st2[u2][seg_index]
             lab_st2[lab_st2 == "UNPAIRED"] = "FP"
