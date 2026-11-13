@@ -3,7 +3,7 @@
 SpikeInterface 0.106.0 release notes
 ------------------------------------
 
-Nov ** 2026
+Nov 13th 2026
 
 Main changes:
 
