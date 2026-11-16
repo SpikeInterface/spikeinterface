@@ -6,7 +6,7 @@ from spikeinterface.metrics.template import (
     compute_template_metrics,
     get_single_channel_template_metric_names,
 )
-from spikeinterface.metrics.template.metrics import single_channel_metrics, multi_channel_metrics
+from spikeinterface.metrics.template.metrics import single_channel_metrics
 
 template_metrics = get_single_channel_template_metric_names()
 
@@ -137,7 +137,6 @@ def test_save_template_metrics(small_sorting_analyzer, create_cache_folder):
 
 
 class TestTemplateMetrics(AnalyzerExtensionCommonTestSuite):
-
     @pytest.mark.parametrize(
         "params",
         [

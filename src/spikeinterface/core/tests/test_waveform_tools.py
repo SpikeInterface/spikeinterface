@@ -5,7 +5,7 @@ import platform
 
 import numpy as np
 
-from spikeinterface.core import generate_recording, generate_sorting, generate_ground_truth_recording, ms_to_samples
+from spikeinterface.core import generate_recording, generate_ground_truth_recording, ms_to_samples
 from spikeinterface.core.waveform_tools import (
     extract_waveforms_to_buffers,
     extract_waveforms_to_single_buffer,

@@ -42,7 +42,7 @@ def test_failure_with_non_unique_unit_ids():
     seed = 10
     sorting = generate_sorting(num_units=3, durations=[0.100], sampling_frequency=30000.0, seed=seed)
     with pytest.raises(AssertionError):
-        sorting2 = UnitsSelectionSorting(sorting, unit_ids=["0", "2"], renamed_unit_ids=["a", "a"])
+        _ = UnitsSelectionSorting(sorting, unit_ids=["0", "2"], renamed_unit_ids=["a", "a"])
 
 
 def test_compute_and_cache_spike_vector():

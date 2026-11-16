@@ -38,9 +38,9 @@ class SplitUnitSorting(BaseSorting):
         if type(indices_list) is not list:
             indices_list = [indices_list]
         parents_unit_ids = sorting.unit_ids
-        assert sorting.get_num_segments() == len(
-            indices_list
-        ), "The length of indices_list must be the same as parent_sorting.get_num_segments"
+        assert sorting.get_num_segments() == len(indices_list), (
+            "The length of indices_list must be the same as parent_sorting.get_num_segments"
+        )
         split_unit_indices = np.unique([np.unique(v) for v in indices_list])
         tot_splits = len(split_unit_indices)
         unchanged_units = parents_unit_ids[parents_unit_ids != split_unit_id]
@@ -63,12 +63,10 @@ class SplitUnitSorting(BaseSorting):
             assert len(new_unit_ids) <= tot_splits, "indices_list has more id indices than the length of new_unit_ids"
 
         assert split_unit_id in parents_unit_ids, "Unit to split must be in parent sorting"
-        assert properties_policy == "keep" or properties_policy == "remove", (
-            "properties_policy must be " "keep" " or " "remove" ""
+        assert properties_policy == "keep" or properties_policy == "remove", "properties_policy must be keep or remove"
+        assert not any(np.isin(new_unit_ids, unchanged_units)), (
+            "new_unit_ids should be new unit ids or no more than one unit id can be found in split_unit_id"
         )
-        assert not any(
-            np.isin(new_unit_ids, unchanged_units)
-        ), "new_unit_ids should be new unit ids or no more than one unit id can be found in split_unit_id"
 
         sampling_frequency = sorting.get_sampling_frequency()
         units_ids = np.concatenate([unchanged_units, new_unit_ids])
@@ -76,9 +74,9 @@ class SplitUnitSorting(BaseSorting):
         self._parent_sorting = sorting
 
         BaseSorting.__init__(self, sampling_frequency, units_ids)
-        assert all(
-            np.isin(unchanged_units, self.unit_ids)
-        ), "new_unit_ids should have a compatible format with the parent ids"
+        assert all(np.isin(unchanged_units, self.unit_ids)), (
+            "new_unit_ids should have a compatible format with the parent ids"
+        )
 
         for si, parent_segment in enumerate(self._parent_sorting.segments):
             sub_segment = SplitSortingUnitSegment(parent_segment, split_unit_id, indices_zero_based[si], new_unit_ids)

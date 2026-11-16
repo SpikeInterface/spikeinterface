@@ -39,7 +39,7 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
         if sorting2_name is None:
             sorting2_name = "sorting2"
         assert sorting1.get_num_segments() == sorting2.get_num_segments(), (
-            "The two sortings must have the same " "number of segments! "
+            "The two sortings must have the same number of segments! "
         )
 
         BasePairComparison.__init__(
@@ -100,7 +100,6 @@ class BasePairSorterComparison(BasePairComparison, MixinSpikeTrainComparison):
                 self.match_event_count, self.event_counts1, self.event_counts2
             )
         elif self.agreement_method == "distance":
-
             self.agreement_scores = calculate_agreement_scores_with_distance(
                 self.sorting1,
                 self.sorting2,
@@ -294,7 +293,6 @@ class GroundTruthComparison(BasePairSorterComparison):
         compute_misclassifications: bool = False,
         verbose: bool = False,
     ):
-        import pandas as pd
 
         if gt_name is None:
             gt_name = "ground truth"

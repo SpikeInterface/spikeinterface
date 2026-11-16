@@ -1,7 +1,6 @@
 import pytest
 
 from pydantic import ValidationError
-import numpy as np
 
 from spikeinterface.curation.curation_model import Curation, SequentialCuration, LabelDefinition
 

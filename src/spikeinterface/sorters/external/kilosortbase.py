@@ -226,9 +226,9 @@ class KilosortBase:
             else:
                 tmp_files_to_remove = ()
         else:
-            assert isinstance(
-                params["delete_tmp_files"], (tuple, list)
-            ), "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
+            assert isinstance(params["delete_tmp_files"], (tuple, list)), (
+                "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
+            )
 
             for name in params["delete_tmp_files"]:
                 assert name in all_tmp_files, f"{name} is not a valid option, must be one of: {all_tmp_files}"

@@ -114,7 +114,6 @@ class LocationsWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -167,7 +166,7 @@ class LocationsWidget(BaseWidget):
 
         scatter_ax.set_xlim(0, dp.total_duration)
         scatter_ax.set_xlabel("Times [s]")
-        scatter_ax.set_ylabel(f"Location [um]")
+        scatter_ax.set_ylabel("Location [um]")
         scatter_ax.spines["top"].set_visible(False)
         scatter_ax.spines["right"].set_visible(False)
         self.figure.subplots_adjust(bottom=0.1, top=0.9, left=0.1)

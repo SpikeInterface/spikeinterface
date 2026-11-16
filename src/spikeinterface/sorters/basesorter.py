@@ -195,7 +195,7 @@ class BaseSorter:
         invalid_parameters = [k for k in new_params.keys() if k not in valid_parameters]
 
         if invalid_parameters:
-            error_msg = f"Invalid parameters: {invalid_parameters} \n" f"Valid parameters are: {valid_parameters}"
+            error_msg = f"Invalid parameters: {invalid_parameters} \nValid parameters are: {valid_parameters}"
             raise ValueError(error_msg)
 
         params.update(new_params)
@@ -278,7 +278,7 @@ class BaseSorter:
             t1 = time.perf_counter()
             run_time = float(t1 - t0)
             has_error = False
-        except Exception as err:
+        except Exception:
             has_error = True
             run_time = None
             log["error"] = True

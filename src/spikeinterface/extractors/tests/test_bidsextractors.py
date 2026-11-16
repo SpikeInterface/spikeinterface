@@ -5,6 +5,7 @@ from spikeinterface.extractors import read_bids
 
 @pytest.mark.skip("BIDS is tested locally only at the moment")
 def test_read_bids_folder():
+    import spikeinterface.full as si
     # gin get NeuralEnsemble/BEP032-examples
     # cd BEP032-examples
     # gin get NeuralEnsemble/BEP032-examples
@@ -16,11 +17,9 @@ def test_read_bids_folder():
     recordings = read_bids(folder_path)
     # ~ print(recordings)
 
-    rec0 = recordings[0]
+    _ = recordings[0]
     rec1 = recordings[1]
     rec2 = recordings[2]
-
-    import spikeinterface.full as si
 
     sorting = si.run_sorter("herdingspikes", rec1)
     print(sorting)
@@ -32,7 +31,6 @@ def test_read_bids_folder():
     import matplotlib.pyplot as plt
     from probeinterface.plotting import plot_probe_group
 
-    fig, ax = plt.subplots()
     probegroup = rec2.get_probegroup()
     print(probegroup)
     plot_probe_group(

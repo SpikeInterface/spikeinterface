@@ -1,4 +1,3 @@
-import operator
 import pytest
 
 from spikeinterface.core import generate_recording, NumpyRecording
@@ -6,7 +5,6 @@ from spikeinterface.core import generate_recording, NumpyRecording
 from spikeinterface.preprocessing import common_reference
 
 import numpy as np
-from tqdm import trange
 
 
 def _generate_test_recording():
@@ -244,7 +242,7 @@ def test_min_local_radius():
     # remove closest channel to first channel
     recording = recording.remove_channels(recording.channel_ids[1:5])
     with pytest.warns(UserWarning):
-        recording_local_car = common_reference(
+        _ = common_reference(
             recording, reference="local", local_radius=(60, 150), operator="average", min_local_neighbors=5
         )
 

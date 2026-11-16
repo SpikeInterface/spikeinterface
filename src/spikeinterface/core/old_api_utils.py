@@ -355,7 +355,7 @@ def copy_properties(oldapi_extractor, new_extractor, skip_properties=None):
             new_extractor.set_property(
                 key=property_name, values=property_values, ids=property_ids, missing_value=missing_value
             )
-        except Exception as e:
+        except Exception:
             warnings.warn(f"Property {property_name} cannot be ported to new API due to missing values.")
 
 

@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 
 from .base import BaseWidget, to_attr
@@ -147,8 +145,6 @@ class SpikesOnTracesWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-        from .utils_matplotlib import make_mpl_figure
 
         from matplotlib.patches import Ellipse
         from matplotlib.lines import Line2D
@@ -237,7 +233,6 @@ class SpikesOnTracesWidget(BaseWidget):
                                 label_set = True
 
     def plot_ipywidgets(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
         import ipywidgets.widgets as widgets
         from IPython.display import display
         from .utils_ipywidgets import check_ipywidget_backend, UnitSelector
@@ -254,8 +249,6 @@ class SpikesOnTracesWidget(BaseWidget):
         backend_kwargs_ts = backend_kwargs.copy()
         backend_kwargs_ts["width_cm"] = ratios[1] * backend_kwargs_ts["width_cm"]
         backend_kwargs_ts["display"] = False
-        height_cm = backend_kwargs["height_cm"]
-        width_cm = backend_kwargs["width_cm"]
 
         # plot timeseries
         self._traces_widget = TracesWidget(

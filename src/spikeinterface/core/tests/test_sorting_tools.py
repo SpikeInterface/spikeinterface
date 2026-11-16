@@ -14,7 +14,6 @@ from spikeinterface.core.sorting_tools import (
     _get_ids_after_merging,
     generate_unit_ids_for_merge_group,
     remap_unit_indices_in_vector,
-    set_properties_after_merging,
     set_properties_after_splits,
     reorder_spike_vector_by_unit_and_segment,
     get_segment_durations,
@@ -192,7 +191,6 @@ def test_random_spikes_selection():
     random_spikes_indices = random_spikes_selection(
         sorting, num_samples, method="uniform", max_spikes_per_unit=max_spikes_per_unit, margin_size=None, seed=2205
     )
-    random_spikes_indices1 = random_spikes_indices
     spikes = sorting.to_spike_vector()
     some_spikes = spikes[random_spikes_indices]
     for unit_index, unit_id in enumerate(sorting.unit_ids):

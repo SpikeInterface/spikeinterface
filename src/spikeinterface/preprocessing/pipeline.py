@@ -5,7 +5,7 @@ from spikeinterface.core import BaseRecording
 from spikeinterface.core.core_tools import is_dict_extractor, is_path_remote
 from spikeinterface.core.zarrextractors import super_zarr_open
 from spikeinterface.core.zarr_tools import read_encoded_array
-from spikeinterface.preprocessing.preprocessing_classes import preprocessor_dict, _all_preprocesser_dict
+from spikeinterface.preprocessing.preprocessing_classes import preprocessor_dict
 
 pp_names_to_functions = {preprocessor.__name__: preprocessor for preprocessor in preprocessor_dict.values()}
 
@@ -30,9 +30,9 @@ class BasePipeline:
                 preprocessor_list.append(step)
         elif isinstance(preprocessor_list_or_dict, list):
             preprocessor_list = preprocessor_list_or_dict
-            assert all(
-                isinstance(step, dict) and "name" in step for step in preprocessor_list
-            ), "Each step in the preprocessor list must be a dict with 'name' key."
+            assert all(isinstance(step, dict) and "name" in step for step in preprocessor_list), (
+                "Each step in the preprocessor list must be a dict with 'name' key."
+            )
 
         for step in preprocessor_list:
             if "params" not in step:
@@ -321,7 +321,6 @@ def _make_pipeline_list_from_recording_dict(recording_dict):
 
     preprocessing_list = []
     for preprocessor in pipeline_dict_from_file:
-
         preprocessor_class_name = preprocessor.split(".")[-1]
 
         preprocessor_function = preprocessor_dict.get(preprocessor_class_name)
@@ -391,7 +390,6 @@ def _get_all_kwargs_and_values(my_pipeline):
 
     all_kwargs_list = []
     for preprocessor in my_pipeline.preprocessor_list:
-
         preprocessor_name = preprocessor["name"].split(".")[-1]
         pp_function = my_pipeline.function_names_to_functions[preprocessor["name"].split(".")[-1]]
         signature = inspect.signature(pp_function)
@@ -407,7 +405,7 @@ def _get_all_kwargs_and_values(my_pipeline):
                         default_value = None
                     else:
                         default_value = default_value[-1]
-                except:
+                except Exception:
                     default_value = None
 
                 preprocessor_index = my_pipeline.preprocessor_list.index(preprocessor)

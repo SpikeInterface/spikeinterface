@@ -37,7 +37,6 @@ os.environ["FIGPACK_UPLOAD"] = "1" if FIGPACK_UPLOAD else "0"
 
 
 class TestWidgets(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
 
@@ -759,7 +758,6 @@ class TestWidgets(unittest.TestCase):
 
 if __name__ == "__main__":
     # unittest.main()
-    import matplotlib.pyplot as plt
 
     TestWidgets.setUpClass()
     mytest = TestWidgets()

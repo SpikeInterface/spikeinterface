@@ -1,7 +1,6 @@
 import warnings
 
 import numpy as np
-import pytest
 from numpy.testing import assert_raises
 
 from spikeinterface.core import (
@@ -13,9 +12,7 @@ from spikeinterface.core import (
     concatenate_sortings,
     select_segment_recording,
     split_recording,
-    split_sorting,
 )
-from spikeinterface.core.testing import check_sorted_arrays_equal
 
 
 def test_append_concatenate_recordings():

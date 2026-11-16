@@ -1,4 +1,3 @@
-import warnings
 import numpy as np
 from numpy.testing import assert_array_equal
 from .baserecording import BaseRecording
@@ -117,7 +116,6 @@ def check_sortings_equal(
         (None, max_spike_index - 30),
         (30, max_spike_index - 30),
     ]:
-
         slice1 = _slice_spikes(s1, start_frame, end_frame)
         slice2 = _slice_spikes(s2, start_frame, end_frame)
         assert np.array_equal(slice1, slice2)
