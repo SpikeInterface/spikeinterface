@@ -537,3 +537,15 @@ def build_codec_pipeline(filters=None, compressors=None):
     codec_kwargs["serializer"] = serializers[0] if len(serializers) == 1 else "auto"
     codec_kwargs["compressors"] = byte_compressors
     return codec_kwargs
+
+
+def local_zarr_store(path):
+    """
+    Return a zarr LocalStore for local paths (remote paths are returned as str).
+    Passing a plain str to zarr 3 parses it as a URL, so characters like '#' truncate the path.
+    """
+    from .core_tools import is_path_remote
+
+    if is_path_remote(str(path)):
+        return str(path)
+    return zarr.storage.LocalStore(path)
