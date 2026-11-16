@@ -1,6 +1,4 @@
-import shutil
 import pytest
-from pathlib import Path
 
 
 from spikeinterface.benchmark.tests.common_benchmark_testing import make_dataset

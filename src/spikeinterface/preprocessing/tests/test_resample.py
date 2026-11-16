@@ -143,7 +143,7 @@ def test_resample_freq_domain():
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=[10, 7])
 
         xf, nyf = get_fft(parent_rec.get_traces().ravel(), parent_rec.get_sampling_frequency())
-        _ = ax.plot(xf, nyf, color="k", alpha=0.8, label=f"original")
+        _ = ax.plot(xf, nyf, color="k", alpha=0.8, label="original")
 
         for i, rec in enumerate(resamp_recs):
             rs_rate = int(rec.get_sampling_frequency())

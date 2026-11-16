@@ -7,7 +7,6 @@ from spikeinterface.postprocessing import ComputeValidUnitPeriods
 
 
 class TestComputeValidUnitPeriods(AnalyzerExtensionCommonTestSuite):
-
     @pytest.mark.parametrize(
         "params",
         [

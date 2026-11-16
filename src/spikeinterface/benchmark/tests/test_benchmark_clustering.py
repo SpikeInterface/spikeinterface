@@ -26,7 +26,6 @@ def test_benchmark_clustering(create_cache_folder):
 
     peaks = {}
     for dataset, gt_analyzer in datasets.items():
-
         # recording, gt_sorting = datasets[dataset]
 
         # sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False)

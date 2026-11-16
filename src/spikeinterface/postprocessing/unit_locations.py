@@ -1,7 +1,7 @@
 import numpy as np
 from itertools import chain
 
-from spikeinterface.core.core_tools import slice_rows, materialize_array
+from spikeinterface.core.core_tools import slice_rows
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
 from .localization_tools import _unit_location_methods
 

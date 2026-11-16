@@ -1,4 +1,5 @@
 from pathlib import Path
+import importlib.util
 
 import numpy as np
 
@@ -44,14 +45,7 @@ class DartsortSorter(BaseSorter):
 
     @classmethod
     def is_installed(cls):
-        try:
-            import dartsort
-
-            HAVE_DARTSORT = True
-        except ImportError:
-            HAVE_DARTSORT = False
-
-        return HAVE_DARTSORT
+        return importlib.util.find_spec("dartsort") is not None
 
     @staticmethod
     def get_sorter_version():

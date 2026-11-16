@@ -180,9 +180,6 @@ def test_initialization_with_wrong_parents_failure(generated_recording, model_pa
     recording = generated_recording
     model_folder_path = model_path_of_trained_pca
     dummy_parent = PipelineNode(recording)
-    extract_waveforms = ExtractSparseWaveforms(
-        recording=recording, ms_before=1, ms_after=1, radius_um=40, return_output=True
-    )
 
     match_error = f"TemporalPCA should have a single {WaveformsNode.__name__} in its parents"
 

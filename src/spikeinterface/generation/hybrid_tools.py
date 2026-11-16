@@ -121,9 +121,9 @@ def select_templates(
     Templates
         The selected templates
     """
-    assert (
-        min_amplitude is not None or max_amplitude is not None or min_depth is not None or max_depth is not None
-    ), "At least one of min_amplitude, max_amplitude, min_depth, max_depth should be provided"
+    assert min_amplitude is not None or max_amplitude is not None or min_depth is not None or max_depth is not None, (
+        "At least one of min_amplitude, max_amplitude, min_depth, max_depth should be provided"
+    )
     # get template amplitudes and depth
     main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
 
@@ -400,9 +400,9 @@ def generate_hybrid_recording(
     durations = num_samples / sampling_frequency
     channel_locations = probe.contact_positions
 
-    assert (
-        templates is not None or sorting is not None or generate_sorting_kwargs is not None
-    ), "Provide templates or sorting or generate_sorting_kwargs"
+    assert templates is not None or sorting is not None or generate_sorting_kwargs is not None, (
+        "Provide templates or sorting or generate_sorting_kwargs"
+    )
 
     # check num_units
     num_units = None
@@ -444,9 +444,9 @@ def generate_hybrid_recording(
         from spikeinterface.postprocessing.localization_tools import compute_monopolar_triangulation
 
         assert isinstance(templates, Templates), "templates should be a Templates object"
-        assert (
-            templates.num_channels == recording.get_num_channels()
-        ), "templates and recording should have the same number of channels"
+        assert templates.num_channels == recording.get_num_channels(), (
+            "templates and recording should have the same number of channels"
+        )
         nbefore = templates.nbefore
         nafter = templates.nafter
         unit_locations = compute_monopolar_triangulation(templates, peak_sign="both", peak_mode="extremum")
@@ -485,9 +485,9 @@ def generate_hybrid_recording(
     num_spikes = sorting.to_spike_vector().size
     sorting.set_property("gt_unit_locations", unit_locations)
 
-    assert (nbefore + nafter) == templates_array.shape[
-        1
-    ], "templates and ms_before, ms_after should have the same length"
+    assert (nbefore + nafter) == templates_array.shape[1], (
+        "templates and ms_before, ms_after should have the same length"
+    )
 
     if templates_array.ndim == 3:
         upsample_vector = None

@@ -5,7 +5,6 @@ from spikeinterface.core.core_tools import define_function_handling_dict_from_cl
 
 
 class DirectionalDerivativeRecording(BasePreprocessor):
-
     def __init__(
         self,
         recording: BaseRecording,

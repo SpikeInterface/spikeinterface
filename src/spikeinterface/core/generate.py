@@ -10,7 +10,7 @@ from .numpyextractors import NumpySorting
 
 from probeinterface import Probe, generate_linear_probe, generate_multi_columns_probe
 
-from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting
+from spikeinterface.core import BaseRecording, BaseRecordingSegment, BaseSorting, BaseSortingSegment
 from .core_tools import define_function_from_class, ms_to_samples, _ensure_seed
 
 
@@ -355,28 +355,27 @@ class TransformSorting(BaseSorting):
 
         if new_unit_ids is not None:
             new_unit_ids = list(new_unit_ids)
-            assert ~np.any(
-                np.isin(new_unit_ids, sorting.unit_ids)
-            ), "some units ids are already present. Consider using added_spikes_existing_units"
+            assert ~np.any(np.isin(new_unit_ids, sorting.unit_ids)), (
+                "some units ids are already present. Consider using added_spikes_existing_units"
+            )
             if len(new_unit_ids) > 0:
-                assert type(unit_ids[0]) == type(new_unit_ids[0]), "unit_ids should have the same type"
+                assert type(unit_ids[0]) is type(new_unit_ids[0]), "unit_ids should have the same type"
                 unit_ids = unit_ids + list(new_unit_ids)
 
         BaseSorting.__init__(self, sampling_frequency, unit_ids)
 
         self.parent_unit_ids = sorting.unit_ids
-        self._cached_spike_vector = sorting.to_spike_vector().copy()
+        spikes = sorting.to_spike_vector().copy()
         self.refractory_period_ms = refractory_period_ms
 
-        self.added_spikes_from_existing_mask = np.zeros(len(self._cached_spike_vector), dtype=bool)
-        self.added_spikes_from_new_mask = np.zeros(len(self._cached_spike_vector), dtype=bool)
+        self.added_spikes_from_existing_mask = np.zeros(len(spikes), dtype=bool)
+        self.added_spikes_from_new_mask = np.zeros(len(spikes), dtype=bool)
 
         if added_spikes_existing_units is not None and len(added_spikes_existing_units) > 0:
-            assert (
-                added_spikes_existing_units.dtype == minimum_spike_dtype
-            ), "added_spikes_existing_units should be a spike vector"
-            added_unit_indices = np.arange(len(self.parent_unit_ids))
-            self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_existing_units))
+            assert added_spikes_existing_units.dtype == minimum_spike_dtype, (
+                "added_spikes_existing_units should be a spike vector"
+            )
+            spikes = np.concatenate((spikes, added_spikes_existing_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.ones(len(added_spikes_existing_units), dtype=bool))
             )
@@ -385,10 +384,10 @@ class TransformSorting(BaseSorting):
             )
 
         if added_spikes_new_units is not None and len(added_spikes_new_units) > 0:
-            assert (
-                added_spikes_new_units.dtype == minimum_spike_dtype
-            ), "added_spikes_new_units should be a spike vector"
-            self._cached_spike_vector = np.concatenate((self._cached_spike_vector, added_spikes_new_units))
+            assert added_spikes_new_units.dtype == minimum_spike_dtype, (
+                "added_spikes_new_units should be a spike vector"
+            )
+            spikes = np.concatenate((spikes, added_spikes_new_units))
             self.added_spikes_from_existing_mask = np.concatenate(
                 (self.added_spikes_from_existing_mask, np.zeros(len(added_spikes_new_units), dtype=bool))
             )
@@ -396,14 +395,20 @@ class TransformSorting(BaseSorting):
                 (self.added_spikes_from_new_mask, np.ones(len(added_spikes_new_units), dtype=bool))
             )
 
-        sort_idxs = np.lexsort([self._cached_spike_vector["sample_index"], self._cached_spike_vector["segment_index"]])
-        self._cached_spike_vector = self._cached_spike_vector[sort_idxs]
+        sort_idxs = np.lexsort(
+            [
+                spikes["sample_index"],
+                spikes["segment_index"],
+            ]
+        )
+        spikes = spikes[sort_idxs]
+        self._cached_time_ordered = {"spikes": spikes, "segment_slices": None}
         self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[sort_idxs]
         self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[sort_idxs]
 
         # We need to add the sorting segments
         for segment_index in range(sorting.get_num_segments()):
-            segment = SpikeVectorSortingSegment(self._cached_spike_vector, segment_index, unit_ids=self.unit_ids)
+            segment = SpikeVectorSortingSegment(spikes, segment_index, unit_ids=self.unit_ids)
             self.add_sorting_segment(segment)
 
         if self.refractory_period_ms is not None:
@@ -449,10 +454,10 @@ class TransformSorting(BaseSorting):
             of spikes. Any spike times in added_spikes violating the refractory period will be
             discarded.
         """
-        assert (
-            sorting1.get_sampling_frequency() == sorting2.get_sampling_frequency()
-        ), "sampling_frequency should be the same"
-        assert type(sorting1.unit_ids[0]) == type(sorting2.unit_ids[0]), "unit_ids should have the same type"
+        assert sorting1.get_sampling_frequency() == sorting2.get_sampling_frequency(), (
+            "sampling_frequency should be the same"
+        )
+        assert type(sorting1.unit_ids[0]) is type(sorting2.unit_ids[0]), "unit_ids should have the same type"
         # We detect the indices that are shared by the two sortings
         mask1 = np.isin(sorting2.unit_ids, sorting1.unit_ids)
         common_ids = sorting2.unit_ids[mask1]
@@ -556,20 +561,18 @@ class TransformSorting(BaseSorting):
         ## This function will remove the added spikes that will violate RPV, but does not affect the
         ## spikes in the original sorting. So if some RPV violation are present in this sorting,
         ## they will be left untouched
-        unit_indices = np.unique(self._cached_spike_vector["unit_index"])
+        spikes = self._cached_time_ordered["spikes"]
+        unit_indices = np.unique(spikes["unit_index"])
         rpv = int(self.get_sampling_frequency() * self.refractory_period_ms / 1000)
         to_keep = ~self.added_spikes_from_existing_mask.copy()
         for segment_index in range(self.get_num_segments()):
             for unit_ind in unit_indices:
-                (indices,) = np.nonzero(
-                    (self._cached_spike_vector["unit_index"] == unit_ind)
-                    * (self._cached_spike_vector["segment_index"] == segment_index)
-                )
+                (indices,) = np.nonzero((spikes["unit_index"] == unit_ind) * (spikes["segment_index"] == segment_index))
                 to_keep[indices[1:]] = np.logical_or(
-                    to_keep[indices[1:]], np.diff(self._cached_spike_vector[indices]["sample_index"]) > rpv
+                    to_keep[indices[1:]], np.diff(spikes[indices]["sample_index"]) > rpv
                 )
 
-        self._cached_spike_vector = self._cached_spike_vector[to_keep]
+        self._cached_time_ordered = {"spikes": spikes[to_keep], "segment_slices": None}
         self.added_spikes_from_existing_mask = self.added_spikes_from_existing_mask[to_keep]
         self.added_spikes_from_new_mask = self.added_spikes_from_new_mask[to_keep]
 
@@ -1017,9 +1020,6 @@ def synthesize_amplitude_factor(
         return rng.normal(loc=1, scale=amplitude_std, size=num_spikes)
     else:
         return None
-
-
-from spikeinterface.core.basesorting import BaseSortingSegment, BaseSorting
 
 
 class SortingGenerator(BaseSorting):
@@ -1686,7 +1686,6 @@ def generate_templates(
 
     """
     unit_params = unit_params or dict()
-    rng = np.random.default_rng(seed=seed)
 
     # neuron location must be 3D
     assert units_locations.shape[1] == 3
@@ -2331,9 +2330,7 @@ def generate_ground_truth_recording(
 
         prb_kwargs = generate_probe_kwargs.copy()
         if "num_contact_per_column" in prb_kwargs:
-            assert (
-                prb_kwargs["num_contact_per_column"] * prb_kwargs["num_columns"]
-            ) == num_channels, (
+            assert (prb_kwargs["num_contact_per_column"] * prb_kwargs["num_columns"]) == num_channels, (
                 "generate_multi_columns_probe : num_channels do not match num_contact_per_column x num_columns"
             )
         elif "num_contact_per_column" not in prb_kwargs and "num_columns" in prb_kwargs:
@@ -2411,10 +2408,8 @@ def generate_ground_truth_recording(
         parent_recording=noise_rec,
         upsample_vector=upsample_vector,
     )
-    recording.annotate(is_filtered=True)
-    recording.set_probe(probe)
-    recording.set_channel_gains(1.0)
-    recording.set_channel_offsets(0.0)
+
+    setup_inject_templates_recording(recording, probe)
 
     main_channel_ids = recording.channel_ids[main_channel_indices]
     sorting.set_property("main_channel_id", main_channel_ids)
@@ -2423,6 +2418,17 @@ def generate_ground_truth_recording(
     sorting.name = "GroundTruthSorting"
 
     return recording, sorting
+
+
+def setup_inject_templates_recording(recording: BaseRecording, probe: Probe) -> None:
+    """
+    Convenience function to modify a generated
+    recording in-place with annotation and probe details
+    """
+    recording.annotate(is_filtered=True)
+    recording.set_probe(probe)
+    recording.set_channel_gains(1.0)
+    recording.set_channel_offsets(0.0)
 
 
 def __getattr__(name):

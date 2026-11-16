@@ -59,7 +59,7 @@ class MergeUnitsSorting(BaseSorting):
         # some checks
         for ids in units_to_merge:
             assert all(u in parents_unit_ids for u in ids), "units to merge are not all in parent"
-        assert properties_policy in ("keep", "remove"), "properties_policy must be " "keep" " or " "remove" ""
+        assert properties_policy in ("keep", "remove"), "properties_policy must be keep or remove"
 
         # new units are put at the end
         unit_ids = keep_unit_ids + list(new_unit_ids)

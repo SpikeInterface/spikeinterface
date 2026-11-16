@@ -95,7 +95,6 @@ class MotionInterpolationBenchmark(Benchmark):
 
 
 class MotionInterpolationStudy(BenchmarkStudy):
-
     benchmark_class = MotionInterpolationBenchmark
 
     def create_benchmark(self, key):
@@ -133,7 +132,6 @@ class MotionInterpolationStudy(BenchmarkStudy):
 
         if mode == "ordered_accuracy":
             if ax is None:
-
                 fig, ax = plt.subplots(figsize=figsize)
             else:
                 fig = ax.figure

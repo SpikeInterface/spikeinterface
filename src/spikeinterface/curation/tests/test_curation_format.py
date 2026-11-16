@@ -234,7 +234,6 @@ def test_to_from_json_file(tmp_path):
     for curation_index, curation_dict in enumerate(
         [curation_ids_int, curation_ids_str, curation_ids_int_dict, curation_with_splits]
     ):
-
         temp_filepath = tmp_path / f"data_{curation_index}.json"
 
         with open(temp_filepath, "w") as f:
@@ -331,7 +330,6 @@ def test_apply_curation_with_split():
 def test_apply_curation_with_split_multi_segment():
     recording, sorting = generate_ground_truth_recording(durations=[10.0, 10.0], num_units=9, seed=2205)
     sorting = sorting.rename_units(np.array([1, 2, 3, 6, 10, 14, 20, 31, 42]))
-    analyzer = create_sorting_analyzer(sorting, recording, sparse=False)
     num_segments = sorting.get_num_segments()
 
     curation_with_splits_multi_segment = curation_with_splits.copy()

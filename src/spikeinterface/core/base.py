@@ -1,5 +1,4 @@
 from pathlib import Path
-import shutil
 from typing import Any
 from collections.abc import Iterable, Sequence
 import importlib
@@ -7,26 +6,19 @@ import warnings
 import weakref
 import json
 import pickle
-import random
-import string
 from packaging.version import parse
 from copy import deepcopy
 
 import numpy as np
 
-from .globals import get_global_tmp_folder, is_set_global_tmp_folder
 from .core_tools import (
-    clean_zarr_folder_name,
     is_dict_extractor,
     SIJsonEncoder,
-    is_path_remote,
     make_paths_relative,
     make_paths_absolute,
     check_paths_relative,
     retrieve_importing_provenance,
-    load_properties_from_folder,
 )
-from .job_tools import _shared_job_kwargs_doc
 
 # base dtypes used throughout spikeinterface
 base_peak_dtype = [
@@ -87,9 +79,9 @@ class BaseExtractor:
             # string column. Store it as fixed-width unicode like every other source.
             self._main_ids = np.array(self._main_ids.tolist())
         if len(self._main_ids) > 0:
-            assert (
-                self._main_ids.dtype.kind in "uiSU"
-            ), f"Main IDs can only be integers (signed/unsigned) or strings, not {self._main_ids.dtype}"
+            assert self._main_ids.dtype.kind in "uiSU", (
+                f"Main IDs can only be integers (signed/unsigned) or strings, not {self._main_ids.dtype}"
+            )
 
         self._segments: "list[BaseSegment]" = []
 
@@ -117,7 +109,7 @@ class BaseExtractor:
         html_annotations = f"<details style='{common_style}'>  <summary><strong>Annotations</strong></summary><ul>"
         for key, value in self._annotations.items():
             html_annotations += f"<li> <strong> {key} </strong>: {value}</li>"
-        html_annotations += f"</details>"
+        html_annotations += "</details>"
 
         html_properties = f"<details style='{common_style}'><summary><strong>Properties</strong></summary><ul>"
         for key, value in self._properties.items():
@@ -337,9 +329,9 @@ class BaseExtractor:
         dtype_kind = dtype.kind
 
         if ids is None:
-            assert (
-                values.shape[0] == size
-            ), f"Values must have the same size as the main ids: {size} but got array of size {values.shape[0]}"
+            assert values.shape[0] == size, (
+                f"Values must have the same size as the main ids: {size} but got array of size {values.shape[0]}"
+            )
             self._properties[key] = values
         else:
             ids = np.array(ids)
@@ -351,7 +343,6 @@ class BaseExtractor:
             # Sam: this is used because you could set all ids (like the None) but with the vector.
             if ids.size < size:
                 if key not in self._properties:
-
                     if missing_value is None:
                         if dtype_kind not in self.default_missing_property_values.keys():
                             raise ValueError(
@@ -386,9 +377,9 @@ class BaseExtractor:
                         return
                 else:
                     existing_property = self._properties[key].dtype
-                    assert (
-                        dtype_kind == existing_property.kind
-                    ), f"Mismatch between existing property dtype {existing_property.kind} and provided values dtype {dtype_kind}."
+                    assert dtype_kind == existing_property.kind, (
+                        f"Mismatch between existing property dtype {existing_property.kind} and provided values dtype {dtype_kind}."
+                    )
 
                 indices = self.ids_to_indices(ids)
                 if dtype_kind == "U":
@@ -690,7 +681,7 @@ class BaseExtractor:
         folder_path = file_path.parent
         if Path(file_path).suffix == "":
             file_path = folder_path / (str(file_path) + ext)
-        assert file_path.suffix in extensions, "'file_path' should have one of the following extensions:" " %s" % (
+        assert file_path.suffix in extensions, "'file_path' should have one of the following extensions: %s" % (
             ", ".join(extensions)
         )
         return file_path
@@ -964,7 +955,7 @@ def _get_class_from_string(class_string):
 
     try:
         imported_class = getattr(imported_module, class_name)
-    except:
+    except Exception:
         imported_class = None
 
     return imported_class

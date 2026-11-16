@@ -90,33 +90,33 @@ def compute_saturation_threshold_from_probe(probe: Probe, stream_name: str) -> f
     return None
 
 
-def synchronize_neuropixel_streams(recording_ref, recording_other):
-    """
-    Use the last "sync" channel from spikeglx or openephys neuropixels to synchronize
-    recordings.
+# def synchronize_neuropixel_streams(recording_ref, recording_other):
+#     """
+#     Use the last "sync" channel from spikeglx or openephys neuropixels to synchronize
+#     recordings.
 
-    Method used :
-      1. detect pulse times on both streams.
-      2. make a linear regression from "other" to "ref".
-          The slope is nclose to 1 and corresponds to the sample rate correction
-          The intercept is close to 0 and corresponds to the delta time start
+#     Method used :
+#       1. detect pulse times on both streams.
+#       2. make a linear regression from "other" to "ref".
+#           The slope is nclose to 1 and corresponds to the sample rate correction
+#           The intercept is close to 0 and corresponds to the delta time start
 
-    """
-    # This will be done very very soon, I promise.
-    raise NotImplementedError
+#     """
+#     # This will be done very very soon, I promise.
+#     raise NotImplementedError
 
-    synhcro_chan_id = recording_ref.channel_ids[-1]
-    trig_ref = recording_ref.get_traces(channel_ids=[synhcro_chan_id], return_in_uV=False)
-    trig_ref = trig_ref[:, 0]
-    times_ref = recording_ref.get_times()
+#     synhcro_chan_id = recording_ref.channel_ids[-1]
+#     trig_ref = recording_ref.get_traces(channel_ids=[synhcro_chan_id], return_in_uV=False)
+#     trig_ref = trig_ref[:, 0]
+#     times_ref = recording_ref.get_times()
 
-    synhcro_chan_id = recording_other.channel_ids[-1]
-    trig_other = recording_other.get_traces(channel_ids=[synhcro_chan_id], return_in_uV=False)
-    trig_other = trig_other[:, 0]
-    times_other = recording_other.get_times()
+#     synhcro_chan_id = recording_other.channel_ids[-1]
+#     trig_other = recording_other.get_traces(channel_ids=[synhcro_chan_id], return_in_uV=False)
+#     trig_other = trig_other[:, 0]
+#     times_other = recording_other.get_times()
 
-    # import matplotlib.pyplot as plt
-    # fig, ax = plt.subplots()
-    # ax.plot(times_ref, trig_ref)
-    # ax.plot(times_other, trig_other)
-    # plt.show()
+#     # import matplotlib.pyplot as plt
+#     # fig, ax = plt.subplots()
+#     # ax.plot(times_ref, trig_ref)
+#     # ax.plot(times_other, trig_other)
+#     # plt.show()

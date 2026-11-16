@@ -1,10 +1,9 @@
 import unittest
 
-import pytest
 
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
-from spikeinterface.sorters import LupinSorter, run_sorter
+from spikeinterface.sorters import LupinSorter
 
 from pathlib import Path
 

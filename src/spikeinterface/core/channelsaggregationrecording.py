@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 
 from probeinterface import ProbeGroup
@@ -52,12 +50,11 @@ class ChannelsAggregationRecording(BaseRecording):
         # Generate a default list of channel ids that are unique and consecutive numbers as strings.
         num_all_channels = sum(rec.get_num_channels() for rec in recording_list)
         if renamed_channel_ids is not None:
-            assert (
-                len(np.unique(renamed_channel_ids)) == num_all_channels
-            ), "'renamed_channel_ids' doesn't have the right size or has duplicates!"
+            assert len(np.unique(renamed_channel_ids)) == num_all_channels, (
+                "'renamed_channel_ids' doesn't have the right size or has duplicates!"
+            )
             channel_ids = list(renamed_channel_ids)
         else:
-
             # Explicitly check if all channel_ids arrays are either all integers or all strings.
             all_ids_are_int_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.integer) for rec in recording_list)
             all_ids_are_str_dtype = all(np.issubdtype(rec.channel_ids.dtype, np.str_) for rec in recording_list)
@@ -89,7 +86,7 @@ class ChannelsAggregationRecording(BaseRecording):
                             property_dict[prop_name] = np.concatenate(
                                 (property_dict[prop_name], rec.get_property(prop_name))
                             )
-                        except Exception as e:
+                        except Exception:
                             print(f"Skipping property '{prop_name}' for shape inconsistency")
                             del property_dict[prop_name]
                             break
@@ -214,7 +211,7 @@ class ChannelsAggregationRecordingSegment(BaseRecordingSegment):
         else:
             for ps in parent_segments:
                 assert ps.get_times_kwargs()["t_start"] == times_kargs0["t_start"], (
-                    "All segments should have the same " "t_start"
+                    "All segments should have the same t_start"
                 )
 
         BaseRecordingSegment.__init__(self, **times_kargs0)
