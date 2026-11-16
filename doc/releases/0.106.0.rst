@@ -1,0 +1,167 @@
+.. _release0.106.0:
+
+SpikeInterface 0.106.0 release notes
+------------------------------------
+
+Nov 13th 2026
+
+Main changes:
+
+* Added support for Zarr v3, with zarr shards computed one chunk at a time and waveforms extracted directly to Zarr datasets (#4260, #4907, #4708)
+* Added session displacement generation to the generators and motion correction modules (#3231)
+* Added the ``VanillaSort`` external sorter and the ``NeuroExplorerSortingExtractor`` (#4832, #4825)
+* Added support for Python 3.14 (#4173)
+* Removed the ``BaseSnippets`` class (#4839)
+* Reduced peak memory usage in several preprocessors (``gaussian_filter``, filters) and in extensions through ``SpikeRetriever`` and ``UnitSelectionSorting`` optimizations (#4903, #4840, #4809, #4783)
+* Significant speedups in template similarity (#4785), amplitude scalings (#4870), phase shift and ``gaussian_filter`` FFTs (#4802, #4853), and Wobble peak search (#4782)
+
+core:
+
+* Remove duplicated ``get_recording_property`` and ``get_sorting_property`` (#4933)
+* Fix binary save when only some segments have a time vector (#4923)
+* Fix saving a recording when only some segments have a ``t_start`` (#4922)
+* Fix ``select_periods`` dropping metadata, recording, times and empty segments (#4921)
+* Compute zarr shards one chunk at a time to reduce peak memory (#4907)
+* Remove legacy location property when loading old recordings (#4896)
+* Fix: do not include extra_metadata in zarr provenance dump (#4885)
+* Store pickled extension data in zarr SortingAnalyzers as byte arrays instead of object arrays (#4882)
+* Store JSON data in zarr SortingAnalyzers as byte arrays instead of object arrays (#4881)
+* Make motion-corrected and silenced recordings JSON-serializable (#4877)
+* Add a SortingAnalyzer fixture to the cross-version serialization tests (#4876)
+* Read zarr v2 NWB files with zarr-python 3 (#4875)
+* Allow for ``main_channel_indices`` to use rec attributes (#4867)
+* Reintroduce ``set_times(..., with_warning)``, with deprecation (#4864)
+* Fix: channel_slice should not check overlapping probes (#4862)
+* Override search_cached_spikes_sorted for identity selections (#4845)
+* Remove ``BaseSnippets`` class (#4839)
+* Fix group (and other property) propagation in channel slice (#4838)
+* Fix: remove ``set_times`` warning (#4834)
+* Run the tests with ``forkserver`` on Linux (#4818)
+* Rename the spike vector caches to state which order they hold (#4817)
+* Enable case omission  on ``get_unit_spike_train_in_seconds`` (#4811)
+* Optimize ``SpikeRetriever`` and RAM usage for extensions (#4809)
+* Fix: provenance handling in ``SortingAnalyzer`` (#4805)
+* Fix: drop new_unit_ids of non-mergeable units (#4804)
+* Fix: zarr pickling in ``SortingAnalyzer`` with ``try``/``except`` (#4801)
+* Fix: make seed JSON serializable (#4798)
+* Fix sorting times segment propagation (#4796)
+* UnitSelectionSorting improvements: remove lexsort, fix bug, save memory by sharing parent cache when possible (#4783)
+* Extract waveforms to zarr dataset (#4708)
+* Support zarr v3 (#4260)
+
+extractors:
+
+* Fix: unused but wrong function names (#4932)
+* Use ast.literal_eval instead of eval in parse_sinaps_meta (#4918)
+* Parse params.py with ast instead of exec in read_python (#4916)
+* Fix: propagate fill_gaps_strategy to biocam kwargs (#4901)
+* Fix: openephys - check sync_times only if not None (#4890)
+* Fix: do not use ``set_times`` in  OpenEphys timestamps loading (and load as memmap) (#4883)
+* Fix(extractors): add gap_tolerance_ms to Neuralynx extractors (#4865)
+* Add ``NeuroExplorerSortingExtractor`` (#4825)
+* Don't mount remote paths when running a sorter in a container (#4821)
+* Build one probe per electrode group in NwbRecordingExtractor (#4820)
+* Read the last spike from the unit end offsets in ``NwbSortingExtractor`` (#4819)
+* Don't follow symlinks when storing extractor paths (#4812)
+
+preprocessing:
+
+* Fix ``signed=True`` saturation periods in ``detect_and_remove_artifacts`` (#4920)
+* Filter subsets of channels at a time in ``gaussian_filter`` to reduce peak memory (#4903)
+* Feat: expose periods property in silence_periods (#4897)
+* Extract margin tapering and make chunk ownership explicit (#4887)
+* Pad ``phase_shift`` and ``gaussian_filter`` FFTs to a fast length (#4853)
+* Filter subsets of channels at a time to reduce peak memory (#4840)
+* Fix: artifact detection crossing chunks (#4803)
+* Speed up FFT phase shifts for Neuropixels recordings (#4802)
+* Fix: frame slicing after resample/decimation (#4799)
+* FIR phase-shift + extract ``apply_raised_cosine_taper`` from ``get_chunk_with_margin`` (#4563)
+
+sorters:
+
+* Add main_channel_id to Lupin (#4894)
+* Add VanillaSort external sorter (#4832)
+* Don't mount remote paths when running a sorter in a container (#4821)
+
+postprocessing:
+
+* Fix run_for_all_spikes units and segments after the first (#4925)
+* Fit amplitude scalings with a numba kernel on the normal equations (#4870)
+* Fix: grid convolution select_peaks (#4863)
+* Fix: PCA computation in lazy mode (#4861)
+* Test empty postprocessing and metric extension outputs (#4807)
+* Precompute unit-pair spatial overlap once in find_collisions (#4797)
+* Avoid dense waveform allocation when exporting PC features (#4789)
+* Speed up template similarity with pair-level parallelism (#4785)
+
+metrics:
+
+* Add a seed to sd_ratio's noise draw (#4929)
+* Return NaN for isolation distance when the unit's spikes outnumber the other units' combined spikes (#4926)
+* Fix legacy Mahalanobis metric parameters on load (#4892)
+
+curation:
+
+* Fix: cast infinites to NaN is overflow error (#4830)
+
+widgets:
+
+* Fix raster plot handling of segment times where ``t_start`` is not zero. (#4790)
+
+generators:
+
+* Add session displacement generation (#3231)
+
+sortingcomponents:
+
+* Patch for Lupin to remove some warnings (#4934)
+* Fix: grid convolution select_peaks (#4863)
+* Speed up Wobble peak search with a linear maximum filter (#4782)
+
+motion correction:
+
+* dredge fixes (#4889)
+* Update MEDiCINe amplitude_threshold_quantile docs and require medicine-neuro>=1.7 (#4872)
+* Add session displacement generation (#3231)
+
+documentation:
+
+* Doc: update release notes for patch-releases (#4917)
+* Fix manual split example in process_by_channel_group docs (#4846)
+* Clarify PSD threshold units and recording scaling (#4808)
+* Add 'How SpikeInterface handles time' documentation (#3072)
+
+continuous integration:
+
+* Drop the separate core test workflow (#4822)
+* Support python 3.14 (#4173)
+
+packaging:
+
+* Support python 3.14 (#4173)
+
+testing:
+
+* Fix: benchmark tests need recoridng caching (#4902)
+* Fix probe attachment in serialization fixture builders (#4858)
+* Fix: kilosort tests should point to cached recording (#4849)
+* Drop the separate core test workflow (#4822)
+* Test empty postprocessing and metric extension outputs (#4807)
+
+Contributors:
+
+* @AtomicGlance
+* @AxelNoun
+* @JESUSROYETH
+* @JoeZiminski
+* @KohakuKirisame
+* @alejoe91
+* @chrishalcrow
+* @cwindolf
+* @galenlynch
+* @grahamfindlay
+* @guptaishaan
+* @h-mayorquin
+* @nwatters01
+* @tritsystem
+* @yger

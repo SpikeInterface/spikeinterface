@@ -1,0 +1,17 @@
+.. _release0.105.3:
+
+SpikeInterface 0.105.3 release notes
+------------------------------------
+
+October 20th 2026
+
+Minor release with bug fixes
+
+extractors:
+
+* Fix: do not use set_times in OpenEphys timestamps loading (and load as memmap) (#4883)
+
+
+Contributors:
+
+* @alejoe91

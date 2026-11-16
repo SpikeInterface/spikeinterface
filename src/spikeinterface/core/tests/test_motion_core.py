@@ -1,5 +1,4 @@
 import pickle
-import shutil
 
 import numpy as np
 from spikeinterface.core.motion import Motion

@@ -10,11 +10,8 @@ It is a 2-step approach:
 """
 
 from pathlib import Path
-import warnings
 
 import numpy as np
-
-from spikeinterface.core.baserecording import BaseRecording
 
 from .baserecording import BaseRecording
 from .job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc
@@ -367,7 +364,6 @@ def _worker_distribute_buffers(segment_index, start_frame, end_frame, worker_dic
     num_samples = recording.get_num_samples(segment_index=segment_index)
 
     if l1 > l0:
-
         sub_spikes = in_seg_spikes[i0:i1]
         start = sub_spikes[0]["sample_index"] - nbefore
         end = sub_spikes[-1]["sample_index"] + nafter
@@ -1137,7 +1133,6 @@ def _init_worker_estimate_templates(
     worker_dict["sparsity_mask"] = sparsity_mask
 
     from multiprocessing.shared_memory import SharedMemory
-    import multiprocessing
 
     shm = SharedMemory(shm_name)
     waveform_accumulator_per_worker = np.ndarray(shape=shape, dtype=dtype, buffer=shm.buf)
@@ -1204,7 +1199,6 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
         unit_indices = sub_spikes["unit_index"]
 
         for sample_index, unit_index in zip(sample_indices, unit_indices):
-
             # sample_index < 0 only near the segment start, near the segment end wf is shorter
             wf_start = max(0, -sample_index)
             wf = traces[sample_index + wf_start : sample_index + offset, :]
@@ -1222,4 +1216,4 @@ def _worker_estimate_templates(segment_index, start_frame, end_frame, worker_dic
                 if waveform_squared_accumulator_per_worker is not None:
                     waveform_squared_accumulator_per_worker[
                         worker_index, unit_index, wf_start:wf_end, : wf.shape[1]
-                    ] += (wf**2)
+                    ] += wf**2

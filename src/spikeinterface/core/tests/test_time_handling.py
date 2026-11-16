@@ -55,7 +55,6 @@ class TestTimeHandling:
         times_recording = raw_recording.clone()
         all_time_vectors = []
         for segment_index in range(raw_recording.get_num_segments()):
-
             t_start = segment_index + 1 * 100
             t_stop = t_start + raw_recording.get_duration(segment_index) + segment_index + 1
 
@@ -80,7 +79,6 @@ class TestTimeHandling:
 
         all_t_starts = []
         for segment_index in range(raw_recording.get_num_segments()):
-
             t_start = (segment_index + 1) * 100
 
             all_t_starts.append(t_start + t_start_recording.get_times(segment_index))
@@ -110,7 +108,6 @@ class TestTimeHandling:
         raw_recording, times_recording, _ = time_vector_recording
 
         for segment_idx in range(raw_recording.get_num_segments()):
-
             assert raw_recording.has_time_vector(segment_idx) is False
             assert times_recording.has_time_vector(segment_idx) is True
 
@@ -169,7 +166,6 @@ class TestTimeHandling:
             recording_for_durations=raw_recording, recording_to_attach=times_recording
         )
         for segment_index in range(raw_recording.get_num_segments()):
-
             if fixture_name == "time_vector_recording":
                 assert sorting.has_time_vector(segment_index=segment_index)
 
@@ -187,7 +183,6 @@ class TestTimeHandling:
         assert "Provide 'segment_index'" in str(e)
 
         for segment_index in range(times_recording.get_num_segments()):
-
             sample_index = np.random.randint(low=0, high=times_recording.get_num_samples(segment_index))
             time_ = times_recording.sample_index_to_time(sample_index, segment_index=segment_index)
 
@@ -258,7 +253,6 @@ class TestTimeHandling:
         all_raw_durations = []
         all_vector_durations = []
         for segment_index in range(raw_recording.get_num_segments()):
-
             # Test before `t_start` and `t_start` (`t_start` is just an offset,
             # should not affect duration).
             raw_duration = all_t_starts[segment_index][-1] - all_t_starts[segment_index][0] + ts
@@ -342,7 +336,6 @@ class TestTimeHandling:
         # For each segment, shift the segment only and check the
         # times are updated as expected.
         for idx in range(num_segments):
-
             scaler = idx + 2
             times_recording.shift_times(shift * scaler, segment_index=idx)
 

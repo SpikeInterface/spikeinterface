@@ -7,6 +7,7 @@ import importlib.util
 import numpy as np
 
 from spikeinterface.core.job_tools import get_poolexecutor, fix_job_kwargs
+from .tools import aggregate_sparse_features, FeaturesLoader
 
 numba_spec = importlib.util.find_spec("numba")
 networkx_spec = importlib.util.find_spec("networkx")
@@ -20,7 +21,6 @@ if numba_spec is not None and networkx_spec is not None and scipy_spec is not No
 else:
     pass
 
-from .tools import aggregate_sparse_features, FeaturesLoader
 
 DEBUG = False
 
@@ -44,10 +44,6 @@ def merge_peak_labels_from_features(
     """
 
     job_kwargs = fix_job_kwargs(job_kwargs)
-
-    features = FeaturesLoader.from_dict_or_folder(features_dict_or_folder)
-    # sparse_wfs = features["sparse_wfs"]
-    # sparse_mask = features["sparse_mask"]
 
     labels_set, pair_mask, pair_shift, pair_values = find_merge_pairs_from_features(
         peaks,
@@ -443,7 +439,6 @@ class ProjectDistribution:
             is_merge = l0 >= l1
             merge_value = l0 - l1
         elif criteria == "distrib_overlap":
-
             lim0 = min(np.min(feat0), np.min(feat1))
             lim1 = max(np.max(feat0), np.max(feat1))
             bin_size = (lim1 - lim0) / 200.0

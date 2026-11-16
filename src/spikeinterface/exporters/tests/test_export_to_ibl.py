@@ -2,10 +2,7 @@ import pytest
 
 from spikeinterface.preprocessing import bandpass_filter, decimate
 from spikeinterface.exporters import export_to_ibl_gui
-from spikeinterface.exporters.tests.common import (
-    make_sorting_analyzer,
-    sorting_analyzer_sparse_for_export,
-)
+
 
 required_output_files = [
     "spikes.times.npy",
@@ -107,8 +104,3 @@ def test_missing_info(sorting_analyzer_sparse_for_export, create_cache_folder):
 
     with pytest.raises(ValueError, match="Missing required extension"):
         export_to_ibl_gui(sorting_analyzer, output_folder, n_jobs=-1)
-
-
-if __name__ == "__main__":
-    sorting_analyzer = make_sorting_analyzer(sparse=True)
-    test_export_ap_to_ibl(sorting_analyzer)

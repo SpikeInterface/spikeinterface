@@ -193,7 +193,7 @@ p_agreement_sorted, p_agreement_moving_avg = calculate_moving_avg(label_df, 'con
 plt.figure(figsize=(6, 6))
 plt.plot(p_agreement_sorted, p_agreement_moving_avg, label = 'Moving Average')
 plt.axhline(y=1/len(np.unique(predictions)), color='black', linestyle='--', label='Chance')
-plt.xlabel('Confidence'); #plt.xlim(0.5, 1)
+plt.xlabel('Confidence') #plt.xlim(0.5, 1)
 plt.ylabel('Proportion Agreement with Human Label'); plt.ylim(0, 1)
 plt.title('Agreement vs Confidence (Moving Average)')
 plt.legend(); plt.grid(True); plt.show()

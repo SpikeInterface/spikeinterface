@@ -88,7 +88,7 @@ def compute_presence_ratios(
     mean_fr_ratio_thresh = float(mean_fr_ratio_thresh)
     if mean_fr_ratio_thresh < 0:
         raise ValueError(
-            f"Expected positive float for `mean_fr_ratio_thresh` param." f"Provided value: {mean_fr_ratio_thresh}"
+            f"Expected positive float for `mean_fr_ratio_thresh` param.Provided value: {mean_fr_ratio_thresh}"
         )
     if mean_fr_ratio_thresh > 1:
         warnings.warn("`mean_fr_ratio_thres` parameter above 1 might lead to low presence ratios.")
@@ -96,11 +96,10 @@ def compute_presence_ratios(
     presence_ratios = {}
     if total_samples < bin_duration_samples:
         warnings.warn(
-            f"Bin duration of {bin_duration_s}s is larger than recording duration. " f"Presence ratios are set to NaN."
+            f"Bin duration of {bin_duration_s}s is larger than recording duration. Presence ratios are set to NaN."
         )
         presence_ratios = {unit_id: np.nan for unit_id in unit_ids}
     else:
-
         for unit_id in unit_ids:
             if num_spikes[unit_id] == 0:
                 presence_ratios[unit_id] = np.nan
@@ -1240,9 +1239,7 @@ def compute_drift_metrics(
 
     segment_samples = [sorting_analyzer.get_num_samples(i) for i in range(sorting_analyzer.get_num_segments())]
     data = spike_locations_by_unit[unit_ids[0]]
-    assert direction in data.dtype.names, (
-        f"Direction {direction} is invalid. Available directions: " f"{data.dtype.names}"
-    )
+    assert direction in data.dtype.names, f"Direction {direction} is invalid. Available directions: {data.dtype.names}"
     bin_edges_for_units = compute_bin_edges_per_unit(
         sorting, segment_samples=segment_samples, periods=periods, bin_duration_s=interval_s, concatenated=False
     )
@@ -1338,6 +1335,7 @@ def compute_sd_ratio(
     censored_period_ms: float = 4.0,
     correct_for_drift: bool = True,
     correct_for_template_itself: bool = True,
+    seed: int | None = None,
     **job_kwargs,
 ):
     """
@@ -1363,6 +1361,9 @@ def compute_sd_ratio(
     correct_for_template_itself : bool, default:  True
         If true, will take into account that the template itself impacts the standard deviation of the noise,
         and will make a rough estimation of what that impact is (and remove it).
+    seed : int | None, default: None
+        Seed for the random chunks the noise SD is computed on. With a seed, the noise SD is always drawn
+        again, and replaces any value `get_noise_levels` has cached on the recording.
     **job_kwargs : dict, default: {}
         Keyword arguments sent to get_noise_levels.
 
@@ -1404,8 +1405,14 @@ def compute_sd_ratio(
         )
         return {unit_id: np.nan for unit_id in unit_ids}
     job_kwargs["progress_bar"] = False
+    # with a seed, draw again rather than reuse a noise SD cached on the recording
+    seed_kwargs = {} if seed is None else dict(random_slices_kwargs=dict(seed=seed), force_recompute=True)
     noise_levels = get_noise_levels(
-        sorting_analyzer.recording, return_in_uV=sorting_analyzer.return_in_uV, method="std", **job_kwargs
+        sorting_analyzer.recording,
+        return_in_uV=sorting_analyzer.return_in_uV,
+        method="std",
+        **seed_kwargs,
+        **job_kwargs,
     )
 
     main_channels = sorting_analyzer.get_main_channels(outputs="index", with_dict=True)
@@ -1473,6 +1480,7 @@ class SDRatio(BaseMetric):
         "censored_period_ms": 4.0,
         "correct_for_drift": True,
         "correct_for_template_itself": True,
+        "seed": None,
     }
     metric_columns = {"sd_ratio": float}
     metric_descriptions = {

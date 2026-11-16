@@ -10,7 +10,7 @@ import zarr
 from spikeinterface.core.base import base_peak_dtype, spike_peak_dtype
 from spikeinterface.core.time_series import TimeSeries
 from spikeinterface.core import BaseRecording, get_chunk_with_margin
-from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, fix_job_kwargs
 from spikeinterface.core import get_channel_distances
 from spikeinterface.core.core_tools import ms_to_samples, samples_to_ms
 
@@ -32,7 +32,6 @@ filters_type = zarr.abc.codec.ArrayArrayCodec | list[zarr.abc.codec.ArrayArrayCo
 
 
 class PipelineNode:
-
     # If False (general case) then compute(traces_chunk, *node_input_args)
     # If True then compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
     _compute_has_extended_signature = False
@@ -89,7 +88,6 @@ class PipelineNode:
 
 
 class PeakSource(PipelineNode):
-
     # this is an important hack : this force a node.compute() before the machininery is started
     # this trigger eventually some numba jit compilation and avoid compilation racing
     # between processes or threads
@@ -627,9 +625,9 @@ def check_graph(nodes, check_for_peak_source=True):
         node_parents = node.parents if node.parents else []
         for parent in node_parents:
             assert parent in nodes, f"Node {node} has parent {parent} that was not passed in nodes"
-            assert (
-                nodes.index(parent) < i
-            ), f"Nodes are ordered incorrectly: {node} before {parent} in the pipeline definition."
+            assert nodes.index(parent) < i, (
+                f"Nodes are ordered incorrectly: {node} before {parent} in the pipeline definition."
+            )
 
     return nodes
 

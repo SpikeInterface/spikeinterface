@@ -53,7 +53,7 @@ class NumpyFolderSorting(BaseSorting):
         for segment_index in range(num_segments):
             self.add_sorting_segment(SpikeVectorSortingSegment(self.spikes, segment_index, unit_ids))
         # important trick : the cache is already spikes vector
-        self._cached_spike_vector = self.spikes
+        self._cached_time_ordered = {"spikes": self.spikes, "segment_slices": None}
 
         load_properties_from_folder(folder_path / "properties", self)
         load_annotations_from_folder(folder_path, self)
@@ -96,7 +96,7 @@ class NumpyFolderSorting(BaseSorting):
         # All properties, annotations, and probe information are already saved in the folder,
         # so we don't need to include them in the si_folder.json
         cached = NumpyFolderSorting(folder_path=folder_path, mmap_mode=mmap_mode)
-        si_folder_path = folder_path / f"si_folder.json"
+        si_folder_path = folder_path / "si_folder.json"
         cached.dump_to_json(
             file_path=si_folder_path,
             relative_to=folder_path,
@@ -176,7 +176,7 @@ class NpzFolderSorting(NpzSortingExtractor):
         # make the si_folder file to make the load() easier
         cached = NpzFolderSorting(folder_path=save_path)
         cached._annotations = deepcopy({k: sorting._annotations[k] for k in sorting._annotations.keys()})
-        si_folder_path = save_path / f"si_folder.json"
+        si_folder_path = save_path / "si_folder.json"
         cached.dump_to_json(file_path=si_folder_path, relative_to=save_path, include_extra_metadata=False)
 
         return cached

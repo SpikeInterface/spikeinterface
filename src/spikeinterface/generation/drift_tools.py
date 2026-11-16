@@ -71,7 +71,6 @@ def interpolate_templates(
             template = templates_array[template_index, sample_index, :]
 
             if interpolation_method == "thin_plate":
-
                 if "neighbors" not in interpolation_kwargs:
                     # If neighbors it not passed, `RBFInterpolator` uses all channels.
                     # This works poorly for standard ephys template interpolation.
@@ -389,9 +388,9 @@ class InjectDriftingTemplatesRecording(BaseRecording):
     ):
         from scipy.spatial import distance
 
-        assert isinstance(
-            drifting_templates, DriftingTemplates
-        ), "drifting_templates must be a DriftingTemplates object"
+        assert isinstance(drifting_templates, DriftingTemplates), (
+            "drifting_templates must be a DriftingTemplates object"
+        )
         self.drifting_templates = drifting_templates
 
         if parent_recording is None:
@@ -419,15 +418,15 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             amplitude_vector = amplitude_factor
 
         if parent_recording is not None:
-            assert (
-                parent_recording.get_num_segments() == sorting.get_num_segments()
-            ), "parent_recording must have the same number of segments as sorting"
-            assert (
-                parent_recording.get_sampling_frequency() == sorting.get_sampling_frequency()
-            ), "parent_recording must have the same sampling frequency as sorting"
-            assert (
-                parent_recording.get_num_channels() == drifting_templates.num_channels
-            ), "parent_recording must have the same number of channels as templates"
+            assert parent_recording.get_num_segments() == sorting.get_num_segments(), (
+                "parent_recording must have the same number of segments as sorting"
+            )
+            assert parent_recording.get_sampling_frequency() == sorting.get_sampling_frequency(), (
+                "parent_recording must have the same sampling frequency as sorting"
+            )
+            assert parent_recording.get_num_channels() == drifting_templates.num_channels, (
+                "parent_recording must have the same number of channels as templates"
+            )
             parent_recording.copy_metadata(self)
 
         if num_samples is None:
@@ -441,29 +440,29 @@ class InjectDriftingTemplatesRecording(BaseRecording):
             num_samples = [num_samples]
 
         # check drift vector shape and length
-        assert (
-            len(displacement_vectors) == sorting.get_num_segments()
-        ), "displacement_vectors must have the same number of segments as sorting"
+        assert len(displacement_vectors) == sorting.get_num_segments(), (
+            "displacement_vectors must have the same number of segments as sorting"
+        )
         if displacement_unit_factor is None:
             displacement_unit_factor = np.ones(sorting.get_num_units(), dtype="float32")
-        assert displacement_unit_factor.shape[0] == len(
-            sorting.unit_ids
-        ), "displacement_unit_factor must have the same number of units as sorting"
+        assert displacement_unit_factor.shape[0] == len(sorting.unit_ids), (
+            "displacement_unit_factor must have the same number of units as sorting"
+        )
         # displacement_vectors_indices = []
         for num_segment in range(sorting.get_num_segments()):
             duration = displacement_vectors[num_segment].shape[0] / displacement_sampling_frequency
-            assert (
-                duration >= num_samples[num_segment] / sorting.get_sampling_frequency()
-            ), "displacement_vectors duration must span the entire recording segment"
-            assert (
-                displacement_vectors[num_segment].shape[2] == displacement_unit_factor.shape[1]
-            ), "displacement_vectors and displacement_unit_factor must have the same number of motions"
+            assert duration >= num_samples[num_segment] / sorting.get_sampling_frequency(), (
+                "displacement_vectors duration must span the entire recording segment"
+            )
+            assert displacement_vectors[num_segment].shape[2] == displacement_unit_factor.shape[1], (
+                "displacement_vectors and displacement_unit_factor must have the same number of motions"
+            )
 
         # TODO SharedMem for templates
         if mode == "precompute":
-            assert (
-                drifting_templates.templates_array_moved is not None
-            ), "drifting_templates must have precomputed displacements"
+            assert drifting_templates.templates_array_moved is not None, (
+                "drifting_templates must have precomputed displacements"
+            )
             displacements = drifting_templates.displacements
 
             # compute the displacement indices

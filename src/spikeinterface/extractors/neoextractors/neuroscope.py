@@ -188,21 +188,20 @@ class NeuroScopeSortingExtractor(BaseSorting):
     ):
         from lxml import etree as et
 
-        assert not (
-            folder_path is None and resfile_path is None and clufile_path is None
-        ), "Either pass a single folder_path location, or a pair of resfile_path and clufile_path! None received."
+        assert not (folder_path is None and resfile_path is None and clufile_path is None), (
+            "Either pass a single folder_path location, or a pair of resfile_path and clufile_path! None received."
+        )
 
         if resfile_path is not None:
             assert clufile_path is not None, "If passing resfile_path or clufile_path, both are required!"
             resfile_path = Path(resfile_path)
             clufile_path = Path(clufile_path)
-            assert (
-                resfile_path.is_file() and clufile_path.is_file()
-            ), f"The resfile_path ({resfile_path}) and clufile_path ({clufile_path}) must be .res and .clu files!"
+            assert resfile_path.is_file() and clufile_path.is_file(), (
+                f"The resfile_path ({resfile_path}) and clufile_path ({clufile_path}) must be .res and .clu files!"
+            )
 
             assert folder_path is None, (
-                "Pass either a single folder_path location, "
-                "or a pair of resfile_path and clufile_path! All received."
+                "Pass either a single folder_path location, or a pair of resfile_path and clufile_path! All received."
             )
             folder_path_passed = False
             folder_path = resfile_path.parent
@@ -225,9 +224,9 @@ class NeuroScopeSortingExtractor(BaseSorting):
             folder_path_passed = True  # flag for setting kwargs for proper dumping
 
         if exclude_shanks is not None:  # dumping checks do not like having an empty list as default
-            assert all(
-                [isinstance(x, (int, np.integer)) and x >= 0 for x in exclude_shanks]
-            ), "Optional argument 'exclude_shanks' must contain positive integers only!"
+            assert all([isinstance(x, (int, np.integer)) and x >= 0 for x in exclude_shanks]), (
+                "Optional argument 'exclude_shanks' must contain positive integers only!"
+            )
         else:
             exclude_shanks = []
         xml_file_path = _handle_xml_file_path(folder_path=folder_path, initial_xml_file_path=xml_file_path)
@@ -248,9 +247,9 @@ class NeuroScopeSortingExtractor(BaseSorting):
 
         resfile_names = [x.name[: x.name.find(".res")] for x in res_files]
         clufile_names = [x.name[: x.name.find(".clu")] for x in clu_files]
-        assert np.all(
-            r == c for (r, c) in zip(resfile_names, clufile_names)
-        ), "Some of the .res.%i and .clu.%i files do not share the same name!"
+        assert np.all(r == c for (r, c) in zip(resfile_names, clufile_names)), (
+            "Some of the .res.%i and .clu.%i files do not share the same name!"
+        )
 
         all_unit_ids = []
         all_spiketrains = []
@@ -272,9 +271,9 @@ class NeuroScopeSortingExtractor(BaseSorting):
                 n_clu = clu[0]
                 clu = np.delete(clu, 0)
                 unique_ids = np.unique(clu)
-                assert (
-                    len(unique_ids) == n_clu
-                ), "First value of .clu file ({clufile_path}) does not match number of unique IDs!"
+                assert len(unique_ids) == n_clu, (
+                    "First value of .clu file ({clufile_path}) does not match number of unique IDs!"
+                )
                 unit_map = dict(zip(unique_ids, list(range(1, n_clu + 1))))
 
                 if 0 in unique_ids:

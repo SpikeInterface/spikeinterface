@@ -94,7 +94,7 @@ def test_name_and_repr():
     assert "MyRecording" not in str(test_recording2)
     assert test_recording2.__class__.__name__ in str(test_recording2)
     # above 10khz, sampling frequency is printed in kHz
-    assert f"kHz" in rec_str
+    assert "kHz" in rec_str
     # below 10khz sampling frequency is printed in Hz
     test_rec_low_fs = generate_recording(seed=0, durations=[2], sampling_frequency=5000)
     rec_str = str(test_rec_low_fs)

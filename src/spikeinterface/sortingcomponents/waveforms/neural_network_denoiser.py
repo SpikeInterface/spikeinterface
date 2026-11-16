@@ -82,9 +82,9 @@ class SingleChannelDenoiser(WaveformsNode):
                 self.denoiser, model_relative_path = self.load_model(
                     model_folder=model_folder, repo_id=repo_id, model_name=model_name, spike_size=spike_size
                 )
-            except RuntimeError as e:
+            except RuntimeError:
                 raise ValueError(
-                    f"Failed to load model. Check consistency between waveform node shapes and model output layer"
+                    "Failed to load model. Check consistency between waveform node shapes and model output layer"
                 )
 
             self.assert_model_and_waveform_temporal_match(
@@ -122,7 +122,7 @@ class SingleChannelDenoiser(WaveformsNode):
             try:
                 filename = str(model_relative_path).replace(".pt", ".json")
                 json_file_path = hf_hub_download(repo_id=repo_id, filename=filename)
-            except Exception as e:
+            except Exception:
                 warnings.warn(f"Could not download json file from repo {repo_id}. Model might misbehave")
 
         if json_file_path is None or not Path(json_file_path).exists():
@@ -179,9 +179,9 @@ class SingleChannelDenoiser(WaveformsNode):
             else:
                 if model_name is not None:
                     raise ValueError(f"Multiple models found in {model_folder}. Please specify model_name")
-                assert (
-                    model_name is not None
-                ), "If there are multiple .pt files in the repo, you need to specify the model_name"
+                assert model_name is not None, (
+                    "If there are multiple .pt files in the repo, you need to specify the model_name"
+                )
                 filename = [f for f in pt_files if model_name in f]
                 if len(filename) == 0:
                     raise ValueError(f"Model {model_name} not found in repo {repo_id}")
@@ -199,9 +199,9 @@ class SingleChannelDenoiser(WaveformsNode):
             if len(pt_files) == 1:
                 filename = pt_files[0]
             else:
-                assert (
-                    model_name is not None
-                ), "If there are multiple .pt files in the repo, you need to specify the model_name"
+                assert model_name is not None, (
+                    "If there are multiple .pt files in the repo, you need to specify the model_name"
+                )
                 filename = [f for f in pt_files if model_name in f]
                 if len(filename) == 0:
                     raise ValueError(f"Model {model_name} not found in repo {repo_id}")

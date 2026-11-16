@@ -112,7 +112,7 @@ def test_get_dense_templates(template_type, is_in_uV):
 
 def test_initialization_fail_with_dense_templates():
     with pytest.raises(ValueError, match="Sparsity mask passed but the templates are not sparse"):
-        template = generate_test_template(template_type="sparse_with_dense_templates")
+        _ = generate_test_template(template_type="sparse_with_dense_templates")
 
 
 @pytest.mark.parametrize("is_in_uV", [True, False])
