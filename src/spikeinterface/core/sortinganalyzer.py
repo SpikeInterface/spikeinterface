@@ -2893,7 +2893,7 @@ global _possible_extensions
 _possible_extensions = []
 
 
-def _get_children_dependencies(extension_name, extensions):
+def _get_children_dependencies(extension_name, all_extension_params):
     """
     Extension classes have a `depend_on` attribute to declare on which class they
     depend on. For instance "templates" depends on "waveforms". "waveforms" depends on "random_spikes".
@@ -2908,16 +2908,21 @@ def _get_children_dependencies(extension_name, extensions):
     For this particular example, if we change the "ms_before" parameter of the "waveforms", also the "templates" will
     require recomputation as this parameter is inherited.
 
-    Dependencies are resolved with the params of each extension, so optional dependencies (e.g. "quality_metrics"
-    on "spike_amplitudes") are included. Every alternative of a "a|b" dependency counts as a parent, since which
-    one was used is not recorded.
+    Extension classes have a `depend_on` attribute to declare which class they depend on. For instance "templates"
+    depends on "waveforms"; "waveforms" depends on "random_spikes". This function is going the opposite way: it finds
+    all children, grandchildren etc that depend on a particular extension.
+
+    Depending on their parameters, certain extensions depend on different combinations of extensions. E.g. if you're
+    computing snrs, then noise_levels has quality_metrics as a child. But if you're just computing firing_rate,
+    then it does not. Hence the dependency graph depends on what other extensions are being computed, or are saved
+    in the analyzer. We account for these through the `all_extension_params` argument.
 
     Parameters
     ----------
     extension_name : str
         The parent extension name.
-    extensions : dict
-        Mapping of computed extension name -> params.
+    all_extension_params : dict
+        Mapping of computed + new extension name as keys and their params as values.
 
     Returns
     -------
@@ -2925,10 +2930,10 @@ def _get_children_dependencies(extension_name, extensions):
         The children, grand children, etc. of ``extension_name``.
     """
     names = []
-    for child, params in extensions.items():
+    for child, params in all_extension_params.items():
         if child not in names and extension_name in get_extension_class(child).get_any_dependencies(**params):
             names.append(child)
-            names.extend(n for n in _get_children_dependencies(child, extensions) if n not in names)
+            names.extend(n for n in _get_children_dependencies(child, all_extension_params) if n not in names)
     return names
 
 

@@ -188,7 +188,7 @@ def test_exception_raised_when_metric_params_not_equal(sorting_analyzer_for_unit
     be raised depending on the `enforce_metric_params` kwarg. This behaviour is tested here."""
 
     sorting_analyzer_for_unitrefine_curation.compute(
-        "quality_metrics", metric_names=["snr"], metric_params={"snr": {"peak_mode": "peak_to_peak"}}
+        "quality_metrics", metric_names=["snr"], metric_params={"snr": {"method": "peak_to_peak"}}
     )
     sorting_analyzer_for_unitrefine_curation.compute(
         "template_metrics", metric_names=["half_width", "peak_to_trough_duration", "number_of_peaks"]
@@ -209,7 +209,7 @@ def test_exception_raised_when_metric_params_not_equal(sorting_analyzer_for_unit
     sorting_analyzer_for_unitrefine_curation.compute(
         "quality_metrics",
         metric_names=["snr"],
-        metric_params={"snr": {"peak_sign": "neg", "peak_mode": "extremum"}},
+        metric_params={"snr": {"method": "extremum"}},
     )
     sorting_analyzer_for_unitrefine_curation.compute(
         "template_metrics", metric_names=["half_width", "peak_to_trough_duration"]

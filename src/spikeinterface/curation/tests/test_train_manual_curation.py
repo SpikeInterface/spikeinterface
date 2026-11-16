@@ -267,7 +267,7 @@ def test_train_using_two_sorting_analyzers():
         {
             "quality_metrics": {
                 "metric_names": ["num_spikes", "snr"],
-                "metric_params": {"snr": {"peak_mode": "at_index"}},
+                "metric_params": {"snr": {"method": "at_index"}},
             }
         }
     )
