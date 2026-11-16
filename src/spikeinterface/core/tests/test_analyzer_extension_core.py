@@ -311,6 +311,31 @@ def test_delete_on_recompute(create_cache_folder):
     assert sorting_analyzer.get_extension("templates") is None
     assert sorting_analyzer.get_extension("waveforms") is None
 
+    # metric extensions only lose the metrics depending on the recomputed extension
+    import spikeinterface.metrics  # noqa: F401 registers quality_metrics
+    from spikeinterface.core import load_sorting_analyzer
+
+    sorting_analyzer = get_sorting_analyzer(cache_folder, format="binary_folder", sparse=False)
+    sorting_analyzer.compute(
+        {
+            "random_spikes": {},
+            "templates": {},
+            "noise_levels": {},
+            "quality_metrics": {"metric_names": ["snr", "firing_rate"]},
+        }
+    )
+    with pytest.warns(UserWarning, match="Removed metrics"):
+        sorting_analyzer.compute("noise_levels")
+    for analyzer in (sorting_analyzer, load_sorting_analyzer(sorting_analyzer.folder)):
+        qm = analyzer.get_extension("quality_metrics")
+        assert qm.params["metric_names"] == ["firing_rate"]
+        assert list(qm.get_data().columns) == ["firing_rate"]
+
+    # if all metrics depend on it, the extension is deleted
+    sorting_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=True)
+    sorting_analyzer.compute("noise_levels")
+    assert sorting_analyzer.get_extension("quality_metrics") is None
+
 
 def test_compute_several(create_cache_folder):
     cache_folder = create_cache_folder
