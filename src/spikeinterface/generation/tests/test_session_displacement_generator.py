@@ -76,7 +76,6 @@ class TestSessionDisplacementGenerator:
         locations_1 = extra_outputs["unit_locations"][0]
 
         for rec_idx in range(1, 4):
-
             shifts = recording_shifts[rec_idx]
 
             assert np.array_equal(
@@ -91,14 +90,12 @@ class TestSessionDisplacementGenerator:
         min_channel_loc = output_recordings[0].get_channel_locations()[0, 1]
         max_channel_loc = output_recordings[0].get_channel_locations()[-1, 1]
         for unit_idx in range(num_units):
-
             start_pos = self._get_peak_chan_loc_in_um(
                 extra_outputs["templates_array_moved"][0][unit_idx],
                 options["y_bin_um"],
             )
 
             for rec_idx in range(1, options["num_recs"]):
-
                 new_pos = self._get_peak_chan_loc_in_um(
                     extra_outputs["templates_array_moved"][rec_idx][unit_idx], options["y_bin_um"]
                 )
@@ -156,7 +153,6 @@ class TestSessionDisplacementGenerator:
 
         for unit_idx in range(options["kwargs"]["num_units"]):
             for rec_idx in range(1, options["num_recs"]):
-
                 # Exact spike times are not preserved when seed is None
                 assert np.array_equal(
                     output_sortings_same[0].get_unit_spike_train(str(unit_idx)),
@@ -222,7 +218,6 @@ class TestSessionDisplacementGenerator:
         # w.r.t the first recording), check the rigid and nonrigid shifts
         # are as expected.
         for rec_idx in range(1, options["num_recs"]):
-
             shift = options["kwargs"]["recording_shifts"][rec_idx][dim_idx]
 
             # Get the rigid shift between the first recording and this shifted recording
@@ -437,7 +432,6 @@ class TestSessionDisplacementGenerator:
         num_extended_units = num_units * 3
 
         for ses_idx in range(num_sessions):
-
             # There are 3x the number of units when new units are created
             # (one new set above, and one new set below the probe).
             for key in ["unit_locations", "templates_array_moved", "firing_rates"]:
