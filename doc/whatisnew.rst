@@ -8,6 +8,7 @@ Release notes
 .. toctree::
   :maxdepth: 1
 
+  releases/0.106.1.rst
   releases/0.106.0.rst
   releases/0.105.4.rst
   releases/0.105.3.rst
@@ -68,8 +69,24 @@ Release notes
   releases/0.9.1.rst
 
 
-Versions 0.105.1
-================
+Version 0.106.1
+===============
+
+Minor releases with bug fixes
+
+Version 0.106.0
+===============
+
+* Added support for Zarr v3, with zarr shards computed one chunk at a time and waveforms extracted directly to Zarr datasets (#4260, #4907, #4708)
+* Added session displacement generation to the generators and motion correction modules (#3231)
+* Added the ``VanillaSort`` external sorter and the ``NeuroExplorerSortingExtractor`` (#4832, #4825)
+* Added support for Python 3.14 (#4173)
+* Removed the ``BaseSnippets`` class (#4839)
+* Reduced peak memory usage in several preprocessors (``gaussian_filter``, filters) and in extensions through ``SpikeRetriever`` and ``UnitSelectionSorting`` optimizations (#4903, #4840, #4809, #4783)
+* Significant speedups in template similarity (#4785), amplitude scalings (#4870), phase shift and ``gaussian_filter`` FFTs (#4802, #4853), and Wobble peak search (#4782)
+
+Versions 0.105.1/4
+==================
 
 * Minor releases with bug fixes and performance improvements
 
