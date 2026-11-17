@@ -880,6 +880,7 @@ class BaseMetric:
     needs_tmp_data = False  # whether the metric needs temporary data computed with MetricExtension._prepare_data
     needs_job_kwargs = False  # whether the metric needs job_kwargs
     supports_periods = False  # whether the metric function supports periods
+    supports_spike_batches = False  # whether the metric function accepts max_spikes_per_batch
     depend_on = []  # extensions the metric depends on
     deprecated_names = []  # list of metric names used by previous versions of spikeinterface
 
@@ -1308,6 +1309,8 @@ class BaseMetricExtension(AnalyzerExtension):
             t_start = time.perf_counter()
             try:
                 metric_params = self.params["metric_params"].get(metric_name, {})
+                if metric.supports_spike_batches and "max_spikes_per_batch" in self.params:
+                    metric_params = dict(metric_params, max_spikes_per_batch=self.params["max_spikes_per_batch"])
 
                 res = metric.compute(
                     sorting_analyzer,

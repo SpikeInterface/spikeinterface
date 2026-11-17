@@ -1,10 +1,10 @@
 import numpy as np
 
 from spikeinterface.core.analyzer_extension_core import BaseMetric
-from spikeinterface.metrics.utils import compute_total_durations_per_unit
+from spikeinterface.metrics.utils import compute_total_durations_per_unit, count_num_spikes_per_unit_batched
 
 
-def compute_num_spikes(sorting_analyzer, unit_ids=None, periods=None):
+def compute_num_spikes(sorting_analyzer, unit_ids=None, periods=None, max_spikes_per_batch=1_000_000):
     """
     Compute the number of spike across segments.
 
@@ -16,22 +16,18 @@ def compute_num_spikes(sorting_analyzer, unit_ids=None, periods=None):
         The list of unit ids to compute the number of spikes. If None, all units are used.
     periods : array of unit_period_dtype, default: None
         Periods to consider for each unit.
+    max_spikes_per_batch : int, default: 1_000_000
+        Maximum number of spikes loaded in memory at once.
 
     Returns
     -------
     num_spikes : dict
         The number of spikes, across all segments, for each unit ID.
     """
-    sorting = sorting_analyzer.sorting
-    sorting = sorting.select_periods(periods)
     if unit_ids is None:
-        unit_ids = sorting.unit_ids
-    # re-order dict to match unit_ids order
-    count_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
-    num_spikes = {}
-    for unit_id in unit_ids:
-        num_spikes[unit_id] = count_spikes[unit_id]
-    return num_spikes
+        unit_ids = sorting_analyzer.unit_ids
+    counts = count_num_spikes_per_unit_batched(sorting_analyzer, periods, max_spikes_per_batch)
+    return {unit_id: counts[sorting_analyzer.sorting.id_to_index(unit_id)] for unit_id in unit_ids}
 
 
 class NumSpikes(BaseMetric):
@@ -41,9 +37,10 @@ class NumSpikes(BaseMetric):
     metric_descriptions = {"num_spikes": "Total number of spikes for each unit across all segments."}
     metric_columns = {"num_spikes": int}
     supports_periods = True
+    supports_spike_batches = True
 
 
-def compute_firing_rates(sorting_analyzer, unit_ids=None, periods=None):
+def compute_firing_rates(sorting_analyzer, unit_ids=None, periods=None, max_spikes_per_batch=1_000_000):
     """
     Compute the firing rate across segments.
 
@@ -55,21 +52,20 @@ def compute_firing_rates(sorting_analyzer, unit_ids=None, periods=None):
         The list of unit ids to compute the firing rate. If None, all units are used.
     periods : array of unit_period_dtype, default: None
         Periods to consider for each unit.
+    max_spikes_per_batch : int, default: 1_000_000
+        Maximum number of spikes loaded in memory at once.
 
     Returns
     -------
     firing_rates : dict of floats
         The firing rate, across all segments, for each unit ID.
     """
-
-    sorting = sorting_analyzer.sorting
-    sorting = sorting.select_periods(periods)
     if unit_ids is None:
-        unit_ids = sorting.unit_ids
+        unit_ids = sorting_analyzer.unit_ids
     total_durations = compute_total_durations_per_unit(sorting_analyzer, periods=periods)
 
     firing_rates = {}
-    num_spikes = sorting.count_num_spikes_per_unit(unit_ids=unit_ids)
+    num_spikes = compute_num_spikes(sorting_analyzer, unit_ids, periods, max_spikes_per_batch)
     for unit_id in unit_ids:
         if num_spikes[unit_id] == 0:
             firing_rates[unit_id] = np.nan
@@ -85,6 +81,7 @@ class FiringRate(BaseMetric):
     metric_descriptions = {"firing_rate": "Firing rate (spikes per second) for each unit across all segments."}
     metric_columns = {"firing_rate": float}
     supports_periods = True
+    supports_spike_batches = True
 
 
 spiketrain_metrics = [NumSpikes, FiringRate]

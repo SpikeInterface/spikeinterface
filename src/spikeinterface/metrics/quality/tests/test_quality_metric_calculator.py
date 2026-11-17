@@ -260,6 +260,61 @@ def test_quality_metrics_with_periods():
         )
 
 
+def test_quality_metrics_spike_batches():
+    """
+    Spike-level metrics read spikes in batches: tiny batches must give the same metrics as one batch,
+    also with multiple segments and overlapping, gappy periods.
+    """
+    from spikeinterface.core.base import unit_period_dtype
+
+    recording, sorting = generate_ground_truth_recording(durations=[20.0, 15.0], num_units=5, seed=2205)
+    sorting_analyzer = create_sorting_analyzer(sorting=sorting, recording=recording, format="memory")
+    sorting_analyzer.compute(
+        ["random_spikes", "templates", "noise_levels", "spike_amplitudes", "amplitude_scalings", "spike_locations"],
+        **job_kwargs,
+    )
+
+    # 3 random (possibly overlapping) periods per unit and segment, none for the last unit
+    rng = np.random.default_rng(0)
+    num_periods = 3 * (len(sorting.unit_ids) - 1)
+    periods = np.zeros(num_periods * recording.get_num_segments(), dtype=unit_period_dtype)
+    for segment_index in range(recording.get_num_segments()):
+        num_samples = recording.get_num_samples(segment_index)
+        seg_periods = periods[segment_index * num_periods : (segment_index + 1) * num_periods]
+        seg_periods["segment_index"] = segment_index
+        seg_periods["unit_index"] = np.repeat(np.arange(len(sorting.unit_ids) - 1), 3)
+        seg_periods["start_sample_index"] = rng.integers(0, num_samples, num_periods)
+        seg_periods["end_sample_index"] = np.minimum(
+            num_samples,
+            seg_periods["start_sample_index"] + rng.integers(num_samples // 5, num_samples // 2, num_periods),
+        )
+
+    metric_params = dict(
+        drift=dict(interval_s=2, min_spikes_per_interval=5),
+        presence_ratio=dict(bin_duration_s=2),
+        firing_range=dict(bin_size_s=1),
+        amplitude_cv=dict(average_num_spikes_per_bin=10, min_num_bins=2),
+    )
+    for p in (None, periods):
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            metrics = [
+                compute_quality_metrics(
+                    sorting_analyzer,
+                    metric_params=metric_params,
+                    skip_pc_metrics=True,
+                    periods=p,
+                    seed=2205,
+                    max_spikes_per_batch=max_spikes_per_batch,
+                )
+                for max_spikes_per_batch in (17, 1_000_000)
+            ]
+        assert not [w for w in caught if str(w.message).startswith("Error computing metric")]
+        if p is None:
+            assert metrics[0].notna().any().all()
+        np.testing.assert_allclose(metrics[0].to_numpy(float), metrics[1].to_numpy(float), rtol=1e-10)
+
+
 if __name__ == "__main__":
     sorting_analyzer = get_sorting_analyzer()
     print(sorting_analyzer)

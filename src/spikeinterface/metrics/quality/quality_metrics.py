@@ -29,6 +29,9 @@ class ComputeQualityMetrics(BaseMetricExtension):
         If True, PC metrics computation is skipped.
     delete_existing_metrics : bool, default: False
         If True, any quality metrics attached to the `sorting_analyzer` are deleted. If False, any metrics which were previously calculated but are not included in `metric_names` are kept.
+    max_spikes_per_batch : int, default: 1_000_000
+        Spike-train and spike-level metrics read the spike vector (and spike amplitudes / locations)
+        in batches of at most this many spikes, so memory does not grow with the recording length.
 
     Returns
     -------
@@ -123,6 +126,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
         # common extension kwargs
         seed=None,
         skip_pc_metrics=False,
+        max_spikes_per_batch=1_000_000,
     ):
         if metric_names is None:
             metric_names = [m.metric_name for m in self.metric_list]
@@ -151,6 +155,7 @@ class ComputeQualityMetrics(BaseMetricExtension):
             periods=periods,
             seed=seed,
             skip_pc_metrics=skip_pc_metrics,
+            max_spikes_per_batch=int(max_spikes_per_batch),
         )
 
     def _prepare_data(self, sorting_analyzer, unit_ids=None):
