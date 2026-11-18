@@ -922,7 +922,7 @@ def compute_amplitude_cutoffs(
     sorting_analyzer,
     unit_ids=None,
     periods=None,
-    num_histogram_bins=500,
+    num_histogram_bins=100,
     histogram_smoothing_value=3,
     amplitudes_bins_min_ratio=5,
 ):
@@ -1639,7 +1639,7 @@ def amplitude_cutoff(
     ----------
     amplitudes : ndarray_like
         The amplitudes (in µV) of the spikes for one unit.
-    num_histogram_bins : int, default: 500
+    num_histogram_bins : int, default: 100
         The number of bins to use to compute the amplitude histogram.
     histogram_smoothing_value : int, default: 3
         Controls the smoothing applied to the amplitude histogram.

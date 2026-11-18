@@ -186,3 +186,12 @@ if __name__ == "__main__":
     test_ZarrSortingExtractor(tmp_path)
     test_ZarrSampleIndexSearch(tmp_path)
     test_ZarrSortingExtractor_lazy_search(tmp_path)
+
+
+def test_zarr_path_with_hash(tmp_path):
+    # zarr 3 parses str paths as URLs, truncating them at '#'
+    folder = tmp_path / "Record Node 103#Probe.zarr"
+    sorting = generate_sorting(durations=[2], num_units=3)
+    ZarrSortingExtractor.write_sorting(sorting, folder)
+    loaded = ZarrSortingExtractor(folder)
+    assert loaded.get_num_units() == 3

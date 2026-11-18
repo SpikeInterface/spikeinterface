@@ -1,0 +1,17 @@
+.. _release0.106.1:
+
+SpikeInterface 0.106.1 release notes
+------------------------------------
+
+November 17th 2026
+
+Minor release with bug fixes
+
+core:
+
+* Fix: use ``zarr.storage.LocalStore()`` instead of ``str()`` (#4945)
+
+
+Contributors:
+
+* @alejoe91
