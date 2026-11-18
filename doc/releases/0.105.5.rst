@@ -1,0 +1,17 @@
+.. _release0.105.5:
+
+SpikeInterface 0.105.5 release notes
+------------------------------------
+
+November 18th 2026
+
+Minor release with bug fixes
+
+sorters:
+
+* Dartsort: fix passing pre-computed ``si_motion`` (#4953)
+
+
+Contributors:
+
+* @alejoe91
