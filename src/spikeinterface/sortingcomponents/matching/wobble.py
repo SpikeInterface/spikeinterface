@@ -735,10 +735,12 @@ class WobbleMatch(BaseTemplateMatching):
             # TODO: If optimizing for speed -- check this loop
             for spike_start_index, spike_scaling in zip(id_spiketrain, id_scaling):
                 spike_stop_index = spike_start_index + convolution_resolution_len
-                objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2 * pconv
                 if params.scale_amplitudes:
                     pconv_scaled = pconv * spike_scaling
+                    objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2 * pconv_scaled
                     objective[overlapping_templates, spike_start_index:spike_stop_index] -= pconv_scaled
+                else:
+                    objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2 * pconv
 
             objective, objective_normalized = cls.enforce_refractory(
                 spike_train, objective, objective_normalized, params, template_meta
@@ -831,7 +833,7 @@ class WobbleMatch(BaseTemplateMatching):
                 high_resolution_conv, norm_peaks, params.scale_min, params.scale_max, params.amplitude_variance
             )
             jitter = np.argmax(high_res_objective[template_meta.jitter_window, :], axis=0)
-            scalings = scalings[jitter, np.arange(len(non_refractory_indices))]
+            scalings = scalings[template_meta.jitter_window[jitter], np.arange(len(non_refractory_indices))]
 
         # Extract outputs from jitter
         template_shift = template_meta.jitter2template_shift[jitter]
