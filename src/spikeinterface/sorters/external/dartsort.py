@@ -41,6 +41,9 @@ class DartsortSorter(BaseSorter):
         for k, props in schema["$defs"]["DARTsortUserConfig"]["properties"].items():
             default_params_descriptions[k] = props["title"]
 
+        default_params.update({"si_motion": None})
+        default_params_descriptions.update({"si_motion": "SpikeInterface motion object (optional)"})
+
         return default_params, default_params_descriptions
 
     @classmethod
@@ -67,7 +70,7 @@ class DartsortSorter(BaseSorter):
         recording = cls.load_recording_from_folder(sorter_output_folder.parent, with_warnings=False)
 
         # Dartsort can be given the motion object optionaly
-        motion = params.pop("motion", None)
+        si_motion = params.pop("si_motion", None)
 
         # dartsort config are set using dataclass we need to map this
         cfg = DARTsortUserConfig(**params)
@@ -76,7 +79,7 @@ class DartsortSorter(BaseSorter):
             recording,
             sorter_output_folder,
             cfg,
-            motion=motion,
+            si_motion=si_motion,
         )
         # the DARTsortSorting is not the spikeinterface sorting
         dartsort_sorting = ret["sorting"]
