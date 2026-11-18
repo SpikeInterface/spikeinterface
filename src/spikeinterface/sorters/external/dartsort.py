@@ -4,7 +4,7 @@ import importlib.util
 import numpy as np
 
 from ..basesorter import BaseSorter
-from ...core import load
+from ...core import load, Motion
 
 
 class DartsortSorter(BaseSorter):
@@ -71,6 +71,8 @@ class DartsortSorter(BaseSorter):
 
         # Dartsort can be given the motion object optionaly
         si_motion = params.pop("si_motion", None)
+        if si_motion is not None:
+            si_motion = Motion.from_dict(si_motion)
 
         # dartsort config are set using dataclass we need to map this
         cfg = DARTsortUserConfig(**params)
