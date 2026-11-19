@@ -157,10 +157,10 @@ def test_reorder_spike_vector_by_unit_and_segment_extra_fields(force_numba, unit
     assert counts.sum() == num_spikes
 
 
-@pytest.mark.parametrize("extra_field", [("amplitude", "float32"), ("amplitude", "float64")])
+@pytest.mark.parametrize("extra_field", [("amplitude", "float32"), ("amplitude", "float16")])
 def test_reorder_spike_vector_by_unit_and_segment_non_uniform_dtype(force_numba, extra_field):
     """`NumpySorting` stores whatever dtype its caller hands it. Make sure these weird spike
-    vectors still get reordered correctly.
+    vectors still get reordered correctly, including fields numba itself can't compile (float16).
     """
     dtype = minimum_spike_dtype + [extra_field]
     spikes = np.empty(6, dtype=dtype)
@@ -242,8 +242,14 @@ def test_numba_can_reorder():
 
     assert _numba_can_reorder(np.dtype(minimum_spike_dtype))
     assert _numba_can_reorder(np.dtype([("sample_index", "int64"), ("unit_index", "int32"), ("segment_index", "int8")]))
+    # records move as raw bytes, so fields numba itself can't compile are fine
+    assert _numba_can_reorder(np.dtype(minimum_spike_dtype + [("amplitude", "float16"), ("flags", "?", (4,))]))
 
     assert not _numba_can_reorder(np.dtype(minimum_spike_dtype + [("label", "O")]))
+    non_native_int32 = np.dtype("int32").newbyteorder()
+    assert not _numba_can_reorder(
+        np.dtype([("sample_index", "int64"), ("unit_index", non_native_int32), ("segment_index", "int8")])
+    )
     assert not _numba_can_reorder(np.dtype([("sample_index", "int64"), ("unit_index", "int64")]))
     assert not _numba_can_reorder(
         np.dtype([("sample_index", "int64"), ("unit_index", "float64"), ("segment_index", "int64")])
