@@ -1088,6 +1088,52 @@ class BaseMetricExtension(AnalyzerExtension):
                     computed_metric_names.append(m.metric_name)
             return computed_metric_names
 
+    def delete(self, deleted_parents=None) -> bool:
+        """
+        Delete the extension, or only the metrics depending on ``deleted_parents`` if other metrics remain.
+
+        Parameters
+        ----------
+        deleted_parents : set[str] | None, default: None
+            Names of the recomputed/deleted extensions that trigger this deletion.
+
+        Returns
+        -------
+        deleted : bool
+            True if the extension was deleted, False if some metrics were kept.
+        """
+        if not deleted_parents or deleted_parents.intersection(self.get_required_dependencies(**self.params)):
+            return super().delete()
+
+        dropped = [
+            metric_name
+            for metric_name in self.params["metric_names"]
+            if any(
+                name in deleted_parents
+                for dep in self.get_metric_by_name(metric_name).depend_on
+                for name in dep.split("|")
+            )
+        ]
+        kept = [m for m in self.params["metric_names"] if m not in dropped]
+        if len(kept) == 0:
+            return super().delete()
+        if len(dropped) == 0:
+            return False
+
+        self.params["metric_names"] = kept
+        self.params["metrics_to_compute"] = [m for m in self.params["metrics_to_compute"] if m not in dropped]
+        columns = [col for m in dropped for col in self.get_metric_by_name(m).metric_columns]
+        self.data["metrics"] = self.data["metrics"].drop(columns=columns, errors="ignore")
+        for m in dropped:
+            self.data.get("runtime_s", {}).pop(m, None)
+        if self.format != "memory" and not self.sorting_analyzer.is_read_only():
+            self.save()
+        warnings.warn(
+            f"Removed metrics {dropped} from {self.extension_name} because they depend on recomputed "
+            f"extensions. Recompute them with `compute('{self.extension_name}', metric_names={dropped})`."
+        )
+        return False
+
     @classmethod
     def get_metric_by_name(cls, metric_name):
         """

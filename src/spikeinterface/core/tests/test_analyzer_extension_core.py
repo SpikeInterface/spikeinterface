@@ -8,7 +8,7 @@ from spikeinterface.core import generate_ground_truth_recording
 from spikeinterface.core import create_sorting_analyzer
 from spikeinterface.core import Templates
 
-from spikeinterface.core.sortinganalyzer import _extension_children, _get_children_dependencies
+from spikeinterface.core.sortinganalyzer import _get_children_dependencies
 
 import numpy as np
 
@@ -277,13 +277,26 @@ def test_ComputeNoiseLevels(format, sparse, create_cache_folder):
 
 
 def test_get_children_dependencies():
-    assert "waveforms" in _extension_children["random_spikes"]
-
-    rs_children = _get_children_dependencies("random_spikes")
+    extensions = {"random_spikes": {}, "waveforms": {}, "templates": {}}
+    rs_children = _get_children_dependencies("random_spikes", extensions)
     assert "waveforms" in rs_children
     assert "templates" in rs_children
-
     assert rs_children.index("waveforms") < rs_children.index("templates")
+
+    # "templates" depends on "random_spikes|waveforms": both alternatives are parents
+    assert _get_children_dependencies("waveforms", extensions) == ["templates"]
+    # children not computed are not returned
+    assert _get_children_dependencies("random_spikes", {"random_spikes": {}}) == []
+
+
+def test_get_children_dependencies_optional():
+    import spikeinterface.metrics  # noqa: F401 registers quality_metrics
+
+    # quality_metrics only optionally depends on spike_amplitudes, through its metrics
+    extensions = {"spike_amplitudes": {}, "quality_metrics": {"metric_names": ["amplitude_cutoff"]}}
+    assert _get_children_dependencies("spike_amplitudes", extensions) == ["quality_metrics"]
+    extensions["quality_metrics"] = {"metric_names": ["firing_rate"]}
+    assert _get_children_dependencies("spike_amplitudes", extensions) == []
 
 
 def test_delete_on_recompute(create_cache_folder):
@@ -297,6 +310,31 @@ def test_delete_on_recompute(create_cache_folder):
     sorting_analyzer.compute("random_spikes")
     assert sorting_analyzer.get_extension("templates") is None
     assert sorting_analyzer.get_extension("waveforms") is None
+
+    # metric extensions only lose the metrics depending on the recomputed extension
+    import spikeinterface.metrics  # noqa: F401 registers quality_metrics
+    from spikeinterface.core import load_sorting_analyzer
+
+    sorting_analyzer = get_sorting_analyzer(cache_folder, format="binary_folder", sparse=False)
+    sorting_analyzer.compute(
+        {
+            "random_spikes": {},
+            "templates": {},
+            "noise_levels": {},
+            "quality_metrics": {"metric_names": ["snr", "firing_rate"]},
+        }
+    )
+    with pytest.warns(UserWarning, match="Removed metrics"):
+        sorting_analyzer.compute("noise_levels")
+    for analyzer in (sorting_analyzer, load_sorting_analyzer(sorting_analyzer.folder)):
+        qm = analyzer.get_extension("quality_metrics")
+        assert qm.params["metric_names"] == ["firing_rate"]
+        assert list(qm.get_data().columns) == ["firing_rate"]
+
+    # if all metrics depend on it, the extension is deleted
+    sorting_analyzer.compute("quality_metrics", metric_names=["snr"], delete_existing_metrics=True)
+    sorting_analyzer.compute("noise_levels")
+    assert sorting_analyzer.get_extension("quality_metrics") is None
 
 
 def test_compute_several(create_cache_folder):

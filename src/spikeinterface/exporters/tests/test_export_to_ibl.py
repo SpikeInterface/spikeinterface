@@ -56,16 +56,20 @@ def test_export_recordingless_to_ibl(sorting_analyzer_sparse_for_export, create_
     recording = sorting_analyzer.recording
     sorting_analyzer._recording = None
 
-    # AP, but no LFP
-    export_to_ibl_gui(sorting_analyzer_sparse_for_export, output_folder, good_units_query=good_units_query, n_jobs=-1)
-    for f in required_output_files:
-        assert (output_folder / f).exists(), f"Missing file: {f}"
-    for f in ap_output_files:
-        assert not (output_folder / f).exists(), f"Missing file: {f}"
-    for f in lfp_output_files:
-        assert not (output_folder / f).exists(), f"Unexpected file: {f}"
-
-    sorting_analyzer._recording = recording
+    try:
+        # AP, but no LFP
+        export_to_ibl_gui(
+            sorting_analyzer_sparse_for_export, output_folder, good_units_query=good_units_query, n_jobs=-1
+        )
+        for f in required_output_files:
+            assert (output_folder / f).exists(), f"Missing file: {f}"
+        for f in ap_output_files:
+            assert not (output_folder / f).exists(), f"Missing file: {f}"
+        for f in lfp_output_files:
+            assert not (output_folder / f).exists(), f"Unexpected file: {f}"
+    finally:
+        # restore the shared module-scoped fixture so later tests still have the recording
+        sorting_analyzer._recording = recording
 
 
 def test_export_lfp_to_ibl(sorting_analyzer_sparse_for_export, create_cache_folder):

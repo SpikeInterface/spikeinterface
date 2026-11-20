@@ -2389,11 +2389,7 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
             save = False
         extension_class = get_extension_class(extension_name)
 
-        for child in _get_children_dependencies(extension_name):
-            if self.has_extension(child):
-                if verbose:
-                    print(f"Deleting extension: {child}")
-                self.delete_extension(child)
+        self._delete_children(extension_name, self._get_extensions_params(), verbose=verbose)
 
         params, job_kwargs = split_job_kwargs(kwargs)
 
@@ -2487,11 +2483,9 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
         # Sort extensions by dependency order
         sorted_extensions = _sort_extensions_by_dependency(extensions)
 
+        all_extensions_params = {**self._get_extensions_params(), **extensions}
         for extension_name in sorted_extensions.keys():
-            for child in _get_children_dependencies(extension_name):
-                if verbose:
-                    print(f"Deleting extension: {child}")
-                self.delete_extension(child)
+            self._delete_children(extension_name, all_extensions_params, verbose=verbose)
 
         # Group extensions by pipeline usage, to run them together
         # Extensions whose dependencies (required or optional) include pipeline extensions are run after the pipeline
@@ -2727,30 +2721,61 @@ extension_params={"waveforms":{"ms_before":1.5, "ms_after": "2.5"}}\
                 del root[extension_name]
                 zarr.consolidate_metadata(zarr_root.store)
 
-    def delete_extension(self, extension_name) -> None:
+    def delete_extension(self, extension_name, deleted_parents=None) -> None:
         """
         Delete the extension from the dict and also in the persistent zarr or folder.
+
+        Parameters
+        ----------
+        extension_name : str
+            The extension to delete.
+        deleted_parents : set[str] | None, default: None
+            Names of the recomputed/deleted extensions that trigger this deletion. The extension can use them
+            to keep the part that does not depend on them (see ``AnalyzerExtension.delete()``).
         """
-        # Delete from folder or zarr
-        if self.format != "memory" and not self._read_only:
-            in_mem_extension = self.extensions.get(extension_name)
-            if in_mem_extension is not None:
-                # Call delete() on the already-loaded instance so it closes any open memmap handles
-                # before removing the on-disk files.  The original code reloaded the extension first
-                # (opening new memmaps) and then called delete() on the fresh copy — on Windows that
-                # left the new memmaps open long enough to cause a PermissionError during rmtree.
-                in_mem_extension.delete()
-            else:
-                self._delete_extension_storage(extension_name)
+        extension = self.extensions.get(extension_name)
+        if extension is None and deleted_parents is not None:
+            # load it, so that it can check what depends on deleted_parents
+            extension = self.get_extension(extension_name)
+        if extension is not None:
+            # Call delete() on the loaded instance so it closes any open memmap handles before
+            # removing the on-disk files (otherwise rmtree can raise a PermissionError on Windows).
+            if not extension.delete(deleted_parents=deleted_parents):
+                return
+        elif self.format != "memory" and not self._read_only:
+            self._delete_extension_storage(extension_name)
 
         # remove from dict
         self.extensions.pop(extension_name, None)
+
+    def _delete_children(self, extension_name, all_extension_params, verbose=False) -> None:
+        """
+        Delete the children of ``extension_name`` before it is recomputed.
+        """
+        children = _get_children_dependencies(extension_name, all_extension_params)
+        deleted_parents = {extension_name, *children}
+        for child in children:
+            if self.has_extension(child):
+                if verbose:
+                    print(f"Deleting extension: {child}")
+                self.delete_extension(child, deleted_parents=deleted_parents)
 
     def get_loaded_extension_names(self):
         """
         Return the loaded or already computed extensions names.
         """
         return list(self.extensions.keys())
+
+    def _get_extensions_params(self) -> dict[str, dict]:
+        """
+        Return the params of all computed extensions (loaded or saved), keyed by extension name.
+        """
+        # saved-but-unloaded extensions fall back to default params rather than being read from disk
+        params: dict[str, dict] = {}
+        if self.format != "memory":
+            params = {name: {} for name in self.get_saved_extension_names()}
+        params.update({name: ext.params for name, ext in self.extensions.items()})
+        return params
 
     def has_extension(self, extension_name: str) -> bool:
         """
@@ -2850,16 +2875,6 @@ def _sort_extensions_by_dependency(extensions):
 
         required_dependencies = get_extension_class(extension).get_required_dependencies(**extension_params)
         optional_dependencies = get_extension_class(extension).get_optional_dependencies(**extension_params)
-        for dependency in required_dependencies:
-            if "|" in dependency:
-                for dep in dependency.split("|"):
-                    if extension not in _extension_children[dep]:
-                        print(f"Adding missing dependency child link: {dep} -> {extension}")
-                        _extension_children[dep].append(extension)
-            else:
-                if extension not in _extension_children[dependency]:
-                    print(f"Adding missing dependency child link: {dependency} -> {extension}")
-                    _extension_children[dependency].append(extension)
 
         # Split cases with an "or" in them, and flatten into a list
         all_dependencies = required_dependencies + optional_dependencies
@@ -2890,11 +2905,8 @@ def _sort_extensions_by_dependency(extensions):
 global _possible_extensions
 _possible_extensions = []
 
-global _extension_children
-_extension_children = {}
 
-
-def _get_children_dependencies(extension_name):
+def _get_children_dependencies(extension_name, all_extension_params):
     """
     Extension classes have a `depend_on` attribute to declare on which class they
     depend on. For instance "templates" depends on "waveforms". "waveforms" depends on "random_spikes".
@@ -2908,15 +2920,34 @@ def _get_children_dependencies(extension_name):
     For instance, recomputing the "waveforms" needs to delete the "templates", since the latter depends on the former.
     For this particular example, if we change the "ms_before" parameter of the "waveforms", also the "templates" will
     require recomputation as this parameter is inherited.
+
+    Extension classes have a `depend_on` attribute to declare which class they depend on. For instance "templates"
+    depends on "waveforms"; "waveforms" depends on "random_spikes". This function is going the opposite way: it finds
+    all children, grandchildren etc that depend on a particular extension.
+
+    Depending on their parameters, certain extensions depend on different combinations of extensions. E.g. if you're
+    computing snrs, then noise_levels has quality_metrics as a child. But if you're just computing firing_rate,
+    then it does not. Hence the dependency graph depends on what other extensions are being computed, or are saved
+    in the analyzer. We account for these through the `all_extension_params` argument.
+
+    Parameters
+    ----------
+    extension_name : str
+        The parent extension name.
+    all_extension_params : dict
+        Mapping of computed + new extension name as keys and their params as values.
+
+    Returns
+    -------
+    names : list
+        The children, grand children, etc. of ``extension_name``.
     """
     names = []
-    children = _extension_children[extension_name]
-    for child in children:
-        if child not in names:
+    for child, params in all_extension_params.items():
+        if child not in names and extension_name in get_extension_class(child).get_any_dependencies(**params):
             names.append(child)
-        grand_children = _get_children_dependencies(child)
-        names.extend(grand_children)
-    return list(names)
+            names.extend(n for n in _get_children_dependencies(child, all_extension_params) if n not in names)
+    return names
 
 
 def register_result_extension(extension_class):
@@ -2942,15 +2973,6 @@ def register_result_extension(extension_class):
         )
 
         _possible_extensions.append(extension_class)
-
-        # create the children dpendencies to be able to delete on re-compute
-        _extension_children[extension_class.extension_name] = []
-        for parent_name in extension_class.get_required_dependencies():
-            if "|" in parent_name:
-                for name in parent_name.split("|"):
-                    _extension_children[name].append(extension_class.extension_name)
-            else:
-                _extension_children[parent_name].append(extension_class.extension_name)
 
 
 def get_extension_class(extension_name: str, auto_import=True):
@@ -3650,17 +3672,30 @@ class AnalyzerExtension:
                 del zarr_root["extensions"][self.extension_name]
                 zarr.consolidate_metadata(zarr_root.store)
 
-    def delete(self):
+    def delete(self, deleted_parents=None) -> bool:
         """
-        Delete the extension from the folder or zarr and from the dict.
+        Delete the extension from the folder or zarr and reset it.
+
+        Parameters
+        ----------
+        deleted_parents : set[str] | None, default: None
+            Names of the recomputed/deleted extensions that trigger this deletion. Subclasses can override
+            this method to keep the part of the extension that does not depend on them.
+
+        Returns
+        -------
+        deleted : bool
+            True if the extension was deleted, False if (part of) it was kept.
         """
         # close any memmap handles onto these files first (e.g. from a lazy load) so the
         # folder/files can actually be removed
         self._close_memmaps()
-        self._delete_extension_folder()
+        if not self.sorting_analyzer.is_read_only():
+            self._delete_extension_folder()
         self.params = None
         self.run_info = self._default_run_info_dict()
         self.data = dict()
+        return True
 
     def reset(self):
         """
