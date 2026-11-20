@@ -199,6 +199,24 @@ def test_get_noise_levels():
         get_noise_levels(recording, method="std", return_in_uV=False, **job_kwargs), [std, std], rtol=1e-2, atol=1e-3
     )
 
+    def mad_raw(**random_slices_kwargs):
+        return get_noise_levels(rec, return_in_uV=False, random_slices_kwargs=random_slices_kwargs, **job_kwargs)
+
+    # a call gets noise levels drawn with its random_slices_kwargs, where no seed accepts any seed
+    fewer_chunks = mad_raw(num_chunks_per_segment=5, seed=1)
+    assert not np.array_equal(fewer_chunks, noise_levels_1)
+    assert np.array_equal(mad_raw(num_chunks_per_segment=5), fewer_chunks)
+    unseeded = mad_raw()
+    assert not np.array_equal(unseeded, fewer_chunks)
+    seeded = mad_raw(seed=1)
+    assert not np.array_equal(seeded, unseeded)
+    assert np.array_equal(mad_raw(), seeded)
+
+    # calls that leave random_slices_kwargs at their defaults get noise levels set by hand, which drop the stored ones
+    rec.set_property("noise_level_mad_raw", [1.0, 2.0])
+    assert np.array_equal(mad_raw(), [1.0, 2.0])
+    assert np.array_equal(mad_raw(seed=1), seeded)
+
 
 def test_get_noise_levels_output():
     # Generate a recording following a gaussian distribution to check the result of get_noise.

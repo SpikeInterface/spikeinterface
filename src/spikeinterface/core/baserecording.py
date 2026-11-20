@@ -44,6 +44,8 @@ class BaseRecording(BaseExtractor, TimeSeries):
         self._sampling_frequency = float(sampling_frequency)
         self._dtype = np.dtype(dtype)
         self._probegroup = None
+        # random_slices_kwargs that drew each noise-level property, kept in memory only
+        self._noise_levels_params = {}
         # initialize main annotation and properties
         self.annotate(is_filtered=False)
 
@@ -336,6 +338,12 @@ class BaseRecording(BaseExtractor, TimeSeries):
     def is_filtered(self):
         # the is_filtered is handle with annotation
         return self._annotations.get("is_filtered", False)
+
+    def set_property(self, key, values, ids=None, missing_value=None) -> None:
+        # when anything writes new values to a noise-level property, the old params no longer describe what's stored
+        # (get_noise_levels writes through this method too, and stores its params afterwards)
+        self._noise_levels_params.pop(key, None)
+        BaseExtractor.set_property(self, key, values, ids=ids, missing_value=missing_value)
 
     def set_channel_groups(self, groups, channel_ids=None):
         if "probes" in self._annotations:
