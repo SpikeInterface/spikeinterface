@@ -1,4 +1,5 @@
 import warnings
+from contextlib import ExitStack
 import platform
 from pathlib import Path
 from tqdm.auto import tqdm
@@ -10,7 +11,7 @@ from threadpoolctl import threadpool_limits
 import numpy as np
 
 from spikeinterface.core.sortinganalyzer import register_result_extension, AnalyzerExtension
-from spikeinterface.core.core_tools import slice_rows, materialize_array
+from spikeinterface.core.core_tools import slice_rows, materialize_array, convert_string_to_bytes
 from spikeinterface.core.job_tools import TimeSeriesChunkExecutor, _shared_job_kwargs_doc, fix_job_kwargs
 from spikeinterface.core.analyzer_extension_core import _inplace_sparse_realign_waveforms, _select_channels_sparse_data
 
@@ -38,6 +39,13 @@ class ComputePrincipalComponents(AnalyzerExtension):
         If True, waveforms are pre-whitened
     dtype : dtype, default: "float32"
         Dtype of the pc scores
+    max_fit_batch_memory : str, default: "64Mi"
+        Maximum size of each waveform input buffer when fitting any PCA mode.
+        Uses memory strings such as "64Mi" or "100M". This is not a limit on total process memory:
+        reshaping, PCA, concurrent workers and storage can require additional buffers and workspace.
+        No additional waveform subsampling is performed; unit, spike and channel order are retained.
+        Units exceeding this limit are fitted in multiple incremental updates, which can change
+        the approximate PCA basis compared with a single update.
     {}
 
     Examples
@@ -72,8 +80,11 @@ class ComputePrincipalComponents(AnalyzerExtension):
         mode="by_channel_local",
         whiten=True,
         dtype="float32",
+        max_fit_batch_memory="64Mi",
     ):
         assert mode in _possible_modes, "Invalid mode!"
+        if convert_string_to_bytes(max_fit_batch_memory) <= 0:
+            raise ValueError("max_fit_batch_memory must be positive")
 
         # the sparsity in params is ONLY the injected sparsity and not the sorting_analyzer one
         params = dict(
@@ -81,6 +92,7 @@ class ComputePrincipalComponents(AnalyzerExtension):
             mode=mode,
             whiten=whiten,
             dtype=np.dtype(dtype),
+            max_fit_batch_memory=max_fit_batch_memory,
         )
         return params
 
@@ -444,103 +456,109 @@ class ComputePrincipalComponents(AnalyzerExtension):
         )
         processor.run()
 
+    def _iter_fit_waveform_batches(self, progress_bar):
+        """Read bounded inputs and account for each mode's SVD dimensions."""
+        p = self.params
+        analyzer = self.sorting_analyzer
+        waveforms = analyzer.get_extension("waveforms").data["waveforms"]
+        spikes = analyzer.get_extension("random_spikes").get_random_spikes()
+        sparsity = analyzer.sparsity
+        num_samples, max_num_channels = waveforms.shape[1:]
+        if max_num_channels == 0:
+            return
+        batch_memory = convert_string_to_bytes(p.get("max_fit_batch_memory", "64Mi"))
+        # slice_rows reads all packed channels, including any padding for sparse units.
+        waveforms_per_batch = batch_memory // (num_samples * max_num_channels * waveforms.dtype.itemsize)
+        units_loop = enumerate(analyzer.unit_ids)
+        if progress_bar:
+            units_loop = tqdm(units_loop, desc="Fitting PCA", total=len(analyzer.unit_ids))
+
+        for unit_ind, unit_id in units_loop:
+            spike_indices = np.flatnonzero(spikes["unit_index"] == unit_ind)
+            channel_inds = (
+                np.arange(max_num_channels) if sparsity is None else sparsity.unit_id_to_channel_indices[unit_id]
+            )
+            num_channels = channel_inds.size
+            if num_channels == 0:
+                continue
+            rows_per_waveform = num_channels if p["mode"] == "by_channel_global" else 1
+            features_per_row = num_samples * num_channels if p["mode"] == "concatenated" else num_samples
+            if spike_indices.size * rows_per_waveform < p["n_components"]:
+                continue
+            # IPCA stacks the previous components and a mean-correction row before its SVD.
+            max_svd_rows = np.iinfo(np.int32).max // features_per_row - p["n_components"] - 1
+            batch_size = min(waveforms_per_batch, max_svd_rows // rows_per_waveform)
+            min_batch_size = (p["n_components"] + rows_per_waveform - 1) // rows_per_waveform
+            if batch_size < min_batch_size:
+                raise ValueError("max_fit_batch_memory is too small to fit n_components waveform rows")
+            num_batches = (spike_indices.size + batch_size - 1) // batch_size
+            if spike_indices.size // num_batches < min_batch_size:
+                raise ValueError("Increase max_fit_batch_memory to avoid batches with fewer than n_components rows")
+            # Balance sizes so a short final batch is retained, with enough rows for PCA.
+            for batch_ind in range(num_batches):
+                start = batch_ind * spike_indices.size // num_batches
+                stop = (batch_ind + 1) * spike_indices.size // num_batches
+                wfs = slice_rows(waveforms, spike_indices[start:stop])[:, :, :num_channels]
+                yield wfs, channel_inds
+                del wfs
+
     def _fit_by_channel_local(self, n_jobs, progress_bar, max_threads_per_worker, mp_context):
         from sklearn.decomposition import IncrementalPCA
 
         p = self.params
-
         if mp_context is not None and platform.system() == "Windows":
             assert mp_context != "fork", "'fork' mp_context not supported on Windows!"
         elif mp_context == "fork" and platform.system() == "Darwin":
             warnings.warn('As of Python 3.8 "fork" is no longer considered safe on macOS')
 
-        unit_ids = self.sorting_analyzer.unit_ids
         channel_ids = self.sorting_analyzer.channel_ids
-        # there is one PCA per channel for independent fit per channel
         pca_models = [IncrementalPCA(n_components=p["n_components"], whiten=p["whiten"]) for _ in channel_ids]
-
-        # fit
-        units_loop = enumerate(unit_ids)
-        if progress_bar:
-            units_loop = tqdm(units_loop, desc="Fitting PCA", total=len(unit_ids))
-
-        for unit_ind, unit_id in units_loop:
-            wfs, channel_inds, _ = self._get_sparse_waveforms(unit_id)
-            if len(wfs) < p["n_components"]:
-                continue
-            if n_jobs in (0, 1):
-                for wf_ind, chan_ind in enumerate(channel_inds):
-                    pca = pca_models[chan_ind]
-                    pca.partial_fit(wfs[:, :, wf_ind])
-            else:
-                # create list of args to parallelize. For convenience, the max_threads_per_worker is passed
-                # as last argument
-                items = [
-                    (chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind], max_threads_per_worker)
-                    for wf_ind, chan_ind in enumerate(channel_inds)
-                ]
-                n_jobs = min(n_jobs, len(items))
-
-                with ProcessPoolExecutor(
-                    max_workers=n_jobs,
-                    mp_context=mp.get_context(mp_context),
-                ) as executor:
+        # Reuse workers across batches; each channel's updates remain sequential.
+        with ExitStack() as stack:
+            executor = None
+            if n_jobs not in (0, 1) and channel_ids.size:
+                executor = stack.enter_context(
+                    ProcessPoolExecutor(
+                        max_workers=min(n_jobs, channel_ids.size), mp_context=mp.get_context(mp_context)
+                    )
+                )
+            for wfs, channel_inds in self._iter_fit_waveform_batches(progress_bar):
+                if executor is None:
+                    for wf_ind, chan_ind in enumerate(channel_inds):
+                        pca_models[chan_ind].partial_fit(wfs[:, :, wf_ind])
+                else:
+                    items = [
+                        (chan_ind, pca_models[chan_ind], wfs[:, :, wf_ind], max_threads_per_worker)
+                        for wf_ind, chan_ind in enumerate(channel_inds)
+                    ]
                     results = executor.map(_partial_fit_one_channel, items)
                     for chan_ind, pca_model_updated in results:
                         pca_models[chan_ind] = pca_model_updated
-
+                    del items, results
+                del wfs
         return pca_models
 
     def _fit_by_channel_global(self, progress_bar):
-        p = self.params
-        unit_ids = self.sorting_analyzer.unit_ids
-
-        # there is one unique PCA across channels
         from sklearn.decomposition import IncrementalPCA
 
+        p = self.params
         pca_model = IncrementalPCA(n_components=p["n_components"], whiten=p["whiten"])
-
-        # fit
-        units_loop = enumerate(unit_ids)
-        if progress_bar:
-            units_loop = tqdm(units_loop, desc="Fitting PCA", total=len(unit_ids))
-
-        # with 'by_channel_global' we can't parallelize over channels
-        for unit_ind, unit_id in units_loop:
-            wfs, _, _ = self._get_sparse_waveforms(unit_id)
-            shape = wfs.shape
-            if shape[0] * shape[2] < p["n_components"]:
-                continue
-            # avoid loop with reshape
-            wfs_concat = wfs.transpose(0, 2, 1).reshape(shape[0] * shape[2], shape[1])
+        for wfs, _ in self._iter_fit_waveform_batches(progress_bar):
+            wfs_concat = wfs.transpose(0, 2, 1).reshape(-1, wfs.shape[1])
             pca_model.partial_fit(wfs_concat)
-
+            del wfs, wfs_concat
         return pca_model
 
     def _fit_concatenated(self, progress_bar):
-
-        p = self.params
-        unit_ids = self.sorting_analyzer.unit_ids
-
-        assert self.sorting_analyzer.sparsity is None, "For mode 'concatenated' waveforms need to be dense"
-
-        # there is one unique PCA across channels
         from sklearn.decomposition import IncrementalPCA
 
+        assert self.sorting_analyzer.sparsity is None, "For mode 'concatenated' waveforms need to be dense"
+        p = self.params
         pca_model = IncrementalPCA(n_components=p["n_components"], whiten=p["whiten"])
-
-        # fit
-        units_loop = enumerate(unit_ids)
-        if progress_bar:
-            units_loop = tqdm(units_loop, desc="Fitting PCA", total=len(unit_ids))
-
-        for unit_ind, unit_id in units_loop:
-            wfs, _, _ = self._get_sparse_waveforms(unit_id)
+        for wfs, _ in self._iter_fit_waveform_batches(progress_bar):
             wfs_flat = wfs.reshape(wfs.shape[0], -1)
-            if len(wfs_flat) < p["n_components"]:
-                continue
             pca_model.partial_fit(wfs_flat)
-
+            del wfs, wfs_flat
         return pca_model
 
     def _transform_waveforms(self, spikes, waveforms, pca_model, progress_bar):
