@@ -25,9 +25,9 @@ class RemoveExcessSpikesSorting(BaseSorting):
     def __init__(self, sorting: BaseSorting, recording: BaseRecording) -> None:
         super().__init__(sorting.get_sampling_frequency(), sorting.unit_ids)
 
-        assert (
-            sorting.get_num_segments() == recording.get_num_segments()
-        ), "The sorting and recording objects must have the same number of samples!"
+        assert sorting.get_num_segments() == recording.get_num_segments(), (
+            "The sorting and recording objects must have the same number of samples!"
+        )
 
         self._parent_sorting = sorting
         self._num_samples = np.empty(sorting.get_num_segments(), dtype=np.int64)

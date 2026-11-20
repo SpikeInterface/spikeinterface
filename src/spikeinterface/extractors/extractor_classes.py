@@ -18,7 +18,7 @@ from spikeinterface.core.zarrextractors import (
 
 # sorting/recording/event from neo
 from .neoextractors import *
-from .neoextractors import read_neuroscope
+from .neoextractors import neo_recording_extractors_dict, neo_sorting_extractors_dict, neo_event_extractors_dict
 from .neoextractors.intan import read_split_intan_files, IntanSplitFilesRecordingExtractor
 
 # non-NEO objects implemented in neo folder

@@ -1,8 +1,7 @@
 import pytest
 import numpy as np
-from pathlib import Path
 
-from spikeinterface import NumpySorting, create_sorting_analyzer, compute_sparsity, get_noise_levels
+from spikeinterface import create_sorting_analyzer, compute_sparsity, get_noise_levels
 
 from spikeinterface.sortingcomponents.matching import find_spikes_from_templates
 from spikeinterface.sortingcomponents.matching.method_list import matching_methods
@@ -90,28 +89,25 @@ def test_find_spikes_from_templates(method, sorting_analyzer):
     # print(info)
 
     # DEBUG = True
-    DEBUG = False
+    # DEBUG = False
 
-    if DEBUG:
-        import matplotlib.pyplot as plt
-        import spikeinterface.full as si
+    # if DEBUG:
+    #     sorting_analyzer.compute("waveforms")
+    #     sorting_analyzer.compute("templates")
 
-        sorting_analyzer.compute("waveforms")
-        sorting_analyzer.compute("templates")
+    #     gt_sorting = sorting_analyzer.sorting
 
-        gt_sorting = sorting_analyzer.sorting
+    #     sorting = NumpySorting.from_samples_and_labels(
+    #         spikes["sample_index"], spikes["cluster_index"], recording.sampling_frequency
+    #     )
 
-        sorting = NumpySorting.from_samples_and_labels(
-            spikes["sample_index"], spikes["cluster_index"], recording.sampling_frequency
-        )
+    #     #metrics = si.compute_quality_metrics(sorting_analyzer, metric_names=["snr"])
 
-        ##metrics = si.compute_quality_metrics(sorting_analyzer, metric_names=["snr"])
-
-        # fig, ax = plt.subplots()
-        # comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
-        # si.plot_agreement_matrix(comp, ax=ax)
-        # ax.set_title(method)
-        # plt.show()
+    #     fig, ax = plt.subplots()
+    #     comp = si.compare_sorter_to_ground_truth(gt_sorting, sorting)
+    #     si.plot_agreement_matrix(comp, ax=ax)
+    #     ax.set_title(method)
+    #     plt.show()
 
 
 if __name__ == "__main__":

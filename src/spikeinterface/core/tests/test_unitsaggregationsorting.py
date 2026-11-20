@@ -26,7 +26,6 @@ def test_unitsaggregationsorting_spiketrains():
 
     # test spike trains
     for segment_index in range(sorting1.get_num_segments()):
-
         spiketrain1 = sorting1.get_unit_spike_train(unit_ids[1], segment_index=segment_index)
         assert np.all(spiketrain1 == sorting_agg.get_unit_spike_train(unit_ids[1], segment_index=segment_index))
 

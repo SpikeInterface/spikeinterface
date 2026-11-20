@@ -1,7 +1,4 @@
-import warnings
-
 import numpy as np
-from spikeinterface.widgets import get_some_colors
 from .benchmark_tools import sigmoid, fit_sigmoid
 
 
@@ -308,7 +305,7 @@ def plot_unit_counts(
                 else:
                     yerr = None
 
-            if not "well_detected" in col and revert_bad:
+            if "well_detected" not in col and revert_bad:
                 y = -y
 
             if i == 0:
@@ -455,7 +452,6 @@ def _plot_performances_vs_metric(
         fig = axs[0].get_figure()
 
     for count, performance_name in enumerate(performance_names):
-
         ax = axs[count]
         if levels_to_group_by is not None:
             case_group_keys, labels = study.get_grouped_keys_mapping(
@@ -467,9 +463,9 @@ def _plot_performances_vs_metric(
 
         colors = study.get_colors(levels_to_group_by=levels_to_group_by)
 
-        assert all(
-            [key in colors for key in case_group_keys]
-        ), f"colors must have a color for each case key: {case_group_keys}"
+        assert all([key in colors for key in case_group_keys]), (
+            f"colors must have a color for each case key: {case_group_keys}"
+        )
 
         for key, key_list in case_group_keys.items():
             color = colors[key]
@@ -827,9 +823,9 @@ def plot_performances_swarm(
     perfs = study.get_performance_by_unit(case_keys=case_keys)
     perfs, case_keys, _, _ = aggregate_dataframe_by_levels(perfs, study, case_keys, levels_to_group_by)
 
-    assert all(
-        [key in performance_colors for key in performance_names]
-    ), f"performance_colors must have a color for each performance name: {performance_names}"
+    assert all([key in performance_colors for key in performance_names]), (
+        f"performance_colors must have a color for each performance name: {performance_names}"
+    )
 
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
@@ -897,9 +893,9 @@ def plot_performances_comparison(
     num_methods = len(case_keys)
     assert num_methods >= 2, "plot_performances_comparison need at least 2 cases!"
 
-    assert all(
-        [key in performance_colors for key in performance_names]
-    ), f"performance_colors must have a color for each performance name: {performance_names}"
+    assert all([key in performance_colors for key in performance_names]), (
+        f"performance_colors must have a color for each performance name: {performance_names}"
+    )
 
     if axs is None:
         fig, axs = plt.subplots(ncols=num_methods - 1, nrows=num_methods - 1, figsize=figsize, squeeze=False)
@@ -1081,7 +1077,6 @@ def plot_performance_losses(
         fig = axs[0].get_figure()
 
     for count, perf_name in enumerate(performance_names):
-
         ax = axs[count]
 
         positions = study.get_gt_unit_locations(case0)

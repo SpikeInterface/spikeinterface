@@ -359,8 +359,7 @@ class InterpolateMotionRecording(BasePreprocessor):
 
         channel_locations = recording.get_channel_locations()
         assert channel_locations.ndim >= motion.dim, (
-            f"'direction' {motion.direction} not available. "
-            f"Channel locations have {channel_locations.ndim} dimensions."
+            f"'direction' {motion.direction} not available. Channel locations have {channel_locations.ndim} dimensions."
         )
         spatial_interpolation_kwargs = dict(
             sigma_um=sigma_um, p=p, num_closest=num_closest, **spatial_interpolation_kwargs

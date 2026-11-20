@@ -6,7 +6,6 @@
 Run: pytest test_read_python_safe.py -v
 """
 
-import os
 import re
 import inspect
 from spikeinterface.core.core_tools import read_python
@@ -15,9 +14,7 @@ from spikeinterface.core.core_tools import read_python
 def test_read_python_does_not_execute_config(tmp_path):
     marker = tmp_path / "pwned.txt"
     p = tmp_path / "params.py"
-    p.write_text(
-        "sample_rate = 30000\n" "dtype = 'int16'\n" "import os\n" f"os.system('echo x> {marker.as_posix()}')\n"
-    )
+    p.write_text(f"sample_rate = 30000\ndtype = 'int16'\nimport os\nos.system('echo x> {marker.as_posix()}')\n")
     md = read_python(str(p))
     assert not marker.exists(), "read_python executed code from the config file (CWE-95)"
     assert md.get("sample_rate") == 30000  # literal assignments still parse

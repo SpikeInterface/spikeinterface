@@ -4,7 +4,6 @@ import warnings
 
 from spikeinterface.core.node_pipeline import (
     find_parent_of_type,
-    PipelineNode,
     WaveformsNode,
 )
 

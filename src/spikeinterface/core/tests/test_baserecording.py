@@ -11,12 +11,11 @@ import pytest
 import numpy as np
 from numpy.testing import assert_raises
 
-from probeinterface import Probe, ProbeGroup, generate_linear_probe
+from probeinterface import Probe
 
 from spikeinterface.core import (
     BinaryRecordingExtractor,
     NumpyRecording,
-    load,
     get_default_zarr_compressor,
     load,
 )

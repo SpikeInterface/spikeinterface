@@ -1,5 +1,6 @@
 import pytest
 import zarr
+import importlib.util
 
 import numpy as np
 from spikeinterface import (
@@ -16,12 +17,12 @@ from spikeinterface.core.generate import generate_unit_locations, generate_templ
 from spikeinterface.core.testing import check_recordings_equal, check_sortings_equal
 from spikeinterface.core.zarrextractors import ZarrRecordingExtractor
 
-try:
-    import s3fs
 
+if importlib.util.find_spec("s3fs") is not None:
     HAVE_S3 = True
-except ImportError:
+else:
     HAVE_S3 = False
+
 
 computed_extensions = ["waveforms", "templates", "noise_levels", "random_spikes"]
 

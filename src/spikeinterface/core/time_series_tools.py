@@ -17,7 +17,7 @@ from .time_series import TimeSeries, TimeSeriesSegment
 def write_binary(
     time_series: TimeSeries,
     file_paths: list[Path | str] | Path | str,
-    file_timestamps_paths: list[Path | str] | Path | str | None = None,
+    file_timestamps_paths: list[Path | str | None] | Path | str | None = None,
     dtype: np.typing.DTypeLike = None,
     add_file_extension: bool = True,
     byte_offset: int = 0,
@@ -37,8 +37,9 @@ def write_binary(
         The time_series object to be saved to binary file
     file_paths : list[Path | str] | Path | str
         The path to the files to save data for each segment.
-    file_timestamps_paths : list[Path | str] | Path | str | None, default: None
-        The path to the timestamps file. If None, timestamps are not saved.
+    file_timestamps_paths : list[Path | str | None] | Path | str | None, default: None
+        The path to the timestamps file. If None, timestamps are not saved. In a list, an entry
+        is None for a segment without timestamps.
     dtype : dtype or None, default: None
         Type of the saved data
     add_file_extension, bool, default: True
@@ -351,9 +352,9 @@ def _write_time_series_to_zarr(
 
     assert dataset_paths is not None, "Provide 'dataset_paths' to save data in zarr format"
     if dataset_timestamps_paths is not None:
-        assert (
-            len(dataset_timestamps_paths) == time_series.get_num_segments()
-        ), "dataset_timestamps_paths should have the same length as the number of segments in the time_series"
+        assert len(dataset_timestamps_paths) == time_series.get_num_segments(), (
+            "dataset_timestamps_paths should have the same length as the number of segments in the time_series"
+        )
     else:
         dataset_timestamps_paths = [None] * time_series.get_num_segments()
 
@@ -424,8 +425,6 @@ def _write_time_series_to_zarr(
 
 
 def _init_zarr_worker(time_series, zarr_datasets, dtype, buffer_megabytes, zarr_timestamps_datasets=None):
-    import zarr
-
     # create a local dict per worker
     worker_ctx = {}
     worker_ctx["time_series"] = time_series
