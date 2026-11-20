@@ -120,9 +120,9 @@ def select_templates(
     Templates
         The selected templates
     """
-    assert (
-        min_amplitude is not None or max_amplitude is not None or min_depth is not None or max_depth is not None
-    ), "At least one of min_amplitude, max_amplitude, min_depth, max_depth should be provided"
+    assert min_amplitude is not None or max_amplitude is not None or min_depth is not None or max_depth is not None, (
+        "At least one of min_amplitude, max_amplitude, min_depth, max_depth should be provided"
+    )
     # get template amplitudes and depth
     main_channel_indices = templates.get_main_channels(outputs="index", with_dict=False)
 
@@ -392,9 +392,9 @@ def generate_hybrid_recording(
     durations = num_samples / sampling_frequency
     channel_locations = probe.contact_positions
 
-    assert (
-        templates is not None or sorting is not None or generate_sorting_kwargs is not None
-    ), "Provide templates or sorting or generate_sorting_kwargs"
+    assert templates is not None or sorting is not None or generate_sorting_kwargs is not None, (
+        "Provide templates or sorting or generate_sorting_kwargs"
+    )
 
     # check num_units
     num_units = None

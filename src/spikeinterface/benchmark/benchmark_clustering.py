@@ -1,20 +1,15 @@
 from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
 from spikeinterface.core import NumpySorting
 from spikeinterface.comparison import GroundTruthComparison
-from spikeinterface.widgets import (
-    plot_probe_map,
-    plot_agreement_matrix,
-)
 
 
 import numpy as np
-from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 from .benchmark_base import Benchmark, BenchmarkStudy, MixinStudyUnitCount
 from spikeinterface.core.sortinganalyzer import create_sorting_analyzer
 
 
 class ClusteringBenchmark(Benchmark):
-
     def __init__(self, recording, gt_sorting, params, indices, peaks, exhaustive_gt=True):
         self.recording = recording
         self.gt_sorting = gt_sorting
@@ -238,7 +233,6 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
         fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
-
             result = self.get_result(key)
             scores = result["gt_comparison"].get_ordered_agreement_scores()
 
@@ -279,7 +273,6 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
             fig = None
 
         for count, key in enumerate(case_keys):
-
             result = self.get_result(key)
             scores = result["gt_comparison"].agreement_scores
 
@@ -334,7 +327,6 @@ class ClusteringStudy(BenchmarkStudy, MixinStudyUnitCount):
         fig, axes = plt.subplots(ncols=len(case_keys), nrows=1, figsize=figsize, squeeze=False)
 
         for count, key in enumerate(case_keys):
-
             result = self.get_result(key)
             scores = result["gt_comparison"].agreement_scores
 

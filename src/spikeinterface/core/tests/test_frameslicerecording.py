@@ -1,7 +1,6 @@
-import pytest
 import numpy as np
 
-from spikeinterface.core import FrameSliceRecording, NumpyRecording
+from spikeinterface.core import NumpyRecording
 
 
 def test_FrameSliceRecording():

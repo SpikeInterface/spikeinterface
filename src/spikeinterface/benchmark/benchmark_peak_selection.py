@@ -1,16 +1,7 @@
-from spikeinterface.sortingcomponents.clustering import find_clusters_from_peaks
-from spikeinterface.core import NumpySorting
-from spikeinterface.comparison import GroundTruthComparison
-from spikeinterface.comparison.comparisontools import make_matching_events
-from spikeinterface.core import get_noise_levels
-
-import numpy as np
-
 from .benchmark_base import Benchmark, BenchmarkStudy
 
 
 class PeakSelectionBenchmark(Benchmark):
-
     def __init__(self, recording, gt_sorting, params, indices, exhaustive_gt=True):
         pass
 
@@ -34,7 +25,6 @@ class PeakSelectionBenchmark(Benchmark):
 
 
 class PeakSelectionStudy(BenchmarkStudy):
-
     benchmark_class = PeakSelectionBenchmark
 
     def create_benchmark(self, key):

@@ -1,4 +1,5 @@
 import warnings
+import ast
 from pathlib import Path
 import numpy as np
 
@@ -275,7 +276,7 @@ def get_sinaps_probe(probe_type: str) -> Probe:
 
     try:
         probe = get_probe(manufacturer="sinaps-research-platform", probe_name=f"{probe_type}")
-    except:
+    except Exception:
         # check if custom version of probe was used such as "p256s1_camera"
         if "_" in probe_type:
             probe_type = probe_type.split("_")[0]
@@ -286,7 +287,7 @@ def get_sinaps_probe(probe_type: str) -> Probe:
 
         try:
             probe = get_probe(manufacturer="sinaps-research-platform", probe_name=f"{probe_type}")
-        except:
+        except Exception:
             warnings.warn(
                 f"Could not load probe information for {probe_type}. Probe needs to be linked manually with rec.set_probe()"
             )
@@ -321,13 +322,13 @@ def parse_sinaps_meta(meta_file: str | Path) -> dict:
                 val = val.replace("\n", "")
                 try:
                     val = int(val)
-                except:
+                except Exception:
                     pass
                 try:
-                    val = eval(val)
+                    val = ast.literal_eval(val)
                     if isinstance(val, tuple):
                         val = float(str(val[0]) + "." + str(val[1]))
-                except:
+                except Exception:
                     pass
                 sinaps_info[key] = val
     return sinaps_info

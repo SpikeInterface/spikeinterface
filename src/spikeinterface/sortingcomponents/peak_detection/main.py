@@ -2,7 +2,7 @@ import warnings
 
 from .method_list import detect_peak_methods
 
-from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 
 from ..tools import make_multi_method_doc
 

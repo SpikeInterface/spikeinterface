@@ -1,14 +1,12 @@
 from abc import ABC, abstractmethod
 from bisect import bisect_right
-from typing import Optional, TYPE_CHECKING, TypeAlias
+from typing import Optional, TypeAlias
 import warnings
 
 import numpy as np
+import zarr
 
 from spikeinterface.core.base import BaseExtractor, BaseSegment
-
-if TYPE_CHECKING:
-    import zarr
 
 # A recording segment's time vector: a 1-D array of per-sample times (in seconds).
 # The backing store depends on how the recording was created/loaded:
@@ -18,7 +16,7 @@ if TYPE_CHECKING:
 #   - zarr.Array : ZarrRecordingExtractor load
 #                  -- *read-only* ; see ZarrRecordingExtractor.__init__
 # Code reading `._time_vector` must not assume it is writeable (see `shift_times`).
-TimeVector: TypeAlias = "np.ndarray | zarr.Array"  # np.memmap is an np.ndarray subclass
+TimeVector: TypeAlias = np.ndarray | zarr.Array  # np.memmap is an np.ndarray subclass
 
 
 class TimeSeries(ABC):

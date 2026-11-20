@@ -8,8 +8,6 @@ import time
 
 
 from spikeinterface.core import SortingAnalyzer, ChannelSparsity, NumpySorting
-from spikeinterface.core import SortingAnalyzer, NumpySorting
-from spikeinterface.core.job_tools import fix_job_kwargs, split_job_kwargs
 from spikeinterface import load, create_sorting_analyzer, load_sorting_analyzer
 from spikeinterface.widgets import get_some_colors
 
@@ -332,7 +330,6 @@ class BenchmarkStudy:
 
         job_keys = []
         for key in case_keys:
-
             result_folder = self.folder / "results" / self.key_to_str(key)
             sorter_folder = self.folder / "sorters" / self.key_to_str(key)
 
@@ -443,9 +440,9 @@ class BenchmarkStudy:
             keys_mapping = {key: [key] for key in case_keys}
         else:
             study_levels = self.levels
-            assert np.all(
-                [l in study_levels for l in levels_to_group_by]
-            ), f"levels_to_group_by must be in {study_levels}, got {levels_to_group_by}"
+            assert np.all([l in study_levels for l in levels_to_group_by]), (
+                f"levels_to_group_by must be in {study_levels}, got {levels_to_group_by}"
+            )
             keys_mapping = {}
             for key in case_keys:
                 new_key = tuple(key[list(study_levels).index(level)] for level in levels_to_group_by)
@@ -480,7 +477,6 @@ class BenchmarkStudy:
         if case_keys is None:
             case_keys = list(self.cases.keys())
 
-        job_keys = []
         for key in case_keys:
             if verbose:
                 print("### Compute result", key, "###")
@@ -546,7 +542,7 @@ class BenchmarkStudy:
                 qm_ext = sorting_analyzer.compute("quality_metrics", metric_names=metric_names, **job_kwargs)
 
             # TODO remove this metics CSV file!!!!
-            metrics = qm_ext.get_data()
+            # _ = qm_ext.get_data()
             # metrics.to_csv(filename, sep="\t", index=True)
 
     def get_metrics(self, key):
@@ -609,7 +605,6 @@ class BenchmarkStudy:
 
         pairs = []
         for key in self.cases.keys():
-
             case0 = list(key)
             case1 = list(key)
             case0[level_index] = possible_values[0]
@@ -702,7 +697,6 @@ class Benchmark:
 
                 zarr_folder = folder / k
                 if zarr_folder.exists():
-
                     result[k] = Templates.from_zarr(zarr_folder)
             elif format == "sorting_analyzer":
                 analyzer_folder = folder / k

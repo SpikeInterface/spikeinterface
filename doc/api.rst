@@ -404,9 +404,6 @@ Deprecated
     :noindex:
 
     .. autofunction:: apply_sortingview_curation
-    .. autoclass:: CurationSorting
-    .. autoclass:: MergeUnitsSorting
-    .. autoclass:: SplitUnitSorting
 
 
 spikeinterface.generation

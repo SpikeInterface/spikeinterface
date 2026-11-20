@@ -112,13 +112,13 @@ class HighpassSpatialFilterRecording(BasePreprocessor):
         # Fix channel padding and tapering
         n_channels = recording.get_num_channels()
         n_channel_pad = 0 if n_channel_pad is None else int(n_channel_pad)
-        assert (
-            n_channel_pad <= recording.get_num_channels()
-        ), "'n_channel_pad' must be less than the number of channels in recording."
+        assert n_channel_pad <= recording.get_num_channels(), (
+            "'n_channel_pad' must be less than the number of channels in recording."
+        )
         n_channel_taper = n_channel_pad if n_channel_taper is None else int(n_channel_taper)
-        assert (
-            n_channel_taper <= recording.get_num_channels()
-        ), "'n_channel_taper' must be less than the number of channels in recording."
+        assert n_channel_taper <= recording.get_num_channels(), (
+            "'n_channel_taper' must be less than the number of channels in recording."
+        )
 
         # Fix Automatic Gain Control options
         sampling_interval = 1 / recording.sampling_frequency

@@ -1,6 +1,3 @@
-import pytest
-
-
 from spikeinterface.sortingcomponents.waveforms.hanning_filter import HanningFilter
 
 from spikeinterface.core.node_pipeline import (

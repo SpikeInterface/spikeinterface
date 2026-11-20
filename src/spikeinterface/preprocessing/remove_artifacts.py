@@ -125,9 +125,9 @@ class RemoveArtifactsRecording(BasePreprocessor):
         # some checks
         assert isinstance(list_triggers, list), "'list_triggers' must be a list (one per segment)"
         assert len(list_triggers) == num_seg, "'list_triggers' must have the same length as the number of segments"
-        assert all(
-            isinstance(list_triggers[i], (list, np.ndarray)) for i in range(num_seg)
-        ), "Each element of 'list_triggers' must be array-like"
+        assert all(isinstance(list_triggers[i], (list, np.ndarray)) for i in range(num_seg)), (
+            "Each element of 'list_triggers' must be array-like"
+        )
 
         if list_labels is not None:
             assert isinstance(list_labels, list), "'list_labels' must be a list (one per segment)"
@@ -163,9 +163,9 @@ class RemoveArtifactsRecording(BasePreprocessor):
                 for l in np.unique(labels):
                     assert l in artifacts.keys(), f"Artefacts are provided but label {l} has no value!"
             else:
-                assert (
-                    ms_before is not None and ms_after is not None
-                ), f"ms_before/after should not be None for mode {mode}"
+                assert ms_before is not None and ms_after is not None, (
+                    f"ms_before/after should not be None for mode {mode}"
+                )
                 sorting = NumpySorting.from_samples_and_labels(
                     list_triggers, list_labels, recording.get_sampling_frequency()
                 )

@@ -71,12 +71,9 @@ def export_report(
         )
 
     # load or compute correlograms
-    if sorting_analyzer.has_extension("correlograms"):
-        correlograms, bins = sorting_analyzer.get_extension("correlograms").get_data()
-    elif force_computation:
-        correlograms, bins = compute_correlograms(sorting_analyzer, window_ms=100.0, bin_ms=1.0)
+    if not sorting_analyzer.has_extension("correlograms") and force_computation:
+        _ = compute_correlograms(sorting_analyzer, window_ms=100.0, bin_ms=1.0)
     else:
-        correlograms = None
         warnings.warn(
             "export_report(): correlograms will not be exported. Use sorting_analyzer.compute('correlograms') if you want to include them."
         )
@@ -107,13 +104,13 @@ def export_report(
 
     # global figures
     fig = plt.figure(figsize=(20, 10))
-    w = sw.plot_unit_locations(sorting_analyzer, figure=fig, unit_colors=unit_colors)
+    _ = sw.plot_unit_locations(sorting_analyzer, figure=fig, unit_colors=unit_colors)
     fig.savefig(output_folder / f"unit_locations.{format}")
     if not show_figures:
         plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(20, 10))
-    sw.plot_unit_depths(sorting_analyzer, ax=ax, unit_colors=unit_colors)
+    _ = sw.plot_unit_depths(sorting_analyzer, ax=ax, unit_colors=unit_colors)
     fig.savefig(output_folder / f"unit_depths.{format}")
     if not show_figures:
         plt.close(fig)

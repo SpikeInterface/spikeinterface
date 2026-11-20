@@ -4,12 +4,9 @@ This is not tested on github because not relevant at all.
 This only a local testing.
 """
 
-import pytest
-from pathlib import Path
 import os
 from spikeinterface.core.job_tools import fix_job_kwargs
 
-import numpy as np
 
 from spikeinterface.core import (
     generate_ground_truth_recording,

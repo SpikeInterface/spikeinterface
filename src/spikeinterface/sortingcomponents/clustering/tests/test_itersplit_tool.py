@@ -1,8 +1,3 @@
-import pytest
-
-from spikeinterface.sortingcomponents.clustering.itersplit_tools import split_clusters
-
-
 # TODO
 def test_split():
     pass

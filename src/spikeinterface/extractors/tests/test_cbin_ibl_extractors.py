@@ -3,7 +3,7 @@ import unittest
 
 import numpy as np
 
-from spikeinterface.extractors.extractor_classes import CompressedBinaryIblExtractor, read_cbin_ibl
+from spikeinterface.extractors.extractor_classes import CompressedBinaryIblExtractor
 
 from spikeinterface.extractors.cbin_ibl import (
     _get_saved_channel_indices,
@@ -13,7 +13,7 @@ from spikeinterface.extractors.cbin_ibl import (
     extract_stream_info,
 )
 
-from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite, SortingCommonTestSuite
+from spikeinterface.extractors.tests.common_tests import RecordingCommonTestSuite
 
 
 class CompressedBinaryIblExtractorTest(RecordingCommonTestSuite, unittest.TestCase):

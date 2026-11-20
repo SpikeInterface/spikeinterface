@@ -74,7 +74,10 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         "ntbuff": "Samples of symmetrical buffer for whitening and spike detection",
         "nfilt_factor": "Max number of clusters per good channel (even temporary ones) 4",
         "do_correction": "If True drift registration is applied",
-        "NT": "Batch size (if None it is automatically computed--recommended Kilosort behavior if ntbuff also not changed)",
+        "NT": "Batch size. If None, 64 * 1024 - ntbuff for Kilosort >= 3.0.2 "
+        "(64 * 1024 + ntbuff for Kilosort < 3.0.2). "
+        "Change this value with care: use a multiple of 1024 minus ntbuff (e.g. 32 * 1024 - ntbuff) "
+        "to avoid spike holes (https://github.com/MouseLand/Kilosort/issues/594).",
         "AUCsplit": "Threshold on the area under the curve (AUC) criterion for performing a split in the final step",
         "wave_length": "size of the waveform extracted around each detected peak, (Default 61, maximum 81)",
         "keep_good_only": "If True only 'good' units are returned",
@@ -138,7 +141,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
     def _check_params(cls, recording, output_folder, params):
         p = params
         if p["NT"] is None:
-            p["NT"] = 64 * 1024 + p["ntbuff"]
+            p["NT"] = cls._get_default_batch_size(p["ntbuff"])
         else:
             p["NT"] = p["NT"] // 32 * 32  # make sure is multiple of 32
         if p["wave_length"] % 2 != 1:
@@ -206,9 +209,7 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         # ops['Nfilt'] = 1024 # max number of clusters
         ops["nfilt_factor"] = params["nfilt_factor"]  # max number of clusters per good channel (even temporary ones)
         ops["ntbuff"] = params["ntbuff"]  # samples of symmetrical buffer for whitening and spike detection
-        ops["NT"] = params[
-            "NT"
-        ]  # must be multiple of 32 + ntbuff. This is the batch size (try decreasing if out of memory).
+        ops["NT"] = params["NT"]  # batch size (try decreasing if out of memory); poor choices cause "spike holes"
         ops["whiteningRange"] = params["whiteningRange"]  # number of channels to use for whitening each channel
         ops["nSkipCov"] = 25.0  # compute whitening matrix from every N-th batch
         ops["scaleproc"] = 200.0  # int16 scaling of whitened data
@@ -226,9 +227,9 @@ class Kilosort3Sorter(KilosortBase, BaseSorter):
         ops["skip_kilosort_preprocessing"] = params["skip_kilosort_preprocessing"]
         if params["skip_kilosort_preprocessing"]:
             ops["fproc"] = ops["fbinary"]
-            assert (
-                params["scaleproc"] is not None
-            ), "When skip_kilosort_preprocessing=True scaleproc must explicitly given"
+            assert params["scaleproc"] is not None, (
+                "When skip_kilosort_preprocessing=True scaleproc must explicitly given"
+            )
 
         # int16 scaling of whitened data, when None then scaleproc is set to 200.
         scaleproc = params["scaleproc"]

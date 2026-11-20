@@ -290,7 +290,7 @@ def run_sorter_by_property(
     working_folder = Path(folder).absolute()
 
     assert grouping_property in recording.get_property_keys(), (
-        f"The 'grouping_property' {grouping_property} is not " f"a recording property!"
+        f"The 'grouping_property' {grouping_property} is not a recording property!"
     )
     recording_dict = recording.split_by(grouping_property)
 
