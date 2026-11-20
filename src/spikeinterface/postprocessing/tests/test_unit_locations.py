@@ -3,7 +3,79 @@ from spikeinterface.postprocessing import ComputeUnitLocations
 import pytest
 from probeinterface import Probe
 from spikeinterface.core import create_sorting_analyzer, generate_ground_truth_recording
+from spikeinterface.postprocessing.localization_tools import (
+    estimate_distance_error_with_log,
+    make_initial_guess_and_bounds,
+    solve_monopolar_triangulation,
+)
 import numpy as np
+
+
+def test_monopolar_log_finite_differences(monkeypatch):
+    from scipy.optimize import minimize
+
+    # An ambiguous real waveform has two local minima. Changing the numerical
+    # gradient can select the worse one, so preserve the original solver path.
+    amplitudes = [4, 7, 6, 7, 3, 10, 33, 8, 7, 9, 8, 35]
+    contact_locations = np.array(
+        [
+            [32, 3100],
+            [16, 3120],
+            [48, 3120],
+            [0, 3140],
+            [32, 3140],
+            [16, 3160],
+            [48, 3160],
+            [0, 3180],
+            [32, 3180],
+            [16, 3200],
+            [48, 3200],
+            [32, 3220],
+        ],
+        dtype="float64",
+    )
+    for dtype, max_distance, function_limit in [
+        ("int16", 150, 15000),
+        ("float32", 150, 15000),
+        ("float64", 150, 15000),
+        ("float64", 2, 15000),
+        ("float64", 0.1, 15000),
+        ("float64", 150, 4),
+    ]:
+        waveform_data = np.array(amplitudes, dtype=dtype)
+        initial, bounds = make_initial_guess_and_bounds(waveform_data, contact_locations, max_distance)
+        bounds = list(zip(bounds[0][:3], bounds[1][:3]))
+        args = (waveform_data, contact_locations, waveform_data.max())
+        expected = minimize(
+            estimate_distance_error_with_log,
+            initial[:3],
+            bounds=bounds,
+            args=args,
+            options={"maxfun": function_limit},
+        )
+        calls = []
+
+        def minimize_and_record(*args, **kwargs):
+            calls.append(kwargs.get("jac", False))
+            if kwargs.get("jac"):
+                # Also exercise budget exhaustion without thousands of evaluations.
+                assert kwargs["options"]["maxfun"] * 4 == 15000
+                kwargs["options"]["maxfun"] = function_limit // 4
+            else:
+                kwargs["options"] = {"maxfun": function_limit}
+            result = minimize(*args, **kwargs)
+            if kwargs.get("jac"):
+                assert result.nfev == result.njev
+            assert result.status == expected.status
+            return result
+
+        monkeypatch.setattr("scipy.optimize.minimize", minimize_and_record)
+        actual = solve_monopolar_triangulation(
+            waveform_data, contact_locations, max_distance, "minimize_with_log_penality"
+        )
+        assert calls == [max_distance > 0.1]
+        np.testing.assert_array_equal(np.asarray(actual[:3]).view("uint64"), expected.x.view("uint64"))
+        assert np.all(np.isfinite(actual))
 
 
 class TestUnitLocationsExtension(AnalyzerExtensionCommonTestSuite):
