@@ -158,12 +158,9 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         num_channels = traces_chunk.shape[1]
         traces_shift = np.empty((num_samples, num_channels), dtype=self.dtype)
 
-        # Neuropixels channels reuse a small set of ADC sampling delays, so each rotation is computed once per
-        # chunk and every block looks up the columns of its channels
+        # each rotation is computed once per chunk and every block looks up the columns of its channels
         fft_length = next_fast_len(traces_chunk.shape[0], real=True)
-        angular_frequencies = 2 * np.pi * np.fft.rfftfreq(fft_length)
-        unique_shifts, shift_indices = np.unique(sample_shifts, return_inverse=True)
-        unique_rotations = np.exp(-1j * (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]))
+        unique_rotations, shift_indices = _get_group_rotations(fft_length, sample_shifts)
 
         for channel_index in range(0, num_channels, NUM_CHANNELS_PER_BLOCK):
             channel_slice = slice(channel_index, channel_index + NUM_CHANNELS_PER_BLOCK)
@@ -219,6 +216,18 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         return _cast_owned_traces(shifted[half : half + (end_frame - start_frame), :], self.dtype)
 
 
+def _get_group_rotations(fft_length, sample_shifts):
+    """Frequency-domain rotations, computed once per unique shift.
+
+    Neuropixels channels reuse a small set of ADC sampling delays. Returns ``unique_rotations`` with shape
+    ``(fft_length // 2 + 1, n_unique)`` and ``shift_indices`` mapping each channel to its column.
+    """
+    angular_frequencies = 2 * np.pi * np.fft.rfftfreq(fft_length)
+    unique_shifts, shift_indices = np.unique(sample_shifts, return_inverse=True)
+    unique_rotations = np.exp(-1j * (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]))
+    return unique_rotations, shift_indices.reshape(-1)
+
+
 def _cast_owned_traces(traces, dtype):
     """Cast filtered float traces to ``dtype``, rounding and clipping in place for an integer ``dtype``.
 
@@ -238,6 +247,7 @@ def _cast_owned_traces(traces, dtype):
 phase_shift = define_function_handling_dict_from_class(source_class=PhaseShiftRecording, name="phase_shift")
 
 
+# TODO: remove this function once the new API is fully adopted
 def apply_frequency_shift(signal, shift_samples, axis=0):
     """
     Apply frequency shift to a signal buffer. This allow for shifting that are sub-sample accurate.
@@ -280,13 +290,7 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     frequency_domain_signal = rfft(signal, n=fft_length, axis=axis, overwrite_x=True)
 
     if axis == 0:
-        angular_frequencies = 2 * np.pi * np.fft.rfftfreq(fft_length)
-        # Neuropixels channels reuse a small set of ADC sampling delays, so compute each rotation once.
-        unique_shifts, shift_indices = np.unique(shift_samples, return_inverse=True)
-        unique_angles = (angular_frequencies[:, np.newaxis] * unique_shifts[np.newaxis, :]).astype(
-            np.float64, copy=False
-        )
-        unique_rotations = np.exp(-1j * unique_angles)
+        unique_rotations, shift_indices = _get_group_rotations(fft_length, shift_samples)
         rotations = unique_rotations[:, shift_indices]
         phase_shifted_signal = np.multiply(frequency_domain_signal, rotations, out=rotations)
     else:
@@ -295,51 +299,6 @@ def apply_frequency_shift(signal, shift_samples, axis=0):
     # Inverse FFT to get the translated signal
     shifted_signal = irfft(phase_shifted_signal, n=fft_length, axis=axis, overwrite_x=True)
     return shifted_signal[:signal_length]
-
-
-apply_fshift = apply_frequency_shift
-
-
-def apply_fshift_ibl(w, s, axis=0, ns=None):
-    """
-    Function from IBLIB: https://github.com/int-brain-lab/ibllib/blob/master/ibllib/dsp/fourier.py
-
-    Shifts a 1D or 2D signal in frequency domain, to allow for accurate non-integer shifts
-    :param w: input signal (if complex, need to provide ns too)
-    :param s: shift in samples, positive shifts forward
-    :param axis: axis along which to shift (last axis by default)
-    :param axis: axis along which to shift (last axis by default)
-    :param ns: if a rfft frequency domain array is provided, give a number of samples as there
-     is an ambiguity
-    :return: w
-    """
-    from scipy.fft import rfft, irfft
-
-    # create a vector that contains a 1 sample shift on the axis
-    ns = ns or w.shape[axis]
-    shape = np.array(w.shape) * 0 + 1
-    shape[axis] = ns
-    dephas = np.zeros(shape)
-    # np.put(dephas, 1, 1)
-    dephas[1] = 1
-    dephas = rfft(dephas, axis=axis)
-    # fft the data along the axis and the dephas
-    do_fft = np.invert(np.iscomplexobj(w))
-    if do_fft:
-        W = rfft(w, axis=axis)
-    else:
-        W = w
-    # if multiple shifts, broadcast along the other dimensions, otherwise keep a single vector
-    if not np.isscalar(s):
-        s_shape = np.array(w.shape)
-        s_shape[axis] = 1
-        s = s.reshape(s_shape)
-    # apply the shift (s) to the fft angle to get the phase shift and broadcast
-    W *= np.exp(1j * np.angle(dephas) * s)
-    if do_fft:
-        W = np.real(irfft(W, ns, axis=axis))
-        W = W.astype(w.dtype)
-    return W
 
 
 def _build_fir_taps(shift_samples, n_taps, beta=None):
