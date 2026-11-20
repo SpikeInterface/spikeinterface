@@ -491,12 +491,15 @@ def select_sorting_periods_mask(sorting: BaseSorting, periods):
         for unit_index, unit_id in enumerate(sorting.unit_ids):
             # filter by unit index
             periods_for_unit = periods_in_segment[periods_in_segment["unit_index"] == unit_index]
+            if len(periods_for_unit) == 0:
+                continue
             global_indices = global_indices_segment[unit_id]
-            spiketrains = spike_vector[global_indices]["sample_index"]
-            if len(periods_for_unit) > 0:
-                for period in periods_for_unit:
-                    mask = (spiketrains >= period["start_sample_index"]) & (spiketrains < period["end_sample_index"])
-                    keep_mask[global_indices[mask]] = True
+            spiketrain = spike_vector["sample_index"][global_indices]
+            # the spike train is sorted, so the spikes in [start, end) of each period are one slice of it
+            starts = np.searchsorted(spiketrain, periods_for_unit["start_sample_index"])
+            ends = np.searchsorted(spiketrain, periods_for_unit["end_sample_index"])
+            for start, end in zip(starts, ends):
+                keep_mask[global_indices[start:end]] = True
     return keep_mask
 
 
