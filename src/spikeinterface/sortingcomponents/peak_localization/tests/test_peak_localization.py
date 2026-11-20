@@ -1,6 +1,3 @@
-import pytest
-import numpy as np
-
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 from spikeinterface.sortingcomponents.peak_localization import localize_peaks
 

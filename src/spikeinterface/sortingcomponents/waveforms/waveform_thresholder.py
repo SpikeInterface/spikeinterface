@@ -4,7 +4,7 @@ import operator
 from typing import Literal
 
 from spikeinterface.core import BaseRecording, get_noise_levels
-from spikeinterface.core.node_pipeline import PipelineNode, WaveformsNode, find_parent_of_type
+from spikeinterface.core.node_pipeline import PipelineNode
 from .waveform_utils import WaveformTransformer
 
 
@@ -54,7 +54,7 @@ class WaveformThresholder(WaveformTransformer):
             parents=parents,
         )
         assert feature in ["ptp", "mean", "energy", "peak_voltage"], (
-            f"{feature} is not a valid feature" " must be one of 'ptp', 'mean', 'energy'," " or 'peak_voltage'"
+            f"{feature} is not a valid feature must be one of 'ptp', 'mean', 'energy', or 'peak_voltage'"
         )
 
         self.threshold = threshold

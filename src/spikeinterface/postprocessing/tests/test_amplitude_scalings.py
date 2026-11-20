@@ -139,7 +139,6 @@ def test_unit_pair_overlap_matrix_matches_naive_reference():
 
 
 class TestAmplitudeScalingsExtension(AnalyzerExtensionCommonTestSuite):
-
     @pytest.mark.parametrize("params", [dict(handle_collisions=True), dict(handle_collisions=False)])
     def test_extension(self, params):
         self.run_extension_tests(ComputeAmplitudeScalings, params)

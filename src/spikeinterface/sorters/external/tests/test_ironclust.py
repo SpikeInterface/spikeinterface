@@ -1,4 +1,5 @@
-import os, getpass
+import os
+import getpass
 
 if getpass.getuser() == "samuel":
     ironclust_path = "/home/samuel/Documents/SpikeInterface/ironclust/"

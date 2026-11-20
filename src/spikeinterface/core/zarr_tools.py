@@ -61,9 +61,9 @@ def adjust_chunks_shards_and_job_kwargs(
     if shards is not None:
         assert len(shards) == len(chunks), "Shards and chunks must have the same number of dimensions"
         for dim in range(len(chunks)):
-            assert (
-                shards[dim] >= chunks[dim] and shards[dim] % chunks[dim] == 0
-            ), "Shard size must be a multiple of chunk size"
+            assert shards[dim] >= chunks[dim] and shards[dim] % chunks[dim] == 0, (
+                "Shard size must be a multiple of chunk size"
+            )
         # When sharding is used, chunk_size in job_kwargs is used to determine the number of samples per chunk to
         # write in each job. Each process will write all chunks in a shard.
         job_kwargs["chunk_size"] = shards[0]
@@ -537,3 +537,15 @@ def build_codec_pipeline(filters=None, compressors=None):
     codec_kwargs["serializer"] = serializers[0] if len(serializers) == 1 else "auto"
     codec_kwargs["compressors"] = byte_compressors
     return codec_kwargs
+
+
+def local_zarr_store(path):
+    """
+    Return a zarr LocalStore for local paths (remote paths are returned as str).
+    Passing a plain str to zarr 3 parses it as a URL, so characters like '#' truncate the path.
+    """
+    from .core_tools import is_path_remote
+
+    if is_path_remote(str(path)):
+        return str(path)
+    return zarr.storage.LocalStore(path)

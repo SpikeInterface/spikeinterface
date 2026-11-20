@@ -8,11 +8,9 @@ from spikeinterface.core.node_pipeline import (
 )
 
 from spikeinterface.core import get_channel_distances
-from spikeinterface.sortingcomponents import waveforms
 
 
 class LocalizeBase(PipelineNode):
-
     def __init__(self, recording, parents, return_output=True, radius_um=75.0):
         PipelineNode.__init__(self, recording, parents=parents, return_output=return_output)
         self.recording = recording

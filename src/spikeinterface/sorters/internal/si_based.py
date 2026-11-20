@@ -1,4 +1,4 @@
-from spikeinterface.core import load, NumpyRecording
+from spikeinterface.core import load
 
 from spikeinterface.sorters import BaseSorter
 

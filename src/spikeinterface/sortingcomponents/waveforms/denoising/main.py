@@ -5,7 +5,7 @@ import numpy as np
 from .method_list import denoising_methods
 
 from spikeinterface.sortingcomponents.tools import make_multi_method_doc
-from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 
 from spikeinterface.core.node_pipeline import (
     run_node_pipeline,

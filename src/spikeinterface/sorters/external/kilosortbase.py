@@ -119,6 +119,27 @@ class KilosortBase:
         return ops
 
     @classmethod
+    def _get_default_batch_size(cls, ntbuff):
+        """
+        Default `NT` for Kilosort 2.5 and 3.
+
+        Since the spike holes fix (https://github.com/MouseLand/Kilosort/issues/594, v2.5.2 and v3.0.2)
+        Kilosort needs `64 * 1024 - ntbuff`. Installs from before the fix need `64 * 1024 + ntbuff`.
+        """
+        sorter_path = getattr(cls, f"{cls.sorter_name}_path", None)
+        if sorter_path is not None and not cls.check_compiled():
+            track_and_sort = Path(str(sorter_path).strip('"')) / "mainLoop" / "trackAndSort.m"
+            # the fix added `ntpad` to the batch loading
+            if track_and_sort.is_file() and "ntpad" not in track_and_sort.read_text(errors="ignore"):
+                warn(
+                    f"The Kilosort install at {sorter_path} predates the fix for spike holes "
+                    "(https://github.com/MouseLand/Kilosort/issues/594) and misses spikes at the edges of every "
+                    "batch. Update Kilosort to get rid of them."
+                )
+                return 64 * 1024 + ntbuff
+        return 64 * 1024 - ntbuff
+
+    @classmethod
     def _setup_recording(cls, recording, sorter_output_folder, params, verbose):
         cls._generate_channel_map_file(recording, sorter_output_folder)
 
@@ -226,9 +247,9 @@ class KilosortBase:
             else:
                 tmp_files_to_remove = ()
         else:
-            assert isinstance(
-                params["delete_tmp_files"], (tuple, list)
-            ), "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
+            assert isinstance(params["delete_tmp_files"], (tuple, list)), (
+                "`delete_tmp_files` must be a `Bool`, `Tuple` or `List`."
+            )
 
             for name in params["delete_tmp_files"]:
                 assert name in all_tmp_files, f"{name} is not a valid option, must be one of: {all_tmp_files}"

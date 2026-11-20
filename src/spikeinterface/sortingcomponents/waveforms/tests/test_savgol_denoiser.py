@@ -1,6 +1,3 @@
-import pytest
-
-
 from spikeinterface.sortingcomponents.waveforms.denoising.savgol_denoiser import SavGolDenoiser
 
 from spikeinterface.core.node_pipeline import (

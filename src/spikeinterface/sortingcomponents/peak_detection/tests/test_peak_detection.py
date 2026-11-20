@@ -327,7 +327,7 @@ def test_detect_peaks_locally_exclusive(recording, job_kwargs, torch_job_kwargs)
         assert np.isclose(np.array(len(peaks_local_numba)), np.array(len(peaks_local_torch)), rtol=0.1)
 
     if HAVE_PYOPENCL:
-        peaks_local_cl = detect_peaks(
+        _ = detect_peaks(
             recording,
             method="locally_exclusive_cl",
             method_kwargs=dict(

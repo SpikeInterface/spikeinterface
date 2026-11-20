@@ -236,9 +236,9 @@ class SelectSegmentRecording(BaseRecording):
             segment_indices = [segment_indices]
 
         num_segments = recording.get_num_segments()
-        assert all(
-            0 <= s < num_segments for s in segment_indices
-        ), f"'segment_index' must be between 0 and {num_segments - 1}"
+        assert all(0 <= s < num_segments for s in segment_indices), (
+            f"'segment_index' must be between 0 and {num_segments - 1}"
+        )
 
         for segment_index in segment_indices:
             rec_seg = recording.segments[segment_index]
@@ -363,12 +363,12 @@ class ConcatenateSegmentSorting(BaseSorting):
                 "Some concatenated sortings don't have a registered recording. "
                 "Call sorting.register_recording() or set `total_samples_list` kwarg."
             )
-            assert len(total_samples_list) == len(
-                sorting_list
-            ), "`total_samples_list` should have the same number of elements as `sorting_list`"
-            assert all(
-                [s.get_num_segments() == 1 for s in sorting_list]
-            ), "All sortings are expected to be monosegment."
+            assert len(total_samples_list) == len(sorting_list), (
+                "`total_samples_list` should have the same number of elements as `sorting_list`"
+            )
+            assert all([s.get_num_segments() == 1 for s in sorting_list]), (
+                "All sortings are expected to be monosegment."
+            )
             assert ignore_times, (
                 "Concatenating sortings without registered recordings: "
                 "Use ignore_times=True to ignore time information."
@@ -550,7 +550,7 @@ class SplitSegmentSorting(BaseSorting):
             recording_list = recording_or_recording_list.recording_list
         else:
             raise TypeError(
-                "'recording_or_recording_list' must be a list of recordings, " "ConcatenateSegmentRecording, or None"
+                "'recording_or_recording_list' must be a list of recordings, ConcatenateSegmentRecording, or None"
             )
 
         num_samples = [0]
@@ -593,9 +593,9 @@ class SelectSegmentSorting(BaseSorting):
             segment_indices = [segment_indices]
 
         num_segments = sorting.get_num_segments()
-        assert all(
-            0 <= s < num_segments for s in segment_indices
-        ), f"'segment_index' must be between 0 and {num_segments - 1}"
+        assert all(0 <= s < num_segments for s in segment_indices), (
+            f"'segment_index' must be between 0 and {num_segments - 1}"
+        )
 
         for segment_index in segment_indices:
             sort_seg = sorting.segments[segment_index]

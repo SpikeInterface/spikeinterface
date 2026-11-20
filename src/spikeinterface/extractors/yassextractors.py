@@ -25,7 +25,7 @@ class YassSortingExtractor(BaseSorting):
     def __init__(self, folder_path):
         try:
             import yaml
-        except:
+        except Exception:
             raise ImportError(self.installation_mesg)
 
         folder_path = Path(folder_path)

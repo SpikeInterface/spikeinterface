@@ -671,9 +671,9 @@ def detect_artifact_periods(
             Array with dtype ``artifact_dtype`` describing each detected artifact
             period.
     """
-    assert (
-        method in _method_to_function
-    ), f"Method {method} not recognized. Valid methods are: {_method_to_function.keys()}"
+    assert method in _method_to_function, (
+        f"Method {method} not recognized. Valid methods are: {_method_to_function.keys()}"
+    )
     if method_kwargs is None:
         method_kwargs = dict()
 

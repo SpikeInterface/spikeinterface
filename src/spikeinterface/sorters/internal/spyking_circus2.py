@@ -1,6 +1,7 @@
 from .si_based import ComponentsBasedSorter
 
 import shutil
+import importlib.util
 import numpy as np
 
 from spikeinterface.core import NumpySorting
@@ -90,8 +91,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
     @classmethod
     def is_installed(cls):
-        import importlib.util
-
         spykingcircus2_deps = ["scipy", "numba", "hdbscan"]
 
         for package_name in spykingcircus2_deps:
@@ -107,10 +106,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
     @classmethod
     def _run_from_folder(cls, sorter_output_folder, params, verbose):
 
-        try:
-            import torch
-        except ImportError:
-            HAVE_TORCH = False
+        if importlib.util.find_spec("torch") is None:
             print("spykingcircus2 could benefit from using torch. Consider installing it")
 
         # this is imported only on demand because numba import are too heavy
@@ -231,7 +227,7 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
         n_peaks_per_channel = selection_params.get("n_peaks_per_channel", 5000)
         min_n_peaks = selection_params.get("min_n_peaks", 100000)
         skip_peaks = not params["multi_units_only"] and selection_method == "uniform"
-        skip_peaks = skip_peaks and not deterministic and not (matching_method is None)
+        skip_peaks = skip_peaks and not deterministic and matching_method is not None
         max_n_peaks = n_peaks_per_channel * num_channels
         n_peaks = max(min_n_peaks, max_n_peaks)
         selection_params["n_peaks"] = n_peaks
@@ -407,7 +403,6 @@ class Spykingcircus2Sorter(ComponentsBasedSorter):
 
             del more_outs
 
-            before_clean_ids = templates.unit_ids.copy()
             cleaning_kwargs["max_std_per_channel"] = max_std_per_channel
             cleaning_kwargs["verbose"] = verbose
             templates = clean_templates(templates, noise_levels=noise_levels, **cleaning_kwargs)

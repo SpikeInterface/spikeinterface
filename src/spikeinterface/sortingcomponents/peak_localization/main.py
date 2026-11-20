@@ -4,7 +4,7 @@ import numpy as np
 from .method_list import peak_localization_methods
 from ..tools import make_multi_method_doc
 
-from spikeinterface.core.job_tools import split_job_kwargs, fix_job_kwargs
+from spikeinterface.core.job_tools import fix_job_kwargs
 
 
 from spikeinterface.core.node_pipeline import (
@@ -35,9 +35,9 @@ def get_localization_pipeline_nodes(
     seed=None,
 ):
 
-    assert (
-        method in peak_localization_methods
-    ), f"Method {method} is not supported. Choose from {peak_localization_methods.keys()}"
+    assert method in peak_localization_methods, (
+        f"Method {method} is not supported. Choose from {peak_localization_methods.keys()}"
+    )
 
     assert method_kwargs is not None
 
@@ -179,9 +179,9 @@ def localize_peaks(
 
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    assert (
-        method in peak_localization_methods
-    ), f"Method {method} is not supported. Choose from {peak_localization_methods.keys()}"
+    assert method in peak_localization_methods, (
+        f"Method {method} is not supported. Choose from {peak_localization_methods.keys()}"
+    )
 
     peak_source = PeakRetriever(recording, peaks)
 

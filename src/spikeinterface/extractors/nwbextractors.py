@@ -420,8 +420,6 @@ def _retrieve_electrodes_indices_from_electrical_series_backend(open_file, elect
     """
     if "electrodes" not in electrical_series:
         if backend == "zarr":
-            import zarr
-
             # links must be resolved
             zarr_links = electrical_series.attrs.get("_LINKS", electrical_series.attrs.get("zarr_link", []))
             electrodes_path = None
@@ -658,9 +656,7 @@ class _NWBReader:
             return self.file[self.unit_table_path]
         except KeyError:
             available = _find_neurodata_type_from_backend(self.file, neurodata_type="Units", backend=backend)
-            raise ValueError(
-                f"{self.unit_table_path} not found in the NWB file!" f"Available options are: {available}."
-            )
+            raise ValueError(f"{self.unit_table_path} not found in the NWB file!Available options are: {available}.")
 
     @staticmethod
     def available_units_tables(file_path, stream_mode=None, storage_options=None):
@@ -838,7 +834,7 @@ class _NWBReader:
         except KeyError:
             available = _find_neurodata_type_from_backend(self.file, neurodata_type="ElectricalSeries", backend=backend)
             raise ValueError(
-                f"{self.electrical_series_path} not found in the NWB file!" f"Available options are: {available}."
+                f"{self.electrical_series_path} not found in the NWB file!Available options are: {available}."
             )
 
     # --- electrodes table ----------------------------------------------------------------------

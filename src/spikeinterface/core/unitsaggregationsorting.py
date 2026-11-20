@@ -38,7 +38,7 @@ class UnitsAggregationSorting(BaseSorting):
         num_all_units = sum([sort.get_num_units() for sort in sorting_list])
         if renamed_unit_ids is not None:
             assert len(np.unique(renamed_unit_ids)) == num_all_units, (
-                "'renamed_unit_ids' doesn't have the right size" "or has duplicates!"
+                "'renamed_unit_ids' doesn't have the right sizeor has duplicates!"
             )
             unit_ids = list(renamed_unit_ids)
         else:
@@ -96,7 +96,6 @@ class UnitsAggregationSorting(BaseSorting):
         # Check if all the sortings have the same properties
         properties_set = set(np.concatenate([sorting.get_property_keys() for sorting in sorting_list]))
         for prop_name in properties_set:
-
             dtypes_per_sorting = []
             for sort in sorting_list:
                 if prop_name in sort.get_property_keys():
@@ -110,7 +109,6 @@ class UnitsAggregationSorting(BaseSorting):
 
             all_property_values = []
             for sort in sorting_list:
-
                 # If one of the sortings doesn't have the property, use the default missing property value
                 if prop_name not in sort.get_property_keys():
                     try:
@@ -118,7 +116,7 @@ class UnitsAggregationSorting(BaseSorting):
                             sort.get_num_units(),
                             BaseExtractor.default_missing_property_values[dtypes_per_sorting[0]],
                         )
-                    except:
+                    except Exception:
                         warnings.warn(f"Skipping property '{prop_name}: cannot inpute missing property values.'")
                         break
                 else:

@@ -24,7 +24,6 @@
 # 3. UnitRefine: pre-trained classifiers to label units as noise or SUA/MUA [Jain]_
 
 # %%
-import numpy as np
 
 import spikeinterface as si
 import spikeinterface.curation as sc

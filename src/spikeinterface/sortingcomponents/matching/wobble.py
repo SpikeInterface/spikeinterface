@@ -171,9 +171,9 @@ class TemplateMetadata:
         if params.template_indices2unit_indices is None:  # Trivial grouping of templates = units
             template_indices2unit_indices = np.arange(num_templates)
         else:
-            assert params.template_indices2unit_indices.shape == (
-                templates.shape[0],
-            ), "template_indices2unit_indices must have shape (num_templates,)"
+            assert params.template_indices2unit_indices.shape == (templates.shape[0],), (
+                "template_indices2unit_indices must have shape (num_templates,)"
+            )
             template_indices2unit_indices = params.template_indices2unit_indices
         unit_indices = np.unique(template_indices2unit_indices)
         num_units = len(unit_indices)

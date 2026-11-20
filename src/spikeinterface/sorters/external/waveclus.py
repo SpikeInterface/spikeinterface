@@ -194,7 +194,7 @@ class WaveClusSorter(BaseSorter):
             """
         else:
             source_dir = Path(__file__).parent
-            shutil.copy(str(source_dir / f"waveclus_master.m"), str(sorter_output_folder))
+            shutil.copy(str(source_dir / "waveclus_master.m"), str(sorter_output_folder))
 
             sorter_path = Path(cls.waveclus_path).absolute()
             if "win" in sys.platform and sys.platform != "darwin":
@@ -290,7 +290,7 @@ class WaveClusSorter(BaseSorter):
         }
         par_input = {}
         for key, value in p.items():
-            if type(value) == bool:
+            if type(value) is bool:
                 value = f"{value}".lower()
             if key in par_renames:
                 key = par_renames[key]

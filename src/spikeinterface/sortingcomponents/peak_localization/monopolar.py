@@ -4,11 +4,6 @@ import numpy as np
 
 from .base import LocalizeBase
 
-from spikeinterface.core.node_pipeline import (
-    find_parent_of_type,
-    WaveformsNode,
-)
-
 from spikeinterface.postprocessing.unit_locations import dtype_localize_by_method
 
 from spikeinterface.postprocessing.localization_tools import (

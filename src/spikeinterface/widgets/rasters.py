@@ -1,10 +1,9 @@
 import numpy as np
-from warnings import warn
 
 from spikeinterface.core import SortingAnalyzer, BaseSorting
 from spikeinterface.core.sorting_tools import get_segment_durations
 
-from .base import BaseWidget, to_attr, default_backend_kwargs
+from .base import BaseWidget, to_attr
 from .utils import (
     get_some_colors,
     validate_segment_indices,
@@ -185,8 +184,6 @@ class BaseRasterWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
-        from matplotlib.colors import Normalize
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -267,10 +264,8 @@ class BaseRasterWidget(BaseWidget):
 
         # Add segment boundary lines if provided and handle x limits
         if dp.segment_start_stop_times is not None:
-
             segment_times = np.array(list(dp.segment_start_stop_times.values()))
             if len(segment_times) > 1:
-
                 segment_times = segment_times - dp.segment_time_offsets[:, None]
                 self._set_segment_time_ticks(scatter_ax, segment_times, dp.segment_time_offsets)
 
@@ -471,7 +466,7 @@ class RasterWidget(BaseRasterWidget):
         if isinstance(sorting_analyzer_or_sorting, SortingAnalyzer):
             if not sorting_analyzer_or_sorting.has_extension("unit_locations"):
                 if sort_by_depth:
-                    raise AttributeError(f"'unit_locations' necessary for `sort_by_depth=True`")
+                    raise AttributeError("'unit_locations' necessary for `sort_by_depth=True`")
             else:
                 depths = sorting_analyzer_or_sorting.get_extension("unit_locations").get_data(outputs="numpy")
                 s_args_depths = np.argsort(depths[:, 1])
