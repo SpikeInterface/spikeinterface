@@ -4,7 +4,7 @@ from typing import Literal
 
 import numpy as np
 
-from spikeinterface.core.base import BaseExtractor, minimum_spike_dtype, unit_period_dtype
+from spikeinterface.core.base import BaseExtractor, unit_period_dtype
 from spikeinterface.core.basesorting import BaseSorting
 from spikeinterface.core.numpyextractors import NumpySorting
 
@@ -149,26 +149,21 @@ def get_numba_vector_to_list_of_spiketrain():
     return vector_to_list_of_spiketrain_numba
 
 
-def _is_flat_int64_view(dtype: np.dtype) -> bool:
+def _numba_can_reorder(dtype: np.dtype) -> bool:
     """
-    Whether a spike-vector dtype can be safely viewed as a flat (num_spikes, num_fields) int64
-    matrix, which is what the numba counting sort moves rows through.
+    Whether the numba counting sort can handle this spike-vector dtype.
 
-    Requires every field to be int64, packed with no padding, and the first three fields to be
-    `minimum_spike_dtype`'s in order, because the kernel addresses unit_index and segment_index
-    positionally (columns 1 and 2) rather than by name.
-
-    The all-int64 rule is deliberately stricter than correctness demands -- the kernel copies rows
-    bitwise, so any 8-byte field would in fact round-trip through the view. Keeping it narrow means
-    the kernel only ever sees the layout it is written for, and it costs nothing in practice: every
-    spike-vector dtype spikeinterface constructs is all-int64.
+    The kernel moves each record as raw bytes, so any field works except Python objects, whose references
+    can't be safely copied except through the Python interpreter. It reads `unit_index` and `segment_index`,
+    so these must be integers in native byte order.
     """
     names = dtype.names
-    if names is None or names[:3] != tuple(name for name, _ in minimum_spike_dtype):
+    if names is None or dtype.hasobject:
         return False
-    if dtype.itemsize != 8 * len(names):
-        return False
-    return all(dtype.fields[name][0] == np.int64 and dtype.fields[name][1] == 8 * i for i, name in enumerate(names))
+    return all(
+        name in names and dtype.fields[name][0].kind in "iu" and dtype.fields[name][0].isnative
+        for name in ("unit_index", "segment_index")
+    )
 
 
 def reorder_spike_vector_by_unit_and_segment(
@@ -199,10 +194,12 @@ def reorder_spike_vector_by_unit_and_segment(
     Parameters
     ----------
     spike_vector : np.ndarray or array-like
-        Structured array whose first three fields are `minimum_spike_dtype`. Extra trailing fields
-        (e.g. the "channel_index" that `to_spike_vector(main_channel_indices=...)` adds) are carried
-        through to the output. Anything array-like is accepted and materialised with `np.asarray`,
-        so lazily-backed spike vectors work, at the cost of being read into memory.
+        Structured array with integer "unit_index" and "segment_index" fields, in any order and of
+        any width. Any other fields (e.g. the "channel_index" that
+        `to_spike_vector(main_channel_indices=...)` adds) are carried through to the output.
+        Object fields force the slower numpy path.
+        Anything array-like is accepted and materialised with `np.asarray`, so lazily-backed spike
+        vectors work, at the cost of being read into memory.
     num_units : int
         The number of units. Every `unit_index` must be in [0, num_units).
     num_segments : int
@@ -212,11 +209,11 @@ def reorder_spike_vector_by_unit_and_segment(
 
     Returns
     -------
-    ordered_spikes : np.ndarray
+    ordered_spike_vector : np.ndarray
         Structured array of the same dtype and length as `spike_vector`, with the spikes grouped
         by bucket.
     order : np.ndarray
-        1d int64 array such that `spike_vector[order]` equals `ordered_spikes`.
+        1d int64 array such that `spike_vector[order]` equals `ordered_spike_vector`.
     counts : np.ndarray
         1d int64 array of length `num_units * num_segments`, the number of spikes in each bucket,
         in bucket order.
@@ -245,28 +242,40 @@ def reorder_spike_vector_by_unit_and_segment(
         f"`spike_vector` has a unit_index outside [0, {num_units}) or a segment_index outside [0, {num_segments})."
     )
 
-    # The numba kernel expects an all-int64 unpadded dtype (e.g. `minimum_spike_dtype`), but it is
-    # possible that a spike vector has extra fields with other dtypes (`NumpySorting` allows that).
-    # So we check taht the numba path is safe, and anything else takes the dtype-agnostic numpy path.
-    if HAVE_NUMBA and _is_flat_int64_view(spike_vector.dtype):
+    # If the spike vector has object fields, or unit_index and segment_index fields
+    # that aren't native-order integers, we have to use numpy.
+    # Otherwise, we can use the numba kernel.
+    if HAVE_NUMBA and _numba_can_reorder(spike_vector.dtype):
         reorder_spike_vector = get_numba_reorder_spike_vector()
 
-        num_fields = len(spike_vector.dtype.names)
-        # These flat (num_spikes, num_fields) int64 views are zero-copy
-        in_flat = np.ascontiguousarray(spike_vector).view(np.int64).reshape(num_spikes, num_fields)
-        out_flat = np.empty((num_spikes, num_fields), dtype=np.int64)
+        spike_vector = np.ascontiguousarray(spike_vector)
+        ordered_spike_vector = np.empty(num_spikes, dtype=spike_vector.dtype)
         order = np.empty(num_spikes, dtype=np.int64)
         counts = np.empty(num_buckets, dtype=np.int64)
 
-        in_range = reorder_spike_vector(in_flat, unit_stride, segment_stride, num_buckets, out_flat, order, counts)
+        # The kernel only moves whole records, so it gets them as opaque bytes and never has to
+        # understand the other fields (numba can't compile some of them, e.g. float16).
+        record_bytes = np.dtype([("bytes", "uint8", (spike_vector.dtype.itemsize,))])
+        in_range = reorder_spike_vector(
+            spike_vector.view(record_bytes),
+            spike_vector["unit_index"],
+            spike_vector["segment_index"],
+            unit_stride,
+            segment_stride,
+            num_buckets,
+            ordered_spike_vector.view(record_bytes),
+            order,
+            counts,
+        )
         if not in_range:
             raise ValueError(out_of_range_error)
-
-        ordered_spikes = out_flat.view(spike_vector.dtype).reshape(num_spikes)
-        return ordered_spikes, order, counts
+        return ordered_spike_vector, order, counts
 
     # numpy fallback: a stable argsort by bucket is equivalent to the counting sort above.
-    bucket_index = spike_vector["unit_index"] * unit_stride + spike_vector["segment_index"] * segment_stride
+    # Widen to int64 first so narrow index fields (e.g. int8) don't overflow when multiplied by the stride.
+    unit_index = spike_vector["unit_index"].astype(np.int64, copy=False)
+    segment_index = spike_vector["segment_index"].astype(np.int64, copy=False)
+    bucket_index = unit_index * unit_stride + segment_index * segment_stride
 
     # Must be checked before narrowing: a negative or oversized bucket would silently wrap.
     if bucket_index.min() < 0 or bucket_index.max() >= num_buckets:
@@ -279,8 +288,8 @@ def reorder_spike_vector_by_unit_and_segment(
     bucket_index = bucket_index.astype(np.min_scalar_type(num_buckets - 1), copy=False)
 
     order = np.argsort(bucket_index, kind="stable")  # radix sort, because of integer key
-    ordered_spikes = spike_vector[order]
-    return ordered_spikes, order, counts
+    ordered_spike_vector = spike_vector[order]
+    return ordered_spike_vector, order, counts
 
 
 def get_numba_reorder_spike_vector():
@@ -290,11 +299,26 @@ def get_numba_reorder_spike_vector():
     from numba import jit
 
     @jit(nopython=True, nogil=True, cache=False)
-    def reorder_spike_vector_numba(in_flat, unit_stride, segment_stride, num_buckets, out_flat, order, counts):
+    def reorder_spike_vector_numba(
+        spike_vector,
+        unit_index,
+        segment_index,
+        unit_stride,
+        segment_stride,
+        num_buckets,
+        ordered_spike_vector,
+        order,
+        counts,
+    ):
         """
-        Stable counting-sort of a (N, num_fields) int64 spike-vector flat-buffer view by
-        (unit, segment). `num_fields` is 3 for `minimum_spike_dtype`, more when the spike vector
-        carries extra int64 fields; the extra columns are copied along with their spike.
+        Stable counting-sort of a structured spike vector by (unit, segment).
+
+        `spike_vector` and `ordered_spike_vector` hold each record as opaque bytes, so the kernel is the same
+        whatever the fields. `unit_index` and `segment_index` are the field views (i.e., zero-copy, strided)
+        of the spike vector. They can be of any integer dtype, so they are widened to int64 to keep narrow
+        fields from overflowing the bucket arithmetic.
+        Rows move as whole records (`ordered_spike_vector[pos] = spike_vector[i]`), so every field travels
+        with its spike.
 
         Each spike's bucket is derived on the fly as
         `unit_index * unit_stride + segment_index * segment_stride`, so no bucket array is needed.
@@ -302,25 +326,25 @@ def get_numba_reorder_spike_vector():
         Two O(N) passes:
           1. histogram the buckets into `counts`,
           2. cumulative-sum to per-bucket write positions, then scatter each
-             row of `in_flat` to its destination in `out_flat` and record the
-             source index in `order` so that ``in[order] == out``.
+             record of `spike_vector` to its destination in `ordered_spike_vector` and record the
+             source index in `order` so that ``spike_vector[order] == ordered_spike_vector``.
 
-        `out_flat`, `order` and `counts` are filled in place.
+        `ordered_spike_vector`, `order` and `counts` are filled in place.
 
         Stability: within each bucket, rows keep their input order, so any
-        ordering already present in `in_flat` (e.g. ascending sample_index
-        within a (segment, unit) group) carries over to `out_flat`.
+        ordering already present in `spike_vector` (e.g. ascending sample_index
+        within a (segment, unit) group) carries over to `ordered_spike_vector`.
 
         Returns False if any spike falls outside [0, num_buckets),
         in which case the outputs are meaningless; True otherwise.
         """
-        num_spikes, num_fields = in_flat.shape
+        num_spikes = spike_vector.shape[0]
 
         # Pass 1: histogram the buckets and do bounds-check (free! we already have to make the pass)
         for b in range(num_buckets):
             counts[b] = 0
         for i in range(num_spikes):
-            bucket = in_flat[i, 1] * unit_stride + in_flat[i, 2] * segment_stride
+            bucket = np.int64(unit_index[i]) * unit_stride + np.int64(segment_index[i]) * segment_stride
             if bucket < 0 or bucket >= num_buckets:
                 return False
             counts[bucket] += 1
@@ -335,10 +359,9 @@ def get_numba_reorder_spike_vector():
 
         # Pass 2: scatter each spike into its bucket, recording where it came from.
         for i in range(num_spikes):
-            bucket = in_flat[i, 1] * unit_stride + in_flat[i, 2] * segment_stride
+            bucket = np.int64(unit_index[i]) * unit_stride + np.int64(segment_index[i]) * segment_stride
             pos = write_pos[bucket]
-            for field in range(num_fields):
-                out_flat[pos, field] = in_flat[i, field]
+            ordered_spike_vector[pos] = spike_vector[i]
             order[pos] = i
             write_pos[bucket] = pos + 1
 
