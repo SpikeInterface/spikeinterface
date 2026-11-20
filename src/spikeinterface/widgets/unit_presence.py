@@ -1,5 +1,4 @@
 import numpy as np
-from warnings import warn
 
 from spikeinterface.core import SortingAnalyzer, BaseSorting
 from .base import BaseWidget, to_attr
@@ -55,7 +54,6 @@ class UnitPresenceWidget(BaseWidget):
         BaseWidget.__init__(self, data_plot, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)

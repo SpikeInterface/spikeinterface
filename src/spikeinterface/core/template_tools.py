@@ -129,9 +129,9 @@ def get_template_amplitudes(
     """
 
     if isinstance(templates_or_sorting_analyzer, SortingAnalyzer):
-        assert (
-            peak_sign is None
-        ), "get_template_amplitudes() peak_sign is now contained in SortingAnalyzer, should be None here"
+        assert peak_sign is None, (
+            "get_template_amplitudes() peak_sign is now contained in SortingAnalyzer, should be None here"
+        )
         if peak_sign is None:
             peak_sign = templates_or_sorting_analyzer.peak_sign
         if peak_mode is None:

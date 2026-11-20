@@ -298,7 +298,7 @@ Here is an example with non-rigid motion estimation:
         method="dredge_ap",
         rigid=False,
         win_shape="gaussian",
-        win_step_um=200.0,
+        win_step_um=400.0,
         win_scale_um=300.0,
         win_margin_um=None,
         bin_um=1.0,

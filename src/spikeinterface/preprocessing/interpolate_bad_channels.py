@@ -8,7 +8,6 @@ from .detect_bad_channels import (
     detect_bad_channels,
     _get_all_detect_bad_channel_kwargs,
 )
-from inspect import signature
 
 
 class InterpolateBadChannelsRecording(BasePreprocessor):

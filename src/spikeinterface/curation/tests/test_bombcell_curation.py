@@ -1,6 +1,4 @@
 import pytest
-from pathlib import Path
-from spikeinterface.curation.tests.common import sorting_analyzer_for_curation, trained_pipeline_path
 from spikeinterface.curation.bombcell_curation import bombcell_label_units
 
 
@@ -31,7 +29,6 @@ def test_bombcell_label_units_with_external_metrics(sorting_analyzer_with_metric
     sorting_analyzer = sorting_analyzer_with_metrics
 
     # Create external metrics DataFrame
-    import pandas as pd
 
     metrics_df = sorting_analyzer.get_metrics_extension_data()
 

@@ -288,7 +288,7 @@ def select_peak_indices(peaks, method, seed, **method_kwargs):
 
     else:
         raise NotImplementedError(
-            f"The 'method' {method} does not exist for peaks selection." f" possible methods are {_possible_methods}"
+            f"The 'method' {method} does not exist for peaks selection. possible methods are {_possible_methods}"
         )
 
     selected_indices = np.concatenate(selected_indices)

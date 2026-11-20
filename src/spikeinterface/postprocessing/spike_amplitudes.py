@@ -75,9 +75,9 @@ class SpikeAmplitudeNode(PipelineNode):
             self._gains = None
             self._offsets = None
         spike_retriever = find_parent_of_type(parents, SpikeRetriever)
-        assert isinstance(
-            spike_retriever, SpikeRetriever
-        ), "SpikeAmplitudeNode needs a single SpikeRetriever as a parent"
+        assert isinstance(spike_retriever, SpikeRetriever), (
+            "SpikeAmplitudeNode needs a single SpikeRetriever as a parent"
+        )
         # put peak_shifts in vector way
         self._peak_shifts = np.array(list(peak_shifts.values()), dtype="int64")
         self._margin = np.max(np.abs(self._peak_shifts))

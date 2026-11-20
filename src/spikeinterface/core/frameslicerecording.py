@@ -34,9 +34,9 @@ class FrameSliceRecording(BaseRecording):
 
         assert start_frame >= 0, f"{start_frame=} must be positive"
         assert start_frame < end_frame, f"{start_frame=} must be smaller than 'end_frame' {end_frame=}!"
-        assert (
-            end_frame <= samples_in_recording
-        ), f"{end_frame=} must be smaller than or equal to {samples_in_recording=}"
+        assert end_frame <= samples_in_recording, (
+            f"{end_frame=} must be smaller than or equal to {samples_in_recording=}"
+        )
 
         BaseRecording.__init__(
             self,

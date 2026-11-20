@@ -1,11 +1,6 @@
-from pathlib import Path
-import json
-import pickle
-import warnings
-
 import numpy as np
 
-from spikeinterface.core import load, BaseSorting, BaseSortingSegment
+from spikeinterface.core import BaseSorting, BaseSortingSegment
 from spikeinterface.core.core_tools import define_function_from_class
 from .basecomparison import BaseMultiComparison, MixinSpikeTrainComparison, MixinTemplateComparison
 from .paircomparisons import SymmetricSortingComparison, TemplateComparison

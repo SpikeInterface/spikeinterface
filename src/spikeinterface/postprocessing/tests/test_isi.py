@@ -15,7 +15,6 @@ else:
 
 
 class TestComputeISIHistograms(AnalyzerExtensionCommonTestSuite):
-
     @pytest.mark.parametrize(
         "params",
         [

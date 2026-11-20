@@ -271,7 +271,6 @@ class IterativeISOSPLITClustering:
         # templates_array = dense_templates.templates_array
 
         if params["merge_from_features"] is not None:
-
             merge_from_features_kwargs = params["merge_from_features"].copy()
             merge_radius_um = merge_from_features_kwargs.pop("merge_radius_um")
 

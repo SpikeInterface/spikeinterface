@@ -1,6 +1,6 @@
 from spikeinterface.sorters import CombinatoSorter
 
-import os, getpass
+import getpass
 
 if getpass.getuser() == "samuel":
     combinato_path = "/home/samuel/Documents/SpikeInterface/combinato/"

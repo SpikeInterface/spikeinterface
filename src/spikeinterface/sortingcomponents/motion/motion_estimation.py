@@ -1,5 +1,4 @@
 import warnings
-import numpy as np
 
 
 from spikeinterface.sortingcomponents.tools import make_multi_method_doc
@@ -19,7 +18,7 @@ def estimate_motion(
     direction="y",
     rigid=False,
     win_shape="gaussian",
-    win_step_um=200.0,
+    win_step_um=400.0,
     win_scale_um=300.0,
     win_margin_um=None,
     method="dredge_ap",
@@ -64,7 +63,7 @@ def estimate_motion(
         width controlled by win_scale_um.
         When win_margin_um is None the margin is automatically set to -win_scale_um/2.
         See get_spatial_windows.
-    win_step_um : float, default: 50
+    win_step_um : float, default: 400
         See win_shape
     win_scale_um : float, default: 150
         See win_shape

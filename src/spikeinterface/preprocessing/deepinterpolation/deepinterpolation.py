@@ -64,9 +64,9 @@ class DeepInterpolatedRecording(BasePreprocessor):
         if parse(importlib.metadata.version("deepinterpolation")) < parse("0.2.0"):
             raise ImportError("DeepInterpolation version must be at least 0.2.0")
 
-        assert has_tf(
-            use_gpu, disable_tf_logger, memory_gpu
-        ), "To use DeepInterpolation, you first need to install `tensorflow`."
+        assert has_tf(use_gpu, disable_tf_logger, memory_gpu), (
+            "To use DeepInterpolation, you first need to install `tensorflow`."
+        )
 
         self.tf = import_tf(use_gpu, disable_tf_logger, memory_gpu=memory_gpu)
 
@@ -80,12 +80,12 @@ class DeepInterpolatedRecording(BasePreprocessor):
         # check shape (this will need to be done at inference)
         network_input_shape = model.get_config()["layers"][0]["config"]["batch_input_shape"]
         desired_shape = network_input_shape[1:3]
-        assert (
-            desired_shape[0] * desired_shape[1] == recording.get_num_channels()
-        ), "The desired shape of the network input must match the number of channels in the recording"
-        assert (
-            network_input_shape[-1] == pre_frame + post_frame
-        ), "The desired shape of the network input must match the pre and post frames"
+        assert desired_shape[0] * desired_shape[1] == recording.get_num_channels(), (
+            "The desired shape of the network input must match the number of channels in the recording"
+        )
+        assert network_input_shape[-1] == pre_frame + post_frame, (
+            "The desired shape of the network input must match the pre and post frames"
+        )
 
         self.model = model
         # add segment

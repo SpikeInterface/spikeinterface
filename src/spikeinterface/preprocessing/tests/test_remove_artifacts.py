@@ -1,5 +1,3 @@
-import pytest
-
 import numpy as np
 
 from spikeinterface.core import generate_recording

@@ -93,8 +93,8 @@ def test_zscore_int():
     zscore_recording = zscore(rec_int, dtype="int16", int_scale=256, mode="mean+std", seed=seed)
     traces = zscore_recording.get_traces(segment_index=0)
     trace_mean = np.mean(traces, axis=0)
-    trace_std = np.std(traces, axis=0)
     assert np.all(np.abs(trace_mean) < 1)
+    # trace_std = np.std(traces, axis=0)
     # assert np.all(np.abs(trace_std - 256) < 1)
 
 
