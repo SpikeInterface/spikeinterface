@@ -27,11 +27,18 @@ def setup_NumpyRecording(tmp_path_factory):
 
     rec = NumpyRecording(timeseries_list, sampling_frequency)
     # print(rec)
-
-    times1 = rec.get_times(1)
     cache_folder = tmp_path_factory.mktemp("cache_folder")
     rec.save(folder=cache_folder / "test_NumpyRecording")
     return cache_folder
+
+
+def test_NumpyRecording_traces_read_only():
+    traces = np.zeros((100, 4), dtype="float32")
+    rec = NumpyRecording(traces, 30000.0)
+    with pytest.raises(ValueError):
+        rec.get_traces()[:] = 1
+    assert np.all(rec.get_traces() == 0)
+    assert traces.flags.writeable  # the caller's array is untouched
 
 
 def test_SharedMemoryRecording():
@@ -90,9 +97,50 @@ def test_NumpySorting(setup_NumpyRecording):
     sorting = NumpySorting.from_sorting(other_sorting)
     # print(sorting)
 
+    # Verify recording segment offsets and shifted sorting times survive conversion to NumpySorting.
+    recording = generate_recording(num_channels=2, durations=[1.0, 1.0])
+    recording.shift_times(shift=5.0, segment_index=0)
+    recording.shift_times(shift=120.0, segment_index=1)
+    other_sorting.register_recording(recording)
+    other_sorting.shift_times(2.0)
+    sorting_with_times = NumpySorting.from_sorting(other_sorting)
+
+    for segment_index in range(other_sorting.get_num_segments()):
+        assert sorting_with_times.get_start_time(segment_index) == other_sorting.get_start_time(segment_index)
+        for unit_id in other_sorting.unit_ids:
+            assert np.array_equal(
+                sorting_with_times.get_unit_spike_train(unit_id, segment_index=segment_index, return_times=True),
+                other_sorting.get_unit_spike_train(unit_id, segment_index=segment_index, return_times=True),
+            )
+
     # construct back from kwargs keep the same array
     sorting2 = load(sorting.to_dict())
-    assert np.shares_memory(sorting2._cached_spike_vector, sorting._cached_spike_vector)
+    assert np.shares_memory(sorting2._cached_time_ordered["spikes"], sorting._cached_time_ordered["spikes"])
+
+
+def test_NumpySorting_num_segments():
+    sampling_frequency = 30000
+    spikes = np.zeros(2, dtype=minimum_spike_dtype)
+    spikes["sample_index"] = [10, 20]
+
+    # by default, the number of segments is inferred from the last spike
+    assert NumpySorting(spikes, sampling_frequency, ["a"]).get_num_segments() == 1
+
+    # trailing segments without spikes, which must also survive a round trip through the kwargs
+    sorting = NumpySorting(spikes, sampling_frequency, ["a"], num_segments=3)
+    assert sorting.get_num_segments() == 3
+    assert sorting.get_unit_spike_train("a", segment_index=2).size == 0
+    assert load(sorting.to_dict()).get_num_segments() == 3
+    assert NumpySorting.from_sorting(sorting).get_num_segments() == 3
+
+    # no spikes at all
+    no_spikes = np.zeros(0, dtype=minimum_spike_dtype)
+    assert NumpySorting(no_spikes, sampling_frequency, ["a"], num_segments=2).get_num_segments() == 2
+
+    # fewer segments than the spikes span
+    spikes["segment_index"] = [0, 1]
+    with pytest.raises(ValueError, match="num_segments"):
+        NumpySorting(spikes, sampling_frequency, ["a"], num_segments=1)
 
 
 def test_SharedMemorySorting():
@@ -108,7 +156,7 @@ def test_SharedMemorySorting():
 
     sorting = SharedMemorySorting.from_sorting(np_sorting)
     # print(sorting)
-    assert sorting._cached_spike_vector is not None
+    assert sorting._cached_time_ordered is not None
 
     # print(sorting.to_spike_vector())
     d = sorting.to_dict()

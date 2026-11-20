@@ -6,8 +6,6 @@ from spikeinterface.generation import generate_recording, generate_ground_truth_
 from spikeinterface.preprocessing import (
     apply_preprocessing_pipeline,
     preprocessor_dict,
-    bandpass_filter,
-    common_reference,
     whiten,
     detect_and_remove_bad_channels,
     bandpass_filter,
@@ -45,7 +43,6 @@ def test_pipeline_equiv_to_step():
 
     for rec in [single_group_rec, rec_groups.split_by("group")]:
         for _, pp_wrapper in preprocessor_dict.items():
-
             pp_name = pp_wrapper.__name__
             pp_class = pp_names_to_functions[pp_name]
 
@@ -205,6 +202,7 @@ def test_loading_from_analyzer(create_cache_folder):
 
     cache_folder = create_cache_folder
     recording, sorting = generate_ground_truth_recording()
+    # Make it JSON-serializable by saving it to a folder and reloading it
     recording = recording.save(folder=cache_folder / "recording")
 
     preprocessing_dict = {"common_reference": {}, "highpass_filter": {"freq_min": 301.0}}

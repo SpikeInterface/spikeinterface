@@ -1,5 +1,6 @@
 import unittest
 
+
 from spikeinterface.sorters.tests.common_tests import SorterCommonTestSuite
 
 from spikeinterface.sorters import Tridesclous2Sorter, run_sorter
@@ -10,6 +11,11 @@ from pathlib import Path
 class Tridesclous2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase):
     SorterClass = Tridesclous2Sorter
 
+    # TODO: remove once writing to zarr is supported with zarr>=3 (save_array writes the templates to zarr)
+
+    def test_with_run(self):
+        super().test_with_run()
+
     @unittest.skip("performance reason")
     def test_with_numpy_gather(self):
         recording = self.recording
@@ -19,7 +25,7 @@ class Tridesclous2SorterCommonTestSuite(SorterCommonTestSuite, unittest.TestCase
 
         sorter_params["gather_mode"] = "npy"
 
-        sorting = run_sorter(
+        _ = run_sorter(
             sorter_name,
             recording,
             folder=output_folder,

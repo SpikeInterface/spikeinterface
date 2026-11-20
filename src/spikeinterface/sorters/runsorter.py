@@ -55,7 +55,6 @@ SORTER_DOCKER_MAP = dict(
     kilosort2_5="kilosort2_5-compiled",
     kilosort3="kilosort3-compiled",
     waveclus="waveclus-compiled",
-    waveclus_snippets="waveclus-compiled",
     # archived
     # klusta="klusta",
     # yass="yass",
@@ -145,7 +144,6 @@ def run_sorter(
     )
 
     if isinstance(recording, dict):
-
         all_kwargs = common_kwargs
         all_kwargs.update(
             dict(
@@ -187,8 +185,7 @@ def run_sorter(
 
             if not has_singularity():
                 raise RuntimeError(
-                    "Singularity is not installed. Install singularity "
-                    "on this machine to run sorting with singularity."
+                    "Singularity is not installed. Install singularity on this machine to run sorting with singularity."
                 )
 
             if not has_spython():
@@ -483,9 +480,9 @@ if __name__ == '__main__':
             print(f"installation_mode='auto' switching to installation_mode: '{installation_mode}'")
 
     if installation_mode == "folder":
-        assert (
-            spikeinterface_folder_source is not None
-        ), "for installation_mode='folder', spikeinterface_folder_source must be provided"
+        assert spikeinterface_folder_source is not None, (
+            "for installation_mode='folder', spikeinterface_folder_source must be provided"
+        )
         host_folder_source = Path(spikeinterface_folder_source)
 
     if installation_mode == "dev":
@@ -553,7 +550,7 @@ if __name__ == '__main__':
 
     if need_si_install or installation_mode == "dev":
         # update pip in container
-        cmd = f"pip install --user --upgrade pip"
+        cmd = "pip install --user --upgrade pip"
         res_output = container_client.run_command(cmd)
 
         if installation_mode == "pypi":
@@ -679,7 +676,7 @@ if __name__ == '__main__':
         if with_output:
             try:
                 sorting = SorterClass.get_result_from_folder(folder)
-            except Exception as e:
+            except Exception:
                 try:
                     sorting = load(in_container_sorting_folder)
                 except FileNotFoundError:

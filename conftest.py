@@ -47,16 +47,16 @@ def pytest_collection_modifyitems(config, items):
     This function marks (in the pytest sense) the tests according to their name and file_path location
     Marking them in turn allows the tests to be run by using the pytest -m marker_name option.
     """
-
     rootdir = Path(config.rootdir)
     modules_location = rootdir / "src" / "spikeinterface"
     for item in items:
+        # TODO: remove once writing to zarr is supported with zarr>=3
         if config.getoption("--mp-context") is not None and item.name == "test_global_job_kwargs":
             item.add_marker(pytest.mark.skip(reason="--mp-context changes the default job kwargs"))
 
         try:
             rel_path = Path(item.fspath).relative_to(modules_location)
-        except:
+        except Exception:
             continue
 
         module = rel_path.parts[0]

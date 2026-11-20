@@ -58,7 +58,6 @@ def create_graph_from_peak_features(
     channel_locations = recording.get_channel_locations()
 
     if bin_mode == "channels":
-
         dims = ["xyz".index(i) for i in direction]
         channel_locs = channel_locations[:, dims]
         channel_distances = np.linalg.norm(channel_locs[:, np.newaxis] - channel_locs[np.newaxis, :], axis=2)
@@ -71,7 +70,6 @@ def create_graph_from_peak_features(
             loop.append((local_chans, neighbors_indices, target_local_inds))
 
     elif bin_mode == "vertical_bins":
-
         assert len(direction) == 1
         dim = "xyz".index(direction)
         channel_depth = channel_locations[:, dim]
@@ -92,7 +90,6 @@ def create_graph_from_peak_features(
 
         loop = []
         for b in range(bins.size - 1):
-
             # limits for peaks
             l0, l1 = bins[b], bins[b + 1]
             # mask = (peak_depths> l0) & (peak_depths<= l1)

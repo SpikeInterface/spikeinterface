@@ -34,7 +34,6 @@ from .template_database import (
 from spikeinterface.core.generate import (
     generate_recording,
     generate_sorting,
-    generate_snippets,
     generate_templates,
     generate_recording_by_size,
     generate_ground_truth_recording,

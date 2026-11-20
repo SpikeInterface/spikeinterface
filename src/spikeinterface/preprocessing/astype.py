@@ -73,7 +73,7 @@ class AstypeRecordingSegment(BasePreprocessorSegment):
             channel_indices = slice(None)
         traces = self.parent_recording_segment.get_traces(start_frame, end_frame, channel_indices)
         if self.round:
-            np.round(traces, out=traces)
+            traces = np.round(traces)
         return traces.astype(self.dtype, copy=False)
 
 

@@ -10,6 +10,7 @@ from spikeinterface.preprocessing import (
     compute_motion,
 )
 from spikeinterface.preprocessing.motion import _get_default_motion_params
+from spikeinterface.sortingcomponents.motion import InterpolateMotionRecording
 
 
 def test_estimate_and_correct_motion(create_cache_folder):
@@ -21,6 +22,7 @@ def test_estimate_and_correct_motion(create_cache_folder):
         shutil.rmtree(folder)
 
     rec_corrected = correct_motion(rec, folder=folder, estimate_motion_kwargs={"win_step_um": 50, "win_scale_um": 100})
+    assert isinstance(rec_corrected, InterpolateMotionRecording)
 
     # test reloading motion info
     motion_info = load_motion_info(folder)
@@ -43,7 +45,7 @@ def test_get_motion_parameters_preset():
     from pprint import pprint
 
     p = _get_default_motion_params()
-    # pprint(p)
+    assert isinstance(p, dict)
 
     params = get_motion_parameters_preset("nonrigid_accurate")
     params = get_motion_parameters_preset("dredge")

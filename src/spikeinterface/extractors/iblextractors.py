@@ -172,9 +172,9 @@ class IblRecordingExtractor(BaseRecording):
         else:
             stream_names = IblRecordingExtractor.get_stream_names(eid=eid, cache_folder=cache_folder, one=one)
             if len(stream_names) > 1:
-                assert (
-                    stream_name is not None
-                ), f"Multiple streams found for session. Please specify a stream name from {stream_names}."
+                assert stream_name is not None, (
+                    f"Multiple streams found for session. Please specify a stream name from {stream_names}."
+                )
                 assert stream_name in stream_names, (
                     f"The `stream_name` '{stream_name}' is not available for this experiment {eid}! "
                     f"Please choose one of {stream_names}."
@@ -320,7 +320,7 @@ class IblSortingExtractor(BaseSorting):
         The loaded data.
     """
 
-    installation_mesg = "IBL extractors require ibllib as a dependency." " To install, run: \n\n pip install ibllib\n\n"
+    installation_mesg = "IBL extractors require ibllib as a dependency. To install, run: \n\n pip install ibllib\n\n"
 
     def __init__(
         self, pid: str, good_clusters_only: bool = False, load_unit_properties: bool = True, one=None, **kwargs

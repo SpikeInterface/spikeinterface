@@ -1,6 +1,6 @@
 import numpy as np
 
-from spikeinterface.core import generate_recording, MockRecording
+from spikeinterface.core import generate_recording, MockRecording, NumpyRecording, get_chunk_with_margin
 
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 
@@ -10,6 +10,8 @@ from spikeinterface.core.time_series_tools import (
     write_memory,
     get_random_sample_slices,
     get_chunks,
+    get_time_series_chunk_with_margin,
+    _taper_margins,
 )
 
 
@@ -171,3 +173,34 @@ def test_get_chunks():
     rec = generate_recording(num_channels=1, sampling_frequency=1000.0, durations=[10.0, 20.0])
     chunks = get_chunks(rec, num_chunks_per_segment=50, chunk_size=500, seed=0)
     assert chunks.shape == (50000, 1)
+
+
+def test_chunk_with_margin_copy_and_taper():
+    # A read-only float64 parent catches accidental in-place writes even when no cast is needed.
+    original = np.arange(400, dtype="float64").reshape(200, 2)
+    parent_data = original.copy()
+    parent_data.flags.writeable = False
+    segment = NumpyRecording(parent_data, 1000.0).segments[0]
+    margin = 10
+    window = (1 - np.cos(np.arange(margin) / margin * np.pi)) / 2
+
+    for fetch in (get_chunk_with_margin, get_time_series_chunk_with_margin):
+        for padding in ({}, {"add_zeros": True}, {"add_reflect_padding": True}):
+            for start, end in ((0, 30), (50, 80), (170, 200)):
+                view, _, _ = fetch(segment, start, end, None, margin, **padding)
+                owned, left, right = fetch(segment, start, end, None, margin, copy=True, **padding)
+                np.testing.assert_array_equal(owned, view)
+                assert not np.shares_memory(owned, parent_data)
+                assert owned.flags.writeable
+                if start == 50:
+                    assert np.shares_memory(view, parent_data)
+                if padding == {"add_zeros": True}:
+                    _taper_margins(owned, window)
+                    legacy, legacy_left, legacy_right = fetch(
+                        segment, start, end, None, margin, window_on_margin=True, **padding
+                    )
+                    np.testing.assert_array_equal(owned, legacy)
+                    assert (left, right) == (legacy_left, legacy_right)
+                else:
+                    owned[:] = 0
+                np.testing.assert_array_equal(parent_data, original)

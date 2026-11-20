@@ -156,7 +156,7 @@ class IntanSplitFilesRecordingExtractor(ConcatenateSegmentRecording, AppendSegme
 
         if mode not in ("append", "concatenate"):
             mode_error = (
-                "Possible options for the `mode` argument are 'concatenate' or 'append', you have entered " f"{mode}."
+                f"Possible options for the `mode` argument are 'concatenate' or 'append', you have entered {mode}."
             )
             raise ValueError(mode_error)
 

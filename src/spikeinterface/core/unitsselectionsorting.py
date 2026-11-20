@@ -33,6 +33,8 @@ class UnitsSelectionSorting(BaseSorting):
 
         BaseSorting.__init__(self, sampling_frequency, self._renamed_unit_ids)
 
+        self._is_identity_selection = bool(np.array_equal(self._unit_ids, parents_unit_ids))
+
         for parent_segment in self._parent_sorting.segments:
             sub_segment = UnitsSelectionSortingSegment(parent_segment, ids_conversion)
             self.add_sorting_segment(sub_segment)
@@ -45,37 +47,50 @@ class UnitsSelectionSorting(BaseSorting):
 
         self._kwargs = dict(parent_sorting=parent_sorting, unit_ids=unit_ids, renamed_unit_ids=renamed_unit_ids)
 
+    @property
+    def _cached_unit_grouped(self):
+        # Same units (possibly renamed), same order => we read and fill the parent's unit-grouped cache
+        if getattr(self, "_is_identity_selection", False):
+            return self._parent_sorting._cached_unit_grouped
+        return self._own_cached_unit_grouped
+
+    @_cached_unit_grouped.setter
+    def _cached_unit_grouped(self, value):
+        if getattr(self, "_is_identity_selection", False):
+            self._parent_sorting._cached_unit_grouped = value
+        else:
+            self._own_cached_unit_grouped = value
+
     def _compute_and_cache_spike_vector(self) -> None:
         from spikeinterface.core.sorting_tools import remap_unit_indices_in_vector
 
-        if self._parent_sorting._cached_spike_vector is None:
+        if self._parent_sorting._cached_time_ordered is None:
             self._parent_sorting._compute_and_cache_spike_vector()
 
-            if self._parent_sorting._cached_spike_vector is None:
+            if self._parent_sorting._cached_time_ordered is None:
                 return
 
+        if self._is_identity_selection:
+            self._parent_sorting._get_spike_vector_segment_slices()
+            self._cached_time_ordered = self._parent_sorting._cached_time_ordered
+            return
+
         spike_vector, _ = remap_unit_indices_in_vector(
-            vector=self._parent_sorting._cached_spike_vector,
+            vector=self._parent_sorting._cached_time_ordered["spikes"],
             all_old_unit_ids=self._parent_sorting.unit_ids,
             all_new_unit_ids=self._unit_ids,
         )
+        self._cached_time_ordered = {"spikes": spike_vector, "segment_slices": None}
 
-        # check if order is preserved
-        pos = np.searchsorted(self._parent_sorting.unit_ids, self.unit_ids)
-        order_is_preserved = np.all(np.diff(pos) > 0)
-
-        if not order_is_preserved:
-            # Note: this can be a very high cost and make big dataset very slow
-            # the only goal of this is to ensure the unit_index order when the sample is the same
-            # TODO: maybe we can remove it, if we don't guarantee the order of unit_index
-            # when sample_index is the same, but it can be a problem for some downstream analysis
-
-            # lexsort by segment_index, sample_index, unit_index
-            sort_indices = np.lexsort(
-                (spike_vector["unit_index"], spike_vector["sample_index"], spike_vector["segment_index"])
-            )
-            spike_vector = spike_vector[sort_indices]
-        self._cached_spike_vector = spike_vector
+    def search_cached_spikes_sorted(
+        self,
+        indices: list[int],
+        segment_index: int | None = None,
+    ):
+        if self._is_identity_selection:
+            # same spikes in the same positions, and the parent knows how to search a lazy vector
+            return self._parent_sorting.search_cached_spikes_sorted(indices=indices, segment_index=segment_index)
+        return super().search_cached_spikes_sorted(indices=indices, segment_index=segment_index)
 
 
 class UnitsSelectionSortingSegment(BaseSortingSegment):

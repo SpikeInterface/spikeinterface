@@ -1,3 +1,6 @@
+import pytest
+import zarr
+
 from spikeinterface.core.template import Templates
 
 from spikeinterface.generation import (
@@ -7,7 +10,13 @@ from spikeinterface.generation import (
     query_templates_from_database,
 )
 
+# TODO: remove once probeinterface can read zarr>=3 groups (Probe.from_zarr_group calls len() on a zarr array)
+skip_zarr_3 = pytest.mark.skipif(
+    int(zarr.__version__.split(".")[0]) >= 3, reason="Reading templates from zarr is not supported yet with zarr>=3"
+)
 
+
+@skip_zarr_3
 def test_fetch_template_object_from_database():
 
     available_datasets = list_available_datasets_in_template_database()
@@ -31,6 +40,7 @@ def test_fetch_templates_database_info():
     assert "dataset" in templates_info.columns
 
 
+@skip_zarr_3
 def test_query_templates_from_database():
     templates_info = fetch_templates_database_info()
 

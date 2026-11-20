@@ -241,8 +241,9 @@ class AnalyzerExtensionCommonTestSuite:
         of interest with the passed parameters. Will perform tests
         for sparsity and format.
         """
+        formats = ("memory", "binary_folder", "zarr")
         for sparse in (True, False):
-            for format in ("memory", "binary_folder", "zarr"):
+            for format in formats:
                 print("sparse", sparse, format)
                 sorting_analyzer = self._prepare_sorting_analyzer(
                     format, sparse, extension_class, extension_params=params

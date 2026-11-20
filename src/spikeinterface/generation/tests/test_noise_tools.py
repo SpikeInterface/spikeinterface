@@ -8,7 +8,7 @@ from spikeinterface.generation import (
 def test_generate_noise():
     probe = probeinterface.generate_multi_columns_probe()
 
-    noise = generate_noise(
+    _ = generate_noise(
         probe,
         sampling_frequency=25000.0,
         durations=[10.0],
@@ -18,7 +18,7 @@ def test_generate_noise():
         seed=2205,
     )
 
-    noise = generate_noise(
+    _ = generate_noise(
         probe,
         sampling_frequency=25000.0,
         durations=[10.0],

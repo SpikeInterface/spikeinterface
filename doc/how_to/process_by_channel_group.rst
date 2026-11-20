@@ -188,9 +188,9 @@ to different groups.
     for group, sub_recording in split_preprocessed_recording.items():
         sorting = run_sorter(
             sorter_name='kilosort2',
-            recording=split_preprocessed_recording,
+            recording=sub_recording,
             folder=f"folder_KS2_group{group}"
-            )
+        )
         sortings[group] = sorting
 
 
