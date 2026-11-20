@@ -101,24 +101,24 @@ def test_install_package_in_container():
     container_client = ContainerClient(mode, container_image, volumes, py_user_base, extra_kwargs)
     container_client.start()
 
-    txt = container_client.run_command("pip install --user --upgrade pip")
+    _ = container_client.run_command("pip install --user --upgrade pip")
 
     # # pypi installation
-    txt = install_package_in_container(container_client, "neo", installation_mode="pypi", version="0.11.0")
+    _ = install_package_in_container(container_client, "neo", installation_mode="pypi", version="0.11.0")
     # print(txt)
-    txt = container_client.run_command("pip list")
+    _ = container_client.run_command("pip list")
     # print(txt)
 
     # # github installation
-    txt = install_package_in_container(
+    _ = install_package_in_container(
         container_client, "spikeinterface", extra="[full]", installation_mode="github", version="0.99.0"
     )
     # print(txt)
-    txt = container_client.run_command("pip list")
+    _ = container_client.run_command("pip list")
     # print(txt)
 
     # folder installation
-    txt = install_package_in_container(
+    _ = install_package_in_container(
         container_client,
         "spikeinterface",
         extra="[full]",
@@ -127,7 +127,7 @@ def test_install_package_in_container():
     )
     # print(txt)
 
-    txt = container_client.run_command("pip list")
+    _ = container_client.run_command("pip list")
     # print(txt)
 
     container_client.stop()

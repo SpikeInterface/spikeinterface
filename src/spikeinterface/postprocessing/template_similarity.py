@@ -1,5 +1,4 @@
 import numpy as np
-import warnings
 from itertools import chain
 import importlib.util
 from spikeinterface.core.core_tools import slice_rows, materialize_array
@@ -259,7 +258,6 @@ def _compute_similarity_matrix_numpy(
 
 
 if HAVE_NUMBA:
-
     from math import sqrt
     from numba import jit, typed, prange
 
@@ -304,7 +302,6 @@ if HAVE_NUMBA:
         for src_unit in range(num_templates):
             start = src_unit if same_array else 0
             for tgt_unit in range(start, other_num_templates):
-
                 if support == "intersection":
                     ch = np.where(sparsity_mask[src_unit] & other_sparsity_mask[tgt_unit])[0].astype(np.uint16)
 
@@ -417,12 +414,12 @@ def compute_similarity_with_templates_array(
     if method not in all_metrics:
         raise ValueError(f"compute_template_similarity (method {method}) not exists")
 
-    assert (
-        templates_array.shape[1] == other_templates_array.shape[1]
-    ), "The number of samples in the templates should be the same for both arrays"
-    assert (
-        templates_array.shape[2] == other_templates_array.shape[2]
-    ), "The number of channels in the templates should be the same for both arrays"
+    assert templates_array.shape[1] == other_templates_array.shape[1], (
+        "The number of samples in the templates should be the same for both arrays"
+    )
+    assert templates_array.shape[2] == other_templates_array.shape[2], (
+        "The number of channels in the templates should be the same for both arrays"
+    )
     # num_templates = templates_array.shape[0]
     num_samples = templates_array.shape[1]
     # num_channels = templates_array.shape[2]

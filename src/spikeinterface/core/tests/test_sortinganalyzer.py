@@ -641,12 +641,14 @@ def test_extension_params():
         assert ext in computable_extension
         if mod == "spikeinterface.core":
             default_params = get_default_analyzer_extension_params(ext)
+            assert default_params is not None
             # print(ext, default_params)
         else:
             try:
                 default_params = get_default_analyzer_extension_params(ext)
+                assert default_params is not None
                 # print(ext, default_params)
-            except:
+            except Exception:
                 print(f"Failed to import {ext}")
 
 
@@ -1130,7 +1132,6 @@ def test_select_channels_sparse_waveforms_templates(dataset):
     selected_waveforms = analyzer_selected.get_extension("waveforms")
 
     for unit_index, unit_id in enumerate(sorting_analyzer.unit_ids):
-
         original_units_to_channels = sorting_analyzer.sparsity.unit_id_to_channel_ids[unit_id]
         selected_units_to_channels = analyzer_selected.sparsity.unit_id_to_channel_ids[unit_id]
 
@@ -1139,7 +1140,6 @@ def test_select_channels_sparse_waveforms_templates(dataset):
 
         for channel_id in select_channel_ids:
             if channel_id in original_units_to_channels:
-
                 # Check templates, which are dense
                 original_channel_index = original_id_index_map[channel_id]
                 selected_channel_index = selected_id_index_map[channel_id]

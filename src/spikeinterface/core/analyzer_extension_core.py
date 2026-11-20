@@ -181,7 +181,6 @@ class ComputeWaveforms(AnalyzerExtension):
         self.data.clear()
 
         recording = self.sorting_analyzer.recording
-        sorting = self.sorting_analyzer.sorting
 
         # retrieve spike vector and the sampling
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
@@ -252,8 +251,6 @@ class ComputeWaveforms(AnalyzerExtension):
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
         keep_unit_indices = self.sorting_analyzer.sorting.ids_to_indices(unit_ids)
-        spikes = self.sorting_analyzer.sorting.to_spike_vector()
-        # some_spikes = spikes[random_spikes_indices]
         keep_spike_mask = np.isin(some_spikes["unit_index"], keep_unit_indices)
 
         new_data = dict()
@@ -529,9 +526,9 @@ class ComputeTemplates(AnalyzerExtension):
         # spikes = self.sorting_analyzer.sorting.to_spike_vector()
         # some_spikes = spikes[self.sorting_analyzer.random_spikes_indices]
 
-        assert self.sorting_analyzer.has_extension(
-            "random_spikes"
-        ), "compute 'templates' requires the random_spikes extension. You can run sorting_analyzer.compute('random_spikes')"
+        assert self.sorting_analyzer.has_extension("random_spikes"), (
+            "compute 'templates' requires the random_spikes extension. You can run sorting_analyzer.compute('random_spikes')"
+        )
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
         for unit_index, unit_id in enumerate(unit_ids):
             spike_mask = some_spikes["unit_index"] == unit_index
@@ -1359,7 +1356,6 @@ class BaseMetricExtension(AnalyzerExtension):
         # Check if we need to propagate any old metrics. If so, we'll do that.
         # Otherwise, we'll avoid attempting to load an empty metrics.
         if set(self.params["metrics_to_compute"]) != set(self.params["metric_names"]):
-
             extension = self.sorting_analyzer.get_extension(self.extension_name)
             if delete_existing_metrics is False and extension is not None and extension.data.get("metrics") is not None:
                 existing_metrics = extension.params["metric_names"]
@@ -1451,7 +1447,6 @@ class BaseMetricExtension(AnalyzerExtension):
         dict
             Dictionary containing the merged metrics DataFrame.
         """
-        import pandas as pd
 
         available_metric_names = self.get_available_metric_names()
         metric_names = [m for m in self.params["metric_names"] if m in available_metric_names]
@@ -1497,7 +1492,6 @@ class BaseMetricExtension(AnalyzerExtension):
         verbose : bool, default: False
             Whether to print verbose output.
         """
-        import pandas as pd
         from itertools import chain
 
         available_metric_names = [m.metric_name for m in self.metric_list]
@@ -1524,7 +1518,6 @@ class BaseMetricExtension(AnalyzerExtension):
         return new_data
 
     def set_data(self, ext_data_name, data):
-        import pandas as pd
 
         if ext_data_name == "metrics":
             metrics = self._cast_metrics(data)
@@ -1629,9 +1622,9 @@ class BaseSpikeVectorExtension(AnalyzerExtension):
             if return_data_name is None:
                 return_data_name = self.nodepipeline_variables[0]
             else:
-                assert (
-                    return_data_name in self.nodepipeline_variables
-                ), f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
+                assert return_data_name in self.nodepipeline_variables, (
+                    f"return_data_name {return_data_name} not in nodepipeline_variables {self.nodepipeline_variables}"
+                )
 
         all_data = self.data[return_data_name]
         # data gathered directly into a zarr store (e.g. by the node pipeline) is kept as a
@@ -1799,12 +1792,10 @@ def _select_channels_sparse_data(old_sorting_analyzer, old_data, new_channel_ids
     new_data = np.zeros_like(old_data)
     max_num_active_channels = 0
     for data_index, (one_old_data, unit_index) in enumerate(zip(old_data, random_spikes["unit_index"])):
-
         unit_id = unit_ids[unit_index]
         channel_slice = unit_sparsity_slices[unit_id]
 
         if len(channel_slice) > 0:
-
             size_of_new_mask = len(channel_slice)
             new_data[data_index, :, :size_of_new_mask] = one_old_data[:, channel_slice]
 

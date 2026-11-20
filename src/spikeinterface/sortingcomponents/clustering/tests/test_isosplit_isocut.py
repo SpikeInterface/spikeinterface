@@ -147,10 +147,10 @@ def test_isosplit():
 
     # check that numba handle the 2 dtypes
     data = data.astype("float64")
-    labels = isosplit(data, isocut_threshold=2.0, n_init=40, seed=2205)
+    _ = isosplit(data, isocut_threshold=2.0, n_init=40, seed=2205)
 
     data = data.astype("float32")
-    labels = isosplit(data, isocut_threshold=2.0, n_init=40, seed=2205)
+    _ = isosplit(data, isocut_threshold=2.0, n_init=40, seed=2205)
 
     # the beauty is that it discovers the number of clusters automatically, at least for this this seed :)
     # assert np.unique(labels).size == 3

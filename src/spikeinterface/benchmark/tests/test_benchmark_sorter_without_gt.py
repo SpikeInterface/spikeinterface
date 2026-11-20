@@ -3,7 +3,6 @@ import pytest
 from pathlib import Path
 
 from spikeinterface import generate_ground_truth_recording
-from spikeinterface.preprocessing import bandpass_filter
 from spikeinterface.benchmark import SorterStudyWithoutGroundTruth
 
 
@@ -42,7 +41,7 @@ def _create_simple_study_no_gt(study_folder):
         },
     }
 
-    study = SorterStudyWithoutGroundTruth.create(study_folder, datasets=datasets, cases=cases)
+    _ = SorterStudyWithoutGroundTruth.create(study_folder, datasets=datasets, cases=cases)
     # print(study)
 
 

@@ -13,10 +13,10 @@ else:
     HAVE_NUMBA = False
 
 from spikeinterface.core import SortingAnalyzer
+from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 from spikeinterface.metrics.quality.misc_metrics import compute_refrac_period_violations
 from spikeinterface.metrics.spiketrain.metrics import compute_firing_rates
 
-from .mergeunitssorting import MergeUnitsSorting
 from .curation_tools import resolve_merging_graph
 
 _compute_merge_presets = {
@@ -227,7 +227,6 @@ def compute_merge_unit_groups(
     outs = dict()
 
     for step in steps:
-
         if step in _required_extensions:
             for ext in _required_extensions[step]:
                 if sorting_analyzer.has_extension(ext):
@@ -374,7 +373,6 @@ def compute_merge_unit_groups(
             outs["pairs_decreased_score"] = pairs_decreased_score
 
         elif step == "slay_score":
-
             M_ij = compute_slay_matrix(
                 sorting_analyzer, params["k1"], params["k2"], templates_diff=outs["templates_diff"], pair_mask=pair_mask
             )
@@ -641,7 +639,6 @@ def auto_merge_units(
     }
 
     for to_launch, params in zip(to_be_launched, steps_params):
-
         if launch_mode == "presets":
             compute_merge_kwargs = {"preset": to_launch}
         elif launch_mode == "steps":
@@ -802,7 +799,7 @@ def smooth_correlogram(correlograms, bins, sigma_smooth_ms=0.6):
     """
     Smooths cross-correlogram with a Gaussian kernel.
     """
-    from scipy.signal import fftconvolve, butter, filtfilt
+    from scipy.signal import fftconvolve
 
     # OLD implementation : smooth correlogram by low pass filter
     # b, a = butter(N=2, Wn = correlogram_low_pass / (1e3 / bin_ms /2), btype="low")
@@ -959,8 +956,8 @@ def check_improve_contaminations_score(
 
         # make a merged sorting and tale one unit (unit_id1 is used)
         unit_id1, unit_id2 = sorting.unit_ids[ind1], sorting.unit_ids[ind2]
-        sorting_merged = MergeUnitsSorting(
-            sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1], delta_time_ms=censored_period_ms
+        sorting_merged = apply_merges_to_sorting(
+            sorting, [[unit_id1, unit_id2]], new_unit_ids=[unit_id1], censor_ms=censored_period_ms
         ).select_units([unit_id1])
 
         # create recordingless analyzer
@@ -1432,7 +1429,6 @@ def compute_xcorr_and_rp(sorting_analyzer: SortingAnalyzer, pair_mask: np.ndarra
 
     for unit_index_1, _ in enumerate(sorting_analyzer.unit_ids):
         for unit_index_2, _ in enumerate(sorting_analyzer.unit_ids):
-
             # Don't waste time computing the other metrics if units not candidates merges
             if not pair_mask[unit_index_1, unit_index_2]:
                 continue

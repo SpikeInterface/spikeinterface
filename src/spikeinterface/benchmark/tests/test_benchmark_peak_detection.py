@@ -23,7 +23,6 @@ def test_benchmark_peak_detection(create_cache_folder):
 
     peaks = {}
     for dataset in datasets.keys():
-
         recording, gt_sorting = datasets[dataset]
 
         sorting_analyzer = create_sorting_analyzer(gt_sorting, recording, format="memory", sparse=False, **job_kwargs)

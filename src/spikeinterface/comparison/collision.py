@@ -1,5 +1,3 @@
-import importlib
-
 from .paircomparisons import GroundTruthComparison
 
 from .comparisontools import make_collision_events
@@ -161,7 +159,6 @@ class CollisionGTComparison(GroundTruthComparison):
             loop = tqdm(loop, desc="collision by bin")
 
         for c in loop:
-
             score1 = labels_st1[unit_ids1[c]][seg_index][spike_indices1[c]]
             score2 = labels_st1[unit_ids2[c]][seg_index][spike_indices2[c]]
 

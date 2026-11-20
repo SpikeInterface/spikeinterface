@@ -1,6 +1,5 @@
 from pathlib import Path
 import re
-import warnings
 import numpy as np
 
 import probeinterface
@@ -142,9 +141,9 @@ class CompressedBinaryIblExtractor(BaseRecording):
             # snippets downloaded from IBL have the .stream.cbin suffix
             cbin_stream_files = list(folder_path.glob(f"*.{stream_name}.stream.cbin"))
             curr_cbin_files = cbin_stream_files if len(cbin_stream_files) > len(cbin_files) else cbin_files
-            assert (
-                len(curr_cbin_files) == 1
-            ), f"There should only be one `*.cbin` file in the folder, but {print(curr_cbin_files)} have been found"
+            assert len(curr_cbin_files) == 1, (
+                f"There should only be one `*.cbin` file in the folder, but {print(curr_cbin_files)} have been found"
+            )
             cbin_file_path = curr_cbin_files[0]
         else:
             cbin_file_path = Path(cbin_file_path)
@@ -274,7 +273,7 @@ def extract_stream_info(meta_file, meta):
         gain_factor = float(meta["imAiRangeMax"]) / max_int
         channel_gains = gain_factor * per_channel_gain * 1e6
     else:
-        raise NotImplementedError("This meta file version of spikeglx" " is not implemented")
+        raise NotImplementedError("This meta file version of spikeglx is not implemented")
 
     info = {}
     info["fname"] = fname

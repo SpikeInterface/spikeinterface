@@ -159,7 +159,6 @@ class AmplitudesWidget(BaseRasterWidget):
             make_serializable,
             handle_display_and_url,
             import_figpack_or_sortingview,
-            generate_unit_table_view,
         )
 
         use_sortingview = backend_kwargs.get("use_sortingview", False)

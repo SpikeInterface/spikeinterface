@@ -13,12 +13,11 @@ from .basesorting import BaseSorting, SpikeVectorSortingSegment
 from .core_tools import (
     define_function_from_class,
     check_json,
-    is_path_remote,
     retrieve_importing_provenance,
     is_path_remote,
 )
 from .job_tools import split_job_kwargs, fix_job_kwargs
-from .zarr_tools import iterate_zarr_group, adjust_chunks_shards_and_job_kwargs, build_codec_pipeline
+from .zarr_tools import local_zarr_store, iterate_zarr_group, adjust_chunks_shards_and_job_kwargs, build_codec_pipeline
 from .time_series_tools import _write_time_series_to_zarr
 
 # The spike vector uses the numcodecs Delta filter (not in the zarr v3 spec) because it greatly
@@ -98,7 +97,7 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
             raise ValueError(f"Folder {folder_path} does not exist")
         for use_consolidated in use_consolidated_options:
             try:
-                root = zarr.open(str(folder_path), mode=mode, use_consolidated=use_consolidated)
+                root = zarr.open(local_zarr_store(folder_path), mode=mode, use_consolidated=use_consolidated)
                 break
             except Exception as e:
                 exception = e
@@ -165,9 +164,9 @@ class ZarrRecordingExtractor(BaseRecording):
             cr_by_segment = {}
         for segment_index in range(num_segments):
             trace_name = f"traces_seg{segment_index}"
-            assert (
-                len(channel_ids) == self._root[trace_name].shape[1]
-            ), f"Segment {segment_index} has the wrong number of channels!"
+            assert len(channel_ids) == self._root[trace_name].shape[1], (
+                f"Segment {segment_index} has the wrong number of channels!"
+            )
 
             time_kwargs = {}
             time_vector = self._root.get(f"times_seg{segment_index}", None)
@@ -177,7 +176,7 @@ class ZarrRecordingExtractor(BaseRecording):
                 if t_starts is None:
                     t_start = None
                 else:
-                    t_start = t_starts[segment_index]
+                    t_start = float(t_starts[segment_index])
                     if np.isnan(t_start):
                         t_start = None
                 time_kwargs["t_start"] = t_start
@@ -267,7 +266,7 @@ class ZarrRecordingExtractor(BaseRecording):
         **kwargs,
     ):
         folder_path = create_zarr_path_for_write(folder_path, overwrite=overwrite)
-        zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
+        zarr_root = zarr.open(local_zarr_store(folder_path), mode="w", storage_options=storage_options)
         zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrRecordingExtractor)
         add_recording_to_zarr_group(recording, zarr_root, **kwargs)
         return ZarrRecordingExtractor(folder_path, storage_options=storage_options)
@@ -677,7 +676,7 @@ class ZarrSortingExtractor(BaseSorting):
         Write a sorting extractor to zarr format.
         """
         folder_path = create_zarr_path_for_write(folder_path, overwrite=overwrite)
-        zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
+        zarr_root = zarr.open(local_zarr_store(folder_path), mode="w", storage_options=storage_options)
         zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrSortingExtractor)
         add_sorting_to_zarr_group(sorting, zarr_root, relative_to=relative_to, **kwargs)
         return ZarrSortingExtractor(folder_path, storage_options=storage_options)
@@ -944,7 +943,7 @@ def add_recording_to_zarr_group(
     channel_ids = recording.channel_ids
     if channel_ids.dtype.kind in ("U", "S"):
         channel_ids = channel_ids.astype("T")
-    arr = zarr_group.create_array(name="channel_ids", data=channel_ids, compressors=None)
+    _ = zarr_group.create_array(name="channel_ids", data=channel_ids, compressors=None)
     dataset_paths = [f"traces_seg{i}" for i in range(recording.get_num_segments())]
     dataset_timestamps_paths: list | None = None
     if any(recording.has_time_vector(i) for i in range(recording.get_num_segments())):
@@ -978,6 +977,7 @@ def add_recording_to_zarr_group(
         job_kwargs=job_kwargs,
         time_series=recording,
     )
+    buffer_megabytes = zarr_kwargs.get("buffer_megabytes", 500)
 
     _write_time_series_to_zarr(
         time_series=recording,
@@ -992,6 +992,7 @@ def add_recording_to_zarr_group(
         compressor_times=compressor_times,
         filters_times=filters_times,
         verbose=verbose,
+        buffer_megabytes=buffer_megabytes,
         **job_kwargs,
     )
 
