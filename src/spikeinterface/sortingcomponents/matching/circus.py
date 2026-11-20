@@ -111,6 +111,9 @@ class CircusOMPPeeler(BaseTemplateMatching):
     is convolved with the templates, and as long as some scalar products
     are higher than a given threshold, we use a Cholesky decomposition
     to compute the optimal amplitudes needed to reconstruct the signal.
+    With a vicinity, each selection only re-fits the nearby selected
+    templates to the residual, as in LocOMP (Mailhé et al., ICASSP 2009,
+    https://hal.science/hal-00461092).
 
     IMPORTANT NOTE: small chunks are more efficient for such Peeler,
     consider using 100ms chunk
@@ -125,14 +128,12 @@ class CircusOMPPeeler(BaseTemplateMatching):
             Stopping criteria of the OMP algorithm, as number of retry while updating amplitudes
         rank : int, default: 5
             Number of components used internally by the SVD
-        vicinity : int
-            Size of the area surrounding a spike to perform modification (expressed in terms
-            of template temporal width)
+        vicinity : int, default: 2
+            Size of the window around a spike, in template widths. A pass selects at most one spike per
+            window, and each selection re-fits the spikes already selected in its window that share a
+            channel with it. With 0, each selection re-fits all spikes selected so far
         ignore_inds : list
             List of template indices to ignore during the matching
-        vicinity: int
-            Size of the area surrounding a spike to perform modification (expressed in terms
-            of template temporal width)
         precomputed : dict | None
             If not None, a dict with precomputed values for the templates
         engine : string in ["numpy", "torch", "auto"]. Default "auto"
@@ -227,10 +228,10 @@ class CircusOMPPeeler(BaseTemplateMatching):
 
         self.ignore_inds = np.array(ignore_inds)
 
-        self.unit_overlaps_tables = {}
+        # the row of template j in the overlaps of template i, -1 when they share no channel
+        self.unit_overlaps_tables = np.full((self.num_templates, self.num_templates), -1)
         for i in range(self.num_templates):
-            self.unit_overlaps_tables[i] = np.zeros(self.num_templates, dtype=int)
-            self.unit_overlaps_tables[i][self.unit_overlaps_indices[i]] = np.arange(len(self.unit_overlaps_indices[i]))
+            self.unit_overlaps_tables[i, self.unit_overlaps_indices[i]] = np.arange(len(self.unit_overlaps_indices[i]))
 
         self.margin = 2 * self.num_samples
         self.is_pushed = False
@@ -326,8 +327,23 @@ class CircusOMPPeeler(BaseTemplateMatching):
     def get_margin(self):
         return self.margin
 
+    def _get_gram(self, selection):
+        """Gram matrix of the normalized templates (template, peak) in selection, from the overlaps."""
+        templates, peaks = selection
+        delta_t = peaks[np.newaxis, :] - peaks[:, np.newaxis]
+        rows = self.unit_overlaps_tables[templates[:, np.newaxis], templates[np.newaxis, :]]
+        i, j = np.nonzero((rows >= 0) & (np.abs(delta_t) < self.num_samples))
+        lags = self.num_samples - 1 + delta_t[i, j]
+        gram = np.zeros(delta_t.shape)
+        if self.shared_memory:
+            gram[i, j] = self.overlaps[templates[i], rows[i, j], lags]
+        else:
+            gram[i, j] = [self.overlaps[t][r, lag] for t, r, lag in zip(templates[i], rows[i, j], lags)]
+        # the overlaps of i with j and of j with i agree up to rounding
+        return (gram + gram.T) / 2
+
     def compute_matching(self, traces, start_frame, end_frame, segment_index):
-        from scipy.linalg import get_lapack_funcs, get_blas_funcs, solve_triangular
+        from scipy.linalg import get_lapack_funcs, get_blas_funcs, solve_triangular, cho_factor, cho_solve
         from scipy import ndimage
 
         if not self.is_pushed:
@@ -381,17 +397,16 @@ class CircusOMPPeeler(BaseTemplateMatching):
 
         spikes = np.empty(scalar_products.size, dtype=spike_dtype)
 
-        M = np.zeros((self.num_templates, self.num_templates), dtype=np.float32)
-
         all_selections = np.empty((2, scalar_products.size), dtype=np.int32)
         final_amplitudes = np.zeros(scalar_products.shape, dtype=np.float32)
         num_selection = 0
         selection = all_selections[:, :0]  # empty until the first peak is picked
 
-        full_sps = scalar_products.copy()
-
-        all_amplitudes = np.zeros(0, dtype=np.float32)
-        is_in_vicinity = np.zeros(0, dtype=np.int32)
+        if self.vicinity == 0:
+            M = np.zeros((self.num_templates, self.num_templates), dtype=np.float32)
+            full_sps = scalar_products.copy()
+        else:
+            is_selected = np.zeros(scalar_products.shape, dtype=bool)
 
         if self.stop_criteria == "omp_min_sps":
             stop_criteria = self.omp_min_sps * np.maximum(self.norms, np.sqrt(self.num_channels * self.num_samples))
@@ -422,31 +437,54 @@ class CircusOMPPeeler(BaseTemplateMatching):
             for peak_index in peak_indices:
                 best_cluster_ind = best_cluster_inds[0, peak_index]
 
-                if num_selection > 0:
-                    delta_t = selection[1] - peak_index
-                    idx = np.flatnonzero((delta_t < self.num_samples) & (delta_t > -self.num_samples))
-                    myline = neighbor_window + delta_t[idx]
-                    myindices = selection[0, idx]
+                if self.vicinity > 0:
+                    # LocOMP: a template is selected at most once at a given time, and each selection re-fits the
+                    # selected templates in its vicinity that share a channel with it to the current residual
+                    if not is_selected[best_cluster_ind, peak_index]:
+                        is_selected[best_cluster_ind, peak_index] = True
+                        all_selections[:, num_selection] = [best_cluster_ind, peak_index]
+                        num_selection += 1
 
-                    if self.shared_memory:
-                        n_overlaps = len(self.unit_overlaps_indices[best_cluster_ind])
-                        local_overlaps = self.overlaps[best_cluster_ind, :n_overlaps]
-                    else:
-                        local_overlaps = self.overlaps[best_cluster_ind]
+                    selection = all_selections[:, :num_selection]
+                    nearby = np.flatnonzero(np.abs(selection[1] - peak_index) < self.vicinity)
+                    nearby = nearby[self.units_overlaps[best_cluster_ind][selection[0, nearby]]]
+                    sub_selection = selection[:, nearby]
 
-                    overlapping_templates = self.unit_overlaps_indices[best_cluster_ind]
-                    table = self.unit_overlaps_tables[best_cluster_ind]
+                    gram = self._get_gram(sub_selection)
+                    residual_sps = scalar_products[sub_selection[0], sub_selection[1]].astype(np.float64)
+                    try:
+                        factor = cho_factor(gram, lower=True, check_finite=False)
+                        coefficients = cho_solve(factor, residual_sps, check_finite=False)
+                    except np.linalg.LinAlgError:  # linearly dependent templates
+                        coefficients = np.linalg.lstsq(gram, residual_sps, rcond=None)[0]
 
-                    if num_selection == M.shape[0]:
-                        Z = np.zeros((2 * num_selection, 2 * num_selection), dtype=np.float32)
-                        Z[:num_selection, :num_selection] = M
-                        M = Z
+                    diff_amplitudes = (coefficients / self.norms[sub_selection[0]]).astype(np.float32)
+                    final_amplitudes[sub_selection[0], sub_selection[1]] += diff_amplitudes
+                else:
+                    if num_selection > 0:
+                        delta_t = selection[1] - peak_index
+                        idx = np.flatnonzero((delta_t < self.num_samples) & (delta_t > -self.num_samples))
+                        myline = neighbor_window + delta_t[idx]
+                        myindices = selection[0, idx]
 
-                    mask = np.isin(myindices, overlapping_templates)
-                    a, b = myindices[mask], myline[mask]
-                    M[num_selection, idx[mask]] = local_overlaps[table[a], b]
+                        if self.shared_memory:
+                            n_overlaps = len(self.unit_overlaps_indices[best_cluster_ind])
+                            local_overlaps = self.overlaps[best_cluster_ind, :n_overlaps]
+                        else:
+                            local_overlaps = self.overlaps[best_cluster_ind]
 
-                    if self.vicinity == 0:
+                        overlapping_templates = self.unit_overlaps_indices[best_cluster_ind]
+                        table = self.unit_overlaps_tables[best_cluster_ind]
+
+                        if num_selection == M.shape[0]:
+                            Z = np.zeros((2 * num_selection, 2 * num_selection), dtype=np.float32)
+                            Z[:num_selection, :num_selection] = M
+                            M = Z
+
+                        mask = np.isin(myindices, overlapping_templates)
+                        a, b = myindices[mask], myline[mask]
+                        M[num_selection, idx[mask]] = local_overlaps[table[a], b]
+
                         solve_triangular(
                             M[:num_selection, :num_selection],
                             M[num_selection, :num_selection],
@@ -462,61 +500,31 @@ class CircusOMPPeeler(BaseTemplateMatching):
                             break
                         M[num_selection, num_selection] = np.sqrt(Lkk)
                     else:
-                        is_in_vicinity = np.flatnonzero(np.abs(delta_t) < self.vicinity)
+                        M[0, 0] = 1
 
-                        if len(is_in_vicinity) > 0:
-                            L = M[is_in_vicinity, :][:, is_in_vicinity]
+                    all_selections[:, num_selection] = [best_cluster_ind, peak_index]
+                    num_selection += 1
 
-                            M[num_selection, is_in_vicinity] = solve_triangular(
-                                L,
-                                M[num_selection, is_in_vicinity],
-                                trans=0,
-                                lower=1,
-                                overwrite_b=True,
-                                check_finite=False,
-                            )
-
-                            v = nrm2(M[num_selection, is_in_vicinity]) ** 2
-                            Lkk = 1 - v
-                            if Lkk <= omp_tol:  # selected atoms are dependent
-                                break
-                            M[num_selection, num_selection] = np.sqrt(Lkk)
-                        else:
-                            M[num_selection, num_selection] = 1.0
-                else:
-                    M[0, 0] = 1
-
-                all_selections[:, num_selection] = [best_cluster_ind, peak_index]
-                num_selection += 1
-
-                selection = all_selections[:, :num_selection]
-                res_sps = full_sps[selection[0], selection[1]]
-
-                if self.vicinity == 0:
+                    selection = all_selections[:, :num_selection]
+                    res_sps = full_sps[selection[0], selection[1]]
                     new_amplitudes, _ = potrs(M[:num_selection, :num_selection], res_sps, lower=True, overwrite_b=False)
                     sub_selection = selection
                     new_amplitudes /= self.norms[sub_selection[0]]
-                else:
-                    is_in_vicinity = np.append(is_in_vicinity, num_selection - 1)
-                    all_amplitudes = np.append(all_amplitudes, np.float32(1))
-                    L = M[is_in_vicinity, :][:, is_in_vicinity]
-                    new_amplitudes, _ = potrs(L, res_sps[is_in_vicinity], lower=True, overwrite_b=False)
-                    sub_selection = selection[:, is_in_vicinity]
-                    new_amplitudes /= self.norms[sub_selection[0]]
 
-                diff_amplitudes = new_amplitudes - final_amplitudes[sub_selection[0], sub_selection[1]]
+                    diff_amplitudes = new_amplitudes - final_amplitudes[sub_selection[0], sub_selection[1]]
+                    final_amplitudes[sub_selection[0], sub_selection[1]] = new_amplitudes
+
                 modified = np.flatnonzero(np.abs(diff_amplitudes) > omp_tol)
-                final_amplitudes[sub_selection[0], sub_selection[1]] = new_amplitudes
 
                 for i in modified:
-                    tmp_best, tmp_peak = sub_selection[:, i]
+                    tmp_best, tmp_peak = sub_selection[:, i].tolist()
                     diff_amp = diff_amplitudes[i] * self.norms[tmp_best]
                     if self.shared_memory:
                         n_overlaps = len(self.unit_overlaps_indices[tmp_best])
                         local_overlaps = self.overlaps[tmp_best, :n_overlaps]
                     else:
                         local_overlaps = self.overlaps[tmp_best]
-                    overlapping_templates = self.units_overlaps[tmp_best]
+                    overlapping_templates = self.unit_overlaps_indices[tmp_best]
                     tmp = tmp_peak - neighbor_window
                     idx = [max(0, tmp), min(num_peaks, tmp_peak + self.num_samples)]
                     tdx = [idx[0] - tmp, idx[1] - tmp]
