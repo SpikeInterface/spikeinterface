@@ -18,6 +18,8 @@ if torch_spec is not None:
 else:
     HAVE_TORCH = False
 
+HAVE_NUMBA = importlib.util.find_spec("numba") is not None
+
 
 @dataclass
 class WobbleParameters:
@@ -51,6 +53,10 @@ class WobbleParameters:
         Maximum value for ampltiude scaling of templates.
     scale_amplitudes : bool
         If True, scale amplitudes of templates to match spikes.
+    joint_fit : bool, default False
+        If True, fit each spike's start, jitter and amplitude together with those of the spikes it overlaps, instead of
+        on its own. This finds more of the spikes that overlap, most of all on few channels (tetrodes). Needs amplitude
+        scaling (amplitude_variance > 0) and numba.
     engine : string in ["numpy", "torch", "auto"]. Default "auto"
         The engine to use for the convolutions
     torch_device : string in ["cpu", "cuda", None]. Default "cpu"
@@ -79,6 +85,7 @@ class WobbleParameters:
     scale_min: float = 0
     scale_max: float = np.inf
     scale_amplitudes: bool = False
+    joint_fit: bool = False
     engine: str = "numpy"
     torch_device: str = "cpu"
     shared_memory: bool = True
@@ -373,6 +380,8 @@ class WobbleMatch(BaseTemplateMatching):
             removing detected spikes from the traces
         6. Enforce a refractory period around each spike by setting the objective to -inf
         7. Repeat Steps 3-6 until no more spikes are detected above the threshold OR max_iter is reached
+    With joint_fit, steps 4 and 5 fit each new spike's start, jitter and amplitude together with the spikes it overlaps,
+    against the residual traces, and a detected spike whose amplitude is fitted to zero is dropped (see _JointFit).
 
     Notes
     -----
@@ -420,6 +429,10 @@ class WobbleMatch(BaseTemplateMatching):
 
         # Aggregate useful parameters/variables for handy access in downstream functions
         params = WobbleParameters(**parameters)
+        if params.joint_fit:
+            assert params.scale_amplitudes, "joint_fit needs amplitude scaling (amplitude_variance > 0)"
+            if not HAVE_NUMBA:
+                raise ModuleNotFoundError('"wobble" needs numba for joint_fit')
 
         assert engine in ["numpy", "torch", "auto"], "engine should be numpy, torch or auto"
         if engine == "auto":
@@ -501,7 +514,8 @@ class WobbleMatch(BaseTemplateMatching):
             self.shm = None
 
     def __del__(self):
-        if self.shared_memory and self.shm is not None:
+        # __init__ may have raised before the shared memory was set up
+        if getattr(self, "shared_memory", False) and self.shm is not None:
             self.template_meta = None
             self.shm.close()
             self.shm = None
@@ -539,6 +553,7 @@ class WobbleMatch(BaseTemplateMatching):
             traces, self.template_data, self.params.approx_rank, self.engine, self.torch_device
         )
         objective_normalized = 2 * objective - self.template_data.norm_squared[:, np.newaxis]
+        joint_fit = _JointFit(self, traces, objective) if self.params.joint_fit else None
 
         # Compute spike train
         spike_trains, scalings, distance_metrics = [], [], []
@@ -555,26 +570,40 @@ class WobbleMatch(BaseTemplateMatching):
             if len(spike_train) == 0:
                 break
 
+            if joint_fit is not None:
+                # fit the new spikes together with the spikes they overlap, which may move them
+                joint_fit.add(spike_train, objective, objective_normalized)
+                objective, objective_normalized = self.enforce_refractory(
+                    spike_train, objective, objective_normalized, self.params, self.template_meta
+                )
+                joint_fit.credit_projections(spike_train, objective_normalized)
+            else:
+                # subtract newly detected spike train from traces (via the objective)
+                objective, objective_normalized = self.subtract_spike_train(
+                    spike_train,
+                    scaling,
+                    self.template_data,
+                    objective,
+                    objective_normalized,
+                    self.params,
+                    self.template_meta,
+                    self.sparsity,
+                )
+
             # update spike_train, scaling, distance metrics with new values
             spike_trains.extend(list(spike_train))
             scalings.extend(list(scaling))
             distance_metrics.extend(list(distance_metric))
 
-            # subtract newly detected spike train from traces (via the objective)
-            objective, objective_normalized = self.subtract_spike_train(
-                spike_train,
-                scaling,
-                self.template_data,
-                objective,
-                objective_normalized,
-                self.params,
-                self.template_meta,
-                self.sparsity,
-            )
-
         spike_train = np.array(spike_trains)
         scalings = np.array(scalings)
         distance_metric = np.array(distance_metrics)
+        if joint_fit is not None and len(spike_train):
+            # spikes may have moved when later ones were fitted, and one refitted to zero explains nothing
+            spike_train = np.column_stack((joint_fit.starts, joint_fit.jittered_indices))
+            scalings = np.array(joint_fit.amplitudes)
+            keep = scalings > 0
+            spike_train, scalings, distance_metric = spike_train[keep], scalings[keep], distance_metric[keep]
         if len(spike_train) == 0:  # no spikes found
             return np.zeros(0, dtype=_base_matching_dtype)
 
@@ -735,10 +764,12 @@ class WobbleMatch(BaseTemplateMatching):
             # TODO: If optimizing for speed -- check this loop
             for spike_start_index, spike_scaling in zip(id_spiketrain, id_scaling):
                 spike_stop_index = spike_start_index + convolution_resolution_len
-                objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2 * pconv
                 if params.scale_amplitudes:
                     pconv_scaled = pconv * spike_scaling
+                    objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2 * pconv_scaled
                     objective[overlapping_templates, spike_start_index:spike_stop_index] -= pconv_scaled
+                else:
+                    objective_normalized[overlapping_templates, spike_start_index:spike_stop_index] -= 2 * pconv
 
             objective, objective_normalized = cls.enforce_refractory(
                 spike_train, objective, objective_normalized, params, template_meta
@@ -831,12 +862,70 @@ class WobbleMatch(BaseTemplateMatching):
                 high_resolution_conv, norm_peaks, params.scale_min, params.scale_max, params.amplitude_variance
             )
             jitter = np.argmax(high_res_objective[template_meta.jitter_window, :], axis=0)
-            scalings = scalings[jitter, np.arange(len(non_refractory_indices))]
+            scalings = scalings[template_meta.jitter_window[jitter], np.arange(len(non_refractory_indices))]
 
         # Extract outputs from jitter
         template_shift = template_meta.jitter2template_shift[jitter]
         time_shift = template_meta.jitter2spike_time_shift[jitter]
         return template_shift, time_shift, non_refractory_indices, scalings
+
+    def _joint_fit_templates(self):
+        """Jittered templates as _JointFit subtracts them: waveforms (channels by samples) on their template's visible
+        channels, padded to the most any template has, those channels and how many there are, each channel's position
+        among a template's visible channels (-1 where not visible), squared norms, template overlap and each template's
+        unit."""
+        if "_joint_fit_templates_cache" not in self.__dict__:
+            visible = self.sparsity.visible_channels
+            num_templates, num_channels = visible.shape
+            jitter_factor = self.params.jitter_factor
+            num_visible = visible.sum(axis=1).astype(np.int64)
+            channels = np.zeros((num_templates, max(int(num_visible.max()), 1)), dtype=np.int64)
+            channel_position = np.full((num_templates, num_channels), -1, dtype=np.int64)
+            waveforms = np.zeros(
+                (num_templates * jitter_factor, channels.shape[1], self.template_meta.num_samples), dtype=np.float32
+            )
+            norms = np.zeros(num_templates * jitter_factor)
+            for template_index in range(num_templates):
+                visible_channels = np.flatnonzero(visible[template_index])
+                channels[template_index, : len(visible_channels)] = visible_channels
+                channel_position[template_index, visible_channels] = np.arange(len(visible_channels))
+                singular = self.template_data.singular[:, template_index, 0]
+                spatial = self.template_data.spatial[:, template_index][:, visible_channels]
+                for jittered_index in range(template_index * jitter_factor, (template_index + 1) * jitter_factor):
+                    temporal = self.template_data.temporal_jittered[jittered_index]
+                    waveform = np.ascontiguousarray(np.flipud((temporal * singular) @ spatial), dtype=np.float32)
+                    waveforms[jittered_index, : len(visible_channels)] = waveform.T
+                    norms[jittered_index] = np.sum(np.square(waveform, dtype=np.float64))
+            unit_of = np.asarray(self.template_meta.template_indices2unit_indices, dtype=np.int64)
+            unit_overlap = np.ascontiguousarray(self.sparsity.unit_overlap, dtype=np.bool_)
+            self._joint_fit_templates_cache = (
+                waveforms,
+                channels,
+                num_visible,
+                channel_position,
+                norms,
+                unit_overlap,
+                unit_of,
+            )
+        return self._joint_fit_templates_cache
+
+    def _convolution_tables(self):
+        """Each jittered template's pairwise convolutions with the templates it overlaps, those templates and how many
+        there are, padded to the most any jittered template overlaps."""
+        if "_convolution_tables_cache" not in self.__dict__:
+            num_overlapping = self.sparsity.unit_overlap.sum(axis=1).astype(np.int64)
+            overlapping = np.zeros((len(num_overlapping), max(int(num_overlapping.max()), 1)), dtype=np.int64)
+            for jittered_index, row in enumerate(self.sparsity.unit_overlap):
+                overlapping[jittered_index, : num_overlapping[jittered_index]] = np.flatnonzero(row)
+            if self.shared_memory:
+                pairwise_convolution = self.template_data.pairwise_convolution[0]
+            else:
+                convolutions = self.template_data.pairwise_convolution
+                pairwise_convolution = np.zeros(overlapping.shape + convolutions[0].shape[1:], dtype=np.float32)
+                for jittered_index, convolution in enumerate(convolutions):
+                    pairwise_convolution[jittered_index, : len(convolution)] = convolution
+            self._convolution_tables_cache = (pairwise_convolution, overlapping, num_overlapping)
+        return self._convolution_tables_cache
 
     @classmethod
     def enforce_refractory(
@@ -886,6 +975,102 @@ class WobbleMatch(BaseTemplateMatching):
         if params.scale_amplitudes:  # template_convolution is only used with amplitude scaling
             objective[spike_unit_indices[:, np.newaxis], waveform_samples[:, 1:-1]] = -1 * np.inf
         return objective, objective_normalized
+
+
+class _JointFit:
+    """The spikes found so far in a chunk, fitted together against an explicit residual (used with joint_fit).
+
+    A new spike first gets the start (within a sample of its peak) and jitter whose fit, together with the spikes it
+    overlaps, explains the most of the residual; its amplitude and theirs are then fitted together by least squares
+    (with the amplitude prior). Where more than max_near spikes overlap it, as in an artifact, it is fitted only with
+    those whose amplitudes are most coupled to its own, which bounds the work per spike. The spikes it overlaps were
+    placed before it was found, so each is then taken out and placed and fitted again in the same way, and so on while
+    any of them moves (coordinate descent on the starts and jitters). The objectives are brought up to date with the
+    residual once per batch of new spikes.
+
+    Templates near a spike are credited in the detection objective with their projection onto it, so that a peak there
+    is the gain of adding a spike at unit amplitude with the spike it overlaps refitted, instead of with that spike's
+    amplitude fixed at one fitted before the new spike was found.
+
+    The work is done by the numba kernels in _wobble_numba; this class holds their arrays.
+    """
+
+    # re-placements allowed per spike involved, after a new spike is placed
+    max_replacements = 10
+    # the most spikes a spike is fitted together with: those whose amplitudes are most coupled to its own
+    max_near = 8
+
+    def __init__(self, matcher, traces, objective):
+        self.inv_lambda = 1 / matcher.params.amplitude_variance
+        # largest projection of each template, at each time, onto a spike found so far
+        self.projection = np.zeros_like(objective)
+        self.templates = matcher._joint_fit_templates()
+        self.convolutions = matcher._convolution_tables()
+        params = matcher.params
+        self.params = (
+            np.int64(params.jitter_factor),
+            float(self.inv_lambda),
+            float(params.scale_min),
+            float(params.scale_max),
+            np.int64(params.refractory_period_frames),
+            np.int64(self.max_replacements),
+            np.int64(self.max_near),
+        )
+        num_bins = traces.shape[0] // matcher.template_meta.num_samples + 1
+        # laid out as _wobble_numba describes; the arrays for each spike grow in add
+        self.state = (
+            np.ascontiguousarray(traces.T),
+            np.zeros(0, dtype=np.int64),
+            np.zeros(0, dtype=np.int64),
+            np.zeros(0),
+            np.full(num_bins, -1, dtype=np.int64),
+            np.full(num_bins, -1, dtype=np.int64),
+            np.zeros(0, dtype=np.int64),
+            np.zeros(0, dtype=np.bool_),
+            np.zeros(0, dtype=np.int64),
+            np.zeros(0, dtype=np.int64),
+            np.zeros(0),
+            np.zeros(2, dtype=np.int64),
+            np.zeros(0, dtype=np.int64),
+        )
+
+    @property
+    def starts(self):
+        return self.state[1][: self.state[11][0]]
+
+    @property
+    def jittered_indices(self):
+        return self.state[2][: self.state[11][0]]
+
+    @property
+    def amplitudes(self):
+        return self.state[3][: self.state[11][0]]
+
+    def add(self, spike_train, objective, objective_normalized):
+        """Place and fit new spikes (one batch, too far apart to overlap) and update the objectives; their rows of
+        spike_train are updated."""
+        from ._wobble_numba import add_spikes, sync_objectives
+
+        state = list(self.state)
+        needed = state[11][0] + len(spike_train)
+        if needed > len(state[1]):
+            capacity = max(2 * len(state[1]), needed, 64)
+            for k in (1, 2, 3, 6, 7, 8, 9, 10, 12):
+                state[k] = np.concatenate((state[k], np.zeros(capacity - len(state[k]), dtype=state[k].dtype)))
+            self.state = tuple(state)
+        rows = np.ascontiguousarray(spike_train, dtype=np.int64)
+        add_spikes(rows, self.state, self.templates, self.params)
+        spike_train[:] = rows
+        sync_objectives(objective, objective_normalized, self.state, self.convolutions)
+
+    def credit_projections(self, spike_train, objective_normalized):
+        """Credit the templates near each new spike with their projection onto it, where it is the largest yet."""
+        from ._wobble_numba import credit_projections
+
+        rows = np.ascontiguousarray(spike_train, dtype=np.int64)
+        credit_projections(
+            rows, self.projection, objective_normalized, self.convolutions, self.templates[4], self.inv_lambda
+        )
 
 
 def compute_template_norm(visible_channels, templates):

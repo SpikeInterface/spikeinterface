@@ -1,8 +1,10 @@
 from types import SimpleNamespace
 
+import pytest
 import numpy as np
 
-from spikeinterface.sortingcomponents.matching import wobble
+from spikeinterface import NumpyRecording, Templates
+from spikeinterface.sortingcomponents.matching import find_spikes_from_templates, wobble
 
 
 def test_compute_template_norm():
@@ -339,6 +341,47 @@ def test_compute_scale_amplitudes():
     # Assert: check shapes
     assert high_res_objective.shape == (peak_window_size, num_spikes)
     assert scale_amplitudes.shape == (peak_window_size, num_spikes)
+
+
+@pytest.mark.parametrize(
+    "joint_fit",
+    [False, pytest.param(True, marks=pytest.mark.skipif(not wobble.HAVE_NUMBA, reason="joint_fit needs numba"))],
+)
+def test_wobble_scaled_spikes(joint_fit):
+    # noiseless spikes away from their template's amplitude. Each must come off at its fitted amplitude, or what is
+    # left of it is detected again as a spike of another unit
+    sampling_frequency, nbefore, num_samples, num_channels = 30000.0, 20, 60, 4
+    t = np.arange(num_samples) - nbefore
+    templates_array = np.zeros((3, num_samples, num_channels), dtype=np.float32)
+    for unit in range(3):
+        width = 3 + 1.5 * unit
+        waveform = -np.exp(-0.5 * (t / width) ** 2) + 0.4 * np.exp(-0.5 * ((t - 2.5 * width) / (2 * width)) ** 2)
+        profile = np.exp(-0.5 * ((np.arange(num_channels) - 1.5 * unit) / 1.5) ** 2)
+        # rank 1, so the matcher's compression keeps the templates exactly
+        templates_array[unit] = 10 * np.outer(waveform, profile)
+
+    units, times, amplitudes = [1, 0, 2], [120, 260, 400], [2.0, 4.0, 0.6]
+    if joint_fit:
+        # two that overlap: the first one found must be refitted when the second is, or its amplitude absorbs the
+        # second and hides it
+        units, times, amplitudes = units + [2, 1], times + [540, 542], amplitudes + [1.5, 0.7]
+    traces = np.zeros((680, num_channels), dtype=np.float32)
+    for unit, time, amplitude in zip(units, times, amplitudes):
+        traces[time - nbefore : time - nbefore + num_samples] += amplitude * templates_array[unit]
+    recording = NumpyRecording([traces], sampling_frequency)
+    templates = Templates(
+        templates_array, sampling_frequency, nbefore, channel_ids=recording.channel_ids, unit_ids=np.arange(3)
+    )
+
+    spikes = find_spikes_from_templates(
+        recording,
+        templates,
+        method="wobble",
+        method_kwargs=dict(parameters=dict(joint_fit=joint_fit)),
+        job_kwargs=dict(n_jobs=1),
+    )
+    assert spikes["cluster_index"].tolist() == units
+    assert spikes["sample_index"].tolist() == times
 
 
 if __name__ == "__main__":
