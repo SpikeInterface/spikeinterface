@@ -10,6 +10,8 @@ from spikeinterface.core.baserecording import BaseRecording
 
 from .filter import fix_dtype
 
+NUM_SAMPLES_PER_BLOCK = 1024
+
 
 class CommonReferenceRecording(BasePreprocessor):
     """
@@ -252,11 +254,10 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
 
         # The reference of a sample only uses the channels at that sample, so the samples can be processed in
         # blocks. This keeps the float copies made while re-referencing the size of a block instead of the chunk.
-        num_samples_per_block = 1024
         num_channels = np.arange(traces.shape[1])[channel_indices].size
         re_referenced_traces = np.empty((traces.shape[0], num_channels), dtype=self.dtype)
-        for block_start in range(0, traces.shape[0], num_samples_per_block):
-            block = slice(block_start, block_start + num_samples_per_block)
+        for block_start in range(0, traces.shape[0], NUM_SAMPLES_PER_BLOCK):
+            block = slice(block_start, block_start + NUM_SAMPLES_PER_BLOCK)
             re_referenced_traces[block] = self._re_reference(traces[block], channel_indices)
         return re_referenced_traces
 
