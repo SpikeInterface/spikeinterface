@@ -8,7 +8,6 @@ from .drift_tools import (
 
 from .hybrid_tools import (
     generate_hybrid_recording,
-    estimate_templates_from_recording,
     select_templates,
     scale_template_to_range,
     relocate_templates,

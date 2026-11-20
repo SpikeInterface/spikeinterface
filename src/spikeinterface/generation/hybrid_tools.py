@@ -1,5 +1,6 @@
 import warnings
 from typing import Literal
+from pathlib import Path
 
 import numpy as np
 
@@ -21,70 +22,6 @@ from spikeinterface.generation.drift_tools import (
     interpolate_templates,
     move_dense_templates,
 )
-
-
-def estimate_templates_from_recording(
-    recording: BaseRecording,
-    ms_before: float = 2,
-    ms_after: float = 2,
-    sorter_name: str = "spykingcircus2",
-    run_sorter_kwargs: dict | None = None,
-    job_kwargs: dict | None = None,
-):
-    """
-    Get dense templates from a recording. Internally, SpyKING CIRCUS 2 is used by default
-    with the only twist that the template matching step is not launched. Instead, a Template
-    object is returned based on the results of the clustering. Other sorters can be invoked
-    with the `sorter_name` and `run_sorter_kwargs` parameters.
-
-    Parameters
-    ----------
-    recording : BaseRecording
-        The recording to get templates from.
-    ms_before : float
-        The time before peaks of templates.
-    ms_after : float
-        The time after peaks of templates.
-    sorter_name : str
-        The sorter to be used in order to get some fast clustering.
-    run_sorter_kwargs : dict
-        The parameters to provide to the run_sorter function of spikeinterface.
-    job_kwargs : dict
-        The job keyword arguments to be used in the estimation of the templates.
-
-    Returns
-    -------
-    templates: Templates
-        The estimated templates
-    """
-    from spikeinterface.core.waveform_tools import estimate_templates
-    from spikeinterface.sorters.runsorter import run_sorter
-
-    if sorter_name == "spykingcircus2":
-        if "matching" not in run_sorter_kwargs:
-            run_sorter_kwargs["matching"] = {"method": None}
-
-    run_sorter_kwargs = run_sorter_kwargs or {}
-    sorting = run_sorter(sorter_name, recording, **run_sorter_kwargs)
-
-    spikes = sorting.to_spike_vector()
-    unit_ids = sorting.unit_ids
-    sampling_frequency = recording.get_sampling_frequency()
-    nbefore = ms_to_samples(ms_before, sampling_frequency)
-    nafter = ms_to_samples(ms_after, sampling_frequency)
-
-    job_kwargs = job_kwargs or {}
-    templates_array = estimate_templates(recording, spikes, unit_ids, nbefore, nafter, return_in_uV=False, **job_kwargs)
-
-    sparsity_mask = None
-    channel_ids = recording.channel_ids
-    probe = recording.get_probe()
-
-    templates = Templates(
-        templates_array, sampling_frequency, nbefore, True, sparsity_mask, channel_ids, unit_ids, probe=probe
-    )
-
-    return templates
 
 
 def select_templates(

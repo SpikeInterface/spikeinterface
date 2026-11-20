@@ -26,7 +26,7 @@ Currently, we have methods for:
  * **motion interpolation**
  * **clustering**
  * **template matching**
-
+ * **template library building**
 
 
 An important concept is the **node pipeline** machinery, which uses the
@@ -425,3 +425,22 @@ At the moment, there are five methods implemented:
     need lots of memory.
   * **'wobble'**: this is a re-implementation of the yass template matching code. Also very similar to 'circus-omp'.
     This is the most accurate methods for discovering spike collisions.
+
+Template libraries
+------------------
+
+Occasionally you might want to create a template library without doing the final step of template matching.
+You can generate a template library from a recording using any of the algorithms implemented in the
+components-based sorters: lupin, spyking-circus2 or tridesclous2. The
+:py:func:`~spikeinterface.sortingcomponents.tools.estimate_templates_from_recording()` function can
+take any of the ``sorter_params`` that the sorters can.
+
+.. code-block:: python
+
+    from spikeinterface.sortingcomponents.tools import estimate_templates_from_recording
+
+    templates = estimate_templates_from_recording(
+        recording,
+        sorter_name="lupin",
+        sorter_params={"apply_motion_correction": True},
+    )

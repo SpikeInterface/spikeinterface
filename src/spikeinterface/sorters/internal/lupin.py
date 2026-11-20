@@ -65,6 +65,7 @@ class LupinSorter(ComponentsBasedSorter):
         "seed": None,
         "save_array": True,
         "debug": False,
+        "_templates_only": False,
     }
 
     _params_description = {
@@ -99,6 +100,7 @@ class LupinSorter(ComponentsBasedSorter):
         "seed": "Seed for random number",
         "save_array": "Save or not intermediate arrays in the folder",
         "debug": "Save debug files",
+        "_templates_only": "Halts spike sorting once the template library has been built.",
     }
 
     installation_mesg = "\tpip install 'spikeinterface[lupin]'\nOr, if you have cloned SpikeInterface locally, using:\n\tpip install '.[lupin]'"
@@ -378,6 +380,10 @@ class LupinSorter(ComponentsBasedSorter):
             peak_sign=params["peak_sign"],
             remove_empty=True,
         )
+
+        if params["_templates_only"]:
+            templates.to_zarr(folder_path=sorter_output_folder / "templates_temp.zarr")
+            return
 
         # Template matching
         gather_mode = params["gather_mode"]
