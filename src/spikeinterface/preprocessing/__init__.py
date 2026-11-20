@@ -12,6 +12,7 @@ from .motion import (
 from .preprocessing_tools import get_spatial_interpolation_kernel
 from .detect_bad_channels import detect_bad_channels
 from .correct_lsb import correct_lsb
+from .filter_design import design_fir_bandpass, design_fir_highpass
 
 from .pipeline import (
     apply_preprocessing_pipeline,
