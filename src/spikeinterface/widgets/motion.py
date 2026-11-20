@@ -371,7 +371,6 @@ class MotionInfoWidget(BaseWidget):
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
         from .utils_matplotlib import make_mpl_figure
-
         from spikeinterface.sortingcomponents.motion import correct_motion_on_peaks
 
         dp = to_attr(data_plot)

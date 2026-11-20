@@ -22,6 +22,7 @@ from .drifting_generator import (
     generate_displacement_vector,
     generate_drifting_recording,
 )
+from .session_displacement_generator import generate_session_displacement_recordings
 
 from .template_database import (
     fetch_template_object_from_database,
