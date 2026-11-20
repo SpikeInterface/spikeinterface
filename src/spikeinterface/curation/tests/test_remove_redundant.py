@@ -2,8 +2,6 @@ import numpy as np
 
 from spikeinterface import create_sorting_analyzer
 from spikeinterface.core.generate import inject_some_duplicate_units
-from spikeinterface.curation.tests.common import make_sorting_analyzer, sorting_analyzer_for_curation
-
 from spikeinterface.curation import remove_redundant_units
 
 
@@ -22,8 +20,3 @@ def test_remove_redundant_units(sorting_analyzer_for_curation):
     for remove_strategy in ("max_spikes", "minimum_shift", "highest_amplitude"):
         sorting_clean = remove_redundant_units(sorting_analyzer, remove_strategy=remove_strategy)
         assert np.all(sorting_clean.unit_ids == sorting.unit_ids)
-
-
-if __name__ == "__main__":
-    sorting_analyzer = make_sorting_analyzer(sparse=True)
-    test_remove_redundant_units(sorting_analyzer)

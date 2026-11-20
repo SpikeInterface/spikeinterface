@@ -4,7 +4,6 @@ import pytest
 
 
 class TestSpikeLocationsExtension(AnalyzerExtensionCommonTestSuite):
-
     @pytest.mark.parametrize(
         "params",
         [

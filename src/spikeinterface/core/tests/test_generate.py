@@ -33,16 +33,6 @@ from spikeinterface.core.testing import check_recordings_equal
 strategy_list = ["tile_pregenerated", "on_the_fly"]
 
 
-def test_generate_recording():
-    # TODO even this is extensively tested in all other functions
-    pass
-
-
-def test_generate_sorting():
-    # TODO even this is extensively tested in all other functions
-    pass
-
-
 def test_generate_sorting_with_spikes_on_borders():
     num_spikes_on_borders = 10
     border_size_samples = 10
@@ -108,7 +98,7 @@ def test_memory_sorting_generator():
     seed = 0
 
     before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    sorting = SortingGenerator(
+    _ = SortingGenerator(
         num_units=num_units,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -118,9 +108,9 @@ def test_memory_sorting_generator():
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
     ratio = memory_usage_MiB / before_instanciation_MiB
     expected_allocation_MiB = 0
-    assert (
-        ratio <= 1.0 + relative_tolerance
-    ), f"SortingGenerator wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    assert ratio <= 1.0 + relative_tolerance, (
+        f"SortingGenerator wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    )
 
 
 def test_sorting_generator_consisency_across_calls():
@@ -175,11 +165,10 @@ def test_noise_generator_memory():
     dtype = np.dtype("float32")
     num_channels = 384
     seed = 0
-    num_samples = int(durations[0] * sampling_frequency)
 
     # case 1 preallocation of noise use one noise block 88M for 60000 sample of 384
     before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    rec1 = MockRecording(
+    _ = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -192,13 +181,13 @@ def test_noise_generator_memory():
     memory_usage_MiB = after_instanciation_MiB - before_instanciation_MiB
     expected_allocation_MiB = dtype.itemsize * num_channels * noise_block_size / bytes_to_MiB_factor
     ratio = expected_allocation_MiB / expected_allocation_MiB
-    assert (
-        ratio <= 1.0 + relative_tolerance
-    ), f"MockRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    assert ratio <= 1.0 + relative_tolerance, (
+        f"MockRecording with 'tile_pregenerated' wrong memory {memory_usage_MiB} instead of {expected_allocation_MiB}"
+    )
 
     # case 2: no preallocation very few memory (under 2 MiB)
     before_instanciation_MiB = measure_memory_allocation() / bytes_to_MiB_factor
-    rec2 = MockRecording(
+    _ = MockRecording(
         num_channels=num_channels,
         sampling_frequency=sampling_frequency,
         durations=durations,
@@ -370,17 +359,12 @@ def test_noise_generator_consistency_after_dump(strategy, seed):
     assert np.allclose(traces0, traces1)
 
 
-def test_generate_recording():
-    # check the high level function
-    rec = generate_recording()
-
-
 def test_generate_single_fake_waveform():
     sampling_frequency = 30000.0
     ms_before = 1.0
     ms_after = 3.0
     wf = generate_single_fake_waveform(ms_before=ms_before, ms_after=ms_after, sampling_frequency=sampling_frequency)
-
+    assert wf.shape == (int((ms_before + ms_after) / 1000 * sampling_frequency),)
     # import matplotlib.pyplot as plt
     # times = np.arange(wf.size) / sampling_frequency * 1000 - ms_before
     # fig, ax = plt.subplots()

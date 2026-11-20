@@ -1,9 +1,4 @@
-import pytest
-from pathlib import Path
-import shutil
-
-from spikeinterface import set_global_tmp_folder, NumpyRecording
-from spikeinterface.core import generate_recording
+from spikeinterface import NumpyRecording
 
 from spikeinterface.preprocessing import astype
 
