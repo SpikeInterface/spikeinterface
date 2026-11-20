@@ -1,6 +1,6 @@
 [project]
 name = "spikeinterface"
-version = "0.106.0"
+version = "0.107.0"
 authors = [
   { name="Alessio Buccino", email="alessiop.buccino@gmail.com" },
   { name="Samuel Garcia", email="sam.garcia.die@gmail.com" },
@@ -28,8 +28,8 @@ dependencies = [
     # for release we need pypi, so this needs to be commented
     "neo @ git+https://github.com/NeuralEnsemble/python-neo.git",
     "probeinterface @ git+https://github.com/SpikeInterface/probeinterface.git",
-    # "neo>=0.14.5",
-    # "probeinterface>=0.4.0",
+    # "neo>=0.14.6",
+    # "probeinterface>=0.5.0",
     "packaging",
     "pydantic",
 ]

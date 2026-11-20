@@ -10,6 +10,8 @@ from spikeinterface.core.baserecording import BaseRecording
 
 from .filter import fix_dtype
 
+NUM_SAMPLES_PER_BLOCK = 1024
+
 
 class CommonReferenceRecording(BasePreprocessor):
     """
@@ -247,11 +249,21 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
         self.operator_func = np.mean if self.operator == "average" else np.median
 
     def get_traces(self, start_frame, end_frame, channel_indices):
+        # We need all the channels to calculate the reference
+        traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
+
+        # The reference of a sample only uses the channels at that sample, so the samples can be processed in
+        # blocks. This keeps the float copies made while re-referencing the size of a block instead of the chunk.
+        num_channels = np.arange(traces.shape[1])[channel_indices].size
+        re_referenced_traces = np.empty((traces.shape[0], num_channels), dtype=self.dtype)
+        for block_start in range(0, traces.shape[0], NUM_SAMPLES_PER_BLOCK):
+            block = slice(block_start, block_start + NUM_SAMPLES_PER_BLOCK)
+            re_referenced_traces[block] = self._re_reference(traces[block], channel_indices)
+        return re_referenced_traces
+
+    def _re_reference(self, traces, channel_indices):
         # Let's do the case with group_indices equal None as that is easy
         if self.group_indices is None:
-            # We need all the channels to calculate the reference
-            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
-
             if self.reference == "global":
                 if self.ref_channel_indices is None:
                     shift = self.operator_func(traces, axis=1, keepdims=True)
@@ -284,9 +296,6 @@ class CommonReferenceRecordingSegment(BasePreprocessorSegment):
 
         # Then the old implementation for backwards compatibility that supports grouping
         else:
-            # need input trace
-            traces = self.parent_recording_segment.get_traces(start_frame, end_frame, slice(None))
-
             sliced_channel_indices = np.arange(traces.shape[1])
             if channel_indices is not None:
                 sliced_channel_indices = sliced_channel_indices[channel_indices]
