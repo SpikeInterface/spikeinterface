@@ -2,7 +2,7 @@ import numpy as np
 
 
 from spikeinterface.core.base import base_period_dtype
-from spikeinterface.core.core_tools import define_function_handling_dict_from_class
+from spikeinterface.core.core_tools import define_function_handling_dict_from_class, _ensure_seed
 from spikeinterface.core.recording_tools import get_noise_levels, get_chunk_with_margin
 from spikeinterface.core.generate import MockRecording
 
@@ -43,7 +43,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         Random seed for the noise fill (only used when ``mode="noise"``): both the
         per-channel noise-level estimation (`spikeinterface.core.get_noise_levels`) and
         the generated noise. Takes precedence over ``noise_levels_kwargs["random_slices_kwargs"]["seed"]``
-        if present.
+        if present. If None, a seed is drawn and stored with the recording, so its copies generate the same noise.
     **noise_levels_kwargs : Keyword arguments for `spikeinterface.core.get_noise_levels()` function
 
     Returns
@@ -104,6 +104,7 @@ class SilencedPeriodsRecording(BasePreprocessor):
         assert mode in available_modes, f"mode {mode} is not an available mode: {available_modes}"
 
         if mode in ["noise"]:
+            seed = _ensure_seed(seed)
             if noise_levels is None:
                 random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {}).copy()
                 random_slices_kwargs["seed"] = seed
