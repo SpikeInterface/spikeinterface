@@ -17,7 +17,7 @@ from .core_tools import (
     is_path_remote,
 )
 from .job_tools import split_job_kwargs, fix_job_kwargs
-from .zarr_tools import iterate_zarr_group, adjust_chunks_shards_and_job_kwargs, build_codec_pipeline
+from .zarr_tools import local_zarr_store, iterate_zarr_group, adjust_chunks_shards_and_job_kwargs, build_codec_pipeline
 from .time_series_tools import _write_time_series_to_zarr
 
 # The spike vector uses the numcodecs Delta filter (not in the zarr v3 spec) because it greatly
@@ -97,7 +97,7 @@ def super_zarr_open(folder_path: str | Path, mode: str = "r", storage_options: d
             raise ValueError(f"Folder {folder_path} does not exist")
         for use_consolidated in use_consolidated_options:
             try:
-                root = zarr.open(str(folder_path), mode=mode, use_consolidated=use_consolidated)
+                root = zarr.open(local_zarr_store(folder_path), mode=mode, use_consolidated=use_consolidated)
                 break
             except Exception as e:
                 exception = e
@@ -266,7 +266,7 @@ class ZarrRecordingExtractor(BaseRecording):
         **kwargs,
     ):
         folder_path = create_zarr_path_for_write(folder_path, overwrite=overwrite)
-        zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
+        zarr_root = zarr.open(local_zarr_store(folder_path), mode="w", storage_options=storage_options)
         zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrRecordingExtractor)
         add_recording_to_zarr_group(recording, zarr_root, **kwargs)
         return ZarrRecordingExtractor(folder_path, storage_options=storage_options)
@@ -676,7 +676,7 @@ class ZarrSortingExtractor(BaseSorting):
         Write a sorting extractor to zarr format.
         """
         folder_path = create_zarr_path_for_write(folder_path, overwrite=overwrite)
-        zarr_root = zarr.open(str(folder_path), mode="w", storage_options=storage_options)
+        zarr_root = zarr.open(local_zarr_store(folder_path), mode="w", storage_options=storage_options)
         zarr_root.attrs["zarr_class_info"] = retrieve_importing_provenance(ZarrSortingExtractor)
         add_sorting_to_zarr_group(sorting, zarr_root, relative_to=relative_to, **kwargs)
         return ZarrSortingExtractor(folder_path, storage_options=storage_options)
