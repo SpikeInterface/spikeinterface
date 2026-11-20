@@ -791,7 +791,7 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
             job_kwargs=job_kwargs,
             mode=mode,
             noise_levels_kwargs=noise_levels_kwargs,
-            seed=seed,
+            seed=self._kwargs["seed"],  # the parent draws one if None
             artifact_periods=artifact_periods,
             apodization=apodization,
         )

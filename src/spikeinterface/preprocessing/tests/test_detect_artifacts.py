@@ -328,6 +328,7 @@ def test_detect_saturation_signed():
 
 def test_detect_and_remove_artifacts():
     import scipy.signal
+    from spikeinterface.core import load
 
     num_chans = 32
     sampling_frequency = 30000
@@ -374,6 +375,16 @@ def test_detect_and_remove_artifacts():
         job_kwargs=job_kwargs,
     )
     assert np.array_equal(cleaned.get_traces(), cleaned_with_detect.get_traces())
+
+    # without a seed, a copy rebuilt from the recording's dict generates the same noise
+    filled = detect_and_remove_artifacts(
+        recording.astype("float32"),
+        method="saturation",
+        method_kwargs=dict(saturation_threshold_uV=sat_value * 0.98),
+        job_kwargs=job_kwargs,
+        mode="noise",
+    )
+    assert np.array_equal(filled.get_traces(), load(filled.to_dict()).get_traces())
 
 
 def test_detect_and_remove_artifacts_json_roundtrip(tmp_path):

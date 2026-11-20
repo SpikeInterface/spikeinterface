@@ -1,4 +1,4 @@
-from spikeinterface.core import generate_recording
+from spikeinterface.core import generate_recording, load
 from spikeinterface.core import get_noise_levels
 from spikeinterface.core.base import base_period_dtype
 from spikeinterface.preprocessing import silence_periods
@@ -31,6 +31,9 @@ def test_silence():
     traces_in1 = rec1.get_traces(segment_index=0, start_frame=5000, end_frame=6000)
     assert np.abs((np.std(traces_in0, axis=0) - noise_levels) < 0.1).sum()
     assert np.abs((np.std(traces_in1, axis=0) - noise_levels)).sum() < 0.1
+    # without a seed, a copy rebuilt from the recording's dict generates the same noise
+    rec2 = silence_periods(rec, periods=periods, mode="noise")
+    assert np.array_equal(rec2.get_traces(0, 0, 1000), load(rec2.to_dict()).get_traces(0, 0, 1000))
     data1 = rec.get_traces(0, 400, 600)
     data2 = rec.get_traces(0, 500, 700)
     assert np.all(data1[100:] == data2[:100])
