@@ -1,6 +1,7 @@
 import numpy as np
 
 from spikeinterface.core import NumpyRecording, generate_recording, MockRecording
+from probeinterface import Probe
 
 from spikeinterface.core.binaryrecordingextractor import BinaryRecordingExtractor
 
@@ -172,6 +173,24 @@ def test_get_closest_channels():
     rec = generate_recording(num_channels=32, sampling_frequency=1000.0, durations=[0.1])
     closest_channels_inds, distances = get_closest_channels(rec)
     closest_channels_inds, distances = get_closest_channels(rec, num_channels=4)
+
+
+def test_channel_distances_can_use_3d_probe_geometry():
+    recording = NumpyRecording(np.zeros((10, 3), dtype="float32"), sampling_frequency=30_000)
+    probe = Probe(ndim=3, si_units="um")
+    probe.set_contacts(
+        positions=np.array([[0, 0, 0], [50, 0, 50], [100, 0, 0]]),
+        plane_axes=np.broadcast_to(np.eye(3)[:2], (3, 2, 3)),
+    )
+    probe.set_device_channel_indices(np.arange(3))
+    recording.set_probe(probe)
+
+    assert get_channel_distances(recording)[0, 1] == 50
+    assert np.isclose(get_channel_distances(recording, axes="xyz")[0, 1], np.sqrt(5000))
+    _, distances_xy = get_closest_channels(recording)
+    _, distances_xyz = get_closest_channels(recording, axes="xyz")
+    assert distances_xy[0, 0] == 50
+    assert np.isclose(distances_xyz[0, 0], np.sqrt(5000))
 
 
 def test_get_noise_levels():
