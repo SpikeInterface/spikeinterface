@@ -1,7 +1,8 @@
 import pytest
 
 
-from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection, TemporalPCADenoising
+from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCAProjection
+from spikeinterface.sortingcomponents.waveforms.denoising.method_list import TemporalPCADenoiser
 from spikeinterface.core.node_pipeline import (
     PeakRetriever,
     ExtractDenseWaveforms,
@@ -67,7 +68,7 @@ def test_pca_denoising(generated_recording, detected_peaks, model_path_of_traine
     extract_waveforms = ExtractDenseWaveforms(
         recording=recording, parents=[peak_retriever], ms_before=ms_before, ms_after=ms_after, return_output=True
     )
-    pca_denoising = TemporalPCADenoising(
+    pca_denoising = TemporalPCADenoiser(
         recording=recording, model_folder_path=model_folder_path, parents=[peak_retriever, extract_waveforms]
     )
     pipeline_nodes = [peak_retriever, extract_waveforms, pca_denoising]
@@ -97,7 +98,7 @@ def test_pca_denoising_sparse(generated_recording, detected_peaks, model_path_of
         radius_um=radius_um,
         return_output=True,
     )
-    pca_denoising = TemporalPCADenoising(
+    pca_denoising = TemporalPCADenoiser(
         recording=recording, model_folder_path=model_folder_path, parents=[peak_retriever, extract_waveforms]
     )
     pipeline_nodes = [peak_retriever, extract_waveforms, pca_denoising]

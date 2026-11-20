@@ -1,10 +1,5 @@
 import numpy as np
 
-from spikeinterface.core.node_pipeline import (
-    find_parent_of_type,
-    WaveformsNode,
-)
-
 from spikeinterface.postprocessing.unit_locations import dtype_localize_by_method
 
 from .base import LocalizeBase
@@ -32,13 +27,6 @@ class LocalizeCenterOfMass(LocalizeBase):
 
         assert feature in ["ptp", "mean", "energy", "peak_voltage"], f"{feature} is not a valid feature"
         self.feature = feature
-
-        # Find waveform extractor in the parents
-        waveform_extractor = find_parent_of_type(self.parents, WaveformsNode)
-        if waveform_extractor is None:
-            raise TypeError(f"{self.name} should have a single {WaveformsNode.__name__} in its parents")
-
-        self.nbefore = waveform_extractor.nbefore
         self._kwargs.update(dict(feature=feature))
 
     def compute(self, traces, peaks, waveforms):
@@ -49,7 +37,7 @@ class LocalizeCenterOfMass(LocalizeBase):
             (chan_inds,) = np.nonzero(self.neighbours_mask[main_chan])
             local_contact_locations = self.contact_locations[chan_inds, :]
 
-            wf = waveforms[idx][:, :, chan_inds]
+            wf = self.get_sparse_waveform(waveforms[idx], chan_inds, main_chan)
 
             if self.feature == "ptp":
                 wf_data = np.ptp(wf, axis=1)

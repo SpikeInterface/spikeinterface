@@ -8,7 +8,7 @@ import numpy as np
 from spikeinterface.sortingcomponents.peak_detection import detect_peaks
 
 from spikeinterface.core.node_pipeline import ExtractDenseWaveforms, ExtractSparseWaveforms
-from spikeinterface.sortingcomponents.waveforms.temporal_pca import TemporalPCADenoising
+from spikeinterface.sortingcomponents.waveforms.denoising.temporal_pca_denoiser import TemporalPCADenoiser
 from spikeinterface.sortingcomponents.peak_detection.iterative import IterativePeakDetector
 from spikeinterface.sortingcomponents.peak_detection.by_channel import ByChannelPeakDetector, ByChannelTorchPeakDetector
 from spikeinterface.sortingcomponents.peak_detection.locally_exclusive import (
@@ -80,7 +80,7 @@ def pca_model_folder_path(recording, job_kwargs, tmp_path):
     n_peaks = 100  # Heuristic for extracting around 1k waveforms per channel
     peak_selection_params = dict(method="uniform", select_per_channel=True, n_peaks=n_peaks)
     detect_peaks_params = dict(method="locally_exclusive", peak_sign="neg", detect_threshold=5, exclude_sweep_ms=1.0)
-    TemporalPCADenoising.fit(
+    TemporalPCADenoiser.fit(
         recording=recording,
         model_folder_path=model_folder_path,
         n_components=n_components,
@@ -125,7 +125,7 @@ def test_iterative_peak_detection(recording, job_kwargs, pca_model_folder_path, 
     ms_after = 1.0
     waveform_extraction_node = ExtractDenseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after)
 
-    waveform_denoising_node = TemporalPCADenoising(
+    waveform_denoising_node = TemporalPCADenoiser(
         recording=recording,
         parents=[waveform_extraction_node],
         model_folder_path=pca_model_folder_path,
@@ -170,7 +170,7 @@ def test_iterative_peak_detection_sparse(recording, job_kwargs, pca_model_folder
         radius_um=radius_um,
     )
 
-    waveform_denoising_node = TemporalPCADenoising(
+    waveform_denoising_node = TemporalPCADenoiser(
         recording=recording,
         parents=[waveform_extraction_node],
         model_folder_path=pca_model_folder_path,
@@ -210,7 +210,7 @@ def test_iterative_peak_detection_thresholds(recording, job_kwargs, pca_model_fo
 
     waveform_extraction_node = ExtractDenseWaveforms(recording=recording, ms_before=ms_before, ms_after=ms_after)
 
-    waveform_denoising_node = TemporalPCADenoising(
+    waveform_denoising_node = TemporalPCADenoiser(
         recording=recording,
         parents=[waveform_extraction_node],
         model_folder_path=pca_model_folder_path,

@@ -34,6 +34,7 @@ filters_type = zarr.abc.codec.ArrayArrayCodec | list[zarr.abc.codec.ArrayArrayCo
 class PipelineNode:
     # If False (general case) then compute(traces_chunk, *node_input_args)
     # If True then compute(traces_chunk, start_frame, end_frame, segment_index, max_margin, *node_input_args)
+    name = None
     _compute_has_extended_signature = False
 
     def __init__(
@@ -398,6 +399,7 @@ class WaveformsNode(PipelineNode):
             self.ms_after = ms_after
             self.nafter = ms_to_samples(ms_after, sampling_frequency)
         self.neighbours_mask = None
+        self.sparse_waveforms = False
 
         self._kwargs.update(
             dict(
@@ -530,6 +532,7 @@ class ExtractSparseWaveforms(WaveformsNode):
             self.radius_um = radius_um
             self.neighbours_mask = self.channel_distance <= radius_um
         self.max_num_chans = np.max(np.sum(self.neighbours_mask, axis=1))
+        self.sparse_waveforms = True
 
         self._kwargs.update(
             dict(
