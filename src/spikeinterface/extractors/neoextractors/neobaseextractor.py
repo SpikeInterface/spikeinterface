@@ -230,9 +230,9 @@ class NeoBaseRecordingExtractor(_NeoBaseExtractor, BaseRecording):
 
         if use_names_as_ids:
             chan_names = signal_channels["name"]
-            assert (
-                chan_names.size == np.unique(chan_names).size
-            ), "use_names_as_ids=True is not possible, channel names are not unique"
+            assert chan_names.size == np.unique(chan_names).size, (
+                "use_names_as_ids=True is not possible, channel names are not unique"
+            )
             chan_ids = chan_names
         else:
             # unique in all cases
@@ -577,9 +577,7 @@ class NeoBaseSortingExtractor(_NeoBaseExtractor, BaseSorting):
 
         if len(unique_t_starts) == 0:
             t_start = None
-            warning_message = (
-                "No stream ids with corresponding sampling frequency found \n " "Setting t_start to None. \n"
-            )
+            warning_message = "No stream ids with corresponding sampling frequency found \n Setting t_start to None. \n"
             warnings.warn(warning_message)
 
         if len(unique_t_starts) == 1:
@@ -671,9 +669,9 @@ class NeoBaseEventExtractor(_NeoBaseExtractor, BaseEvent):
 
         if use_names_as_ids:
             channel_ids = event_channels["name"]
-            assert (
-                event_channels.size == np.unique(channel_ids).size
-            ), "use_name_as_ids=True is not possible, channel names are not unique"
+            assert event_channels.size == np.unique(channel_ids).size, (
+                "use_name_as_ids=True is not possible, channel names are not unique"
+            )
         else:
             channel_ids = event_channels["id"]
 

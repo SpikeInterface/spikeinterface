@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Any
 import numpy as np
 
 from spikeinterface.core import Templates, estimate_templates, fix_job_kwargs

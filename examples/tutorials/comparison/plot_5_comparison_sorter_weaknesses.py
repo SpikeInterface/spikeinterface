@@ -34,8 +34,6 @@ We duplicate the results and modify it a bit to inject some "errors":
 ##############################################################################
 # Import
 
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 
 from spikeinterface.comparison import compare_sorter_to_ground_truth

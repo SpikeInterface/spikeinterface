@@ -82,7 +82,6 @@ class MetricsBaseWidget(BaseWidget):
         BaseWidget.__init__(self, plot_data, backend=backend, **backend_kwargs)
 
     def plot_matplotlib(self, data_plot, **backend_kwargs):
-        import matplotlib.pyplot as plt
         from .utils_matplotlib import make_mpl_figure
 
         dp = to_attr(data_plot)
@@ -376,9 +375,9 @@ class MetricsHistogramsWidget(BaseWidget):
             for category, subdict in thresholds.items():
                 assert isinstance(subdict, dict), "Each category in thresholds should be a dict of metric thresholds."
                 for metric_name, thresh in subdict.items():
-                    assert isinstance(thresh, dict) and (
-                        "greater" in thresh or "less" in thresh
-                    ), "Each threshold entry should be a dict with 'greater' and/or 'less' keys."
+                    assert isinstance(thresh, dict) and ("greater" in thresh or "less" in thresh), (
+                        "Each threshold entry should be a dict with 'greater' and/or 'less' keys."
+                    )
                     flat_thresholds[metric_name] = thresh
 
         if metrics_to_plot is None:

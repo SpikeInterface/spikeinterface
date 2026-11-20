@@ -1,7 +1,6 @@
 import warnings
 
 import numpy as np
-from spikeinterface.core.core_tools import check_json
 
 
 def get_spatial_windows(
@@ -58,8 +57,6 @@ def get_spatial_windows(
     Here by default we use gaussian window.
 
     """
-    n = spatial_bin_centers.size
-
     if rigid:
         # win_shape = 'rect' is forced
         windows, window_centers = get_rigid_windows(spatial_bin_centers)

@@ -1,13 +1,10 @@
 import numpy as np
 
 
+from spikeinterface.core.sorting_tools import apply_merges_to_sorting
 from spikeinterface.sorters import run_sorter
-
 from spikeinterface.comparison import GroundTruthComparison
 from spikeinterface.sortingcomponents.motion.motion_interpolation import InterpolateMotionRecording
-from spikeinterface.curation import MergeUnitsSorting
-
-
 from .benchmark_base import Benchmark, BenchmarkStudy
 
 
@@ -77,7 +74,7 @@ class MotionInterpolationBenchmark(Benchmark):
             if merge_ids.size > 1:
                 to_merge.append(list(merge_ids))
 
-        merged_sporting = MergeUnitsSorting(sorting, to_merge)
+        merged_sporting = apply_merges_to_sorting(sorting, to_merge)
         comparison_merged = GroundTruthComparison(self.gt_sorting, merged_sporting, exhaustive_gt=True)
 
         self.result["comparison_merged"] = comparison_merged
@@ -95,7 +92,6 @@ class MotionInterpolationBenchmark(Benchmark):
 
 
 class MotionInterpolationStudy(BenchmarkStudy):
-
     benchmark_class = MotionInterpolationBenchmark
 
     def create_benchmark(self, key):
@@ -133,7 +129,6 @@ class MotionInterpolationStudy(BenchmarkStudy):
 
         if mode == "ordered_accuracy":
             if ax is None:
-
                 fig, ax = plt.subplots(figsize=figsize)
             else:
                 fig = ax.figure
