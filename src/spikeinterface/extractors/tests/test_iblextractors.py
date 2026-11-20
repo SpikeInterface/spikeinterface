@@ -1,4 +1,3 @@
-import sys
 from re import escape
 from unittest import TestCase
 
@@ -27,7 +26,7 @@ class TestDefaultIblRecordingExtractorApBand(TestCase):
                 silent=True,
                 cache_dir=None,
             )
-        except:
+        except Exception:
             print("Skipping test due to server being down.")
             pytest.skip("Skipping test due to server being down.")
         try:
@@ -124,7 +123,7 @@ class TestIblStreamingRecordingExtractorApBandWithLoadSyncChannel(TestCase):
                 silent=True,
                 cache_dir=None,
             )
-        except:
+        except Exception:
             pytest.skip("Skipping test due to server being down.")
         cls.recording = read_ibl_recording(eid=cls.eid, stream_name="probe00.ap", load_sync_channel=True, one=cls.one)
         cls.small_scaled_trace = cls.recording.get_traces(start_frame=5, end_frame=26, return_in_uV=True)
@@ -200,7 +199,7 @@ class TestIblSortingExtractor(TestCase):
                 silent=True,
                 cache_dir=None,
             )
-        except:
+        except Exception:
             pytest.skip("Skipping test due to server being down.")
         sorting = read_ibl_sorting(pid=PID, one=one, revision="2023-12-05")
         assert len(sorting.unit_ids) == 733

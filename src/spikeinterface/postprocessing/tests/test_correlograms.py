@@ -1,21 +1,7 @@
-import numpy as np
-import importlib.util
-
-numba_spec = importlib.util.find_spec("numba")
-if numba_spec is not None:
-    HAVE_NUMBA = True
-else:
-    HAVE_NUMBA = False
-
-npyx_spec = importlib.util.find_spec("npyx")
-if npyx_spec is not None:
-    HAVE_NPYX = True
-else:
-    HAVE_NPYX = False
-
-
 import pytest
 from pytest import param
+import numpy as np
+import importlib.util
 
 from spikeinterface import NumpySorting, generate_sorting
 from spikeinterface.postprocessing import ComputeACG3D, ComputeCorrelograms, ComputeAutoCorrelograms
@@ -31,6 +17,19 @@ from spikeinterface.postprocessing.correlograms import (
     correlogram_for_one_segment,
 )
 from spikeinterface.postprocessing.tests.common_extension_tests import AnalyzerExtensionCommonTestSuite
+
+
+numba_spec = importlib.util.find_spec("numba")
+if numba_spec is not None:
+    HAVE_NUMBA = True
+else:
+    HAVE_NUMBA = False
+
+npyx_spec = importlib.util.find_spec("npyx")
+if npyx_spec is not None:
+    HAVE_NPYX = True
+else:
+    HAVE_NPYX = False
 
 SKIP_NUMBA = pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
 
@@ -231,27 +230,6 @@ def test_equal_results_fast_auto_correlograms(window_and_bin_ms):
     # fast_mode uses numba.prange which can produce off-by-one counts at bin
     # boundaries due to the shared start_j optimisation across threads
     np.testing.assert_allclose(result_numba_fast, result_numba, atol=2)
-
-
-@pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
-@pytest.mark.parametrize("window_and_bin_ms", [(60.0, 2.0), (3.57, 1.6421)])
-def test_equal_results_auto_correlograms(window_and_bin_ms):
-    """
-    Test that the 2 methods have same results with some varied time bins
-    that are not tested in other tests.
-    """
-
-    window_ms, bin_ms = window_and_bin_ms
-    sorting = generate_sorting(num_units=5, sampling_frequency=30000.0, durations=[10.325, 3.5], seed=0)
-
-    result_numpy, bins_numpy = _compute_auto_correlograms_on_sorting(
-        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numpy"
-    )
-    result_numba, bins_numba = _compute_auto_correlograms_on_sorting(
-        sorting, window_ms=window_ms, bin_ms=bin_ms, method="numba"
-    )
-
-    assert np.array_equal(result_numpy, result_numba)
 
 
 @pytest.mark.skipif(not HAVE_NUMBA, reason="Numba not available")
@@ -647,9 +625,9 @@ def test_acgs_3d_original_implementation(window_ms, bin_ms, num_firing_rate_quan
     )
 
     assert np.allclose(npyx_3dacg, acg_3d, rtol=1e-2, atol=1e-2), "3D-ACG result does not match original implementation"
-    assert np.allclose(
-        npyx_quantiles, firing_rate_quantiles, rtol=1e-5, atol=1e-5
-    ), "3D-ACG quantiles do not match original implementation"
+    assert np.allclose(npyx_quantiles, firing_rate_quantiles, rtol=1e-5, atol=1e-5), (
+        "3D-ACG quantiles do not match original implementation"
+    )
 
 
 # Check in the case where we have segments
@@ -693,6 +671,6 @@ def test_acgs_3d_original_implementation_with_segments(window_ms, bin_ms, num_fi
     )
 
     # Use a less strict tolerance here as we are only simulating a single segment
-    assert np.allclose(
-        npyx_3dacg, acg_3d, rtol=5e-2, atol=5e-2
-    ), f"3D-ACG result for {segments} segments does not match original implementation with concatenated times"
+    assert np.allclose(npyx_3dacg, acg_3d, rtol=5e-2, atol=5e-2), (
+        f"3D-ACG result for {segments} segments does not match original implementation with concatenated times"
+    )

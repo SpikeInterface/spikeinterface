@@ -52,7 +52,7 @@ class CombinatoSorter(BaseSorter):
     }
 
     _params_description = {
-        "detect_sign": "Use -1 (negative) or 1 (positive) depending " "on the sign of the spikes in the recording",
+        "detect_sign": "Use -1 (negative) or 1 (positive) depending on the sign of the spikes in the recording",
         "MaxClustersPerTemp": "How many clusters can be selected at one temperature",
         "MinSpikesPerClusterMultiSelect": "How many spikes does a cluster need to be selected",
         "RecursiveDepth": "How many clustering recursions should be run (1 do not recurse)",
@@ -125,7 +125,6 @@ class CombinatoSorter(BaseSorter):
         # Generate h5 files in the dataset directory
         chan_ids = recording.get_channel_ids()
         assert len(chan_ids) == 1, "combinato is a single-channel recording"
-        chid = chan_ids[0]
         vcFile_h5 = str(sorter_output_folder / ("recording.h5"))
         with h5py.File(vcFile_h5, mode="w") as f:
             f.create_dataset("sr", data=[recording.get_sampling_frequency()], dtype="float32")

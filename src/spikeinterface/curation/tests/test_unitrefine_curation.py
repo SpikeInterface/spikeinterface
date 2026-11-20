@@ -1,6 +1,5 @@
 import pytest
 
-from spikeinterface.curation.tests.common import sorting_analyzer_for_unitrefine_curation, trained_pipeline_path
 from spikeinterface.curation import unitrefine_label_units
 
 
@@ -49,7 +48,7 @@ def test_unitrefine_label_units_hf(sorting_analyzer_for_unitrefine_curation):
 
     # test passing none
     with pytest.raises(ValueError):
-        labels = unitrefine_label_units(
+        _ = unitrefine_label_units(
             sorting_analyzer_for_unitrefine_curation,
             noise_neural_classifier=None,
             sua_mua_classifier=None,
@@ -57,14 +56,14 @@ def test_unitrefine_label_units_hf(sorting_analyzer_for_unitrefine_curation):
 
     # test warnings when unexpected labels are returned
     with pytest.warns(UserWarning):
-        labels = unitrefine_label_units(
+        _ = unitrefine_label_units(
             sorting_analyzer_for_unitrefine_curation,
             noise_neural_classifier="SpikeInterface/UnitRefine_sua_mua_classifier_lightweight",
             sua_mua_classifier=None,
         )
 
     with pytest.warns(UserWarning):
-        labels = unitrefine_label_units(
+        _ = unitrefine_label_units(
             sorting_analyzer_for_unitrefine_curation,
             noise_neural_classifier=None,
             sua_mua_classifier="SpikeInterface/UnitRefine_noise_neural_classifier_lightweight",
@@ -79,13 +78,13 @@ def test_unitrefine_label_units_with_local_models(sorting_analyzer_for_unitrefin
     sorting_analyzer_for_unitrefine_curation.compute("quality_metrics")
 
     # test passing model folder
-    labels = unitrefine_label_units(
+    _ = unitrefine_label_units(
         sorting_analyzer_for_unitrefine_curation,
         noise_neural_classifier=trained_pipeline_path,
     )
 
     # test passing model folder
-    labels = unitrefine_label_units(
+    _ = unitrefine_label_units(
         sorting_analyzer_for_unitrefine_curation,
         noise_neural_classifier=trained_pipeline_path / "best_model.skops",
     )

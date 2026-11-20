@@ -348,15 +348,15 @@ class OpenEphysBinaryRecordingExtractor(NeoBaseRecordingExtractor):
                 if load_sync_timestamps:
                     if (stream_folder / "sample_numbers.npy").is_file():
                         # OE version>=v0.6
-                        sync_times = np.load(stream_folder / "timestamps.npy")
+                        sync_times = np.load(stream_folder / "timestamps.npy", mmap_mode="r")
                     elif (stream_folder / "synchronized_timestamps.npy").is_file():
                         # version<v0.6
-                        sync_times = np.load(stream_folder / "synchronized_timestamps.npy")
+                        sync_times = np.load(stream_folder / "synchronized_timestamps.npy", mmap_mode="r")
                     else:
                         sync_times = None
-                    try:
-                        self.set_times(times=sync_times, segment_index=segment_index)
-                    except:
+                    if sync_times is not None and len(sync_times) == self.segments[segment_index].get_num_samples():
+                        self.segments[segment_index]._time_vector = sync_times
+                    else:
                         warnings.warn(f"Could not load synchronized timestamps for {stream_name}")
 
             self.annotate(experiment_name=f"experiment{exp_id}")

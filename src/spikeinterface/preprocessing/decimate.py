@@ -70,7 +70,7 @@ class DecimateRecording(BasePreprocessor):
         # Original sampling frequency
         self._orig_samp_freq = recording.get_sampling_frequency()
         if not isinstance(decimation_factor, int) or decimation_factor <= 0:
-            raise ValueError(f"Expecting strictly positive integer for `decimation_factor` arg")
+            raise ValueError("Expecting strictly positive integer for `decimation_factor` arg")
         self._decimation_factor = decimation_factor
         if not isinstance(decimation_offset, int) or decimation_offset < 0:
             raise ValueError("Expecting a nonnegative integer for `decimation_offset` arg")
@@ -79,8 +79,8 @@ class DecimateRecording(BasePreprocessor):
         )
         if decimation_offset >= decimation_factor or decimation_offset >= parent_min_n_samp:
             raise ValueError(
-                f"Expecting `decimation_offset` < `decimation_factor` and `decimation_offset` < parent_segment.get_num_samples() for all segments. "
-                f"Consider combining DecimateRecording with FrameSliceRecording for fine control on the recording start/end frames."
+                "Expecting `decimation_offset` < `decimation_factor` and `decimation_offset` < parent_segment.get_num_samples() for all segments. "
+                "Consider combining DecimateRecording with FrameSliceRecording for fine control on the recording start/end frames."
             )
         self._decimation_offset = decimation_offset
         decimated_sampling_frequency = self._orig_samp_freq / self._decimation_factor
@@ -179,9 +179,7 @@ class DecimateRecordingSegment(BaseRecordingSegment):
                 parent_start_frame,
                 parent_end_frame,
                 channel_indices,
-            )[
-                :: self._decimation_factor
-            ].astype(self._dtype)
+            )[:: self._decimation_factor].astype(self._dtype)
 
         return get_polyphase_resampled_traces(
             self._parent_segment,

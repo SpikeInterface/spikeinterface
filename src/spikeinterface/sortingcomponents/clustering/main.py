@@ -1,4 +1,4 @@
-from spikeinterface.core.job_tools import fix_job_kwargs, _shared_job_kwargs_doc
+from spikeinterface.core.job_tools import fix_job_kwargs
 
 import copy
 from ..tools import make_multi_method_doc
@@ -39,9 +39,9 @@ def find_clusters_from_peaks(
     """
     job_kwargs = fix_job_kwargs(job_kwargs)
 
-    assert (
-        method in clustering_methods
-    ), f"Method for clustering do not exists, should be in {list(clustering_methods.keys())}"
+    assert method in clustering_methods, (
+        f"Method for clustering do not exists, should be in {list(clustering_methods.keys())}"
+    )
 
     method_class = clustering_methods[method]
     params = copy.deepcopy(method_class._default_params.copy())

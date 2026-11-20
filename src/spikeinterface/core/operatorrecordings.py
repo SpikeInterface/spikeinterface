@@ -7,17 +7,17 @@ class BaseOperatorRecording(BaseRecording):
 
     def __init__(self, recording1, recording2, operator: str):
         assert operator in ["add", "subtract"], "Operator must be 'add' or 'subtract'"
-        assert all(
-            isinstance(rec, BaseRecording) for rec in [recording1, recording2]
-        ), "'recordings' must be a list of RecordingExtractor"
+        assert all(isinstance(rec, BaseRecording) for rec in [recording1, recording2]), (
+            "'recordings' must be a list of RecordingExtractor"
+        )
 
         rec_attrs2 = get_rec_attributes(recording2)
-        assert do_recording_attributes_match(
-            recording1, rec_attrs2
-        ), "Both recordings must have the same sampling frequency and channel ids"
-        assert self.are_times_kwargs_compatible(
-            recording1, recording2
-        ), "Both recordings must have the same time parameters"
+        assert do_recording_attributes_match(recording1, rec_attrs2), (
+            "Both recordings must have the same sampling frequency and channel ids"
+        )
+        assert self.are_times_kwargs_compatible(recording1, recording2), (
+            "Both recordings must have the same time parameters"
+        )
 
         channel_ids = recording1.channel_ids
         sampling_frequency = recording1.sampling_frequency

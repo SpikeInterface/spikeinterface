@@ -12,6 +12,7 @@ def test_toy_example():
     assert sorting.get_num_segments() == 1
 
     probe = rec.get_probe()
+    assert probe is not None
 
 
 if __name__ == "__main__":

@@ -1,5 +1,3 @@
-from typing import Literal
-
 import warnings
 import importlib.util
 
@@ -110,9 +108,6 @@ def compute_monopolar_triangulation(
         for i, unit_id in enumerate(unit_ids):
             chan_inds = sparsity.unit_id_to_channel_indices[unit_id]
             neighbours_mask[i, chan_inds] = True
-        enforce_decrease_radial_parents = make_radial_order_parents(contact_locations, neighbours_mask)
-
-        best_channels = sorting_analyzer_or_templates.get_main_channels(outputs="index", with_dict=True)
 
     unit_location = np.zeros((unit_ids.size, 4), dtype="float64")
     for i, unit_id in enumerate(unit_ids):

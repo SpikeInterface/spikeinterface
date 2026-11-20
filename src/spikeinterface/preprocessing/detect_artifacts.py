@@ -671,9 +671,9 @@ def detect_artifact_periods(
             Array with dtype ``artifact_dtype`` describing each detected artifact
             period.
     """
-    assert (
-        method in _method_to_function
-    ), f"Method {method} not recognized. Valid methods are: {_method_to_function.keys()}"
+    assert method in _method_to_function, (
+        f"Method {method} not recognized. Valid methods are: {_method_to_function.keys()}"
+    )
     if method_kwargs is None:
         method_kwargs = dict()
 
@@ -695,7 +695,7 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
         Available methods:
 
         * ``"envelope"``: detects artifacts as threshold crossings of a low-pass-filtered, rectified
-          channel envelope.
+            channel envelope.
         * ``"saturation"``: detects amplifier saturation events by a voltage threshold and/or a derivative threshold.
 
 

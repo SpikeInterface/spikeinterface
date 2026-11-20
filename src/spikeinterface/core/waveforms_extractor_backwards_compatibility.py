@@ -255,9 +255,9 @@ class MockWaveformExtractor:
         selected_spikes = []
         for segment_index in range(self.get_num_segments()):
             # inds = self.sorting_analyzer.get_selected_indices_in_spike_train(unit_id, segment_index)
-            assert self.sorting_analyzer.has_extension(
-                "random_spikes"
-            ), "get_sampled_indices() requires the 'random_spikes' extension."
+            assert self.sorting_analyzer.has_extension("random_spikes"), (
+                "get_sampled_indices() requires the 'random_spikes' extension."
+            )
             inds = self.sorting_analyzer.get_extension("random_spikes").get_selected_indices_in_spike_train(
                 unit_id, segment_index
             )
@@ -281,9 +281,9 @@ class MockWaveformExtractor:
         ext = self.sorting_analyzer.get_extension("waveforms")
         unit_index = self.sorting.id_to_index(unit_id)
 
-        assert self.sorting_analyzer.has_extension(
-            "random_spikes"
-        ), "get_sampled_indices() requires the 'random_spikes' extension."
+        assert self.sorting_analyzer.has_extension("random_spikes"), (
+            "get_sampled_indices() requires the 'random_spikes' extension."
+        )
 
         some_spikes = self.sorting_analyzer.get_extension("random_spikes").get_random_spikes()
 
@@ -291,9 +291,9 @@ class MockWaveformExtractor:
         wfs = ext.data["waveforms"][spike_mask, :, :]
 
         if sparsity is not None:
-            assert (
-                self.sorting_analyzer.sparsity is None
-            ), "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
+            assert self.sorting_analyzer.sparsity is None, (
+                "Waveforms are alreayd sparse! Cannot apply an additional sparsity."
+            )
             wfs = wfs[:, :, sparsity.mask[self.sorting.id_to_index(unit_id)]]
 
         if force_dense:
@@ -475,12 +475,12 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
     if (folder / "recording.json").exists():
         try:
             recording = load(folder / "recording.json", base_folder=folder)
-        except:
+        except Exception:
             pass
     elif (folder / "recording.pickle").exists():
         try:
             recording = load(folder / "recording.pickle", base_folder=folder)
-        except:
+        except Exception:
             pass
 
     # sorting
@@ -505,7 +505,6 @@ def _read_old_waveforms_extractor_binary(folder, sorting):
     # need to concatenate sampled_index and order it
     waveform_folder = folder / "waveforms"
     if waveform_folder.exists():
-
         spikes = sorting.to_spike_vector()
         random_spike_mask = np.zeros(spikes.size, dtype="bool")
 
@@ -686,7 +685,7 @@ def make_ext_params_up_to_date(ext, old_params, new_params):
 #     try:
 #         recording_dict = waveforms_root.attrs["recording"]
 #         recording = load(recording_dict, base_folder=folder)
-#     except:
+#     except Exception:
 #         pass
 
 #     # sorting

@@ -41,8 +41,6 @@ from .amplitude_scalings import compute_amplitude_scalings, ComputeAmplitudeScal
 
 from .alignsorting import align_sorting, AlignSortingExtractor
 
-from .noise_level import compute_noise_levels, ComputeNoiseLevels
-
 from .valid_unit_periods import (
     ComputeValidUnitPeriods,
     compute_valid_unit_periods,
