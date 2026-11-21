@@ -108,14 +108,14 @@ class SilencedPeriodsRecording(BasePreprocessor):
                 random_slices_kwargs = noise_levels_kwargs.pop("random_slices_kwargs", {}).copy()
                 random_slices_kwargs["seed"] = seed
                 noise_levels = get_noise_levels(
-                    recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs
+                    recording, return_in_uV=False, random_slices_kwargs=random_slices_kwargs, **noise_levels_kwargs
                 )
 
             mock_noise = MockRecording(
                 num_channels=recording.get_num_channels(),
                 sampling_frequency=recording.sampling_frequency,
                 durations=[recording.select_segments(i).get_duration() for i in range(recording.get_num_segments())],
-                dtype=recording.dtype,
+                dtype=recording.dtype if recording.dtype in (np.float32, np.float64) else "float32",
                 seed=seed,
                 strategy="on_the_fly",
                 noise_block_size=int(recording.sampling_frequency),

@@ -735,8 +735,8 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
             - "noise": The periods are filled with a gaussion noise that has the
                     same variance that the one in the recordings, on a per channel
                     basis
-            - "apodization": The periods zeroed, but are apodized with a cosine taper (using `apodization_samples`)
-        apodization_samples : int, default: 7
+            - "apodization": The periods zeroed, but are apodized with a cosine taper (using `apodization`)
+        apodization : int, default: 7
             The factor used for the cosine taper when mode is "apodization". Higher values create a wider taper.
         seed : int | None, default: None
             Random seed, if applicable. When ``method="envelope"``, used for chunk
@@ -778,9 +778,9 @@ class DetectAndRemoveArtifactsRecording(SilencedPeriodsRecording):
             recording,
             periods=artifact_periods,
             mode=mode,
-            noise_levels_kwargs=noise_levels_kwargs,
             seed=seed,
-            apodization=apodization,
+            apodization_samples=apodization,
+            **(noise_levels_kwargs or {}),
         )
 
         self._kwargs = dict(
