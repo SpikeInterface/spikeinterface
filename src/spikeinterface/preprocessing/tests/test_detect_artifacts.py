@@ -364,6 +364,16 @@ def test_detect_and_remove_artifacts():
     assert traces[sat_start + 100, 0] == 0, "Saturated samples should be zeroed"
     assert traces[0, 0] != 0, "Non-saturated samples should not be zeroed"
 
+    # noise mode on an int16 recording
+    filled = detect_and_remove_artifacts(
+        recording,
+        method="saturation",
+        method_kwargs=dict(saturation_threshold_uV=sat_value * 0.98),
+        job_kwargs=job_kwargs,
+        mode="noise",
+    )
+    assert filled.get_traces().dtype == recording.dtype
+
     # recording_to_detect: detect on raw recording, silence a separate (processed) recording
     # We use the same recording here just to exercise the code path
     cleaned_with_detect = detect_and_remove_artifacts(
