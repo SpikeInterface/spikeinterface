@@ -123,6 +123,29 @@ def test_highpass_spatial_filter_with_dead_channels():
     assert result.shape == traces.shape
 
 
+def test_highpass_spatial_filter_uses_noise_level_cache(monkeypatch):
+    """The spatial filter must route RMS cache decisions through get_noise_levels."""
+    import importlib
+
+    highpass_spatial_filter_module = importlib.import_module("spikeinterface.preprocessing.highpass_spatial_filter")
+    recording = generate_recording(num_channels=32, sampling_frequency=30000.0, durations=[0.5])
+    # Even an existing property must be checked against the requested sampling parameters.
+    recording.set_property("noise_level_rms_raw", np.ones(recording.get_num_channels()))
+    received_kwargs = {}
+
+    def fake_get_noise_levels(recording_arg, **kwargs):
+        received_kwargs.update(kwargs)
+        return np.ones(recording_arg.get_num_channels())
+
+    monkeypatch.setattr(highpass_spatial_filter_module, "get_noise_levels", fake_get_noise_levels)
+    sampling_kwargs = {"seed": 123, "num_chunks_per_segment": 3, "chunk_size": 100}
+    spre.highpass_spatial_filter(recording, n_channel_pad=2, random_slice_kwargs=sampling_kwargs)
+
+    assert received_kwargs["method"] == "rms"
+    assert received_kwargs["return_in_uV"] is False
+    assert received_kwargs["random_slices_kwargs"] == sampling_kwargs
+
+
 @pytest.mark.parametrize("dtype", [np.int16, np.float32, np.float64])
 def test_dtype_stability(dtype):
     """
