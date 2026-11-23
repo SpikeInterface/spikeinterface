@@ -9,6 +9,7 @@ import sys
 import threading
 import warnings
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from contextvars import ContextVar
 
 import numpy as np
 from threadpoolctl import threadpool_limits
@@ -65,7 +66,48 @@ job_keys = (
     "progress_bar",
     "mp_context",
     "max_threads_per_worker",
+    "per_step_job_kwargs",
 )
+
+# The `per_step_job_kwargs` of the running job. `TimeSeriesChunkExecutor` sets it in each worker and the preprocessing
+# steps read it when they are asked for traces.
+_per_step_job_kwargs = ContextVar("per_step_job_kwargs", default=None)
+
+
+def get_per_step_job_kwargs() -> dict | None:
+    return _per_step_job_kwargs.get()
+
+
+def get_step_chunk_size(options, time_series) -> int:
+    """
+    The number of samples a step computes at once, from its `chunk_size` or its `chunk_duration`.
+    """
+    if "chunk_size" in options:
+        return int(options["chunk_size"])
+    return chunk_duration_to_chunk_size(options["chunk_duration"], time_series)
+
+
+def check_per_step_job_kwargs(per_step_job_kwargs, time_series, chunk_size):
+    """
+    Check that `per_step_job_kwargs` names preprocessing functions, sets either `chunk_size` or `chunk_duration`,
+    and that no step is given more than the `chunk_size` of each job, which is the most a step can be asked for.
+    """
+    from spikeinterface.preprocessing.preprocessing_classes import _all_preprocesser_dict
+
+    step_names = [function.__name__ for function in _all_preprocesser_dict.values()]
+    for step_name, options in per_step_job_kwargs.items():
+        if step_name not in step_names:
+            raise ValueError(f"per_step_job_kwargs: '{step_name}' is not a preprocessing function")
+        if set(options) not in ({"chunk_size"}, {"chunk_duration"}):
+            raise ValueError(
+                f"per_step_job_kwargs: give either 'chunk_size' or 'chunk_duration', got {set(options)} for '{step_name}'"
+            )
+        if chunk_size is not None and get_step_chunk_size(options, time_series) > chunk_size:
+            raise ValueError(
+                f"per_step_job_kwargs: the chunk size of '{step_name}' is longer than the chunks of the job "
+                f"({chunk_size} samples)"
+            )
+
 
 # theses key are the same and should not be in th final dict
 _mutually_exclusive = (
@@ -419,6 +461,7 @@ class TimeSeriesChunkExecutor:
         job_name="",
         max_threads_per_worker=1,
         need_worker_index=False,
+        per_step_job_kwargs=None,
     ):
         self.time_series = time_series
         self.func = func
@@ -470,6 +513,10 @@ class TimeSeriesChunkExecutor:
 
         self.need_worker_index = need_worker_index
 
+        if per_step_job_kwargs:
+            check_per_step_job_kwargs(per_step_job_kwargs, self.time_series, self.chunk_size)
+        self.per_step_job_kwargs = per_step_job_kwargs
+
         if verbose:
             chunk_memory = self.get_chunk_memory()
             total_memory = chunk_memory * self.n_jobs
@@ -514,7 +561,13 @@ class TimeSeriesChunkExecutor:
         """
         Runs the defined jobs.
         """
+        token = _per_step_job_kwargs.set(self.per_step_job_kwargs)
+        try:
+            return self._run(slices)
+        finally:
+            _per_step_job_kwargs.reset(token)
 
+    def _run(self, slices):
         if slices is None:
             # TODO: rename
             slices = divide_time_series_into_chunks(self.time_series, self.chunk_size)
@@ -571,6 +624,7 @@ class TimeSeriesChunkExecutor:
                         self.need_worker_index,
                         lock,
                         array_pid,
+                        self.per_step_job_kwargs,
                     ),
                 ) as executor:
                     results = executor.map(process_function_wrapper, slices)
@@ -616,6 +670,7 @@ class TimeSeriesChunkExecutor:
                         thread_local_data,
                         self.need_worker_index,
                         lock,
+                        self.per_step_job_kwargs,
                     ),
                 ) as executor:
                     slices2 = [(thread_local_data,) + tuple(args) for args in slices]
@@ -665,8 +720,12 @@ class WorkerFuncWrapper:
 global _process_func_wrapper
 
 
-def process_worker_initializer(func, init_func, init_args, max_threads_per_worker, need_worker_index, lock, array_pid):
+def process_worker_initializer(
+    func, init_func, init_args, max_threads_per_worker, need_worker_index, lock, array_pid, per_step_job_kwargs
+):
     global _process_func_wrapper
+
+    _per_step_job_kwargs.set(per_step_job_kwargs)
 
     if need_worker_index:
         child_process = multiprocessing.current_process()
@@ -703,8 +762,9 @@ global _thread_started
 
 
 def thread_worker_initializer(
-    func, init_func, init_args, max_threads_per_worker, thread_local_data, need_worker_index, lock
+    func, init_func, init_args, max_threads_per_worker, thread_local_data, need_worker_index, lock, per_step_job_kwargs
 ):
+    _per_step_job_kwargs.set(per_step_job_kwargs)
 
     if need_worker_index:
         lock.acquire()
