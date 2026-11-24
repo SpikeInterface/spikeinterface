@@ -870,7 +870,7 @@ def compute_cross_contaminations(analyzer, pair_mask, cc_thresh, refractory_peri
     ----------
     analyzer : SortingAnalyzer
         The analyzer to look at
-    CC_treshold : float, default: 0.1
+    cc_thresh : float, default: 0.1
         The threshold on the cross-contamination.
         Any pair above this threshold will not be considered.
     refractory_period : array/list/tuple of 2 floats

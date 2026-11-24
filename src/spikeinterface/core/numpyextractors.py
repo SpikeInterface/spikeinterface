@@ -414,7 +414,7 @@ class NumpySorting(BaseSorting):
 
         Parameters
         ----------
-        dict_list : list of dict
+        units_dict_list : list of dict
         """
         if isinstance(units_dict_list, dict):
             units_dict_list = [units_dict_list]

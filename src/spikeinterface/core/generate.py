@@ -513,7 +513,7 @@ class TransformSorting(BaseSorting):
 
         sorting1 : BaseSorting
             The first sorting
-        dict_list : list[dict] | dict
+        units_dict_list : list[dict] | dict
             A list of dict with unit_ids as keys and spike times as values.
         refractory_period_ms : float, default: None
             The refractory period violation to prevent duplicates and/or unphysiological addition

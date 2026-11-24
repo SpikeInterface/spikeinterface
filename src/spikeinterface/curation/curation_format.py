@@ -31,7 +31,7 @@ def curation_label_to_vectors(curation_dict_or_model: dict | Curation):
 
     Parameters
     ----------
-    curation_dict : dict or Curation
+    curation_dict_or_model : dict or Curation
         A curation dictionary or model
 
     Returns
@@ -80,7 +80,7 @@ def curation_label_to_dataframe(curation_dict_or_model: dict | Curation):
 
     Parameters
     ----------
-    curation_dict : dict
+    curation_dict_or_model : dict
         A curation dictionary
 
     Returns
