@@ -34,7 +34,7 @@ def compress_templates(
 
     Parameters
     ----------
-    templates : ndarray (num_templates, num_samples, num_channels)
+    templates_array : ndarray (num_templates, num_samples, num_channels)
         Spike template waveforms.
     approx_rank : int
         Rank of the compressed template matrices.

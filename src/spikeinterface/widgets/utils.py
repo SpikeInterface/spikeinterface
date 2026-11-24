@@ -308,7 +308,7 @@ def make_units_table_from_analyzer(
 
     Parameters
     ----------
-    sorting_analyzer : SortingAnalyzer
+    analyzer : SortingAnalyzer
         The SortingAnalyzer object
     extra_properties : None | dict
         Extra columns given as dict.

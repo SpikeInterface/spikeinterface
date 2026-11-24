@@ -610,7 +610,7 @@ class BaseExtractor:
 
         Parameters
         ----------
-        d: dictionary
+        dictionary : dict
             Python dictionary
         base_folder: str, Path, or None
             If given, the parent folder of the file and folder paths
