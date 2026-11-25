@@ -39,6 +39,7 @@ class FilterRecording(BasePreprocessor):
         For filter application:
             * scipy.signal.filtfilt or scipy.signal.sosfiltfilt when direction = "forward-backward"
             * scipy.signal.lfilter or scipy.signal.sosfilt when direction = "forward" or "backward"
+            * overlap-save convolution with `taps`, as in ``fir_filter``, when method = "fir"
 
     BandpassFilterRecording is built on top of it.
 
@@ -73,6 +74,12 @@ class FilterRecording(BasePreprocessor):
         - "forward" - filter is applied to the timeseries in one direction, creating phase shifts
         - "backward" - the timeseries is reversed, the filter is applied and filtered timeseries reversed again. Creates phase shifts in the opposite direction to "forward"
         - "forward-backward" - Applies the filter in the forward and backward direction, resulting in zero-phase filtering. Note this doubles the effective filter order.
+    method : "iir" | "fir", default: "iir"
+        "iir" designs and applies the filter with `scipy.signal`. "fir" applies the zero-phase FIR `taps` by
+        overlap-save; `margin_ms` is then ignored, and `filter_order`, `ftype`, `filter_mode`, `coeff` and
+        `direction` must be left at their defaults.
+    taps : array | None, default: None
+        Symmetric FIR kernel for `method="fir"`, for example from ``design_fir_bandpass``.
 
     Returns
     -------
@@ -93,25 +100,47 @@ class FilterRecording(BasePreprocessor):
         coeff=None,
         dtype=None,
         direction="forward-backward",
+        method="iir",
+        taps=None,
     ):
         from scipy.signal import iirfilter
 
-        assert filter_mode in ("sos", "ba"), "'filter' mode must be 'sos' or 'ba'"
+        if method not in ("iir", "fir"):
+            raise ValueError(f"method must be 'iir' or 'fir', got {method!r}")
         fs = recording.get_sampling_frequency()
-        if coeff is None:
-            assert btype in ("bandpass", "highpass"), "'bytpe' must be 'bandpass' or 'highpass'"
-            # coefficient
-            # self.coeff is 'sos' or 'ab' style
-            filter_coeff = iirfilter(
-                filter_order, band, fs=fs, analog=False, btype=btype, ftype=ftype, output=filter_mode
+        if method == "fir":
+            if taps is None:
+                raise ValueError("method='fir' needs taps")
+            taps = np.asarray(taps, dtype=np.float64)
+            iir_arguments = dict(
+                filter_order=(filter_order, 5),
+                ftype=(ftype, "butter"),
+                filter_mode=(filter_mode, "sos"),
+                direction=(direction, "forward-backward"),
             )
+            for name, (value, default) in iir_arguments.items():
+                if value != default:
+                    raise ValueError(f"{name} applies to method='iir' only")
+            if coeff is not None:
+                raise ValueError("coeff applies to method='iir' only")
+        elif taps is not None:
+            raise ValueError("taps applies to method='fir' only")
         else:
-            filter_coeff = coeff
-            if not isinstance(coeff, list):
-                if filter_mode == "ba":
-                    coeff = [c.tolist() for c in coeff]
-                else:
-                    coeff = coeff.tolist()
+            assert filter_mode in ("sos", "ba"), "'filter' mode must be 'sos' or 'ba'"
+            if coeff is None:
+                assert btype in ("bandpass", "highpass"), "'bytpe' must be 'bandpass' or 'highpass'"
+                # coefficient
+                # self.coeff is 'sos' or 'ab' style
+                filter_coeff = iirfilter(
+                    filter_order, band, fs=fs, analog=False, btype=btype, ftype=ftype, output=filter_mode
+                )
+            else:
+                filter_coeff = coeff
+                if not isinstance(coeff, list):
+                    if filter_mode == "ba":
+                        coeff = [c.tolist() for c in coeff]
+                    else:
+                        coeff = coeff.tolist()
         dtype = fix_dtype(recording, dtype)
 
         BasePreprocessor.__init__(self, recording, dtype=dtype)
@@ -119,6 +148,32 @@ class FilterRecording(BasePreprocessor):
 
         if "offset_to_uV" in self.get_property_keys():
             self.set_channel_offsets(0)
+
+        self._kwargs = dict(
+            recording=recording,
+            band=band,
+            btype=btype,
+            filter_order=filter_order,
+            ftype=ftype,
+            filter_mode=filter_mode,
+            coeff=coeff,
+            margin_ms=margin_ms,
+            add_reflect_padding=add_reflect_padding,
+            dtype=dtype.str,
+            direction=direction,
+            method=method,
+            taps=None if taps is None else taps.tolist(),
+        )
+
+        if method == "fir":
+            from .fir_filter import FIRFilterRecordingSegment
+
+            self.margin_samples = taps.size // 2
+            for parent_segment in recording.segments:
+                self.add_recording_segment(
+                    FIRFilterRecordingSegment(parent_segment, taps, (taps.size - 1) // 2, dtype, add_reflect_padding)
+                )
+            return
 
         assert margin_ms is not None, "margin_ms must be provided!"
         margin = int(margin_ms * fs / 1000.0)
@@ -142,46 +197,6 @@ class FilterRecording(BasePreprocessor):
                     add_reflect_padding=add_reflect_padding,
                     direction=direction,
                 )
-            )
-
-        self._kwargs = dict(
-            recording=recording,
-            band=band,
-            btype=btype,
-            filter_order=filter_order,
-            ftype=ftype,
-            filter_mode=filter_mode,
-            coeff=coeff,
-            margin_ms=margin_ms,
-            add_reflect_padding=add_reflect_padding,
-            dtype=dtype.str,
-            direction=direction,
-        )
-
-    def _init_fir(self, recording, taps, dtype, filter_kwargs):
-        """Set this recording up to apply the zero-phase FIR `taps` by overlap-save, for ``method="fir"``."""
-        from .fir_filter import FIRFilterRecordingSegment
-
-        iir_defaults = dict(filter_order=5, ftype="butter", filter_mode="sos", coeff=None, direction="forward-backward")
-        for name, value in filter_kwargs.items():
-            if name not in iir_defaults and name != "add_reflect_padding":
-                raise TypeError(f"Unexpected argument {name!r}")
-            default = iir_defaults.get(name)
-            if name in iir_defaults and (value is not None if default is None else value != default):
-                raise ValueError(f"{name} applies to method='iir' only; method='fir' is set by its transition bands")
-        dtype = fix_dtype(recording, dtype)
-
-        BasePreprocessor.__init__(self, recording, dtype=dtype)
-        self.annotate(is_filtered=True)
-        if "offset_to_uV" in self.get_property_keys():
-            self.set_channel_offsets(0)
-        self.margin_samples = taps.size // 2
-        kernels = taps[np.newaxis, :]
-        groups = np.zeros(recording.get_num_channels(), dtype=np.intp)
-        add_reflect_padding = filter_kwargs.get("add_reflect_padding", False)
-        for parent_segment in recording.segments:
-            self.add_recording_segment(
-                FIRFilterRecordingSegment(parent_segment, kernels, groups, taps.size // 2, dtype, add_reflect_padding)
             )
 
 
@@ -312,7 +327,15 @@ class BandpassFilterRecording(FilterRecording):
         stopband_db=45.0,
         **filter_kwargs,
     ):
-        if method == "iir":
+        if method == "fir":
+            from .filter_design import design_fir_bandpass
+
+            fs = recording.get_sampling_frequency()
+            taps = design_fir_bandpass(freq_min, freq_max, fs, transition_low_hz, transition_high_hz, stopband_db)
+            FilterRecording.__init__(
+                self, recording, band=[freq_min, freq_max], dtype=dtype, method="fir", taps=taps, **filter_kwargs
+            )
+        else:
             if margin_ms == "auto":
                 margin_ms = adjust_margin_ms_for_highpass(freq_min)
             highpass_check(
@@ -322,16 +345,14 @@ class BandpassFilterRecording(FilterRecording):
                 skip_warning=_skip_margin_warning_for_old_version,
             )
             FilterRecording.__init__(
-                self, recording, band=[freq_min, freq_max], margin_ms=margin_ms, dtype=dtype, **filter_kwargs
+                self,
+                recording,
+                band=[freq_min, freq_max],
+                margin_ms=margin_ms,
+                dtype=dtype,
+                method=method,
+                **filter_kwargs,
             )
-        elif method == "fir":
-            from .filter_design import design_fir_bandpass
-
-            fs = recording.get_sampling_frequency()
-            taps = design_fir_bandpass(freq_min, freq_max, fs, transition_low_hz, transition_high_hz, stopband_db)
-            self._init_fir(recording, taps, dtype, filter_kwargs)
-        else:
-            raise ValueError(f"method must be 'iir' or 'fir', got {method!r}")
         dtype = fix_dtype(recording, dtype)
         self._kwargs = dict(
             recording=recording,
@@ -407,7 +428,14 @@ class HighpassFilterRecording(FilterRecording):
         stopband_db=45.0,
         **filter_kwargs,
     ):
-        if method == "iir":
+        if method == "fir":
+            from .filter_design import design_fir_highpass
+
+            taps = design_fir_highpass(freq_min, recording.get_sampling_frequency(), transition_low_hz, stopband_db)
+            FilterRecording.__init__(
+                self, recording, band=freq_min, btype="highpass", dtype=dtype, method="fir", taps=taps, **filter_kwargs
+            )
+        else:
             if margin_ms == "auto":
                 margin_ms = adjust_margin_ms_for_highpass(freq_min)
             highpass_check(
@@ -417,15 +445,15 @@ class HighpassFilterRecording(FilterRecording):
                 skip_warning=_skip_margin_warning_for_old_version,
             )
             FilterRecording.__init__(
-                self, recording, band=freq_min, margin_ms=margin_ms, dtype=dtype, btype="highpass", **filter_kwargs
+                self,
+                recording,
+                band=freq_min,
+                margin_ms=margin_ms,
+                dtype=dtype,
+                btype="highpass",
+                method=method,
+                **filter_kwargs,
             )
-        elif method == "fir":
-            from .filter_design import design_fir_highpass
-
-            taps = design_fir_highpass(freq_min, recording.get_sampling_frequency(), transition_low_hz, stopband_db)
-            self._init_fir(recording, taps, dtype, filter_kwargs)
-        else:
-            raise ValueError(f"method must be 'iir' or 'fir', got {method!r}")
         dtype = fix_dtype(recording, dtype)
         self._kwargs = dict(
             recording=recording,
