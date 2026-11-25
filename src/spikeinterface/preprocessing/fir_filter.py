@@ -71,11 +71,8 @@ class FIRFilterRecording(BasePreprocessor):
     recording : Recording
         The recording to filter.
     taps : array-like
-        Kernel of shape ``(num_taps,)``, applied to every channel, or ``(num_kernels, num_taps)``, with each
-        channel's row given by `channel_groups`. Designed with, for example, ``design_fir_bandpass`` or
-        ``scipy.signal.firwin``.
-    channel_groups : array-like | None, default: None
-        For a 2D `taps`, the row of `taps` for each channel. None requires one row per channel.
+        Kernel of shape ``(num_taps,)``, applied to every channel. Designed with, for example,
+        ``design_fir_bandpass`` or ``scipy.signal.firwin``.
     center : int | None, default: None
         Index of the tap aligned with the output sample. None means ``(num_taps - 1) // 2``, zero-phase for a
         symmetric kernel; 0 makes the filter causal.
@@ -91,21 +88,11 @@ class FIRFilterRecording(BasePreprocessor):
         The filtered recording.
     """
 
-    def __init__(self, recording, taps, channel_groups=None, center=None, dtype=None, add_reflect_padding=False):
+    def __init__(self, recording, taps, center=None, dtype=None, add_reflect_padding=False):
         taps = np.asarray(taps, dtype=np.float64)
-        if taps.ndim not in (1, 2) or taps.shape[-1] == 0:
-            raise ValueError(f"taps must have shape (num_taps,) or (num_kernels, num_taps), got {taps.shape}")
-        kernels = np.atleast_2d(taps)
-        num_kernels, num_taps = kernels.shape
-        num_channels = recording.get_num_channels()
-        if channel_groups is None:
-            if num_kernels not in (1, num_channels):
-                raise ValueError(f"{num_kernels} kernels for {num_channels} channels need channel_groups")
-            groups = np.zeros(num_channels, dtype=np.intp) if num_kernels == 1 else np.arange(num_channels)
-        else:
-            groups = np.asarray(channel_groups, dtype=np.intp)
-            if groups.shape != (num_channels,) or groups.min() < 0 or groups.max() >= num_kernels:
-                raise ValueError(f"channel_groups must give a row of taps, 0 to {num_kernels - 1}, for each channel")
+        if taps.ndim != 1 or taps.size == 0:
+            raise ValueError(f"taps must have shape (num_taps,), got {taps.shape}")
+        num_taps = taps.size
         center = (num_taps - 1) // 2 if center is None else int(center)
         if not 0 <= center < num_taps:
             raise ValueError(f"center must be in [0, {num_taps}), got {center}")
@@ -114,18 +101,17 @@ class FIRFilterRecording(BasePreprocessor):
         BasePreprocessor.__init__(self, recording, dtype=dtype)
         self.annotate(is_filtered=True)
         if "offset_to_uV" in self.get_property_keys():
-            # A constant offset passes through scaled by each kernel's DC gain.
-            self.set_channel_offsets(self.get_channel_offsets() * kernels.sum(axis=1)[groups])
+            # A constant offset passes through scaled by the kernel's DC gain.
+            self.set_channel_offsets(self.get_channel_offsets() * taps.sum())
 
         for parent_segment in recording.segments:
             self.add_recording_segment(
-                FIRFilterRecordingSegment(parent_segment, kernels, groups, center, dtype, add_reflect_padding)
+                FIRFilterRecordingSegment(parent_segment, taps, center, dtype, add_reflect_padding)
             )
 
         self._kwargs = dict(
             recording=recording,
             taps=taps.tolist(),
-            channel_groups=None if channel_groups is None else groups.tolist(),
             center=center,
             dtype=dtype.str,
             add_reflect_padding=add_reflect_padding,
@@ -133,27 +119,27 @@ class FIRFilterRecording(BasePreprocessor):
 
 
 class FIRFilterRecordingSegment(BasePreprocessorSegment):
-    def __init__(self, parent_recording_segment, kernels, channel_groups, center, dtype, add_reflect_padding):
+    def __init__(self, parent_recording_segment, taps, center, dtype, add_reflect_padding):
         BasePreprocessorSegment.__init__(self, parent_recording_segment)
-        self.kernels = kernels
-        self.num_taps = kernels.shape[1]
-        self.channel_groups = channel_groups
+        self.taps = taps
+        self.num_taps = taps.size
         self.center = center
         self.dtype = dtype
         self.add_reflect_padding = add_reflect_padding
-        # Kernel spectra depend on the FFT length, which depends on the chunk length.
+        # The kernel's spectrum depends on the FFT length, which depends on the chunk length.
         self._kernel_spectra = {}
         self._kernel_spectra_lock = threading.Lock()
 
-    def _get_kernel_spectra(self, fft_length):
+    def _get_kernel_spectrum(self, fft_length):
+        """The kernel's spectrum as a ``(fft_length // 2 + 1, 1)`` column, to broadcast across channels."""
         import scipy.fft
 
         with self._kernel_spectra_lock:
-            spectra = self._kernel_spectra.get(fft_length)
-            if spectra is None:
-                spectra = scipy.fft.rfft(self.kernels.T, n=fft_length, axis=0).astype(np.complex64)
-                self._kernel_spectra[fft_length] = spectra
-        return spectra
+            spectrum = self._kernel_spectra.get(fft_length)
+            if spectrum is None:
+                spectrum = scipy.fft.rfft(self.taps, n=fft_length).astype(np.complex64)[:, np.newaxis]
+                self._kernel_spectra[fft_length] = spectrum
+        return spectrum
 
     def _get_input(self, start_frame, end_frame, channel_indices):
         """Parent traces for every input sample the kernel reaches, padded beyond the recording's edges."""
@@ -177,16 +163,14 @@ class FIRFilterRecordingSegment(BasePreprocessorSegment):
         if channel_indices is None:
             channel_indices = slice(None)
         traces = self._get_input(start_frame, end_frame, channel_indices)
-        groups = self.channel_groups[channel_indices]
         num_samples, num_channels = end_frame - start_frame, traces.shape[1]
         num_taps = self.num_taps
 
         fft_length = _overlap_save_fft_length(num_samples + num_taps - 1, num_taps)
         step = fft_length - num_taps + 1
-        spectra = self._get_kernel_spectra(fft_length)
-        one_kernel = spectra.shape[1] == 1
-        # The float32 block and its complex64 spectrum take 8 bytes per sample, and per-channel kernel spectra 4 more.
-        slab = _channels_per_block(num_channels, fft_length, bytes_per_sample=8 if one_kernel else 12)
+        kernel_spectrum = self._get_kernel_spectrum(fft_length)
+        # The float32 block and its complex64 spectrum take 8 bytes per sample.
+        slab = _channels_per_block(num_channels, fft_length, bytes_per_sample=8)
 
         # Each block is rounded and cast as it is written, so no full float32 copy of the chunk is held.
         out = np.empty((num_samples, num_channels), dtype=self.dtype)
@@ -195,14 +179,13 @@ class FIRFilterRecordingSegment(BasePreprocessorSegment):
         for c0 in range(0, num_channels, slab):
             c1 = min(num_channels, c0 + slab)
             tile = buffer[:, : c1 - c0]
-            tile_spectra = spectra if one_kernel else spectra[:, groups[c0:c1]]
             for t0 in range(0, num_samples, step):
                 num_out = min(step, num_samples - t0)
                 num_in = num_out + num_taps - 1
                 tile[:num_in] = traces[t0 : t0 + num_in, c0:c1]
                 tile[num_in:] = 0
                 spectrum = scipy.fft.rfft(tile, axis=0)
-                spectrum *= tile_spectra
+                spectrum *= kernel_spectrum
                 # The first num_taps - 1 samples of each circular convolution wrap around and are discarded.
                 result = scipy.fft.irfft(spectrum, n=fft_length, axis=0, overwrite_x=True)
                 valid = result[num_taps - 1 : num_taps - 1 + num_out]

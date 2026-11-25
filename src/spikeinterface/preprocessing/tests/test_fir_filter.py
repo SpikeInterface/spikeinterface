@@ -51,41 +51,22 @@ def test_fir_filter_chunk_invariance(recording):
         check_chunk_invariance(rec, chunk_size, atol=1e-5 * scale)
 
 
-def test_fir_filter_per_channel_kernels(recording):
-    rng = np.random.default_rng(2)
-    kernels = rng.standard_normal((3, 21))
-    groups = np.array([0, 1, 2, 0, 1, 2])
-    traces = recording.get_traces()
-    out = fir_filter(recording, kernels, channel_groups=groups).get_traces()
-    for channel, group in enumerate(groups):
-        expected = expected_output(traces[:, [channel]], kernels[group], 10)
-        np.testing.assert_allclose(out[:, [channel]], expected, atol=1e-5 * np.abs(expected).max())
-    # One row per channel needs no channel_groups.
-    one_per_channel = rng.standard_normal((6, 21))
-    out = fir_filter(recording, one_per_channel).get_traces()
-    expected = expected_output(traces[:, [4]], one_per_channel[4], 10)
-    np.testing.assert_allclose(out[:, [4]], expected, atol=1e-5 * np.abs(expected).max())
-
-
 def test_fir_filter_channel_blocks(recording, monkeypatch):
     import sys
 
-    # Blocks of 4 split the 6 channels unevenly and across kernel groups.
+    # Blocks of 4 split the 6 channels unevenly.
     monkeypatch.setattr(
         sys.modules["spikeinterface.preprocessing.fir_filter"], "_channels_per_block", lambda *a, **k: 4
     )
-    kernels = np.random.default_rng(3).standard_normal((2, 21))
-    groups = np.array([0, 1, 1, 0, 1, 0])
-    traces = recording.get_traces()
-    out = fir_filter(recording, kernels, channel_groups=groups).get_traces()
-    expected = np.concatenate([expected_output(traces[:, [c]], kernels[g], 10) for c, g in enumerate(groups)], axis=1)
+    taps = np.random.default_rng(3).standard_normal(21)
+    out = fir_filter(recording, taps).get_traces()
+    expected = expected_output(recording.get_traces(), taps, 10)
     np.testing.assert_allclose(out, expected, atol=1e-5 * np.abs(expected).max())
 
 
 def test_fir_filter_channel_subset(recording):
     rng = np.random.default_rng(3)
-    kernels = rng.standard_normal((6, 41))
-    rec = fir_filter(recording, kernels)
+    rec = fir_filter(recording, rng.standard_normal(41))
     whole = rec.get_traces()
     ids = recording.channel_ids[[4, 1]]
     subset = rec.get_traces(start_frame=1234, end_frame=5678, channel_ids=ids)
@@ -128,7 +109,7 @@ def test_fir_filter_save_load(tmp_path):
     from spikeinterface.core import generate_recording
 
     parent = generate_recording(num_channels=4, durations=[1.0], sampling_frequency=FS, seed=0)
-    rec = fir_filter(parent, np.random.default_rng(4).standard_normal((2, 15)), channel_groups=[0, 1, 0, 1])
+    rec = fir_filter(parent, np.random.default_rng(4).standard_normal(15))
     rec.dump_to_json(tmp_path / "rec.json")
     np.testing.assert_array_equal(load(tmp_path / "rec.json").get_traces(), rec.get_traces())
     saved = rec.save(folder=tmp_path / "saved")
@@ -136,10 +117,8 @@ def test_fir_filter_save_load(tmp_path):
 
 
 def test_fir_filter_invalid_arguments(recording):
-    with pytest.raises(ValueError, match="channel_groups"):
+    with pytest.raises(ValueError, match="taps"):
         fir_filter(recording, np.ones((3, 5)))
-    with pytest.raises(ValueError, match="channel_groups"):
-        fir_filter(recording, np.ones((3, 5)), channel_groups=[0, 1, 2, 3, 0, 1])
     with pytest.raises(ValueError, match="center"):
         fir_filter(recording, np.ones(5), center=5)
 
