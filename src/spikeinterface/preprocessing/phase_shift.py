@@ -7,6 +7,7 @@ from spikeinterface.core.core_tools import define_function_handling_dict_from_cl
 from spikeinterface.core import get_chunk_with_margin
 
 from .basepreprocessor import BasePreprocessor, BasePreprocessorSegment
+from .filter_design import _design_fir_fractional_delay
 
 HAVE_NUMBA = importlib.util.find_spec("numba") is not None
 
@@ -126,7 +127,7 @@ class PhaseShiftRecordingSegment(BasePreprocessorSegment):
         if method == "fir":
             # The numba kernel indexes taps forward in time, the reverse of convolution order. Store them as (K, C)
             # so its innermost loop, over channels, reads adjacent memory.
-            taps = _build_fir_taps(self.sample_shifts, self.n_taps)
+            taps = _design_fir_fractional_delay(self.sample_shifts, self.n_taps)
             self._fir_kernels_kc = np.ascontiguousarray(taps[:, ::-1].T, dtype=np.float32)
 
     def get_traces(self, start_frame, end_frame, channel_indices):
@@ -312,48 +313,6 @@ def apply_fshift_ibl(w, s, axis=0, ns=None):
         W = np.real(irfft(W, ns, axis=axis))
         W = W.astype(w.dtype)
     return W
-
-
-def _build_fir_taps(shift_samples, n_taps, beta=None):
-    """Build one windowed-sinc kernel per channel that delays the channel by a fraction of a sample.
-
-    An ideal delay of ``d`` samples convolves the signal with ``sinc(t - d)``, which never ends. Each kernel keeps
-    ``n_taps`` samples of it around the centre and tapers them with a Kaiser window, the standard windowed-sinc
-    fractional delay (Laakso et al., 1996). Each kernel is then scaled to sum to 1, so a constant signal passes
-    unchanged; the windowed sinc's sum varies with ``d``, which would otherwise scale each ADC group differently.
-
-    Parameters
-    ----------
-    shift_samples : array of shape (C,)
-        Delay of each channel in samples. A positive delay gives ``y[n] = x[n - d]``, as in ``apply_frequency_shift``.
-    n_taps : int
-        Kernel length ``K``. Longer kernels stay accurate to higher frequencies.
-    beta : float | None, default: None
-        Kaiser window shape. None uses ``(K + 1) / 2``, which minimises the error in 0.3-10 kHz at 30 kHz sampling
-        for each ``K``; a fixed value suits only one length.
-
-    Returns
-    -------
-    taps : array of shape (C, K)
-        Taps in convolution order: ``y[n] = sum_j taps[c, j] * x[n + center - j]`` with ``center = (K - 1) // 2``.
-
-    References
-    ----------
-    T. I. Laakso, V. Välimäki, M. Karjalainen and U. K. Laine, "Splitting the unit delay", IEEE Signal Processing
-    Magazine 13(1), 30-60, 1996.
-    """
-    # Tap j weighs x[n + center - j], an offset of t = center - j samples, so the ideal delay gives sinc(t + shift).
-    offsets = (n_taps - 1) // 2 - np.arange(n_taps, dtype=np.float64)
-    shifts = np.asarray(shift_samples, dtype=np.float64)[:, np.newaxis]
-    if beta is None:
-        beta = (n_taps + 1) / 2
-    # The window reaches half a tap past each end tap. np.kaiser(K) would end exactly on them, where it is near zero,
-    # and waste two taps.
-    window_positions = np.arange(n_taps) - (n_taps - 1) / 2
-    window = np.i0(beta * np.sqrt(1 - (window_positions / (n_taps / 2)) ** 2)) / np.i0(beta)
-    taps = np.sinc(offsets + shifts) * window
-    taps /= taps.sum(axis=1, keepdims=True)
-    return taps
 
 
 if HAVE_NUMBA:

@@ -4,6 +4,7 @@ from spikeinterface import NumpyRecording, load
 from spikeinterface.core.testing import check_recordings_equal
 
 from spikeinterface.preprocessing import phase_shift
+from spikeinterface.preprocessing.filter_design import _design_fir_fractional_delay
 from spikeinterface.preprocessing.phase_shift import apply_frequency_shift
 from spikeinterface.core import get_chunk_with_margin
 
@@ -253,16 +254,13 @@ def test_phase_shift_fir_numpy_fallback_matches_numba(monkeypatch, parent_dtype,
 
 def test_phase_shift_fir_taps_are_in_convolution_order():
     """Each channel's taps, convolved with the input and centred on (K - 1) // 2, give the FIR phase shift."""
-    import importlib
-
-    phase_shift_module = importlib.import_module("spikeinterface.preprocessing.phase_shift")
     rng = np.random.default_rng(0)
     num_channels, n_taps = 8, 16
     traces = rng.standard_normal((2000, num_channels)).astype("float32")
     shifts = np.linspace(-0.5, 0.9, num_channels)
     rec = NumpyRecording([traces], 30000.0)
     fir_rec = phase_shift(rec, method="fir", inter_sample_shift=shifts, n_taps=n_taps)
-    taps = phase_shift_module._build_fir_taps(shifts, n_taps)
+    taps = _design_fir_fractional_delay(shifts, n_taps)
     center = (n_taps - 1) // 2
     expected = np.stack([np.convolve(traces[:, c], taps[c])[center : center + 2000] for c in range(num_channels)], 1)
     np.testing.assert_allclose(fir_rec.get_traces(), expected, rtol=0, atol=1e-5)
