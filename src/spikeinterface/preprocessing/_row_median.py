@@ -49,7 +49,10 @@ def _sorted_row_median(traces):
     sorted_traces = np.sort(traces, axis=1)  # NaN sorts last
     lo = sorted_traces[:, (num_channels - 1) // 2]
     hi = sorted_traces[:, num_channels // 2]
-    median = 0.5 * (lo + hi)  # the scalar stays weak, so the sum and result keep the input dtype
+    if num_channels % 2:
+        median = lo.copy()  # averaging a value with itself can overflow where np.median does not
+    else:
+        median = 0.5 * (lo + hi)  # the scalar stays weak, so the sum and result keep the input dtype
     median[np.isnan(sorted_traces[:, -1])] = np.nan  # np.median returns NaN for a row holding one
     return median[:, np.newaxis]
 

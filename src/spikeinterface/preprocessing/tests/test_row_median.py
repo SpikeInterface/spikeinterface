@@ -59,13 +59,14 @@ def test_row_median_float(dtype, num_channels):
 
 
 @pytest.mark.parametrize("dtype", ["float32", "float64"])
-def test_row_median_float_non_finite(dtype):
-    x = np.random.default_rng(0).standard_normal((6, 384)).astype(dtype)
+@pytest.mark.parametrize("num_channels", [384, 385])
+def test_row_median_float_non_finite(dtype, num_channels):
+    x = np.random.default_rng(0).standard_normal((6, num_channels)).astype(dtype)
     x[0, 5] = np.nan
     x[1, 7] = np.inf
     x[2, 3] = -np.inf
     x[3, [1, 2]] = [np.inf, -np.inf]
-    x[4] = np.finfo(dtype).max  # the sum of the middle values overflows
+    x[4] = np.finfo(dtype).max  # np.median overflows averaging two middle values, but returns an odd row's one
     x[5, [0, 1]] = [np.nan, np.inf]
     with np.errstate(over="ignore", invalid="ignore"):
         assert_matches_np_median(x)
