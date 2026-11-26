@@ -124,12 +124,11 @@ class RawDataQualityMetricsWidget(BaseWidget):
             self.figure.colorbar(psd_image, ax=psd_axis, label="PSD (µV²/Hz)")
 
             num_channels = len(recording_data["channel_ids"])
-            tick_indices = np.linspace(0, num_channels - 1, min(8, num_channels), dtype=int)
 
             for axis in (psd_axis, rms_axis):
-                axis.set_yticks(tick_indices, labels=recording_data["channel_ids"][tick_indices])
+                axis.set_yticks([])
                 axis.set_ylim(-0.5, num_channels - 0.5)
-                axis.set_ylabel("Channel ID")
+                axis.set_ylabel("Channel")
 
         self.figure.tight_layout()
 
