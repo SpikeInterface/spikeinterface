@@ -17,7 +17,6 @@ def raw_data_quality_metrics(
     chunk_size_s: float = 1.0,
     num_chunks: int = 30,
     rolling_rms_window_size_s: float = 3.0,
-    folder: Path | str | None = None,
     compute_rolling_rms_for: str | tuple = ("preprocessed_ap",),
     verbose: bool = False,
     **job_kwargs,
@@ -62,11 +61,6 @@ def raw_data_quality_metrics(
     rolling_rms_window_size_s : float, default: 3.0
         The window size used for the consecutive windows across which
         the 'rolling' RMS is computed.
-    folder :
-        If provided, write one CSV per recording type in this directory. Each CSV
-        has one row per channel for median RMS and a separate ``all_channels`` row
-        for the 10th and 90th percentiles. Multi-segment columns have a segment suffix.
-        Array-valued results remain in the return value.
     compute_rolling_rms_for : "all" | tuple
         Names must be from the set of "raw_ap", "preprocessed_ap" and "raw_lfp".
         Use "all" to apply to all available recordings. By default, only
@@ -174,27 +168,6 @@ def raw_data_quality_metrics(
         "chunked_results": all_chunk_results,
         "rolling_rms": all_rolling_rms,
     }
-    if folder is not None:
-        # Plotting dependencies are only needed when saving figures.
-        import matplotlib.pyplot as plt
-        from .plot_raw_data_quality_metrics import plot_raw_data_quality_metrics
-
-        _write_rms_summary_csvs(folder, all_chunk_results)
-
-        for segment_index in range(raw_ap.get_num_segments()):
-            widget = plot_raw_data_quality_metrics(
-                results,
-                recordings=recordings,
-                segment_index=segment_index,
-                backend="matplotlib",
-            )
-            widget.figure.savefig(
-                Path(folder) / f"raw_data_quality_metrics_seg_{segment_index}.png",
-                dpi=150,
-                bbox_inches="tight",
-            )
-            plt.close(widget.figure)
-
     return results
 
 
@@ -443,9 +416,26 @@ def _generate_skipped_chunk_slices(
     return slices
 
 
-def _write_rms_summary_csvs(folder, chunked_results):
-    """Write the metrics to a CSV which has rms_median per channel (row),
-    as well as the 10-90 quantiles in the first row of separate columns"""
+def write_rms_summary_csvs(folder: Path | str, chunked_results: dict):
+    """Write one RMS summary CSV per recording type.
+
+    Parameters
+    ----------
+    folder : Path | str
+        Output directory, created if needed. Existing CSVs with the same names
+        are overwritten.
+    chunked_results : dict
+        The ``results["chunked_results"]`` dictionary returned by
+        :func:`raw_data_quality_metrics`. Each CSV contains one row per channel
+        for median RMS and an ``all_channels`` row for the 10th and 90th
+        percentiles. Multi-segment columns have a segment suffix.
+        PSD and rolling RMS arrays are not exported.
+
+    Examples
+    --------
+    >>> results = raw_data_quality_metrics(raw_ap)
+    >>> write_rms_summary_csvs("quality_metrics", results["chunked_results"])
+    """
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
 
