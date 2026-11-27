@@ -26,3 +26,4 @@ from .widgets import *
 from .exporters import *
 from .generation import *
 from .benchmark import *
+from .qualitycontrol import *
