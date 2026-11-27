@@ -27,9 +27,9 @@ class RawDataQualityMetricsWidget(BaseWidget):
     def __init__(self, results, recordings, segment_index=0, order_by_depth=True, backend=None, **backend_kwargs):
 
         display_names = {
-            "raw_ap_recording": "Raw",
-            "preprocessed_ap_recording": "Preprocessed",
-            "raw_lfp_recording": "LFP",
+            "raw_ap": "Raw",
+            "preprocessed_ap": "Preprocessed",
+            "raw_lfp": "LFP",
         }
 
         recording_data = {}

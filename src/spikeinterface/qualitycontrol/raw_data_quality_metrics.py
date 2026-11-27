@@ -10,17 +10,16 @@ from spikeinterface.preprocessing import common_reference, highpass_filter
 
 
 def raw_data_quality_metrics(
-    raw_ap_recording: BaseRecording,
-    raw_lfp_recording: BaseRecording | None = None,
-    preprocessed_ap_recording: BaseRecording | None = None,
+    raw_ap: BaseRecording,
+    raw_lfp: BaseRecording | None = None,
+    preprocessed_ap: BaseRecording | None = None,
     first_chunk_time_s: float = 0.0,
     chunk_size_s: float = 1.0,
     num_chunks: int = 30,
     rolling_rms_window_size_s: float = 3.0,
     folder: Path | str | None = None,
-    compute_raw_rolling_rms: bool = False,
+    compute_rolling_rms_for: str | tuple = ("preprocessed_ap",),
     verbose: bool = False,
-    quick_metrics_only: bool = False,
     **job_kwargs,
 ):
     """Compute raw data quality metrics for the provided recordings.
@@ -34,21 +33,20 @@ def raw_data_quality_metrics(
     See 'Returns' section for details.
 
     Next, a 'rolling' RMS is computed using consecutive chunks across the entire
-    recording. This is used to generate plots rather than compute metrics. Set
-    ``quick_metrics_only=True`` to skip this full-recording pass for all recordings.
+    recording. This is used to generate plots rather than compute metrics.
 
-    All quality metrics are computed on the raw recording, the preprocessed recording and
+    Sampled RMS summaries and PSD are always computed on the raw recording, the preprocessed recording and
     LFP recording (if provided). If no AP-preprocessed recording is used, the data is filtered
     and common median referenced.
 
     Parameters
     ---------
 
-    raw_ap_recording :
+    raw_ap :
         The raw AP-band recording (i.e. has not been preprocessed).
-    raw_lfp_recording :
+    raw_lfp :
         The unprocessed LFP-band recording.
-    preprocessed_ap_recording :
+    preprocessed_ap :
         The preprocessed AP-band recording. This can be included to use a recording
         preprocessed to your steps, otherwise if ``None`` a standard 300 Hz highpass
         filter and common median referencing is used.
@@ -69,14 +67,12 @@ def raw_data_quality_metrics(
         has one row per channel for median RMS and a separate ``all_channels`` row
         for the 10th and 90th percentiles. Multi-segment columns have a segment suffix.
         Array-valued results remain in the return value.
-    compute_raw_rolling_rms:
-        If  `True`, the rolling RMS will be output for the raw dataset.
+    compute_rolling_rms_for : "all" | tuple
+        Names must be from the set of "raw_ap", "preprocessed_ap" and "raw_lfp".
+        Use "all" to apply to all available recordings. By default, only
+        "preprocessed_ap" is used, as this step is the slowest to compute.
     verbose :
         Whether to print the progress of the quality metric computation.
-    quick_metrics_only : bool, default: False
-        Compute only the sampled RMS summaries and PSD. Skip rolling RMS for all
-        recordings, including LFP and raw AP even if ``compute_raw_rolling_rms=True``.
-        The returned ``rolling_rms`` dictionary is empty in this mode.
     **job_kwargs : dict
         Keyword arguments forwarded to :class:`TimeSeriesChunkExecutor` (e.g. ``n_jobs``).
         This must not contain arguments related to chunk-size, as these are set by this module.
@@ -88,8 +84,8 @@ def raw_data_quality_metrics(
 
     ``"chunked_results"`` :
         A dictionary with keys [recording_name][metric][segment_index]. The
-        recording names are "raw_ap_recording", "preprocessed_ap_recording" and (if LFP
-        provided) "raw_lfp_recording". Each recording also includes ``"channel_ids"``,
+        recording names are "raw_ap", "preprocessed_ap" and (if LFP
+        provided) "raw_lfp". Each recording also includes ``"channel_ids"``,
         an array of shape (num_channels,). The metric names are:
 
         "channel_ids" :
@@ -115,7 +111,7 @@ def raw_data_quality_metrics(
         A dictionary with keys [recording_name]["rms" or "times"][segment_index]
         where "rms" gives the rolling RMS across the recording and "times" gives the
         center time for each corresponding RMS measurement. Empty when
-        ``quick_metrics_only=True``.
+        ``compute_rolling_rms_for=()``.
 
     References
     ----------
@@ -125,17 +121,23 @@ def raw_data_quality_metrics(
     """
     sparse_job_kwargs, rolling_job_kwargs = _get_job_kwargs(job_kwargs, chunk_size_s, rolling_rms_window_size_s)
 
-    if preprocessed_ap_recording is None:
-        preprocessed_ap_recording = highpass_filter(raw_ap_recording, freq_min=300)
-        preprocessed_ap_recording = common_reference(preprocessed_ap_recording, operator="median")
+    if preprocessed_ap is None:
+        preprocessed_ap = highpass_filter(raw_ap, freq_min=300)
+        preprocessed_ap = common_reference(preprocessed_ap, operator="median")
 
     recordings = {
-        "raw_ap_recording": raw_ap_recording,
-        "preprocessed_ap_recording": preprocessed_ap_recording,
+        "raw_ap": raw_ap,
+        "preprocessed_ap": preprocessed_ap,
     }
 
-    if raw_lfp_recording is not None:
-        recordings.update({"raw_lfp_recording": raw_lfp_recording})
+    if raw_lfp is not None:
+        recordings.update({"raw_lfp": raw_lfp})
+
+    if compute_rolling_rms_for == "all":
+        compute_rolling_rms_for = recordings.keys()
+
+    if "raw_lfp" in compute_rolling_rms_for and raw_lfp is None:
+        raise ValueError('Selecting "raw_lfp" requires raw_lfp to be supplied.')
 
     all_chunk_results = {}
     all_rolling_rms = {}
@@ -159,10 +161,7 @@ def raw_data_quality_metrics(
 
         all_chunk_results[recording_name] = chunk_results
 
-        if quick_metrics_only:
-            continue
-
-        if recording_name == "raw_ap_recording" and not compute_raw_rolling_rms:
+        if recording_name not in compute_rolling_rms_for:
             continue
 
         # Compute the RMS over the entire recording in blocks
@@ -182,7 +181,7 @@ def raw_data_quality_metrics(
 
         _write_rms_summary_csvs(folder, all_chunk_results)
 
-        for segment_index in range(raw_ap_recording.get_num_segments()):
+        for segment_index in range(raw_ap.get_num_segments()):
             widget = plot_raw_data_quality_metrics(
                 results,
                 recordings=recordings,
