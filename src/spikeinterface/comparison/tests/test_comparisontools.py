@@ -1,27 +1,28 @@
 import numpy as np
+import pandas as pd
 from numpy.testing import assert_array_equal
 
-from spikeinterface.extractors import NumpySorting
 from spikeinterface.comparison import (
+    compare_spike_trains,
+    compute_performance,
+    do_confusion_matrix,
     do_count_event,
-    make_match_count_matrix,
+    do_count_score,
+    do_score_labels,
     make_agreement_scores,
-    make_possible_match,
     make_best_match,
     make_hungarian_match,
-    do_score_labels,
-    compare_spike_trains,
-    do_confusion_matrix,
-    do_count_score,
-    compute_performance,
+    make_match_count_matrix,
+    make_possible_match,
 )
 from spikeinterface.core.generate import generate_sorting
+from spikeinterface.extractors import NumpySorting
 
 
-def make_sorting(times1, labels1, times2, labels2):
+def make_sorting(times1, labels1, times2, labels2, ids1=None, ids2=None):
     sampling_frequency = 30000.0
-    sorting1 = NumpySorting.from_samples_and_labels([times1], [labels1], sampling_frequency)
-    sorting2 = NumpySorting.from_samples_and_labels([times2], [labels2], sampling_frequency)
+    sorting1 = NumpySorting.from_samples_and_labels([times1], [labels1], sampling_frequency, unit_ids=ids1)
+    sorting2 = NumpySorting.from_samples_and_labels([times2], [labels2], sampling_frequency, unit_ids=ids2)
     return sorting1, sorting2
 
 
@@ -375,6 +376,57 @@ def test_do_score_labels():
             "TP",
         ],
     )
+
+
+def test_do_score_labels_counts_spikes_once():
+    # checks that spikes in each sorting are only matched once across the spike trains by do_score_labels
+    # for posterity: right now, make_match_count_matrix() can still count a sorting2
+    # spike twice. it tries to fix that by capping each count to the total spike count,
+    # but that has edge cases.
+    # TODO: count each spike once in compute_matching_matrix()
+    delta_frames = 10
+
+    sorting1, sorting2 = make_sorting([100, 112, 500], [0, 0, 1], [101, 104, 900], [0, 0, 1])
+    unit_map12 = {0: 0, 1: 1}
+    labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, unit_map12)
+    assert_array_equal(labels_st1[0][0], ["TP", "TP"])
+    assert_array_equal(labels_st2[0][0], ["TP", "TP"])
+    assert_array_equal(labels_st1[1][0], ["FN"])
+    assert_array_equal(labels_st2[1][0], ["FP"])
+
+    # these sortings work now in make_match_count_matrix
+    counts = make_match_count_matrix(sorting1, sorting2, delta_frames=delta_frames)
+    for u1, u2 in unit_map12.items():
+        assert np.sum(labels_st1[u1][0] == "TP") == counts.at[u1, u2]
+        assert np.sum(labels_st2[u2][0] == "TP") == counts.at[u1, u2]
+
+    # note: can't test make_match_count_matrix here, it over-counts this guy
+    sorting1, sorting2 = make_sorting([0, 1, 2], [0, 0, 0], [1, 5, 1000], [0, 0, 0])
+    labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, {0: 0})
+    assert_array_equal(labels_st1[0][0], ["TP", "TP", "FN"])
+    assert_array_equal(labels_st2[0][0], ["TP", "TP", "FP"])
+
+    # test label_misclassification. the spike from st1u0 is where most of the action is at.
+    # it should get CL'd to one spike, and that should be the one from st2u1 at time 503.
+    # also check empty unit handling. unit 3 in both trains are empty, unit 4 are empty too
+    # but are mapped to each other.
+    sorting1, sorting2 = make_sorting(
+        [100, 500, 900, 1300],
+        [0, 0, 1, 2],
+        [102, 503, 505, 901, 1301],
+        [0, 1, 2, 1, 2],
+        ids1=[0, 1, 2, 3, 4],
+        ids2=[0, 1, 2, 3, 4],
+    )
+    unit_map12 = pd.Series({0: 0, 1: 1, 2: 2, 3: -1, 4: 4})
+    labels_st1, labels_st2 = do_score_labels(sorting1, sorting2, delta_frames, unit_map12, label_misclassification=True)
+    assert_array_equal(labels_st1[0][0], ["TP", "CL_0_1"])
+    assert_array_equal(labels_st2[1][0], ["CL_1_0", "TP"])
+    assert_array_equal(labels_st2[2][0], ["FP", "TP"])
+    assert labels_st1[3][0].size == 0
+    assert labels_st2[3][0].size == 0
+    assert labels_st1[4][0].size == 0
+    assert labels_st2[4][0].size == 0
 
 
 def test_compare_spike_trains():
